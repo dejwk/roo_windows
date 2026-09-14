@@ -127,11 +127,27 @@ class KeyboardWidget final : public SurfaceWidget {
   }
   void setCapsState(Keyboard::CapsState caps_state);
   void setPage(int idx);
+  void setLayout(KeyboardLayoutView layout) {
+    onCancel();
+    page_idx_ = -1;
+    spec_ = nullptr;
+    layout_ = layout;
+    caps_state_ = Keyboard::CAPS_STATE_LOW;
+    if (isVisible()) setPage(0);
+    invalidateInterior();
+    requestLayout();
+  }
   void onDown(XDim x, YDim y) override;
   void onShowPress(XDim x, YDim y) override;
   void onSingleTapUp(XDim x, YDim y) override;
   void onLongPress(XDim x, YDim y) override;
   void onLongPressFinished(XDim x, YDim y) override;
+  void onLongPressMove(XDim x, YDim y) override;
+  void onPresentationChanged(const PresentationChange& change) override {
+    if (change.state != PresentationState::kPresented ||
+        change.detached_since_delivery)
+      onCancel();
+  }
   void onCancel() override;
 
   const KeyboardColorTheme& colorTheme() const {
@@ -156,6 +172,19 @@ class KeyboardWidget final : public SurfaceWidget {
   struct Grid {
     int cell_width, row_height, left, top;
   };
+
+  friend class AlternativesPin;
+  void showAlternatives();
+  void selectAlternative(XDim x, YDim y);
+  uint32_t alternativeRune(int choice) const;
+  Rect activeAllocation() const;
+
+  struct AlternativeSelection {
+    Rect strip;
+    int8_t selected = -1;
+    uint8_t caps = 0;
+    bool active = false;
+  } alternatives_;
 
   Grid grid() const;
   Rect keyBounds(int row, int key) const;
@@ -252,6 +281,154 @@ class PressHighlighterPin final : public PresentationPin {
 
   const KeyboardWidget& target_;
 };
+
+// A single paint-only strip keeps gesture and editor ownership on the keyboard.
+class AlternativesPin final : public PresentationPin {
+ public:
+  explicit AlternativesPin(const KeyboardWidget& target) : target_(target) {}
+
+ protected:
+  Rect boundsInWindow() const override {
+    return CalculateShadowExtents(target_.alternatives_.strip,
+                                  kPressPreviewElevation);
+  }
+
+  Rect clipBoundsInWindow() const override {
+    return target_.getMainWindow()->bounds();
+  }
+
+  void paint(PaintContext& ctx) const override {
+    const Rect strip = target_.alternatives_.strip;
+    const int count = target_.keyAt(target_.active_row_, target_.active_key_)
+                          .alternative_count +
+                      1;
+    const int cell = strip.width() / count;
+    for (int i = 0; i < count; ++i) {
+      const Rect box(strip.xMin() + i * cell, strip.yMin(),
+                     strip.xMin() + (i + 1) * cell - 1, strip.yMax());
+      PaintContext local = ctx.clipped(box);
+      if (local.empty()) continue;
+      Color background = target_.colorTheme().normalButton;
+      if (i == target_.alternatives_.selected) {
+        background = AlphaBlend(
+            background,
+            target_.theme().material3Theme().state.resolve(
+                material3::ColorToken::kPrimary, InteractionState::kPressed));
+      }
+      char text[4];
+      int bytes = roo_io::WriteUtf8Char(text, target_.alternativeRune(i));
+      local.setBgcolor(background);
+      local.drawTiled(StringViewLabel(roo::string_view(text, bytes),
+                                      font_body1(), target_.colorTheme().text),
+                      box, kCenter | kMiddle);
+      ctx.addExclusion(box);
+    }
+    PaintDecoration decoration;
+    decoration.bounds = strip;
+    decoration.background = target_.colorTheme().normalButton;
+    decoration.elevation = kPressPreviewElevation;
+    ctx.addDecoration(decoration);
+  }
+
+ private:
+  const KeyboardWidget& target_;
+};
+
+Rect KeyboardWidget::activeAllocation() const {
+  const Grid g = grid();
+  const KeyboardLayoutView::Key key = keyAt(active_row_, active_key_);
+  const int left = g.left + key.start * g.cell_width;
+  const int top = g.top + active_row_ * g.row_height;
+  XDim dx;
+  YDim dy;
+  getAbsoluteOffset(dx, dy);
+  return Rect(left + dx, top + dy, left + key.width * g.cell_width - 1 + dx,
+              top + g.row_height - 1 + dy);
+}
+
+uint32_t KeyboardWidget::alternativeRune(int choice) const {
+  KeyboardLayoutView::Character ch = keyAt(active_row_, active_key_).character;
+  if (choice > 0)
+    layout_.readAlternative(page_idx_, active_row_, active_key_, choice - 1,
+                            ch);
+  return alternatives_.caps == Keyboard::CAPS_STATE_LOW ? ch.lower : ch.upper;
+}
+
+void KeyboardWidget::showAlternatives() {
+  if (alternatives_.active || !isPresented()) return;
+  const KeyboardLayoutView::Key key = keyAt(active_row_, active_key_);
+  if (key.alternative_count == 0) return;
+  const Rect viewport = getMainWindow()->bounds();
+  const Rect allocation = activeAllocation();
+  const int count = key.alternative_count + 1;
+  const int cell =
+      std::min<int>(std::max<int>(activeBounds().width(), Scaled(32)),
+                    viewport.width() / count);
+  const int height = grid().row_height;
+  if (cell < Scaled(24) || height > viewport.height()) return;
+  const int width = cell * count;
+  const int left = std::max<int>(
+      viewport.xMin(),
+      std::min<int>((allocation.xMin() + allocation.xMax() + 1 - cell) / 2,
+                    viewport.xMax() + 1 - width));
+  int top = allocation.yMin() - Scaled(4) - height;
+  if (top < viewport.yMin()) top = allocation.yMax() + 1 + Scaled(4);
+  top = std::max<int>(viewport.yMin(),
+                      std::min<int>(top, viewport.yMax() + 1 - height));
+  std::unique_ptr<PresentationPin> pin(new (std::nothrow)
+                                           AlternativesPin(*this));
+  if (!pin) return;  // Preserve the ordinary preview and hold behavior.
+  alternatives_.strip = Rect(left, top, left + width - 1, top + height - 1);
+  alternatives_.caps = caps_state_;
+  alternatives_.selected = 0;
+  hidePresentationPin();
+  if (showPresentationPin(std::move(pin)) !=
+      PresentationPinShowResult::kShown) {
+    showPresentationPin(std::unique_ptr<PresentationPin>(
+        new (std::nothrow) PressHighlighterPin(*this)));
+    return;
+  }
+  alternatives_.active = true;
+  context().presentations().observe(*this);
+}
+
+void KeyboardWidget::selectAlternative(XDim x, YDim y) {
+  XDim dx;
+  YDim dy;
+  getAbsoluteOffset(dx, dy);
+  const int wx = x + dx, wy = y + dy;
+  const Rect strip = alternatives_.strip;
+  const Rect base = activeAllocation();
+  int selected = -1;
+  if (strip.contains(wx, wy)) {
+    const int count = keyAt(active_row_, active_key_).alternative_count + 1;
+    selected = (wx - strip.xMin()) / (strip.width() / count);
+  } else if (base.contains(wx, wy)) {
+    selected = 0;
+  } else {
+    const int gap_top =
+        strip.yMax() < base.yMin() ? strip.yMax() + 1 : base.yMax() + 1;
+    const int gap_bottom =
+        strip.yMax() < base.yMin() ? base.yMin() - 1 : strip.yMin() - 1;
+    if (wy >= gap_top && wy <= gap_bottom &&
+        wx >= std::min<int>(strip.xMin(), base.xMin()) &&
+        wx <= std::max<int>(strip.xMax(), base.xMax())) {
+      selected = alternatives_.selected;
+    }
+  }
+  if (selected == alternatives_.selected) return;
+  alternatives_.selected = selected;
+  setPresentationPinDirty();
+}
+
+void KeyboardWidget::onLongPressMove(XDim x, YDim y) {
+  if (!alternatives_.active) return;
+  if (!hasPresentationPin() || !isPresented()) {
+    onCancel();
+    return;
+  }
+  selectAlternative(x, y);
+}
 
 PreferredSize KeyboardWidget::getPreferredSize() const {
   if (page_idx_ < 0) {
@@ -538,6 +715,7 @@ void KeyboardWidget::paint(PaintContext& ctx) const {
 
 void KeyboardWidget::setCapsState(Keyboard::CapsState caps_state) {
   if (caps_state == caps_state_) return;
+  if (alternatives_.active) onCancel();
   caps_state_ = caps_state;
   dirty(bounds());
   if (hasPresentationPin()) setPresentationPinDirty();
@@ -609,6 +787,13 @@ void KeyboardWidget::onSingleTapUp(XDim x, YDim y) {
 
 void KeyboardWidget::onLongPress(XDim x, YDim y) {
   if (active_key_ < 0) return;
+  if (!isPressed()) onShowPress(x, y);
+  if (active_key_ < 0) return;
+  if (keyAt(active_row_, active_key_).function ==
+      KeyboardLayoutView::Function::kText) {
+    showAlternatives();
+    return;
+  }
   if (keyAt(active_row_, active_key_).function ==
           KeyboardLayoutView::Function::kShift &&
       caps_state_ == Keyboard::CAPS_STATE_HIGH) {
@@ -617,12 +802,28 @@ void KeyboardWidget::onLongPress(XDim x, YDim y) {
 }
 
 void KeyboardWidget::onLongPressFinished(XDim x, YDim y) {
-  // Text keys still commit on release after a hold; only shift and delete
-  // have additional long-press semantics.
-  onSingleTapUp(x, y);
+  if (!alternatives_.active) {
+    onSingleTapUp(x, y);
+    return;
+  }
+  if (!hasPresentationPin() || !isPresented()) {
+    onCancel();
+    return;
+  }
+  selectAlternative(x, y);
+  const int selected = alternatives_.selected;
+  const uint32_t rune = selected >= 0 ? alternativeRune(selected) : 0;
+  const uint8_t caps = alternatives_.caps;
+  onCancel();
+  if (selected < 0) return;
+  if (caps == Keyboard::CAPS_STATE_HIGH) setCapsState(Keyboard::CAPS_STATE_LOW);
+  text_input_.commitRune(rune);
 }
 
 void KeyboardWidget::onCancel() {
+  if (alternatives_.active) context().presentations().unobserve(*this);
+  alternatives_.active = false;
+  alternatives_.selected = -1;
   repeat_.cancel();
   hidePresentationPin();
   if (active_key_ >= 0) dirty(activeBounds());
@@ -672,8 +873,13 @@ void Keyboard::hide() {
 }
 
 void Keyboard::connect(Application& destination) {
+  contents()->onCancel();
   text_input_.disconnect();
   text_input_.connect(destination);
+}
+
+void Keyboard::setLayout(KeyboardLayoutView layout) {
+  contents()->setLayout(layout);
 }
 
 void Keyboard::setPage(int idx) { contents()->setPage(idx); }

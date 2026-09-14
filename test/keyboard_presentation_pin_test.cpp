@@ -180,6 +180,158 @@ TEST_F(KeyboardPresentationPinTest, CircularActionPaintAndTouchBoundsDiffer) {
   owner.navigation().clear();
 }
 
+class BinaryPopupTest : public KeyboardPresentationPinTest {
+ protected:
+  BinaryPopupTest() : binary_(app_.keyboard()) {}
+
+  void SetUp() override {
+    KeyboardPresentationPinTest::SetUp();
+    binary_.hide();
+    binary_.setLayout(accentDemoLayout());
+    task_->textFieldEditor().edit(&field_, false);
+    binary_.show();
+    ASSERT_TRUE(refresh());
+  }
+
+  Widget& keys() { return binary_.getContents(); }
+
+  void hold() {
+    keys().onDown(166, 48);
+    keys().onShowPress(166, 48);
+    keys().onLongPress(166, 48);
+    ASSERT_TRUE(keys().hasPresentationPin());
+  }
+
+  Keyboard& binary_;
+};
+
+// Verifies slide selection, popup repaint, and exactly one semantic accent
+// commit.
+TEST_F(BinaryPopupTest, SlideSelectsAccentAndClearsPopup) {
+  hold();
+  ASSERT_TRUE(refresh());
+  keys().onLongPressMove(232, -36);
+  ASSERT_TRUE(refresh());
+  keys().onLongPressFinished(232, -36);
+  EXPECT_EQ(u8"é", field_.content());
+  EXPECT_FALSE(keys().hasPresentationPin());
+  keys().onLongPressFinished(232, -36);
+  EXPECT_EQ(u8"é", field_.content());
+  ASSERT_TRUE(refresh());
+}
+
+// Verifies release coordinates work without a preceding MOVE and consume
+// one-shot caps.
+TEST_F(BinaryPopupTest, ReleaseSelectsUppercaseAndBaseHoldStillWorks) {
+  binary_.setCapsState(Keyboard::CAPS_STATE_HIGH);
+  hold();
+  keys().onLongPressFinished(232, -36);
+  EXPECT_EQ(u8"É", field_.content());
+  EXPECT_EQ(Keyboard::CAPS_STATE_LOW, binary_.caps_state());
+  hold();
+  keys().onLongPressFinished(166, 48);
+  EXPECT_EQ(u8"Ée", field_.content());
+  binary_.setCapsState(Keyboard::CAPS_STATE_HIGH_LOCKED);
+  hold();
+  keys().onLongPressFinished(376, -36);
+  EXPECT_EQ(u8"ÉeĘ", field_.content());
+  EXPECT_EQ(Keyboard::CAPS_STATE_HIGH_LOCKED, binary_.caps_state());
+}
+
+// Verifies cancellation does not fall through to base-letter delivery.
+TEST_F(BinaryPopupTest, OutsideAndLifecycleChangesCancelSelection) {
+  for (int reason = 0; reason < 6; ++reason) {
+    binary_.show();
+    ASSERT_TRUE(refresh());
+    hold();
+    if (reason == 0) keys().onLongPressMove(-100, -100);
+    if (reason == 1) binary_.hide();
+    if (reason == 2) binary_.connect(app_);
+    if (reason == 3) binary_.setCapsState(Keyboard::CAPS_STATE_HIGH);
+    if (reason == 4) keys().hidePresentationPin();
+    if (reason == 5) keys().onCancel();
+    keys().onLongPressFinished(-100, -100);
+    EXPECT_TRUE(field_.content().empty()) << reason;
+    EXPECT_FALSE(keys().hasPresentationPin());
+  }
+}
+
+// Verifies returning from outside and traversing the gap retains the chosen
+// accent.
+TEST_F(BinaryPopupTest, CanReturnToStripAndCrossTheCorridor) {
+  hold();
+  keys().onLongPressMove(-100, -100);
+  keys().onLongPressMove(232, -36);
+  keys().onLongPressFinished(232, 5);
+  EXPECT_EQ(u8"é", field_.content());
+}
+
+// Verifies replacing layout or resizing a live popup cannot commit its stale
+// key.
+TEST_F(BinaryPopupTest, LayoutAndPresentationChangesCancel) {
+  hold();
+  binary_.setLayout(kbEngUSLayout());
+  keys().onLongPressFinished(232, -36);
+  EXPECT_TRUE(field_.content().empty());
+  binary_.setLayout(accentDemoLayout());
+  ASSERT_TRUE(refresh());
+  hold();
+  keys().layout(Rect(0, 0, 399, 159));
+  keys().onLongPressFinished(232, -36);
+  EXPECT_TRUE(field_.content().empty());
+  binary_.hide();
+  binary_.show();
+  ASSERT_TRUE(refresh());
+  hold();
+  keys().setVisibility(Visibility::kInvisible);
+  keys().onLongPressFinished(232, -36);
+  EXPECT_TRUE(field_.content().empty());
+}
+
+// Verifies a popup too tall for its viewport retains ordinary hold-to-commit
+// behavior.
+TEST_F(BinaryPopupTest, UnfittableStripFallsBackToBaseLetter) {
+  keys().layout(Rect(0, 0, 411, 999));
+  hold();
+  keys().onLongPressFinished(166, 48);
+  EXPECT_EQ("e", field_.content());
+}
+
+// Verifies popup highlights, circle faces and cleanup are single-pass and match
+// complete invalidation, including changes while the strip covers the keyboard.
+TEST(KeyboardPaint, AlternativePopupDirtyPaintMatchesFullPaint) {
+  std::vector<roo::byte> pixels(412 * 320 * 2);
+  KeyboardDisplay device(pixels.data());
+  roo_display::Display display(device);
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  Application app(&env, display);
+  app.keyboard().setLayout(accentDemoLayout());
+  app.keyboard().show();
+  ASSERT_TRUE(app.refresh());
+  Widget& keyboard = app.keyboard().getContents();
+  for (int step = 0; step < 4; ++step) {
+    if (step == 0) {
+      keyboard.onDown(166, 48);
+      keyboard.onShowPress(166, 48);
+      keyboard.onLongPress(166, 48);
+    }
+    if (step == 1) keyboard.onLongPressMove(232, -36);
+    if (step == 2) keyboard.onLongPressMove(376, -36);
+    if (step == 3) keyboard.onCancel();
+    device.reset();
+    ASSERT_TRUE(app.refresh());
+    EXPECT_LE(*std::max_element(device.writes.begin(), device.writes.end()), 1);
+    const std::vector<roo::byte> partial = pixels;
+    app.root().invalidateInterior();
+    device.reset();
+    ASSERT_TRUE(app.refresh());
+    EXPECT_LE(*std::max_element(device.writes.begin(), device.writes.end()), 1);
+    EXPECT_EQ(partial, pixels) << step;
+  }
+  app.keyboard().hide();
+}
+
 // Verifies the preview escapes the leaf keyboard while retaining task focus,
 // and disappears on cancellation without committing the pressed character.
 TEST_F(KeyboardPresentationPinTest,

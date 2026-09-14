@@ -1,7 +1,7 @@
 # Compact keyboard layouts and long-press alternatives
 
-Status: In progress. Phase 1 (compiler, reader, captured layouts) is implemented.
-The remaining widget and gesture phases follow in incremental commits.
+Status: In progress. Phases 1–5 are implemented. Built-in migration and final
+target validation remain in phase 6.
 
 Implementation adjustment: AOSP Polish has nine alternatives for `a`; version 1
 accepts nine alternatives (ten choices including the base). Static C++ entry
@@ -614,6 +614,10 @@ The additions to the existing `Keyboard` and `Widget` APIs are:
 /// Borrows layout bytes for the lifetime of this keyboard.
 Keyboard(ApplicationContext& context, KeyboardLayoutView layout);
 
+/// Replaces borrowed layout bytes, canceling input and resetting page/caps.
+/// Preserves visibility; after startup call on the application UI thread.
+void setLayout(KeyboardLayoutView layout);
+
 // Generated accessors in their respective headers.
 /// Returns a view over static flash storage, validated once on first use.
 KeyboardLayoutView accentDemoLayout();
@@ -625,7 +629,9 @@ KeyboardLayoutView kbEngUSLayout();
 virtual void onLongPressMove(XDim x, YDim y);
 ```
 
-Consumer:
+For the application-owned keyboard, use
+`app.keyboard().setLayout(kbPolPLLayout())` before startup. This avoids creating
+a second task merely to choose a language. A separately hosted consumer remains:
 
 ```cpp
 Keyboard keyboard(context, accentDemoLayout());

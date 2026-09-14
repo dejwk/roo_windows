@@ -39,6 +39,10 @@ class Keyboard {
   /// Borrows validated layout bytes, which must outlive this keyboard.
   Keyboard(ApplicationContext& context, KeyboardLayoutView layout);
 
+  /// Replaces the borrowed layout, canceling input and resetting page/caps.
+  /// Preserves visibility. Call on the application's UI thread after startup.
+  void setLayout(KeyboardLayoutView layout);
+
   /// Returns the underlying `KeyboardWidget` that renders the layout.
   Widget& getContents();
 

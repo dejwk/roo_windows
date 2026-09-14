@@ -73,3 +73,16 @@ Attach its `getContents()` to a task, call `setTask(task)`, connect it to the ed
 application with `connect(application)`, and use `show()`/`hide()` for visibility.
 The layout's static bytes are shared; drawing searches only for the clipped
 range endpoints, then decodes each visited key directly.
+
+For the application-owned keyboard, select a layout before startup:
+
+```cpp
+#include "roo_windows/keyboard_layout/pl_pl.h"
+app.keyboard().setLayout(roo_windows::kbPolPLLayout());
+```
+
+`setLayout()` also works on the UI thread after startup: it cancels an in-flight
+press, resets page/caps, and preserves visibility. The
+[Polish place-name example](../../examples/keyboard/polish_place_name/polish_place_name.ino)
+shows text editing with this layout. Run its emulator target with
+`bazel run //examples/keyboard/polish_place_name:polish_place_name`.
