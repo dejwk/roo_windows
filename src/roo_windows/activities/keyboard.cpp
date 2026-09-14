@@ -376,8 +376,19 @@ uint32_t KeyboardWidget::rune(int row_idx, int key_idx) const {
 }
 
 void KeyboardWidget::paintKey(PaintContext& ctx, int row_idx, int key_idx,
-                              const Rect& bounds) const {
+                              const Rect& face) const {
   const KeyboardLayoutView::Key key = keyAt(row_idx, key_idx);
+  Rect bounds = face;
+  const bool circle = key.shape == KeyboardLayoutView::Shape::kCircle;
+  if (circle) {
+    // Decoration radii are byte-sized; keep the face circular at large scales.
+    const int side =
+        std::min<int>(510, std::min<int>(face.width(), face.height()));
+    if (side <= 0) return;
+    const int left = face.xMin() + (face.width() - side) / 2;
+    const int top = face.yMin() + (face.height() - side) / 2;
+    bounds = Rect(left, top, left + side - 1, top + side - 1);
+  }
   PaintContext local = ctx.clipped(bounds);
   if (local.empty()) return;
   Color background = colorTheme().modifierButton;
@@ -394,8 +405,9 @@ void KeyboardWidget::paintKey(PaintContext& ctx, int row_idx, int key_idx,
   }
   // Resolve the flat interior first, including transparent glyph pixels.
   // The clipper composes rounded edges over the keyboard surface afterward.
-  const uint8_t radius = std::min<int>(
-      Scaled(3), std::min<int>(bounds.width(), bounds.height()) / 2);
+  const uint8_t radius =
+      std::min<int>(circle ? 255 : Scaled(3),
+                    std::min<int>(bounds.width(), bounds.height()) / 2);
   const int inset = BorderStyle(radius, 0).getThickness();
   const Rect inner(bounds.xMin() + inset, bounds.yMin() + inset,
                    bounds.xMax() - inset, bounds.yMax() - inset);

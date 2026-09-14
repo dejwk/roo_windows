@@ -332,6 +332,8 @@ with the number of keys.
 Compute the usual inset face rectangle first. For a circular action, center an
 integer square of side `min(face_width, face_height)` within it and render that
 square with corner radius half its side through the existing decoration path.
+The side is capped at 510 pixels because decoration radii are byte-sized;
+very large allocations keep a centered circle within that limit.
 Odd side lengths retain the renderer's integer-radius convention, within one
 pixel of the ideal circle. Center the action icon in that square, and retain
 existing function-based colors and pressed-state blending. Empty or too-small

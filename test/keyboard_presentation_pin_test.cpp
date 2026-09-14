@@ -3,6 +3,7 @@
 #include "gtest/gtest.h"
 #include "roo_testing/system/timer.h"
 #include "roo_windows/core/task.h"
+#include "roo_windows/keyboard_layout/accent_demo.h"
 #include "roo_windows/keyboard_layout/en_us_binary.h"
 #include "roo_windows/widgets/button.h"
 #include "roo_windows/widgets/text_field.h"
@@ -144,6 +145,37 @@ TEST_F(KeyboardPresentationPinTest,
   keys.onDown(26, 28);
   keys.onSingleTapUp(26, 28);
   EXPECT_EQ("q11", field_.content());
+  binary.hide();
+  owner.navigation().clear();
+}
+
+// Verifies a wide circular delete face leaves its allocation corners untouched,
+// while those same corners remain valid delete touch targets.
+TEST_F(KeyboardPresentationPinTest, CircularActionPaintAndTouchBoundsDiffer) {
+  app_.keyboard().hide();
+  Keyboard binary(context(), accentDemoLayout());
+  Task& owner =
+      app_.addTask(binary.getContents(), roo_display::Box(0, 146, 412, 174));
+  binary.setTask(owner);
+  binary.connect(app_);
+  binary.show();
+  ASSERT_TRUE(refresh());
+  Widget& keys = binary.getContents();
+  keys.layout(Rect(0, 0, 411, 173));
+  keys.invalidateInterior();
+  ASSERT_TRUE(refresh());
+  XDim dx;
+  YDim dy;
+  keys.getAbsoluteOffset(dx, dy);
+  EXPECT_EQ(QuantizeToArgb4444(context().keyboardColorTheme().background),
+            pixelAt(dx + 220, dy + 25));
+  EXPECT_EQ(QuantizeToArgb4444(context().keyboardColorTheme().modifierButton),
+            pixelAt(dx + 286, dy + 20));
+  field_.setContent("ab");
+  task_->textFieldEditor().edit(&field_, false);
+  keys.onDown(220, 25);
+  keys.onSingleTapUp(220, 25);
+  EXPECT_EQ("a", field_.content());
   binary.hide();
   owner.navigation().clear();
 }
