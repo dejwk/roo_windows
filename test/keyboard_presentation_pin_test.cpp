@@ -31,6 +31,8 @@ TEST_F(KeyboardPresentationPinTest,
   Panel& keyboard_contents = static_cast<Panel&>(keyboard.getContents());
   Panel& letter_page = static_cast<Panel&>(keyboard_contents.child_at(0));
   Widget& key = letter_page.child_at(0);
+  EXPECT_EQ(ParentClipMode::kClipped, keyboard_contents.getParentClipMode());
+  EXPECT_EQ(ParentClipMode::kClipped, letter_page.getParentClipMode());
   Task* const owner = keyboard.getContents().getTask();
   ASSERT_NE(nullptr, owner);
   EXPECT_EQ(owner, letter_page.getTask());
@@ -41,15 +43,15 @@ TEST_F(KeyboardPresentationPinTest,
   YDim page_dy;
   letter_page.getAbsoluteOffset(page_dx, page_dy);
   const Rect& key_bounds = key.parent_bounds();
-  const Rect preview_bounds(
-      key_bounds.xMin() + page_dx, key_bounds.yMin() + page_dy - 50,
-      key_bounds.xMax() + page_dx, key_bounds.yMax() + page_dy - 3);
+  const XDim preview_center_x =
+      (key_bounds.xMin() + key_bounds.xMax()) / 2 + page_dx;
+  const YDim preview_center_y = key_bounds.yMin() + page_dy - 4 - 24;
   XDim keyboard_dx;
   YDim keyboard_dy;
   keyboard_contents.getAbsoluteOffset(keyboard_dx, keyboard_dy);
-  ASSERT_LT(preview_bounds.yMin(), keyboard_dy);
-  ASSERT_GE(preview_bounds.xMin(), 0);
-  ASSERT_GE(preview_bounds.yMin(), 0);
+  ASSERT_LT(preview_center_y, keyboard_dy);
+  ASSERT_GE(preview_center_x, 0);
+  ASSERT_GE(preview_center_y, 0);
 
   key.onShowPress(0, 0);
   EXPECT_TRUE(letter_page.hasPresentationPin());
@@ -57,17 +59,8 @@ TEST_F(KeyboardPresentationPinTest,
   EXPECT_EQ(&key, owner->focus().focused());
   ASSERT_TRUE(refresh());
 
-  Color overlay = roo_display::color::Black;
-  overlay.set_a(
-      context()
-          .theme()
-          .framework.interaction
-          .resolve(FrameworkColorRole::kSurface, InteractionState::kPressed)
-          .a());
-  const Color expected = roo_display::AlphaBlend(
-      context().keyboardColorTheme().normalButton, overlay);
-  EXPECT_EQ(QuantizeToArgb4444(expected),
-            pixelAt(preview_bounds.xMin(), preview_bounds.yMin() + 1));
+  EXPECT_EQ(QuantizeToArgb4444(static_cast<Button&>(key).background()),
+            pixelAt(preview_center_x, preview_center_y));
 
   key.onCancel();
   EXPECT_FALSE(letter_page.hasPresentationPin());

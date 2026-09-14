@@ -14,6 +14,7 @@
 #include "roo_windows/core/dimensions.h"
 #include "roo_windows/core/main_window.h"
 #include "roo_windows/core/task.h"
+#include "roo_windows/decoration/decoration.h"
 #include "roo_windows/widgets/button.h"
 
 namespace roo_windows {
@@ -78,7 +79,9 @@ const RleImage4bppxBiased<Alpha4, ProgMemPtr>& caps_lock_filled_24() {
 }
 
 static const int kExtraTopPaddingPx = 2;
-static const int kHighlighterHeight = 50;
+static const int kPressPreviewDiameter = Scaled(32);
+static const int kPressPreviewGap = Scaled(2);
+static const int kPressPreviewElevation = 1;
 
 static const int kButtonMarginPercent = 10;
 static const int kMinRowHeight = 10;
@@ -259,7 +262,8 @@ class PressHighlighterPin final : public PresentationPin {
     XDim dx;
     YDim dy;
     page().getAbsoluteOffset(dx, dy);
-    return bounds.translate(dx, dy);
+    return CalculateShadowExtents(bounds, kPressPreviewElevation)
+        .translate(dx, dy);
   }
 
   void paint(PaintContext& ctx) const override {
@@ -267,23 +271,31 @@ class PressHighlighterPin final : public PresentationPin {
     YDim dy;
     page().getAbsoluteOffset(dx, dy);
     PaintContext local = ctx.translated(dx, dy);
-    const Theme& th = page().theme();
-    const KeyboardColorTheme& kb_th = page().keyboard()->color_theme();
-    Color overlay = roo_display::color::Black;
-    overlay.set_a(
-        th.framework.interaction
-            .resolve(FrameworkColorRole::kSurface, InteractionState::kPressed)
-            .a());
-    const Color background =
-        roo_display::AlphaBlend(kb_th.normalButton, overlay);
-    local.drawObject(roo_display::MakeTileOf(
-        roo_display::StringViewLabel(target_.label(), font_body1(),
-                                     target_.contentColor()),
-        boundsInPage().asBox(),
-        roo_display::kCenter | roo_display::kTop.shiftBy(3), background));
-    // The pin is painted before its popup subtree, so retain its final pixels
-    // while that lower-z content is settled.
-    local.addExclusion(boundsInPage());
+    const Rect preview = boundsInPage();
+    const Color background = target_.background();
+    const Color content = target_.contentColor();
+    roo_display::StringViewLabel label(target_.label(), font_body1(), content);
+    const roo_display::Offset offset =
+        (roo_display::kCenter | roo_display::kMiddle)
+            .resolveOffset(preview.asBox(), label.anchorExtents());
+    const Rect glyph_bounds =
+        Rect(label.extents()).translate(offset.dx, offset.dy);
+    PaintContext label_ctx = local.clipped(glyph_bounds);
+    label_ctx.setBgcolor(background);
+    label_ctx.drawTiled(label, preview,
+                        roo_display::kCenter | roo_display::kMiddle);
+    local.addExclusion(glyph_bounds);
+
+    // A rounded square with a half-side radius is a circle. The decoration is
+    // emitted after the keyboard subtree, while the glyph exclusion preserves
+    // text aligned to that circular surface.
+    PaintDecoration decoration;
+    decoration.bounds = preview;
+    decoration.background = background;
+    const uint8_t radius = preview.width() / 2;
+    decoration.corner_radii = {radius, radius, radius, radius};
+    decoration.elevation = kPressPreviewElevation;
+    local.addDecoration(decoration);
   }
 
  private:
@@ -293,8 +305,14 @@ class PressHighlighterPin final : public PresentationPin {
 
   Rect boundsInPage() const {
     const Rect& bounds = target_.parent_bounds();
-    return Rect(bounds.xMin(), bounds.yMin() - kHighlighterHeight,
-                bounds.xMax(), bounds.yMax() - 3);
+    // Keep the discrete centers aligned. With an even preview diameter, its
+    // center lies between pixels, so flooring the key center first shifts the
+    // preview one pixel left for even-width keys.
+    const XDim x_min =
+        (bounds.xMin() + bounds.xMax() - (kPressPreviewDiameter - 1)) / 2;
+    const YDim y_max = bounds.yMin() - kPressPreviewGap - 1;
+    return Rect(x_min, y_max - kPressPreviewDiameter + 1,
+                x_min + kPressPreviewDiameter - 1, y_max);
   }
 
   const TextButton& target_;
@@ -443,7 +461,6 @@ KeyboardWidget::KeyboardWidget(ApplicationContext& context,
       color_theme_(context.keyboardColorTheme()),
       caps_state_(Keyboard::CAPS_STATE_LOW),
       text_input_(text_input) {
-  setParentClipMode(ParentClipMode::kUnclipped);
   for (int i = 0; i < spec->page_count; ++i) {
     auto page = new KeyboardPage(context, &spec->pages[i]);
     add(std::unique_ptr<KeyboardPage>(page));
@@ -511,9 +528,7 @@ void KeyboardWidget::setPage(int idx) {
 
 KeyboardPage::KeyboardPage(ApplicationContext& context,
                            const KeyboardPageSpec* spec)
-    : Panel(context), spec_(spec), initialized_(false) {
-  setParentClipMode(ParentClipMode::kUnclipped);
-}
+    : Panel(context), spec_(spec), initialized_(false) {}
 
 Color KeyboardPage::background() const {
   return keyboard()->color_theme().background;
