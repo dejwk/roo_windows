@@ -5,13 +5,10 @@
 #include <stddef.h>
 
 #include <memory>
-#include <string>
-#include <vector>
 
-#include "roo_windows/core/panel.h"
 #include "roo_windows/core/text_input.h"
+#include "roo_windows/core/widget.h"
 #include "roo_windows/keyboard_layout/keyboard_layout.h"
-#include "roo_windows/widgets/button.h"
 
 namespace roo_windows {
 
@@ -22,7 +19,10 @@ class Application;
 /// On-screen software keyboard widget controller.
 ///
 /// Renders the layout supplied at construction (regular / numeric / etc.)
-/// and emits semantic text input to its connected application. Tracks caps
+/// with one surface widget, reading keys directly from the borrowed spec.
+/// The spec and its tables must outlive the keyboard.
+///
+/// Emits semantic text input to its connected application. Tracks caps
 /// state (`LOW`, `HIGH`, `HIGH_LOCKED`) and current page. Its fixed popup task
 /// owns placement; show and hide only change widget visibility.
 class Keyboard {

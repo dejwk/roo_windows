@@ -1,8 +1,8 @@
 #include "roo_windows/activities/keyboard.h"
 
+#include <algorithm>
 #include <memory>
 #include <new>
-#include <string>
 
 #include "roo_display/ui/text_label.h"
 #include "roo_display/ui/tile.h"
@@ -13,9 +13,9 @@
 #include "roo_windows/config.h"
 #include "roo_windows/core/dimensions.h"
 #include "roo_windows/core/main_window.h"
+#include "roo_windows/core/surface_widget.h"
 #include "roo_windows/core/task.h"
 #include "roo_windows/decoration/decoration.h"
-#include "roo_windows/widgets/button.h"
 
 namespace roo_windows {
 
@@ -78,6 +78,7 @@ const RleImage4bppxBiased<Alpha4, ProgMemPtr>& caps_lock_filled_24() {
   return value;
 }
 
+static const int kPagePaddingPx = 6;
 static const int kExtraTopPaddingPx = 2;
 static const int kPressPreviewDiameter = Scaled(32);
 static const int kPressPreviewGap = Scaled(2);
@@ -91,204 +92,132 @@ static const int kPreferredCellWidth = 15;
 static const roo_time::Duration kDeleteRepeatDelay = roo_time::Millis(400);
 static const roo_time::Duration kDeleteRepeatInterval = roo_time::Millis(60);
 
+// All per-key information stays in the borrowed layout tables. Only the active
+// key, one repeat timer, and pending paint damage use storage independent of
+// the number of keys and pages.
+class KeyboardWidget final : public SurfaceWidget {
+ public:
+  KeyboardWidget(ApplicationContext& context, const KeyboardSpec* spec,
+                 TextInputEmitter& text_input)
+      : SurfaceWidget(context),
+        spec_(spec),
+        text_input_(text_input),
+        repeat_(context.scheduler(), [this]() { repeatDelete(); }) {}
+
+  Color background() const override { return colorTheme().background; }
+
+  bool isClickable() const override { return true; }
+  bool supportsLongPress() override { return true; }
+  OverlayType getOverlayType() const override { return OVERLAY_NONE; }
+  // Press feedback belongs to one key, not the whole keyboard surface.
+  bool useOverlayOnPress() const override { return false; }
+  Dimensions getSuggestedMinimumDimensions() const override {
+    return Dimensions();
+  }
+  PreferredSize getPreferredSize() const override;
+  Keyboard::CapsState caps_state() const {
+    return static_cast<Keyboard::CapsState>(caps_state_);
+  }
+  void setCapsState(Keyboard::CapsState caps_state);
+  void setPage(int idx);
+  void onDown(XDim x, YDim y) override;
+  void onShowPress(XDim x, YDim y) override;
+  void onSingleTapUp(XDim x, YDim y) override;
+  void onLongPress(XDim x, YDim y) override;
+  void onLongPressFinished(XDim x, YDim y) override;
+  void onCancel() override;
+
+  const KeyboardColorTheme& colorTheme() const {
+    return context().keyboardColorTheme();
+  }
+  Rect activeBounds() const { return keyBounds(active_row_, active_key_); }
+  uint32_t activeRune() const { return rune(active_row_, active_key_); }
+
+ protected:
+  Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
+  void onLayout(bool changed, const Rect& rect) override {
+    if (changed) onCancel();
+  }
+  void invalidateDescending() override;
+  void invalidateDescending(const Rect& rect) override;
+  void paintWidgetContents(PaintContext& ctx) override;
+  void paint(PaintContext& ctx) const override;
+
+ private:
+  // Recomputes the compact grid from final widget dimensions for both drawing
+  // and hit testing; no rectangles or other state are stored per key.
+  struct Grid {
+    int cell_width, row_height, left, top;
+  };
+
+  Grid grid() const;
+  Rect keyBounds(int row, int key) const;
+  Rect keyBounds(const Grid& grid, int x, int row, int key_width) const;
+  // Assigns inter-key gutters to their grid cell; staggered row gaps stay
+  // empty.
+  void findKey(XDim x, YDim y);
+  uint32_t rune(int row, int key) const;
+  void paintKey(PaintContext& ctx, int row, int key, const Rect& bounds) const;
+  void repeatDelete();
+  void dirty(const Rect& bounds);
+  void includeDamage(const Rect& bounds);
+
+  const KeyboardSpec* spec_;
+  const KeyboardPageSpec* page_ = nullptr;
+  TextInputEmitter& text_input_;
+  roo_scheduler::SingletonTask repeat_;
+  uint8_t caps_state_ = Keyboard::CAPS_STATE_LOW;
+  int8_t active_row_ = -1;
+  int16_t active_key_ = -1;
+  Rect pending_paint_ = Rect(0, 0, -1, -1);
+};
+
 namespace {
 
-std::string runeAsStr(char32_t ch) {
-  char buf[4];
-  int n = roo_io::WriteUtf8Char(buf, ch);
-  return std::string(buf, n);
+// Draws glyphs without clearing the rounded surface around them.
+void PaintKeyContent(PaintContext& ctx, const Drawable& content,
+                     const Rect& bounds) {
+  ctx.drawTiled(content, bounds, kCenter | kMiddle);
 }
 
 }  // namespace
 
-class KeyboardPage;
-class TextButton;
-class KeyboardWidget;
-
-class KeyboardButton : public SimpleButton {
- public:
-  using SimpleButton::SimpleButton;
-
-  ClickActivationPolicy getClickActivationPolicy() const override {
-    return ClickActivationPolicy::kImmediateNoAnimation;
-  }
-
-  virtual void capsStateUpdated() {}
-
-  void onCancel() override;
-
-  Margins getMargins() const override {
-    int16_t m =
-        std::max<int16_t>(width(), height()) * kButtonMarginPercent / 200;
-    return Margins(m);
-  }
-
-  BorderStyle getBorderStyle() const override {
-    return BorderStyle(Scaled(3), 0);
-  }
-
- protected:
-  KeyboardWidget& keyboard();
-};
-
-class KeyboardPage : public Panel {
- public:
-  KeyboardPage(ApplicationContext& context, const KeyboardPageSpec* spec);
-
-  Color background() const override;
-
-  void init(ApplicationContext& context);
-
-  void showHighlighter(const TextButton& btn);
-  void hideHighlighter();
-
-  const KeyboardWidget* keyboard() const;
-  KeyboardWidget* keyboard();
-
-  PreferredSize getPreferredSize() const override;
-  Padding getPadding() const override { return Padding(6); }
-
-  void capsStateUpdated();
-
-  bool respectsChildrenBoundaries() const override { return true; }
-
- protected:
-  Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
-
-  void onLayout(bool changed, const Rect& rect) override;
-
- private:
-  const KeyboardPageSpec* spec_;
-  std::vector<KeyboardButton*> keys_;
-  bool initialized_;
-};
-
-class KeyboardWidget : public Panel {
- public:
-  KeyboardWidget(ApplicationContext& context, const KeyboardSpec* spec,
-                 TextInputEmitter& text_input);
-
-  const KeyboardColorTheme& color_theme() const { return color_theme_; }
-
-  TextInputEmitter& textInput() { return text_input_; }
-
-  Padding getPadding() const override { return Padding(1); }
-
-  PreferredSize getPreferredSize() const override;
-
-  void setCapsState(Keyboard::CapsState caps_state);
-
-  Keyboard::CapsState caps_state() const { return caps_state_; }
-
-  void setPage(int idx);
-
- protected:
-  Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
-
-  void onLayout(bool changed, const Rect& rect) override;
-
- private:
-  std::vector<KeyboardPage*> pages_;
-  const KeyboardColorTheme& color_theme_;
-  Keyboard::CapsState caps_state_;
-  KeyboardPage* current_page_;
-  TextInputEmitter& text_input_;
-};
-
-KeyboardWidget& KeyboardButton::keyboard() {
-  return *((KeyboardPage*)parent())->keyboard();
-}
-
-void KeyboardButton::onCancel() {
-  KeyboardPage* page = ((KeyboardPage*)parent());
-  page->hideHighlighter();
-  Button::onCancel();
-}
-
-class TextButton : public KeyboardButton {
- public:
-  TextButton(ApplicationContext& context, uint16_t rune, uint16_t rune_caps)
-      : KeyboardButton(context, runeAsStr(rune)),
-        rune_(rune),
-        rune_caps_(rune_caps) {
-    setFont(font_body1());
-  }
-
-  void onShowPress(XDim x, YDim y) override {
-    ((KeyboardPage*)parent())->showHighlighter(*this);
-    Button::onShowPress(x, y);
-  }
-
-  void capsStateUpdated() override {
-    if (rune_ == rune_caps_) return;
-    Keyboard::CapsState caps = keyboard().caps_state();
-    if (caps == Keyboard::CAPS_STATE_LOW) {
-      setLabel(runeAsStr(rune_));
-    } else {
-      setLabel(runeAsStr(rune_caps_));
-    }
-  }
-
-  void onSingleTapUp(XDim x, YDim y) override {
-    KeyboardPage* page = ((KeyboardPage*)parent());
-    page->hideHighlighter();
-    KeyboardButton::onSingleTapUp(x, y);
-  }
-
-  void onClicked() override {
-    KeyboardPage* page = ((KeyboardPage*)parent());
-    Keyboard::CapsState caps = keyboard().caps_state();
-    page->keyboard()->textInput().commitRune(
-        caps == Keyboard::CAPS_STATE_LOW ? rune_ : rune_caps_);
-    if (caps == Keyboard::CAPS_STATE_HIGH) {
-      // Flip back.
-      keyboard().setCapsState(Keyboard::CAPS_STATE_LOW);
-    }
-    KeyboardButton::onClicked();
-  }
-
-  uint16_t rune_;
-  uint16_t rune_caps_;
-};
-
-/// Active-only popup-layer preview for one pressed text key.
+/// Active-only popup-layer preview for the single pressed text key.
 class PressHighlighterPin final : public PresentationPin {
  public:
-  explicit PressHighlighterPin(const TextButton& target) : target_(target) {}
+  explicit PressHighlighterPin(const KeyboardWidget& target)
+      : target_(target) {}
 
  protected:
   Rect boundsInWindow() const override {
-    const Rect bounds = boundsInPage();
     XDim dx;
     YDim dy;
-    page().getAbsoluteOffset(dx, dy);
-    return CalculateShadowExtents(bounds, kPressPreviewElevation)
+    target_.getAbsoluteOffset(dx, dy);
+    return CalculateShadowExtents(previewBounds(), kPressPreviewElevation)
         .translate(dx, dy);
   }
 
   void paint(PaintContext& ctx) const override {
     XDim dx;
     YDim dy;
-    page().getAbsoluteOffset(dx, dy);
+    target_.getAbsoluteOffset(dx, dy);
     PaintContext local = ctx.translated(dx, dy);
-    const Rect preview = boundsInPage();
-    const Color background = target_.background();
-    const Color content = target_.contentColor();
-    roo_display::StringViewLabel label(target_.label(), font_body1(), content);
-    const roo_display::Offset offset =
-        (roo_display::kCenter | roo_display::kMiddle)
+    const Rect preview = previewBounds();
+    const Color background = target_.colorTheme().normalButton;
+    char utf8[4];
+    int size = roo_io::WriteUtf8Char(utf8, target_.activeRune());
+    StringViewLabel label(roo::string_view(utf8, size), font_body1(),
+                          target_.colorTheme().text);
+    const Offset offset =
+        (kCenter | kMiddle)
             .resolveOffset(preview.asBox(), label.anchorExtents());
     const Rect glyph_bounds =
         Rect(label.extents()).translate(offset.dx, offset.dy);
     PaintContext label_ctx = local.clipped(glyph_bounds);
     label_ctx.setBgcolor(background);
-    label_ctx.drawTiled(label, preview,
-                        roo_display::kCenter | roo_display::kMiddle);
+    label_ctx.drawTiled(label, preview, kCenter | kMiddle);
     local.addExclusion(glyph_bounds);
 
-    // A rounded square with a half-side radius is a circle. The decoration is
-    // emitted after the keyboard subtree, while the glyph exclusion preserves
-    // text aligned to that circular surface.
     PaintDecoration decoration;
     decoration.bounds = preview;
     decoration.background = background;
@@ -299,15 +228,9 @@ class PressHighlighterPin final : public PresentationPin {
   }
 
  private:
-  const KeyboardPage& page() const {
-    return *static_cast<const KeyboardPage*>(target_.parent());
-  }
-
-  Rect boundsInPage() const {
-    const Rect& bounds = target_.parent_bounds();
-    // Keep the discrete centers aligned. With an even preview diameter, its
-    // center lies between pixels, so flooring the key center first shifts the
-    // preview one pixel left for even-width keys.
+  Rect previewBounds() const {
+    const Rect bounds = target_.activeBounds();
+    // Preserve the between-pixel center of even-width keys.
     const XDim x_min =
         (bounds.xMin() + bounds.xMax() - (kPressPreviewDiameter - 1)) / 2;
     const YDim y_max = bounds.yMin() - kPressPreviewGap - 1;
@@ -315,381 +238,322 @@ class PressHighlighterPin final : public PresentationPin {
                 x_min + kPressPreviewDiameter - 1, y_max);
   }
 
-  const TextButton& target_;
+  const KeyboardWidget& target_;
 };
-
-class SpaceButton : public KeyboardButton {
- public:
-  SpaceButton(ApplicationContext& context) : KeyboardButton(context, "") {}
-
-  void onClicked() override {
-    KeyboardPage* page = ((KeyboardPage*)parent());
-    page->keyboard()->textInput().commitRune(' ');
-    KeyboardButton::onClicked();
-  }
-};
-
-class EnterButton : public KeyboardButton {
- public:
-  EnterButton(ApplicationContext& context, const MonoIcon& icon)
-      : KeyboardButton(context, icon) {}
-
-  void onClicked() override {
-    KeyboardPage* page = ((KeyboardPage*)parent());
-    page->keyboard()->textInput().performAction(TextInputAction::kDone);
-    KeyboardButton::onClicked();
-  }
-};
-
-class ShiftButton : public KeyboardButton {
- public:
-  ShiftButton(ApplicationContext& context)
-      : KeyboardButton(context, shift_24()) {}
-
-  void onShowPress(XDim x, YDim y) override {
-    auto& kb = keyboard();
-    switch (kb.caps_state()) {
-      case Keyboard::CAPS_STATE_LOW: {
-        kb.setCapsState(Keyboard::CAPS_STATE_HIGH);
-        break;
-      }
-      case Keyboard::CAPS_STATE_HIGH:
-      case Keyboard::CAPS_STATE_HIGH_LOCKED: {
-        kb.setCapsState(Keyboard::CAPS_STATE_LOW);
-        break;
-      }
-    }
-    KeyboardButton::onShowPress(x, y);
-  }
-
-  bool supportsLongPress() override { return true; }
-
-  void onLongPress(XDim x, YDim y) {
-    auto& kb = keyboard();
-    if (kb.caps_state() == Keyboard::CAPS_STATE_HIGH) {
-      kb.setCapsState(Keyboard::CAPS_STATE_HIGH_LOCKED);
-      setIcon(&caps_lock_filled_24());
-    }
-    KeyboardButton::onLongPress(x, y);
-  }
-
-  void capsStateUpdated() override {
-    auto& kb = keyboard();
-    switch (kb.caps_state()) {
-      case Keyboard::CAPS_STATE_LOW: {
-        setIcon(&shift_24());
-        break;
-      }
-      case Keyboard::CAPS_STATE_HIGH: {
-        setIcon(&shift_filled_24());
-        break;
-      }
-      case Keyboard::CAPS_STATE_HIGH_LOCKED: {
-        setIcon(&caps_lock_filled_24());
-        break;
-      }
-    }
-  }
-};
-
-class DelButton : public KeyboardButton {
- public:
-  DelButton(ApplicationContext& context, const MonoIcon& icon)
-      : KeyboardButton(context, icon),
-        repeat_(context.scheduler(), [this]() { repeatDelete(); }) {}
-
-  void onShowPress(XDim x, YDim y) override {
-    deleteBackward();
-    repeat_.scheduleAfter(kDeleteRepeatDelay);
-    KeyboardButton::onShowPress(x, y);
-  }
-
-  bool supportsLongPress() override { return true; }
-
-  void onSingleTapUp(XDim x, YDim y) override {
-    repeat_.cancel();
-    KeyboardButton::onSingleTapUp(x, y);
-  }
-
-  void onLongPressFinished(XDim x, YDim y) override {
-    repeat_.cancel();
-    KeyboardButton::onLongPressFinished(x, y);
-  }
-
-  void onCancel() override {
-    repeat_.cancel();
-    KeyboardButton::onCancel();
-  }
-
- private:
-  void deleteBackward() { keyboard().textInput().deleteBackward(); }
-
-  void repeatDelete() {
-    if (!isPressed()) return;
-    deleteBackward();
-    repeat_.scheduleAfter(kDeleteRepeatInterval);
-  }
-
-  roo_scheduler::SingletonTask repeat_;
-};
-
-class PageSwitchButton : public KeyboardButton {
- public:
-  PageSwitchButton(ApplicationContext& context, std::string label,
-                   uint8_t target)
-      : KeyboardButton(context, std::move(label)), target_(target) {}
-
-  void onShowPress(XDim x, YDim y) override {
-    keyboard().setPage(target_);
-    KeyboardButton::onShowPress(x, y);
-  }
-
- private:
-  uint8_t target_;
-};
-
-const KeyboardWidget* KeyboardPage::keyboard() const {
-  return (KeyboardWidget*)parent();
-}
-
-KeyboardWidget* KeyboardPage::keyboard() { return (KeyboardWidget*)parent(); }
-
-KeyboardWidget::KeyboardWidget(ApplicationContext& context,
-                               const KeyboardSpec* spec,
-                               TextInputEmitter& text_input)
-    : Panel(context),
-      color_theme_(context.keyboardColorTheme()),
-      caps_state_(Keyboard::CAPS_STATE_LOW),
-      text_input_(text_input) {
-  for (int i = 0; i < spec->page_count; ++i) {
-    auto page = new KeyboardPage(context, &spec->pages[i]);
-    add(std::unique_ptr<KeyboardPage>(page));
-    pages_.push_back(page);
-  }
-  setPage(-1);
-}
 
 PreferredSize KeyboardWidget::getPreferredSize() const {
-  return current_page_ == nullptr ? PreferredSize(PreferredSize::ExactWidth(0),
-                                                  PreferredSize::ExactHeight(0))
-                                  : current_page_->getPreferredSize();
-}
-
-PreferredSize KeyboardPage::getPreferredSize() const {
-  Padding padding = getPadding();
+  if (page_ == nullptr) {
+    return PreferredSize(PreferredSize::ExactWidth(0),
+                         PreferredSize::ExactHeight(0));
+  }
   return PreferredSize(
       PreferredSize::MatchParentWidth(),
-      PreferredSize::ExactHeight(spec_->row_count * kPreferredRowHeight +
-                                 padding.top() + padding.bottom() +
-                                 kExtraTopPaddingPx));
+      PreferredSize::ExactHeight(page_->row_count * kPreferredRowHeight +
+                                 2 * kPagePaddingPx + kExtraTopPaddingPx));
 }
 
 Dimensions KeyboardWidget::onMeasure(WidthSpec width, HeightSpec height) {
-  return (current_page_ == nullptr) ? Dimensions()
-                                    : current_page_->measure(width, height);
+  if (page_ == nullptr) return Dimensions();
+  return Dimensions(
+      width.kind() == UNSPECIFIED
+          ? page_->row_width * kPreferredCellWidth + 2 * kPagePaddingPx
+          : width.value(),
+      height.kind() == UNSPECIFIED ? page_->row_count * kPreferredRowHeight +
+                                         2 * kPagePaddingPx + kExtraTopPaddingPx
+                                   : height.value());
 }
 
-void KeyboardWidget::onLayout(bool changed, const Rect& rect) {
-  if (current_page_ != nullptr) {
-    current_page_->layout(Rect(0, 0, rect.width() - 1, rect.height() - 1));
+KeyboardWidget::Grid KeyboardWidget::grid() const {
+  const int cell_width = std::max(
+      kMinCellWidth, (width() - 2 * kPagePaddingPx) / page_->row_width);
+  const int row_height = std::max(
+      kMinRowHeight,
+      (height() - 2 * kPagePaddingPx - kExtraTopPaddingPx) / page_->row_count);
+  return {cell_width, row_height,
+          std::max(0, (width() - page_->row_width * cell_width) / 2),
+          std::max(0, (height() - kExtraTopPaddingPx -
+                       page_->row_count * row_height) /
+                          2) +
+              kExtraTopPaddingPx};
+}
+
+Rect KeyboardWidget::keyBounds(int row_idx, int key_idx) const {
+  const Grid g = grid();
+  const KeyboardRowSpec& row = page_->rows[row_idx];
+  int x = g.left + row.start_offset * g.cell_width;
+  for (int i = 0; i < key_idx; ++i) x += row.keys[i].width * g.cell_width;
+  return keyBounds(g, x, row_idx, row.keys[key_idx].width);
+}
+
+Rect KeyboardWidget::keyBounds(const Grid& g, int x, int row_idx,
+                               int key_width) const {
+  const int y = g.top + row_idx * g.row_height;
+  const int mx = std::max(1, g.cell_width * kButtonMarginPercent / 100);
+  const int my = std::max(1, g.row_height * kButtonMarginPercent / 100);
+  return Rect(x + mx, y + my, x + key_width * g.cell_width - mx - 1,
+              y + g.row_height - my - 1);
+}
+
+void KeyboardWidget::findKey(XDim x, YDim y) {
+  if (page_ == nullptr || !bounds().contains(x, y)) return;
+  const Grid g = grid();
+  if (y < g.top) return;
+  const int row_idx = (y - g.top) / g.row_height;
+  if (row_idx >= page_->row_count) return;
+  const KeyboardRowSpec& row = page_->rows[row_idx];
+  int left = g.left + row.start_offset * g.cell_width;
+  if (x < left) return;
+  for (int i = 0; i < row.key_count; ++i) {
+    left += row.keys[i].width * g.cell_width;
+    if (x < left) {
+      active_row_ = row_idx;
+      active_key_ = i;
+      return;
+    }
   }
+}
+
+uint32_t KeyboardWidget::rune(int row_idx, int key_idx) const {
+  const KeyboardRowSpec& row = page_->rows[row_idx];
+  return (caps_state_ == Keyboard::CAPS_STATE_LOW ? row.keys
+                                                  : row.keys_caps)[key_idx]
+      .data;
+}
+
+void KeyboardWidget::paintKey(PaintContext& ctx, int row_idx, int key_idx,
+                              const Rect& bounds) const {
+  const KeyboardRowSpec& row = page_->rows[row_idx];
+  const KeySpec& key = row.keys[key_idx];
+  PaintContext local = ctx.clipped(bounds);
+  if (local.empty()) return;
+  Color background = colorTheme().modifierButton;
+  if (key.function == KeySpec::TEXT || key.function == KeySpec::SPACE) {
+    background = colorTheme().normalButton;
+  } else if (key.function == KeySpec::ENTER) {
+    background = colorTheme().acceptButton;
+  }
+  if (isPressed() && active_row_ == row_idx && active_key_ == key_idx) {
+    background = AlphaBlend(background, theme().material3Theme().state.resolve(
+                                            material3::ColorToken::kPrimary,
+                                            InteractionState::kPressed));
+  }
+  // Resolve the flat interior first, including transparent glyph pixels.
+  // The clipper composes rounded edges over the keyboard surface afterward.
+  const uint8_t radius = std::min<int>(
+      Scaled(3), std::min<int>(bounds.width(), bounds.height()) / 2);
+  const int inset = BorderStyle(radius, 0).getThickness();
+  const Rect inner(bounds.xMin() + inset, bounds.yMin() + inset,
+                   bounds.xMax() - inset, bounds.yMax() - inset);
+  PaintContext content = local.clipped(inner);
+  content.setBgcolor(background);
+  const MonoIcon* icon = nullptr;
+  switch (key.function) {
+    case KeySpec::TEXT: {
+      char utf8[4];
+      int size = roo_io::WriteUtf8Char(utf8, rune(row_idx, key_idx));
+      PaintKeyContent(content,
+                      StringViewLabel(roo::string_view(utf8, size),
+                                      font_body1(), colorTheme().text),
+                      bounds);
+      break;
+    }
+    case KeySpec::SWITCH_PAGE:
+      PaintKeyContent(
+          content,
+          StringViewLabel(roo::string_view(row.pageswitch_key_labels +
+                                               ((key.data >> 8) & 0xFF),
+                                           key.data >> 16),
+                          font_button(), colorTheme().text),
+          bounds);
+      break;
+    case KeySpec::ENTER:
+      icon = &ic_outlined_24_action_done();
+      break;
+    case KeySpec::DEL:
+      icon = &ic_outlined_24_content_backspace();
+      break;
+    case KeySpec::SHIFT:
+      icon = caps_state_ == Keyboard::CAPS_STATE_LOW ? &shift_24()
+             : caps_state_ == Keyboard::CAPS_STATE_HIGH
+                 ? &shift_filled_24()
+                 : &caps_lock_filled_24();
+      break;
+    case KeySpec::SPACE:
+      content.clear();
+      break;
+  }
+  if (icon != nullptr) {
+    MonoIcon tinted = *icon;
+    tinted.color_mode().setColor(colorTheme().text);
+    PaintKeyContent(content, tinted, bounds);
+  }
+  PaintDecoration decoration;
+  decoration.bounds = bounds;
+  decoration.background = background;
+  decoration.corner_radii = {radius, radius, radius, radius};
+  local.addDecoration(decoration);
+  local.addExclusion(inner);
+}
+
+void KeyboardWidget::includeDamage(const Rect& bounds) {
+  if (bounds.empty()) return;
+  pending_paint_ =
+      pending_paint_.empty() ? bounds : Rect::Extent(pending_paint_, bounds);
+}
+
+void KeyboardWidget::invalidateDescending() {
+  Widget::invalidateDescending();
+  pending_paint_ = bounds();
+}
+
+void KeyboardWidget::invalidateDescending(const Rect& rect) {
+  Widget::invalidateDescending(rect);
+  // A preview can expose only a strip of this surface while unrelated damage
+  // elsewhere expands MainWindow's combined redraw rectangle.
+  includeDamage(Rect::Intersect(rect, bounds()));
+}
+
+// Preserve pending damage until the entire local pass succeeds, including
+// when the framework defers painting because its deadline has expired.
+void KeyboardWidget::paintWidgetContents(PaintContext& ctx) {
+  const Rect damage = pending_paint_.empty() ? bounds() : pending_paint_;
+  PaintContext local = ctx.clipped(damage);
+  Widget::paintWidgetContents(local);
+  if (!isDirty()) pending_paint_ = Rect(0, 0, -1, -1);
+}
+
+void KeyboardWidget::dirty(const Rect& bounds) {
+  includeDamage(bounds);
+  setDirty(bounds);
+}
+
+void KeyboardWidget::paint(PaintContext& ctx) const {
+  if (page_ == nullptr) {
+    ctx.clear();
+    return;
+  }
+  const Grid g = grid();
+  const Rect clip = ctx.localClip();
+  if (clip.empty()) return;
+  // Visit only intersecting rows and stop each row at the right clip edge.
+  // Advance the grid cursor even for skipped keys; no per-key geometry cache
+  // or repeated walk from the beginning of the row is needed.
+  const int first_row = std::max(0, (clip.yMin() - g.top) / g.row_height);
+  const int last_row =
+      std::min<int>(page_->row_count - 1, (clip.yMax() - g.top) / g.row_height);
+  for (int row_idx = first_row; row_idx <= last_row; ++row_idx) {
+    const KeyboardRowSpec& row = page_->rows[row_idx];
+    int x = g.left + row.start_offset * g.cell_width;
+    for (int key = 0; key < row.key_count && x <= clip.xMax(); ++key) {
+      const int key_width = row.keys[key].width;
+      const int next_x = x + key_width * g.cell_width;
+      if (next_x > clip.xMin()) {
+        const Rect bounds = keyBounds(g, x, row_idx, key_width);
+        if (bounds.intersects(clip)) paintKey(ctx, row_idx, key, bounds);
+      }
+      x = next_x;
+    }
+  }
+  ctx.clear();
 }
 
 void KeyboardWidget::setCapsState(Keyboard::CapsState caps_state) {
   if (caps_state == caps_state_) return;
-  bool caps_switched = (caps_state == Keyboard::CAPS_STATE_LOW ||
-                        caps_state_ == Keyboard::CAPS_STATE_LOW);
   caps_state_ = caps_state;
-  if (caps_switched) {
-    for (auto& page : pages_) {
-      page->capsStateUpdated();
-    }
-  }
+  dirty(bounds());
+  if (hasPresentationPin()) setPresentationPinDirty();
 }
 
 void KeyboardWidget::setPage(int idx) {
-  if (idx < 0) {
-    if (current_page_ == nullptr) return;
-    current_page_->hideHighlighter();
-    current_page_ = nullptr;
-  } else {
-    if (current_page_ == pages_[idx]) return;
-    if (current_page_ != nullptr) current_page_->hideHighlighter();
-    current_page_ = pages_[idx];
-    current_page_->init(context());
-  }
-  for (int i = 0; i < static_cast<int>(pages_.size()); ++i) {
-    pages_[i]->setVisibility(i == idx ? Visibility::kVisible
-                                      : Visibility::kGone);
-  }
+  if (idx >= spec_->page_count) return;
+  const KeyboardPageSpec* page = idx < 0 ? nullptr : &spec_->pages[idx];
+  if (page == page_) return;
+  onCancel();
+  page_ = page;
   setCapsState(Keyboard::CAPS_STATE_LOW);
+  invalidateInterior();
   requestLayout();
 }
 
-KeyboardPage::KeyboardPage(ApplicationContext& context,
-                           const KeyboardPageSpec* spec)
-    : Panel(context), spec_(spec), initialized_(false) {}
-
-Color KeyboardPage::background() const {
-  return keyboard()->color_theme().background;
+void KeyboardWidget::onDown(XDim x, YDim y) {
+  onCancel();
+  findKey(x, y);
 }
 
-void KeyboardPage::init(ApplicationContext& context) {
-  if (initialized_) return;
-  initialized_ = true;
-  for (int i = 0; i < spec_->row_count; ++i) {
-    const auto& row = spec_->rows[i];
-    for (int j = 0; j < row.key_count; ++j) {
-      KeyboardButton* b;
-      Color b_color;
-      const auto& key = row.keys[j];
-      const auto& key_caps = row.keys_caps[j];
-      switch (key.function) {
-        case KeySpec::TEXT: {
-          b = new TextButton(context, key.data, key_caps.data);
-          b_color = context.keyboardColorTheme().normalButton;
-          break;
-        }
-        case KeySpec::SPACE: {
-          b = new SpaceButton(context);
-          b_color = context.keyboardColorTheme().normalButton;
-          break;
-        }
-        case KeySpec::ENTER: {
-          b = new EnterButton(context, ic_outlined_24_action_done());
-          b_color = context.keyboardColorTheme().acceptButton;
-          break;
-        }
-        case KeySpec::SHIFT: {
-          b = new ShiftButton(context);
-          b_color = context.keyboardColorTheme().modifierButton;
-          break;
-        }
-        case KeySpec::DEL: {
-          b = new DelButton(context, ic_outlined_24_content_backspace());
-          b_color = context.keyboardColorTheme().modifierButton;
-          break;
-        }
-        case KeySpec::SWITCH_PAGE: {
-          b = new PageSwitchButton(
-              context,
-              std::string(row.pageswitch_key_labels + ((key.data >> 8) & 0xFF),
-                          key.data >> 16),
-              (key.data & 0xFF));
-          b_color = context.keyboardColorTheme().modifierButton;
-          break;
-        }
-      }
-      b->setInteriorColor(b_color);
-      b->setOutlineColor(b_color);
-      b->setContentColor(context.keyboardColorTheme().text);
-      keys_.emplace_back(b);
-      add(std::unique_ptr<Button>(b));
-    }
+void KeyboardWidget::onShowPress(XDim x, YDim y) {
+  if (active_key_ < 0 || isPressed()) return;
+  setPressed(true);
+  dirty(activeBounds());
+  const KeySpec& key = page_->rows[active_row_].keys[active_key_];
+  switch (key.function) {
+    case KeySpec::TEXT:
+      showPresentationPin(std::unique_ptr<PresentationPin>(
+          new (std::nothrow) PressHighlighterPin(*this)));
+      break;
+    case KeySpec::SHIFT:
+      setCapsState(caps_state_ == Keyboard::CAPS_STATE_LOW
+                       ? Keyboard::CAPS_STATE_HIGH
+                       : Keyboard::CAPS_STATE_LOW);
+      break;
+    case KeySpec::DEL:
+      // Schedule before synchronous delivery, which may hide this keyboard.
+      repeat_.scheduleAfter(kDeleteRepeatDelay);
+      text_input_.deleteBackward();
+      break;
+    case KeySpec::SWITCH_PAGE:
+      setPage(key.data & 0xFF);
+      break;
+    default:
+      break;
   }
 }
 
-Dimensions KeyboardPage::onMeasure(WidthSpec width, HeightSpec height) {
-  // Calculate grid size.
-  Padding padding = getPadding();
-  int16_t row_height;
-  int16_t full_height;
-  // int16_t top_offset;
-  if (height.kind() == UNSPECIFIED) {
-    row_height = kPreferredRowHeight;
-    full_height = row_height * spec_->row_count + padding.top() +
-                  padding.bottom() + kExtraTopPaddingPx;
-  } else {
-    int16_t hspan =
-        height.value() - padding.top() - padding.bottom() - kExtraTopPaddingPx;
-    row_height = std::max<int16_t>(kMinRowHeight, hspan / spec_->row_count);
-    full_height = height.value();
-  }
-  int16_t cell_width;
-  int16_t full_width;
-  if (width.kind() == UNSPECIFIED) {
-    cell_width = kPreferredCellWidth;
-    full_width =
-        cell_width * spec_->row_width + padding.left() + padding.right();
-  } else {
-    int16_t vspan = width.value() - padding.left() - padding.right();
-    cell_width = std::max<int16_t>(kMinCellWidth, vspan / spec_->row_width);
-    full_width = width.value();
-  }
-
-  int h_key_margin = row_height * kButtonMarginPercent / 100;
-  if (h_key_margin < 1) h_key_margin = 1;
-  int v_key_margin = cell_width * kButtonMarginPercent / 100;
-  if (v_key_margin < 1) v_key_margin = 1;
-
-  // Now go through all children and have them measured.
-  int child_idx = 0;
-  for (int i = 0; i < spec_->row_count; ++i) {
-    const auto& row = spec_->rows[i];
-    for (int j = 0; j < row.key_count; ++j) {
-      const auto& key = row.keys[j];
-      Widget& w = child_at(child_idx++);
-      w.measure(WidthSpec::Exactly(cell_width - 2 * v_key_margin * key.width),
-                HeightSpec::Exactly(row_height - 2 * h_key_margin));
-    }
-  }
-  return Dimensions(full_height, full_width);
-}
-
-void KeyboardPage::onLayout(bool changed, const Rect& rect) {
-  // Recalculate now that we have a specific dimensions.
-  Padding padding = getPadding();
-  int16_t vspan =
-      rect.height() - padding.top() - padding.bottom() - kExtraTopPaddingPx;
-  int16_t row_height =
-      std::max<int16_t>(kMinRowHeight, vspan / spec_->row_count);
-  int16_t top_offset = std::max<int16_t>(
-      0,
-      (rect.height() - kExtraTopPaddingPx - spec_->row_count * row_height) / 2);
-  int16_t hspan = rect.width() - padding.left() - padding.right();
-  int16_t cell_width =
-      std::max<int16_t>(kMinCellWidth, hspan / spec_->row_width);
-  int16_t left_offset =
-      std::max<int16_t>(0, (rect.width() - spec_->row_width * cell_width) / 2);
-
-  int h_key_margin = row_height * kButtonMarginPercent / 100;
-  if (h_key_margin < 1) h_key_margin = 1;
-  int v_key_margin = cell_width * kButtonMarginPercent / 100;
-  if (v_key_margin < 1) v_key_margin = 1;
-
-  int y = top_offset + kExtraTopPaddingPx;
-  int child_idx = 0;
-  for (int i = 0; i < spec_->row_count; ++i) {
-    const auto& row = spec_->rows[i];
-    int x = left_offset + row.start_offset * cell_width;
-    for (int j = 0; j < row.key_count; ++j) {
-      const auto& key = row.keys[j];
-      Box bounds(x + v_key_margin, y + h_key_margin,
-                 x + key.width * cell_width - v_key_margin - 1,
-                 y + row_height - h_key_margin - 1);
-      Widget& w = child_at(child_idx++);
-      w.layout(bounds);
-      x += key.width * cell_width;
-    }
-    y += row_height;
+void KeyboardWidget::onSingleTapUp(XDim x, YDim y) {
+  if (active_key_ < 0) return;
+  if (!isPressed()) onShowPress(x, y);
+  if (active_key_ < 0) return;  // Page switches cancel the old key.
+  const KeySpec::Function function =
+      page_->rows[active_row_].keys[active_key_].function;
+  const uint32_t ch = function == KeySpec::TEXT ? activeRune() : ' ';
+  const Keyboard::CapsState caps = caps_state();
+  onCancel();
+  if (function == KeySpec::TEXT) {
+    if (caps == Keyboard::CAPS_STATE_HIGH)
+      setCapsState(Keyboard::CAPS_STATE_LOW);
+    text_input_.commitRune(ch);
+  } else if (function == KeySpec::SPACE) {
+    text_input_.commitRune(' ');
+  } else if (function == KeySpec::ENTER) {
+    text_input_.performAction(TextInputAction::kDone);
   }
 }
 
-void KeyboardPage::showHighlighter(const TextButton& btn) {
-  // A new press can target a different key before the prior cancellation
-  // reaches this page, so replace rather than retain that pin's borrowed key.
+void KeyboardWidget::onLongPress(XDim x, YDim y) {
+  if (active_key_ < 0) return;
+  if (page_->rows[active_row_].keys[active_key_].function == KeySpec::SHIFT &&
+      caps_state_ == Keyboard::CAPS_STATE_HIGH) {
+    setCapsState(Keyboard::CAPS_STATE_HIGH_LOCKED);
+  }
+}
+
+void KeyboardWidget::onLongPressFinished(XDim x, YDim y) {
+  // Text keys still commit on release after a hold; only shift and delete
+  // have additional long-press semantics.
+  onSingleTapUp(x, y);
+}
+
+void KeyboardWidget::onCancel() {
+  repeat_.cancel();
   hidePresentationPin();
-  std::unique_ptr<PressHighlighterPin> pin(new (std::nothrow)
-                                               PressHighlighterPin(btn));
-  showPresentationPin(std::move(pin));
+  if (active_key_ >= 0) dirty(activeBounds());
+  active_row_ = active_key_ = -1;
+  setPressed(false);
 }
 
-void KeyboardPage::hideHighlighter() { hidePresentationPin(); }
-
-void KeyboardPage::capsStateUpdated() {
-  for (auto& key : keys_) {
-    key->capsStateUpdated();
-  }
+void KeyboardWidget::repeatDelete() {
+  if (!isPressed() || active_key_ < 0 || !isPresented()) return;
+  repeat_.scheduleAfter(kDeleteRepeatInterval);
+  text_input_.deleteBackward();
 }
 
 KeyboardWidget* Keyboard::contents() {

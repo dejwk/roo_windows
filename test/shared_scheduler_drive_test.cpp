@@ -1,5 +1,4 @@
 #include "gtest/gtest.h"
-
 #include "roo_display.h"
 #include "roo_display/core/offscreen.h"
 #include "roo_scheduler.h"
@@ -32,8 +31,7 @@ class OneKeySource final : public KeySource {
 class TextInputDestination final : public Destination {
  public:
   explicit TextInputDestination(ApplicationContext& context)
-      : field(context, font_body1(), "", roo_display::kLeft,
-              TextField::NONE) {}
+      : field(context, font_body1(), "", roo_display::kLeft, TextField::NONE) {}
 
   Widget& getContents() override { return field; }
 
@@ -99,11 +97,9 @@ TEST(SharedSchedulerDrive, KeyboardCanTargetAnotherApplicationEditor) {
   ASSERT_TRUE(source.refresh());
   source.keyboard().show();
   EXPECT_TRUE(source.refresh());
-  Panel& keyboard_contents =
-      static_cast<Panel&>(source.keyboard().getContents());
-  Panel& letter_page = static_cast<Panel&>(keyboard_contents.child_at(0));
-  Widget& q_key = letter_page.child_at(0);
-  q_key.onSingleTapUp(0, 0);
+  Widget& keyboard_contents = source.keyboard().getContents();
+  keyboard_contents.onDown(5, 6);
+  keyboard_contents.onSingleTapUp(5, 6);
 
   EXPECT_EQ("q", target.field.content());
   destination_navigation.clear();
