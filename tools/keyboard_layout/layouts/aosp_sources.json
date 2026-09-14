@@ -1,0 +1,90 @@
+{
+  "repository": "https://android.googlesource.com/platform/packages/inputmethods/LatinIME",
+  "revision": "refs/tags/android-15.0.0_r1",
+  "files": {
+    "key_styles_common.xml": {
+      "sha256": "63dff147b1833f110ff8106ec7cedfd7b1a6e0e3411795f32a40cae93dcfa24c",
+      "path": "java/res/xml/key_styles_common.xml"
+    },
+    "key_space_symbols.xml": {
+      "sha256": "69bd594b2620b900f0b15994222864060cd1f8948a0918075f6fdb7e725b9f9a",
+      "path": "java/res/xml/key_space_symbols.xml"
+    },
+    "key_styles_currency_dollar.xml": {
+      "sha256": "9a518d7d5818b2530aab2684cdcb0c09b6f075fa890fe2129a4984ce772ba485",
+      "path": "java/res/xml/key_styles_currency_dollar.xml"
+    },
+    "key_styles_currency.xml": {
+      "sha256": "452da94103210eae388d987a41b946cb19a8b555a0637cdac0a4a29dda6d1453",
+      "path": "java/res/xml/key_styles_currency.xml"
+    },
+    "row_symbols_shift4.xml": {
+      "sha256": "12912da314dc31ff942372b2e9512e0379a22ea97bcfb9c997ddc2faace060eb",
+      "path": "java/res/xml/row_symbols_shift4.xml"
+    },
+    "rowkeys_symbols_shift3.xml": {
+      "sha256": "d31467ca78a26d46204ba0232b2ee5734d4469e059f8df64405f1914e62ee302",
+      "path": "java/res/xml/rowkeys_symbols_shift3.xml"
+    },
+    "rowkeys_symbols_shift2.xml": {
+      "sha256": "d0c81d1d117d85d5566e436babe1dd7c465b5784bb40dbb3efee6ec509903039",
+      "path": "java/res/xml/rowkeys_symbols_shift2.xml"
+    },
+    "rowkeys_symbols_shift1.xml": {
+      "sha256": "a68bb480ba72cf278c3125d5f2ba2fcc1002e77fbda998e6e7e3b55e3c224162",
+      "path": "java/res/xml/rowkeys_symbols_shift1.xml"
+    },
+    "row_symbols4.xml": {
+      "sha256": "4f2e14bad9e02724f29bc6ae1379a37c4848448d0d8d8b120a60556e8526b44a",
+      "path": "java/res/xml/row_symbols4.xml"
+    },
+    "rowkeys_symbols3.xml": {
+      "sha256": "0cf64d924c17e8ac4bac48a380655ddf26b90611f606bb516ed7f84f33a25bb1",
+      "path": "java/res/xml/rowkeys_symbols3.xml"
+    },
+    "rowkeys_symbols2.xml": {
+      "sha256": "3d68f979d7c619bdc79f28f5e0dce96d0e910aafd75a2ce55fd33658fcc87fef",
+      "path": "java/res/xml/rowkeys_symbols2.xml"
+    },
+    "rowkeys_symbols1.xml": {
+      "sha256": "394a9a4d1b939ba2c65a6412e20408b3138208e9d88060c8969238b5fd4c7f55",
+      "path": "java/res/xml/rowkeys_symbols1.xml"
+    },
+    "rows_symbols_shift.xml": {
+      "sha256": "c62f775823bc102cbfa26e5d7b7dae9d367201aca969eed30355006d6052d26f",
+      "path": "java/res/xml/rows_symbols_shift.xml"
+    },
+    "rows_symbols.xml": {
+      "sha256": "f1473f79a96ba08ddfe4a5ca6c6d23bdceb0d27942f8bac0630637c72f045061",
+      "path": "java/res/xml/rows_symbols.xml"
+    },
+    "row_qwerty4.xml": {
+      "sha256": "6fc9aae3ff9f771614e8fdada3942df1deefb3eaed0b0791d615f767f2179536",
+      "path": "java/res/xml/row_qwerty4.xml"
+    },
+    "rowkeys_qwerty3.xml": {
+      "sha256": "3232a4afa4d21e90b0b6075f8ade1fd88292a83893c5f1a36a9e991851bcc7e9",
+      "path": "java/res/xml/rowkeys_qwerty3.xml"
+    },
+    "rowkeys_qwerty2.xml": {
+      "sha256": "de403ca88aafd9f691482d0cc52e5ccf7524fc447a9a638ec10ba8f5911ca406",
+      "path": "java/res/xml/rowkeys_qwerty2.xml"
+    },
+    "rowkeys_qwerty1.xml": {
+      "sha256": "ce1dca63f9d59525a565b88676548ac2a0e9cee70795046546e44ce83174c169",
+      "path": "java/res/xml/rowkeys_qwerty1.xml"
+    },
+    "rows_qwerty.xml": {
+      "sha256": "92a18b6b1861891effade724f1eee065dc8c834a832584c2a7f04ad80075dd05",
+      "path": "java/res/xml/rows_qwerty.xml"
+    },
+    "method.xml": {
+      "sha256": "7e7257f679eb9976d1440a1fc1f9f3baad30c1a4895e549297b705c8e97a4b35",
+      "path": "java/res/xml/method.xml"
+    },
+    "KeyboardTextsTable.java": {
+      "sha256": "c423485e756a6045571034347c57d90d18366c7f6ccedf815a8cb4caa79966b0",
+      "path": "java/src/com/android/inputmethod/keyboard/internal/KeyboardTextsTable.java"
+    }
+  }
+}

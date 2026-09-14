@@ -1,0 +1,64 @@
+{
+  "format": 1,
+  "name": "accent_demo",
+  "pages": [
+    {
+      "id": "letters",
+      "width": 10,
+      "rows": [
+        {
+          "offset": 1,
+          "keys": [
+            {
+              "text": "a",
+              "upper": "A",
+              "width": 2
+            },
+            {
+              "text": "e",
+              "upper": "E",
+              "width": 2,
+              "alternatives": [
+                {
+                  "text": "é",
+                  "upper": "É"
+                },
+                {
+                  "text": "è",
+                  "upper": "È"
+                },
+                {
+                  "text": "ę",
+                  "upper": "Ę"
+                }
+              ]
+            },
+            {
+              "action": "delete",
+              "width": 4,
+              "shape": "circle"
+            }
+          ]
+        },
+        {
+          "keys": [
+            {
+              "action": "shift",
+              "width": 2,
+              "shape": "circle"
+            },
+            {
+              "action": "space",
+              "width": 6
+            },
+            {
+              "action": "enter",
+              "width": 2,
+              "shape": "circle"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

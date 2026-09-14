@@ -1,6 +1,11 @@
 # Compact keyboard layouts and long-press alternatives
 
-Status: Proposed. No part of this proposal is implemented.
+Status: In progress. Phase 1 (compiler, reader, captured layouts) is implemented.
+The remaining widget and gesture phases follow in incremental commits.
+
+Implementation adjustment: AOSP Polish has nine alternatives for `a`; version 1
+accepts nine alternatives (ten choices including the base). Static C++ entry
+points use `Open()` to follow repository naming rules.
 
 ## Objective
 
@@ -199,7 +204,7 @@ Gaps occupy no records; their widths are reflected in subsequent key starts.
 Version 1 accepts 1–255 pages, 1–255 rows per page, and widths of 1–255 units.
 Every row contains at least one key, every key has positive integer width, and
 its end must not exceed the page width. Row height remains uniform per page.
-Each text key accepts at most eight alternatives, giving at most nine choices
+Each text key accepts at most nine alternatives, giving at most ten choices
 including the base. Alternative objects accept only `text` and `upper`; recursive
 submenus are rejected. Unknown fields, duplicate JSON object members, invalid
 UTF-8, floats in integer fields, booleans as numbers, and oversized output are
@@ -242,7 +247,7 @@ It also verifies positive widths, strictly increasing starts, nonoverlapping
 key intervals, and ends within the page width. These invariants make both start
 and end coordinates strictly increasing, as required by the drawing searches. Span arithmetic uses at least 32 bits and subtraction
 checks to prevent wraparound. It does not allocate. Generated assets are valid by
-construction; a runtime `open()` performs validation once per view initialization,
+construction; a runtime `Open()` performs validation once per view initialization,
 never per pointer event. Unsupported or corrupt blobs return an error and an
 empty output view. Version 1 exposes no external file-loading API or checksum.
 
@@ -479,7 +484,7 @@ class KeyboardLayoutView {
   KeyboardLayoutView() = default;
 
   /// Validates borrowed PROGMEM bytes; clears out on failure.
-  static Error open(const uint8_t* data, size_t size, KeyboardLayoutView& out);
+  static Error Open(const uint8_t* data, size_t size, KeyboardLayoutView& out);
 
   /// Returns whether this view has no layout.
   bool empty() const;
@@ -517,7 +522,7 @@ class KeyboardLayoutView {
 };
 ```
 
-`open()` requires a readable region of `size` bytes. Null data, size outside
+`Open()` requires a readable region of `size` bytes. Null data, size outside
 8–65,535 bytes, bad magic, or inconsistent contents produce `kInvalidData`;
 a valid magic with an unrecognized version produces `kUnsupportedVersion` once
 the minimum header is present. No attempt is made to parse that version's tables.
@@ -581,7 +586,7 @@ KeyboardLayoutView layout_;  // Shared blob; no retained decoded tables.
 
 struct AlternativeSelection {
   Rect strip_bounds_in_window;
-  int8_t selected = -1;  // 0 = base, 1..8 = alternatives, -1 = none.
+  int8_t selected = -1;  // 0 = base, 1..9 = alternatives, -1 = none.
   uint8_t caps_snapshot = 0;
   bool active = false;
 } alternatives_;
@@ -629,7 +634,7 @@ keyboard.connect(editor_application);
 Empty layouts render no keys and ignore pointer input. `setPage(-1)` keeps its
 current hide-page meaning; other invalid page indices leave state unchanged.
 A generated accessor treats validation failure as a build defect and logs a fatal
-error; callers of `open()` receive recoverable errors. Generated accessor names
+error; callers of `Open()` receive recoverable errors. Generated accessor names
 convert underscore-separated JSON `name` words to lower camel case and append
 `Layout` (for example, `accent_demo` → `accentDemoLayout`); the built-in US accessor
 uses the explicitly maintained public spelling `kbEngUSLayout`.
@@ -733,7 +738,7 @@ and keep all Bazel storage on persistent paths under `/home/dawidk`, never `/tmp
 ## Caveats
 
 Version 1 deliberately bounds layouts to 64 KiB minus one byte and alternatives
-to eight per key. Coordinate lookup is logarithmic in row key count; the original
+to nine per key. Coordinate lookup is logarithmic in row key count; the original
 constant-time lookup requirement is intentionally relaxed to save flash.
 Runtime validation adds setup work; it does not belong on the pointer path.
 The scalar-only text contract matches the current emitter but cannot encode

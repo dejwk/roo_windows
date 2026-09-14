@@ -1,0 +1,176 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Roo keyboard layout",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "format",
+    "name",
+    "pages"
+  ],
+  "properties": {
+    "format": {
+      "const": 1
+    },
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$"
+    },
+    "pages": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 255,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "width",
+          "rows"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "width": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 255
+          },
+          "rows": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 255,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "keys"
+              ],
+              "properties": {
+                "offset": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 254
+                },
+                "keys": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 511,
+                  "items": {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                          "text": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 1
+                          },
+                          "upper": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 1
+                          },
+                          "width": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 255
+                          },
+                          "shape": {
+                            "enum": [
+                              "rounded_rect",
+                              "circle"
+                            ]
+                          },
+                          "action": {
+                            "enum": [
+                              "delete",
+                              "enter",
+                              "shift",
+                              "space",
+                              "switch_page"
+                            ]
+                          },
+                          "target": {
+                            "type": "string"
+                          },
+                          "label": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "alternatives": {
+                            "type": "array",
+                            "minItems": 1,
+                            "maxItems": 9,
+                            "items": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "required": [
+                                "text"
+                              ],
+                              "properties": {
+                                "text": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 1
+                                },
+                                "upper": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 1
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "oneOf": [
+                          {
+                            "required": [
+                              "text"
+                            ],
+                            "not": {
+                              "required": [
+                                "action"
+                              ]
+                            }
+                          },
+                          {
+                            "required": [
+                              "action"
+                            ],
+                            "not": {
+                              "required": [
+                                "text"
+                              ]
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "gap"
+                        ],
+                        "properties": {
+                          "gap": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 255
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
