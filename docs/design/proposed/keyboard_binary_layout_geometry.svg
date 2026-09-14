@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="410" viewBox="0 0 800 410">
+<rect width="800" height="410" fill="white"/>
+<g font-family="sans-serif" fill="#172333">
+<text x="24" y="30" font-size="20">Grid ownership is independent of the painted key shape</text>
+<text x="24" y="57" font-size="14">Demo row: 10 units, 20 pixels per unit; row height 60 pixels</text>
+
+<rect x="40" y="100" width="60" height="180" fill="#f1f3f5" stroke="#a2aab5"/>
+<text x="70" y="91" text-anchor="middle" font-size="14">0</text>
+<rect x="100" y="100" width="60" height="180" fill="#e8f1ff" stroke="#a2aab5"/>
+<text x="130" y="91" text-anchor="middle" font-size="14">1</text>
+<rect x="160" y="100" width="60" height="180" fill="#e8f1ff" stroke="#a2aab5"/>
+<text x="190" y="91" text-anchor="middle" font-size="14">2</text>
+<rect x="220" y="100" width="60" height="180" fill="#e8f1ff" stroke="#a2aab5"/>
+<text x="250" y="91" text-anchor="middle" font-size="14">3</text>
+<rect x="280" y="100" width="60" height="180" fill="#e8f1ff" stroke="#a2aab5"/>
+<text x="310" y="91" text-anchor="middle" font-size="14">4</text>
+<rect x="340" y="100" width="60" height="180" fill="#e8f1ff" stroke="#a2aab5"/>
+<text x="370" y="91" text-anchor="middle" font-size="14">5</text>
+<rect x="400" y="100" width="60" height="180" fill="#e8f1ff" stroke="#a2aab5"/>
+<text x="430" y="91" text-anchor="middle" font-size="14">6</text>
+<rect x="460" y="100" width="60" height="180" fill="#e8f1ff" stroke="#a2aab5"/>
+<text x="490" y="91" text-anchor="middle" font-size="14">7</text>
+<rect x="520" y="100" width="60" height="180" fill="#e8f1ff" stroke="#a2aab5"/>
+<text x="550" y="91" text-anchor="middle" font-size="14">8</text>
+<rect x="580" y="100" width="60" height="180" fill="#f1f3f5" stroke="#a2aab5"/>
+<text x="610" y="91" text-anchor="middle" font-size="14">9</text>
+<rect x="106" y="106" width="108" height="168" rx="9" fill="#c8ddfb" stroke="#315e91"/>
+<text x="160" y="200" text-anchor="middle" font-size="30">a</text>
+<rect x="226" y="106" width="108" height="168" rx="9" fill="#c8ddfb" stroke="#315e91"/>
+<text x="280" y="200" text-anchor="middle" font-size="30">e</text>
+<circle cx="460" cy="190" r="84" fill="#d9cdef" stroke="#684394"/>
+<text x="460" y="198" text-anchor="middle" font-size="24">delete</text>
+<circle cx="307" cy="190" r="5" fill="#ac2929"/>
+<text x="663" y="148" font-size="14">Point (109,70)</text>
+<text x="663" y="169" font-size="14">→ column 4</text>
+<text x="663" y="190" font-size="14">→ key 1: e</text>
+<text x="40" y="309" font-size="14">Stored starts: [1, 3, 5]; widths: [2, 2, 4]. Search column 4 → start 3 → key 1.</text>
+<text x="40" y="334" font-size="14">Clipped draw [105, 175) px → key range [1, 3): search twice, then draw e and delete.</text>
+<text x="40" y="362" font-size="14">Delete: 80 × 60 px allocation; 56 px circle after 2 px margins.</text>
+<text x="40" y="386" font-size="14">The pale rectangular corners still select Delete. The gray end cells select nothing.</text>
+</g></svg>

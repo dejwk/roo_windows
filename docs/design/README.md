@@ -73,6 +73,7 @@ Status was audited against the source tree and tests on 2026-09-12. “Dependenc
 
 | Design | Dependency status |
 | --- | --- |
+| [Compact keyboard layouts and long-press alternatives](proposed/keyboard_binary_layout_design.md) | Existing keyboard surface, semantic text input, and presentation pins provide foundations. Binary layouts, binary-search lookup, circular action faces, and long-press movement/selection are proposed. |
 | Button groups | Buttons and icon buttons are implemented; no group implementation exists. |
 | Click delivery policy | Click-animation lifecycle and settlement are implemented; widget-selected semantic delivery timing is not. |
 | Date pickers | Buttons, icon buttons, basic dialogs, and shared back behavior are implemented; single-line text fields are implemented; picker-specific integration remains proposed. |
