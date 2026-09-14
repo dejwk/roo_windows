@@ -145,7 +145,9 @@ void setup() {
   editor_task.textFieldEditor().edit(&editor_destination.field, false);
 
   // Keyboard presentation stays with the first application, while its
-  // semantic input synchronously edits the active field in the second.
+  // semantic input synchronously edits the active field in the second. Press
+  // a text key in the emulator to exercise its popup-layer preview above the
+  // keyboard bounds.
   first_app.keyboard().connect(second_app);
   first_app.keyboard().show();
 

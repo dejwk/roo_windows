@@ -929,6 +929,20 @@ Validation:
 - `bazel test //:keyboard_presentation_pin_test`
 - `bazel test //:overlay_test`
 
+Implementation result:
+
+- `KeyboardPage` no longer retains a highlighter widget or adds an unclipped
+  child; a text-key press transfers an active-only, nothrow-allocated
+  `PressHighlighterPin` to the popup-layer host,
+- the pin borrows its pressed key only while visible, computes page-relative
+  preview bounds in window coordinates, and is removed on cancellation, page
+  switches, keyboard hide, or structural teardown,
+- allocation failure leaves the key press and keyboard popup unchanged while
+  omitting only the preview, and
+- `keyboard_presentation_pin_test` verifies escaped rendering above the
+  keyboard task, popup-task and focus preservation, dismissal, and the
+  `Keyboard` persistent-size invariant.
+
 ### Dependent Phase 7: Coordinate Task-Coverage Suppression
 
 The task-bounded extension in

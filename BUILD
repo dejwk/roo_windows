@@ -328,6 +328,19 @@ cc_test(
 )
 
 cc_test(
+    name = "keyboard_presentation_pin_test",
+    srcs = [
+        "test/keyboard_presentation_pin_test.cpp",
+        "test/roo_windows_render_test_support.h",
+    ],
+    linkstatic = 1,
+    deps = [
+        ":roo_windows",
+        "@roo_testing//:arduino_gtest_main",
+    ],
+)
+
+cc_test(
     name = "image_test",
     srcs = [
         "test/image_test.cpp",

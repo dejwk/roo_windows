@@ -1,6 +1,7 @@
 #include "roo_windows/activities/keyboard.h"
 
 #include <memory>
+#include <new>
 #include <string>
 
 #include "roo_display/ui/text_label.h"
@@ -8,11 +9,11 @@
 #include "roo_icons/outlined/action.h"
 #include "roo_icons/outlined/content.h"
 #include "roo_io/text/unicode.h"
+#include "roo_scheduler.h"
 #include "roo_windows/config.h"
 #include "roo_windows/core/dimensions.h"
 #include "roo_windows/core/main_window.h"
 #include "roo_windows/core/task.h"
-#include "roo_scheduler.h"
 #include "roo_windows/widgets/button.h"
 
 namespace roo_windows {
@@ -127,24 +128,6 @@ class KeyboardButton : public SimpleButton {
   KeyboardWidget& keyboard();
 };
 
-class PressHighlighter : public Widget {
- public:
-  PressHighlighter(ApplicationContext& context);
-
-  void setTarget(const TextButton* target) { target_ = target; }
-
-  void paint(PaintContext& ctx) const override;
-  Dimensions getSuggestedMinimumDimensions() const override;
-
-  const KeyboardPage* page() const;
-  const KeyboardWidget* keyboard() const;
-
-  void moveTo(const Rect& rect) { Widget::moveTo(rect); }
-
- private:
-  const TextButton* target_;
-};
-
 class KeyboardPage : public Panel {
  public:
   KeyboardPage(ApplicationContext& context, const KeyboardPageSpec* spec);
@@ -174,7 +157,6 @@ class KeyboardPage : public Panel {
  private:
   const KeyboardPageSpec* spec_;
   std::vector<KeyboardButton*> keys_;
-  PressHighlighter highlighter_;
   bool initialized_;
 };
 
@@ -264,6 +246,58 @@ class TextButton : public KeyboardButton {
 
   uint16_t rune_;
   uint16_t rune_caps_;
+};
+
+/// Active-only popup-layer preview for one pressed text key.
+class PressHighlighterPin final : public PresentationPin {
+ public:
+  explicit PressHighlighterPin(const TextButton& target) : target_(target) {}
+
+ protected:
+  Rect boundsInWindow() const override {
+    const Rect bounds = boundsInPage();
+    XDim dx;
+    YDim dy;
+    page().getAbsoluteOffset(dx, dy);
+    return bounds.translate(dx, dy);
+  }
+
+  void paint(PaintContext& ctx) const override {
+    XDim dx;
+    YDim dy;
+    page().getAbsoluteOffset(dx, dy);
+    PaintContext local = ctx.translated(dx, dy);
+    const Theme& th = page().theme();
+    const KeyboardColorTheme& kb_th = page().keyboard()->color_theme();
+    Color overlay = roo_display::color::Black;
+    overlay.set_a(
+        th.framework.interaction
+            .resolve(FrameworkColorRole::kSurface, InteractionState::kPressed)
+            .a());
+    const Color background =
+        roo_display::AlphaBlend(kb_th.normalButton, overlay);
+    local.drawObject(roo_display::MakeTileOf(
+        roo_display::StringViewLabel(target_.label(), font_body1(),
+                                     target_.contentColor()),
+        boundsInPage().asBox(),
+        roo_display::kCenter | roo_display::kTop.shiftBy(3), background));
+    // The pin is painted before its popup subtree, so retain its final pixels
+    // while that lower-z content is settled.
+    local.addExclusion(boundsInPage());
+  }
+
+ private:
+  const KeyboardPage& page() const {
+    return *static_cast<const KeyboardPage*>(target_.parent());
+  }
+
+  Rect boundsInPage() const {
+    const Rect& bounds = target_.parent_bounds();
+    return Rect(bounds.xMin(), bounds.yMin() - kHighlighterHeight,
+                bounds.xMax(), bounds.yMax() - 3);
+  }
+
+  const TextButton& target_;
 };
 
 class SpaceButton : public KeyboardButton {
@@ -459,9 +493,11 @@ void KeyboardWidget::setCapsState(Keyboard::CapsState caps_state) {
 void KeyboardWidget::setPage(int idx) {
   if (idx < 0) {
     if (current_page_ == nullptr) return;
+    current_page_->hideHighlighter();
     current_page_ = nullptr;
   } else {
     if (current_page_ == pages_[idx]) return;
+    if (current_page_ != nullptr) current_page_->hideHighlighter();
     current_page_ = pages_[idx];
     current_page_->init(context());
   }
@@ -475,7 +511,7 @@ void KeyboardWidget::setPage(int idx) {
 
 KeyboardPage::KeyboardPage(ApplicationContext& context,
                            const KeyboardPageSpec* spec)
-    : Panel(context), spec_(spec), highlighter_(context), initialized_(false) {
+    : Panel(context), spec_(spec), initialized_(false) {
   setParentClipMode(ParentClipMode::kUnclipped);
 }
 
@@ -536,10 +572,6 @@ void KeyboardPage::init(ApplicationContext& context) {
       add(std::unique_ptr<Button>(b));
     }
   }
-  // Note: highlighter must be added last to be on top of all children.
-  highlighter_.setVisibility(Visibility::kInvisible);
-  highlighter_.setParentClipMode(ParentClipMode::kUnclipped);
-  add(highlighter_);
 }
 
 Dimensions KeyboardPage::onMeasure(WidthSpec width, HeightSpec height) {
@@ -586,7 +618,6 @@ Dimensions KeyboardPage::onMeasure(WidthSpec width, HeightSpec height) {
                 HeightSpec::Exactly(row_height - 2 * h_key_margin));
     }
   }
-  // We skip the measurement of the highlighter.
   return Dimensions(full_height, full_width);
 }
 
@@ -627,41 +658,23 @@ void KeyboardPage::onLayout(bool changed, const Rect& rect) {
     }
     y += row_height;
   }
-  // Skipping the highlighter.
 }
 
 void KeyboardPage::showHighlighter(const TextButton& btn) {
-  const Rect& bBounds = btn.parent_bounds();
-  highlighter_.moveTo(Rect(bBounds.xMin(), bBounds.yMin() - kHighlighterHeight,
-                           bBounds.xMax(), bBounds.yMax() - 3));
-  highlighter_.setTarget(&btn);
-  highlighter_.setVisibility(Visibility::kVisible);
+  // A new press can target a different key before the prior cancellation
+  // reaches this page, so replace rather than retain that pin's borrowed key.
+  hidePresentationPin();
+  std::unique_ptr<PressHighlighterPin> pin(new (std::nothrow)
+                                               PressHighlighterPin(btn));
+  showPresentationPin(std::move(pin));
 }
 
-void KeyboardPage::hideHighlighter() {
-  // Use Visibility::kInvisible to avoid needlessly re-measuring the keyboard
-  // page.
-  highlighter_.setVisibility(Visibility::kInvisible);
-  highlighter_.setTarget(nullptr);
-}
+void KeyboardPage::hideHighlighter() { hidePresentationPin(); }
 
 void KeyboardPage::capsStateUpdated() {
   for (auto& key : keys_) {
     key->capsStateUpdated();
   }
-}
-
-PressHighlighter::PressHighlighter(ApplicationContext& context)
-    : Widget(context) {
-  setParentClipMode(ParentClipMode::kUnclipped);
-}
-
-const KeyboardPage* PressHighlighter::page() const {
-  return (KeyboardPage*)parent();
-}
-
-const KeyboardWidget* PressHighlighter::keyboard() const {
-  return page()->keyboard();
 }
 
 KeyboardWidget* Keyboard::contents() {
@@ -670,30 +683,6 @@ KeyboardWidget* Keyboard::contents() {
 
 const KeyboardWidget* Keyboard::contents() const {
   return (KeyboardWidget*)contents_.get();
-}
-
-void PressHighlighter::paint(PaintContext& ctx) const {
-  if (target_ == nullptr) {
-    ctx.clear();
-    return;
-  }
-  const Theme& th = theme();
-  const KeyboardColorTheme& kbTh = keyboard()->color_theme();
-  Color overlay = roo_display::color::Black;
-  overlay.set_a(
-      th.framework.interaction
-          .resolve(FrameworkColorRole::kSurface, InteractionState::kPressed)
-          .a());
-  Color bgcolor = roo_display::AlphaBlend(kbTh.normalButton, overlay);
-  ctx.drawObject(roo_display::MakeTileOf(
-      roo_display::StringViewLabel(target_->label(), font_body1(),
-                                   target_->contentColor()),
-      bounds().asBox(), roo_display::kCenter | roo_display::kTop.shiftBy(3),
-      bgcolor));
-}
-
-Dimensions PressHighlighter::getSuggestedMinimumDimensions() const {
-  return Dimensions(0, 0);
 }
 
 Keyboard::Keyboard(ApplicationContext& context, const KeyboardSpec* spec)
