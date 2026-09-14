@@ -264,9 +264,14 @@ PreferredSize TextField::getPreferredSize() const {
 TextField::Slots TextField::slots() const {
   const TextStyle& body = text_style_body_large();
   const TextStyle& small = text_style_body_small();
+  // An outlined floating label straddles the top stroke, so reserve half of
+  // its line height above the fixed-height container.
   int top = flags_ & kOutlined ? small.lineHeight() / 2 : 0;
   Slots s;
   s.container = Rect(0, top, width() - 1, top + kTokens.height - 1);
+
+  // First reserve the edge affordances, then assign the remaining span to the
+  // label, prefix, editable viewport, and suffix.
   int left = leading_ ? kTokens.icon_pad : kTokens.pad;
   int right =
       width() - (effectiveTrailingIcon() ? kTokens.icon_pad : kTokens.pad);
@@ -314,6 +319,8 @@ TextField::Slots TextField::slots() const {
            width() - kTokens.pad - 1,
            top + kTokens.height + kTokens.assist_gap + small.lineHeight() - 1);
   if (flags_ & kRtl) {
+    // Compute logical slots left-to-right once, then mirror their physical
+    // rectangles without changing the UTF-8 value or prefix/suffix roles.
     auto mirror = [&](Rect& r) {
       r = Rect(width() - 1 - r.xMax(), r.yMin(), width() - 1 - r.xMin(),
                r.yMax());
@@ -325,6 +332,8 @@ TextField::Slots TextField::slots() const {
     mirror(s.suffix);
     mirror(s.viewport);
   }
+  // Tiny layouts can make slots overlap or invert; clipping leaves painting
+  // with empty rectangles instead of coordinates outside the widget.
   auto clip = [&](Rect& r) { r = Rect::Intersect(r, bounds()); };
   clip(s.container);
   clip(s.label);
@@ -344,6 +353,8 @@ void TextField::paint(PaintContext& ctx) const {
   const Slots s = slots();
   Color ancestor = ctx.bgcolor();
   bool outlined = flags_ & kOutlined;
+  // Resolve the final container color before blending disabled and interaction
+  // state layers, so every foreground slot uses the same opaque background.
   Color fill = outlined ? ancestor : colors.surfaceContainerHighest;
   if (!isEnabled() && !outlined) {
     fill = Opacity(colors.onSurface, 10, ancestor);
@@ -400,6 +411,8 @@ void TextField::paint(PaintContext& ctx) const {
     DrawText(ctx, prefix_, body, s.prefix, secondary, fill, right_to_left);
     DrawText(ctx, suffix_, body, s.suffix, secondary, fill, right_to_left);
     if (!s.viewport.empty()) {
+      // Editor metrics are viewport-relative advances. Convert the active
+      // selection or caret to that coordinate system before drawing text.
       int16_t begin = 0;
       int16_t end = -1;
       int16_t offset = 0;
@@ -490,6 +503,8 @@ void TextField::paint(PaintContext& ctx) const {
     ctx.fillRect(indicator, accent);
     ctx.addExclusion(indicator);
   }
+  // Exclusions preserve foreground pixels while the decoration resolves the
+  // container and any remaining ancestor background in one final pass.
   PaintDecoration decoration;
   decoration.bounds = s.container;
   decoration.background = fill;
