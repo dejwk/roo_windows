@@ -10,144 +10,257 @@
 namespace roo_windows::material3 {
 namespace {
 using namespace roo_display;
+
+// Shared Material 3 dimensions, evaluated once to avoid per-field storage.
 struct Tokens {
-  int16_t height = Scaled(56), pad = Scaled(16), icon_pad = Scaled(12);
-  int16_t gap = Scaled(16), assist_gap = Scaled(4), radius = Scaled(4);
-  int16_t notch = Scaled(4), idle_stroke = std::max(1, Scaled(1));
+  int16_t height = Scaled(56);
+  int16_t pad = Scaled(16);
+  int16_t icon_pad = Scaled(12);
+  int16_t gap = Scaled(16);
+  int16_t assist_gap = Scaled(4);
+  int16_t radius = Scaled(4);
+  int16_t notch = Scaled(4);
+  int16_t idle_stroke = std::max(1, Scaled(1));
   int16_t focus_stroke = std::max(1, Scaled(2));
 };
 const Tokens kTokens;
+
 const MonoIcon kErrorIcon = SCALED_ROO_ICON(filled, alert_error);
+
 Rect Empty() { return Rect(0, 0, -1, -1); }
+
+// Measures a string using the complete text-style layout configuration.
 int16_t TextWidth(roo::string_view text, const TextStyle& style) {
   return style.font()
       .getHorizontalStringMetrics(text, style.fontOptions())
       .advance();
 }
+
+// Applies foreground opacity over the supplied painted background.
 Color Opacity(Color color, int alpha, Color background) {
   color.set_a(alpha);
   return AlphaBlend(background, color);
 }
+
+// Draws and excludes one text slot using the field's logical direction.
+void DrawText(PaintContext& ctx, roo::string_view value, const TextStyle& style,
+              Rect rect, Color color, Color background, bool right_to_left) {
+  if (rect.empty()) {
+    return;
+  }
+
+  PaintContext part = ctx.clipped(rect);
+  part.setBgcolor(background);
+  part.drawTiled(
+      StringViewLabel(value, style.font(), color, style.fontOptions()), rect,
+      (right_to_left ? kRight : kLeft) |
+          kBaseline.toTop().shiftBy(style.baselineOffset()));
+  ctx.addExclusion(rect);
+}
+
+// Draws and excludes one icon slot over the supplied painted background.
+void DrawIcon(PaintContext& ctx, const MonoIcon* source, Rect rect, Color color,
+              Color background) {
+  if (source == nullptr || rect.empty()) {
+    return;
+  }
+
+  MonoIcon icon = *source;
+  icon.color_mode().setColor(color);
+  PaintContext part = ctx.clipped(rect);
+  part.setBgcolor(background);
+  part.drawTiled(icon, rect, kCenter | kMiddle);
+  ctx.addExclusion(rect);
+}
 }  // namespace
+
 struct TextField::Slots {
-  Rect container, label, viewport, prefix, suffix, leading, trailing, assist;
+  Rect container;
+  Rect label;
+  Rect viewport;
+  Rect prefix;
+  Rect suffix;
+  Rect leading;
+  Rect trailing;
+  Rect assist;
 };
+
 TextField::TextField(ApplicationContext& context, roo::string_view label,
                      TextFieldVariant variant)
     : BasicSurfaceWidget(context),
       label_(label),
       flags_(variant == TextFieldVariant::kOutlined ? kOutlined : 0) {}
+
 TextField::~TextField() {
   // Stop the editor before the edit-target base and owned value are destroyed.
-  if (isEdited()) getTask()->textFieldEditor().cancel();
+  if (isEdited()) {
+    getTask()->textFieldEditor().cancel();
+  }
 }
+
 TextFieldVariant TextField::variant() const {
   return flags_ & kOutlined ? TextFieldVariant::kOutlined
                             : TextFieldVariant::kFilled;
 }
+
 void TextField::setVariant(TextFieldVariant value) {
-  if (variant() == value) return;
+  if (variant() == value) {
+    return;
+  }
   flags_ ^= kOutlined;
   geometryChanged();
 }
+
 LayoutDirection TextField::layoutDirection() const {
   return flags_ & kRtl ? LayoutDirection::kRightToLeft
                        : LayoutDirection::kLeftToRight;
 }
+
 void TextField::setLayoutDirection(LayoutDirection value) {
-  if (layoutDirection() == value) return;
+  if (layoutDirection() == value) {
+    return;
+  }
   flags_ ^= kRtl;
   geometryChanged();
 }
+
 void TextField::geometryChanged() {
   invalidateInterior();
   requestLayout();
   updateScroll();
 }
+
 void TextField::setText(std::string value) {
-  if (value_ == value) return;
+  if (value_ == value) {
+    return;
+  }
   value_ = std::move(value);
-  if (isEdited()) getTask()->textFieldEditor().resetMetrics();
+  if (isEdited()) {
+    getTask()->textFieldEditor().resetMetrics();
+  }
   invalidateInterior();
   onTextChanged();
 }
+
 void TextField::setLabel(roo::string_view value) {
-  if (label_ == value) return;
+  if (label_ == value) {
+    return;
+  }
   label_ = value;
   geometryChanged();
 }
+
 void TextField::setPrefixText(roo::string_view value) {
-  if (prefix_ == value) return;
+  if (prefix_ == value) {
+    return;
+  }
   prefix_ = value;
   geometryChanged();
 }
+
 void TextField::setSuffixText(roo::string_view value) {
-  if (suffix_ == value) return;
+  if (suffix_ == value) {
+    return;
+  }
   suffix_ = value;
   geometryChanged();
 }
+
 roo::string_view TextField::assistiveText() const {
   return hasError() ? error_ : supporting_;
 }
+
 void TextField::setSupportingText(roo::string_view value) {
-  if (supporting_ == value) return;
+  if (supporting_ == value) {
+    return;
+  }
   bool had_row = !assistiveText().empty();
   supporting_ = value;
-  if (hasError()) return;
-  if (had_row != !assistiveText().empty())
+  if (hasError()) {
+    return;
+  }
+  if (had_row != !assistiveText().empty()) {
     geometryChanged();
-  else
+  } else {
     setDirty(slots().assist);
+  }
 }
+
 void TextField::setErrorText(roo::string_view value) {
-  if (hasError() && error_ == value) return;
-  bool had_error = hasError(), had_row = !assistiveText().empty();
+  if (hasError() && error_ == value) {
+    return;
+  }
+  bool had_error = hasError();
+  bool had_row = !assistiveText().empty();
   error_ = value;
   flags_ |= kError;
-  if (!had_error || had_row != !assistiveText().empty())
+  if (!had_error || had_row != !assistiveText().empty()) {
     geometryChanged();
-  else
+  } else {
     setDirty(slots().assist);
+  }
 }
+
 void TextField::clearError() {
-  if (!hasError()) return;
+  if (!hasError()) {
+    return;
+  }
   flags_ &= ~kError;
   geometryChanged();
 }
+
 void TextField::setLeadingIcon(const MonoIcon* value) {
-  if (leading_ == value) return;
+  if (leading_ == value) {
+    return;
+  }
   leading_ = value;
   geometryChanged();
 }
+
 void TextField::setTrailingIcon(const MonoIcon* value) {
-  if (trailing_ == value) return;
+  if (trailing_ == value) {
+    return;
+  }
   trailing_ = value;
   geometryChanged();
 }
+
 const MonoIcon* TextField::effectiveTrailingIcon() const {
   return trailing_ != nullptr ? trailing_ : hasError() ? &kErrorIcon : nullptr;
 }
+
 void TextField::setReadOnly(bool value) {
-  if (readOnly() == value) return;
+  if (readOnly() == value) {
+    return;
+  }
   flags_ ^= kReadOnly;
   invalidateInterior();
-  if (value && isEdited()) getTask()->textFieldEditor().cancel();
+  if (value && isEdited()) {
+    getTask()->textFieldEditor().cancel();
+  }
 }
+
 bool TextField::floated() const {
   return !value_.empty() || isFocused() || isEdited();
 }
+
 Dimensions TextField::getSuggestedMinimumDimensions() const {
   int height = kTokens.height;
-  if (flags_ & kOutlined) height += text_style_body_small().lineHeight() / 2;
-  if (!assistiveText().empty())
+  if (flags_ & kOutlined) {
+    height += text_style_body_small().lineHeight() / 2;
+  }
+  if (!assistiveText().empty()) {
     height += kTokens.assist_gap + text_style_body_small().lineHeight();
+  }
   return Dimensions(Scaled(120), height);
 }
+
 PreferredSize TextField::getPreferredSize() const {
   return PreferredSize(
       PreferredSize::MatchParentWidth(),
       PreferredSize::ExactHeight(getSuggestedMinimumDimensions().height()));
 }
+
 TextField::Slots TextField::slots() const {
   const TextStyle& body = text_style_body_large();
   const TextStyle& small = text_style_body_small();
@@ -162,25 +275,29 @@ TextField::Slots TextField::slots() const {
                               std::min(right, left + ROO_WINDOWS_ICON_SIZE) - 1,
                               iy + ROO_WINDOWS_ICON_SIZE - 1)
                        : Empty();
-  if (leading_)
+  if (leading_) {
     left = std::min(right, left + ROO_WINDOWS_ICON_SIZE + kTokens.gap);
+  }
   s.trailing = effectiveTrailingIcon()
                    ? Rect(std::max(left, right - ROO_WINDOWS_ICON_SIZE), iy,
                           right - 1, iy + ROO_WINDOWS_ICON_SIZE - 1)
                    : Empty();
-  if (effectiveTrailingIcon())
+  if (effectiveTrailingIcon()) {
     right = std::max(left, right - ROO_WINDOWS_ICON_SIZE - kTokens.gap);
+  }
   bool floating = floated();
   int ty = top + (kTokens.height - body.lineHeight()) / 2;
-  if (floating && !(flags_ & kOutlined))
+  if (floating && !(flags_ & kOutlined)) {
     ty = top + (kTokens.height - body.lineHeight() - small.lineHeight()) / 2 +
          small.lineHeight();
+  }
   if (floating) {
     int ly = flags_ & kOutlined ? 0 : ty - small.lineHeight();
     int lw = std::min(std::max(0, right - left), (int)TextWidth(label_, small));
     s.label = Rect(left, ly, left + lw - 1, ly + small.lineHeight() - 1);
-  } else
+  } else {
     s.label = Rect(left, ty, right - 1, ty + body.lineHeight() - 1);
+  }
   int pw = floating ? std::min(std::max(0, right - left),
                                (int)TextWidth(prefix_, body))
                     : 0;
@@ -219,21 +336,24 @@ TextField::Slots TextField::slots() const {
   clip(s.assist);
   return s;
 }
+
 void TextField::paint(PaintContext& ctx) const {
   using namespace roo_display;
-  const auto& colors = theme().material3Theme().color;
+
+  const ColorScheme& colors = theme().material3Theme().color;
   const Slots s = slots();
   Color ancestor = ctx.bgcolor();
   bool outlined = flags_ & kOutlined;
   Color fill = outlined ? ancestor : colors.surfaceContainerHighest;
-  if (!isEnabled() && !outlined)
+  if (!isEnabled() && !outlined) {
     fill = Opacity(colors.onSurface, 10, ancestor);
-  else if (isEnabled() && (isPressed() || isHover()))
+  } else if (isEnabled() && (isPressed() || isHover())) {
     fill = AlphaBlend(fill, theme().material3Theme().state.resolve(
                                 outlined ? ColorToken::kSurface
                                          : ColorToken::kSurfaceContainerHighest,
                                 isPressed() ? InteractionState::kPressed
                                             : InteractionState::kHover));
+  }
   Color input =
       isEnabled()
           ? colors.onSurface
@@ -248,25 +368,16 @@ void TextField::paint(PaintContext& ctx) const {
                                                : colors.onSurfaceVariant;
   Color label_color =
       hasError() || isFocused() || isEdited() ? accent : secondary;
-  auto text = [&](roo::string_view value, const TextStyle& style, Rect rect,
-                  Color color, Color bg) {
-    if (rect.empty()) return;
-    PaintContext part = ctx.clipped(rect);
-    part.setBgcolor(bg);
-    part.drawTiled(
-        StringViewLabel(value, style.font(), color, style.fontOptions()), rect,
-        (flags_ & kRtl ? kRight : kLeft) |
-            kBaseline.toTop().shiftBy(style.baselineOffset()));
-    ctx.addExclusion(rect);
-  };
+  const bool right_to_left = flags_ & kRtl;
   const TextStyle& body = text_style_body_large();
   const TextStyle& small = text_style_body_small();
   if (floated()) {
     Rect label = s.label;
-    if (outlined && !label.empty())
+    if (outlined && !label.empty()) {
       label = Rect::Intersect(bounds(),
                               Rect(label.xMin() - kTokens.notch, label.yMin(),
                                    label.xMax() + kTokens.notch, label.yMax()));
+    }
     // Notch background and label settle together before the outline.
     if (outlined && !label.empty()) {
       PaintContext part = ctx.clipped(label);
@@ -283,15 +394,18 @@ void TextField::paint(PaintContext& ctx) const {
           caption, label,
           kCenter | kBaseline.toTop().shiftBy(baseline - label.yMin()));
       ctx.addExclusion(label);
-    } else
-      text(label_, small, label, label_color, fill);
-    text(prefix_, body, s.prefix, secondary, fill);
-    text(suffix_, body, s.suffix, secondary, fill);
+    } else {
+      DrawText(ctx, label_, small, label, label_color, fill, right_to_left);
+    }
+    DrawText(ctx, prefix_, body, s.prefix, secondary, fill, right_to_left);
+    DrawText(ctx, suffix_, body, s.suffix, secondary, fill, right_to_left);
     if (!s.viewport.empty()) {
-      int16_t begin = 0, end = -1, offset = 0;
+      int16_t begin = 0;
+      int16_t end = -1;
+      int16_t offset = 0;
       bool recent = false;
       if (isEdited()) {
-        const auto& editor = getTask()->textFieldEditor();
+        const TextFieldEditor& editor = getTask()->textFieldEditor();
         auto advance = [&](int pos) {
           return pos == 0 ? 0 : editor.glyphs()[pos - 1].advance();
         };
@@ -321,38 +435,36 @@ void TextField::paint(PaintContext& ctx) const {
           value_, obscureText(), recent, offset, begin, end, input, highlight));
       ctx.addExclusion(s.viewport);
     }
-  } else
-    text(label_, body, s.label, label_color, fill);
-  auto icon = [&](const MonoIcon* source, Rect rect, Color color) {
-    if (source == nullptr || rect.empty()) return;
-    MonoIcon icon = *source;
-    icon.color_mode().setColor(color);
-    PaintContext part = ctx.clipped(rect);
-    part.setBgcolor(fill);
-    part.drawTiled(icon, rect, kCenter | kMiddle);
-    ctx.addExclusion(rect);
-  };
-  icon(leading_, s.leading, secondary);
-  icon(effectiveTrailingIcon(), s.trailing, hasError() ? accent : secondary);
+  } else {
+    DrawText(ctx, label_, body, s.label, label_color, fill, right_to_left);
+  }
+  DrawIcon(ctx, leading_, s.leading, secondary, fill);
+  DrawIcon(ctx, effectiveTrailingIcon(), s.trailing,
+           hasError() ? accent : secondary, fill);
   // Assistive ellipsis borrows a UTF-8 prefix. Dots occupy their own
   // final-color region, avoiding a concatenation allocation.
   roo::string_view assist = assistiveText();
   if (!assist.empty() && !s.assist.empty()) {
     int available = s.assist.width();
-    if (TextWidth(assist, small) <= available)
-      text(assist, small, s.assist, hasError() ? accent : secondary, ancestor);
-    else {
+    if (TextWidth(assist, small) <= available) {
+      DrawText(ctx, assist, small, s.assist, hasError() ? accent : secondary,
+               ancestor, right_to_left);
+    } else {
       roo::string_view dots = "...";
-      while (!dots.empty() && TextWidth(dots, small) > available)
+      while (!dots.empty() && TextWidth(dots, small) > available) {
         dots.remove_suffix(1);
+      }
       int dw = TextWidth(dots, small);
       while (!assist.empty() && TextWidth(assist, small) > available - dw) {
         size_t n = assist.size() - 1;
-        while (n > 0 && (static_cast<unsigned char>(assist[n]) & 0xc0) == 0x80)
+        while (n > 0 &&
+               (static_cast<unsigned char>(assist[n]) & 0xc0) == 0x80) {
           --n;
+        }
         assist = assist.substr(0, n);
       }
-      Rect body_rect = s.assist, dots_rect = s.assist;
+      Rect body_rect = s.assist;
+      Rect dots_rect = s.assist;
       if (flags_ & kRtl) {
         dots_rect = Rect(s.assist.xMin(), s.assist.yMin(),
                          s.assist.xMin() + dw - 1, s.assist.yMax());
@@ -364,8 +476,10 @@ void TextField::paint(PaintContext& ctx) const {
         body_rect = Rect(s.assist.xMin(), s.assist.yMin(), dots_rect.xMin() - 1,
                          s.assist.yMax());
       }
-      text(assist, small, body_rect, hasError() ? accent : secondary, ancestor);
-      text(dots, small, dots_rect, hasError() ? accent : secondary, ancestor);
+      DrawText(ctx, assist, small, body_rect, hasError() ? accent : secondary,
+               ancestor, right_to_left);
+      DrawText(ctx, dots, small, dots_rect, hasError() ? accent : secondary,
+               ancestor, right_to_left);
     }
   }
   int stroke = isEnabled() && (isFocused() || isEdited()) ? kTokens.focus_stroke
@@ -385,7 +499,9 @@ void TextField::paint(PaintContext& ctx) const {
                              static_cast<uint8_t>(outlined ? radius : 0)};
   decoration.outline_width = SmallNumber(outlined ? stroke : 0);
   decoration.outline_color = accent;
-  if (!s.container.empty()) ctx.addDecoration(decoration);
+  if (!s.container.empty()) {
+    ctx.addDecoration(decoration);
+  }
   // Resolve the remaining ancestor/background/decoration pixels in one pass.
   ctx.clear();
 }
@@ -394,28 +510,45 @@ bool TextField::isEdited() const {
   const Task* task = getTask();
   return task != nullptr && task->textFieldEditor().isEdited(this);
 }
+
 void TextField::startEditing(bool show_keyboard) {
   Task* task = getTask();
   if (!isEnabled() || !isVisible() || readOnly() || task == nullptr ||
-      presentationState() == PresentationState::kHidden)
+      presentationState() == PresentationState::kHidden) {
     return;
-  if (!requestFocus() && !bounds().empty()) return;
+  }
+  if (!requestFocus() && !bounds().empty()) {
+    return;
+  }
   invalidateInterior();
   task->textFieldEditor().edit(this, show_keyboard);
 }
+
 void TextField::edit() { startEditing(true); }
+
 void TextField::onClicked() {
   uint8_t tapped = flags_ & (kLeadingTap | kTrailingTap);
   flags_ &= ~(kLeadingTap | kTrailingTap);
-  if (!isEnabled()) return;
-  if (tapped == kLeadingTap && onLeadingAffordanceClicked()) return;
-  if (tapped == kTrailingTap && onTrailingAffordanceClicked()) return;
-  if (!readOnly()) edit();
+  if (!isEnabled()) {
+    return;
+  }
+  if (tapped == kLeadingTap && onLeadingAffordanceClicked()) {
+    return;
+  }
+  if (tapped == kTrailingTap && onTrailingAffordanceClicked()) {
+    return;
+  }
+  if (!readOnly()) {
+    edit();
+  }
   Widget::onClicked();
 }
+
 void TextField::onSingleTapUp(XDim x, YDim y) {
   Slots s = slots();
-  if (!s.container.contains(x, y)) return;
+  if (!s.container.contains(x, y)) {
+    return;
+  }
   flags_ &= ~(kLeadingTap | kTrailingTap);
   auto hit = [&](Rect r) {
     return !r.empty() &&
@@ -424,66 +557,91 @@ void TextField::onSingleTapUp(XDim x, YDim y) {
                                 r.xMax() + Scaled(8), s.container.yMax()))
                .contains(x, y);
   };
-  if (hit(s.leading))
+  if (hit(s.leading)) {
     flags_ |= kLeadingTap;
-  else if (hit(s.trailing))
+  } else if (hit(s.trailing)) {
     flags_ |= kTrailingTap;
+  }
   Widget::onSingleTapUp(x, y);
 }
+
 void TextField::onCancel() {
   flags_ &= ~(kLeadingTap | kTrailingTap | kActivationKey);
   Widget::onCancel();
 }
+
 void TextField::onFocusChanged(bool focused) {
   invalidateInterior();
   if (!focused) {
     flags_ &= ~kActivationKey;
-    if (isEdited()) getTask()->textFieldEditor().cancel();
+    if (isEdited()) {
+      getTask()->textFieldEditor().cancel();
+    }
   }
 }
+
 void TextField::onLayout(bool changed, const Rect& rect) {
-  if (isEdited() && !isFocused()) requestFocus();
+  if (isEdited() && !isFocused()) {
+    requestFocus();
+  }
   updateScroll();
 }
+
 void TextField::updateScroll() {
-  if (isEdited())
+  if (isEdited()) {
     getTask()->textFieldEditor().ensureCursorVisible(slots().viewport.width());
+  }
 }
+
 void TextField::notifyEditVisualChange() {
   bool edited = isEdited();
   bool was_edited = flags_ & kLastEdited;
-  if (edited)
+  if (edited) {
     flags_ |= kLastEdited;
-  else
+  } else {
     flags_ &= ~kLastEdited;
+  }
   updateScroll();
-  if (edited != was_edited)
+  if (edited != was_edited) {
     invalidateInterior();
-  else
+  } else {
     setDirty(slots().viewport);
+  }
 }
+
 void TextField::notifyTextChanged() {
   Slots s = slots();
   setDirty(Rect(0, 0, width() - 1, s.viewport.yMax()));
   onTextChanged();
 }
+
 void TextField::maskingChanged() {
-  if (isEdited()) getTask()->textFieldEditor().refreshMetrics();
+  if (isEdited()) {
+    getTask()->textFieldEditor().refreshMetrics();
+  }
   invalidateInterior();
 }
+
 void TextField::notifyStateChanged(uint16_t diff) {
   BasicSurfaceWidget::notifyStateChanged(diff);
-  if (!isEnabled() && isEdited()) getTask()->textFieldEditor().cancel();
+  if (!isEnabled() && isEdited()) {
+    getTask()->textFieldEditor().cancel();
+  }
 }
+
 void TextField::onAnimationFrame(AnimationTag tag,
                                  const AnimationSample& sample) {
-  if (tag == 0 && isEdited())
+  if (tag == 0 && isEdited()) {
     getTask()->textFieldEditor().applyCursorFrame(*this, sample);
-  else
+  } else {
     BasicSurfaceWidget::onAnimationFrame(tag, sample);
+  }
 }
+
 bool TextField::onKeyEvent(const KeyEvent& event) {
-  if (!isEnabled()) return false;
+  if (!isEnabled()) {
+    return false;
+  }
   bool activation =
       event.code == KeyCode::kEnter || event.code == KeyCode::kSpace;
   if (event.phase == KeyPhase::kUp) {
@@ -493,21 +651,27 @@ bool TextField::onKeyEvent(const KeyEvent& event) {
     }
     return false;
   }
-  if (event.phase != KeyPhase::kDown && event.phase != KeyPhase::kRepeat)
+  if (event.phase != KeyPhase::kDown && event.phase != KeyPhase::kRepeat) {
     return false;
+  }
   if (!isEdited()) {
-    if (!activation) return false;
+    if (!activation) {
+      return false;
+    }
     if (event.phase == KeyPhase::kDown) {
       flags_ |= kActivationKey;
-      if (readOnly())
+      if (readOnly()) {
         Widget::onClicked();
-      else
+      } else {
         startEditing(false);
+      }
     }
     return true;
   }
-  if (activation && (flags_ & kActivationKey)) return true;
-  auto& editor = getTask()->textFieldEditor();
+  if (activation && (flags_ & kActivationKey)) {
+    return true;
+  }
+  TextFieldEditor& editor = getTask()->textFieldEditor();
   bool shift = event.modifiers & kKeyModifierShift;
   switch (event.code) {
     case KeyCode::kCharacter:

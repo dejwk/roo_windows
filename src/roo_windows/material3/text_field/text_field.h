@@ -145,25 +145,59 @@ class TextField : public BasicSurfaceWidget, private internal::TextEditTarget {
   void onFocusChanged(bool focused) override;
 
  protected:
+  /// Notifies subclasses after the owned value changes.
   virtual void onTextChanged() {}
+
+  /// Notifies subclasses when the active edit session finishes.
   void onEditFinished(bool confirmed) override {}
+
+  /// Handles a leading-affordance activation and reports whether it consumed
+  /// it.
   virtual bool onLeadingAffordanceClicked() { return false; }
+
+  /// Handles a trailing-affordance activation and reports whether it consumed
+  /// it.
   virtual bool onTrailingAffordanceClicked() { return false; }
+
+  /// Returns the trailing icon after applying subclass-specific fallbacks.
   virtual const MonoIcon* effectiveTrailingIcon() const;
+
+  /// Reports whether editor rendering should mask the owned value.
   bool obscureText() const override { return false; }
+
+  /// Refreshes active editor metrics after the masking policy changes.
   void maskingChanged();
+
+  /// Retains focus while editing and updates the horizontal viewport scroll.
   void onLayout(bool changed, const Rect& rect) override;
+
+  /// Accepts the active editor's sparse cursor-animation samples.
   void onAnimationFrame(AnimationTag tag,
                         const AnimationSample& sample) override;
+
+  /// Cancels editing when a state transition disables the field.
   void notifyStateChanged(uint16_t diff) override;
 
  private:
+  /// Owner-local rectangles for the field's painted regions.
   struct Slots;
+
+  /// Computes the clipped rectangles for the current content and direction.
   Slots slots() const;
+
+  /// Reports whether the label is displayed above the input content.
   bool floated() const;
+
+  /// Selects the error or supporting message for the assistive row.
   roo::string_view assistiveText() const;
+
+  /// Invalidates, relayouts, and preserves the active caret viewport.
   void geometryChanged();
+
+  /// Focuses and binds the task editor when this field is eligible.
   void startEditing(bool show_keyboard);
+
+  /// Keeps the active caret within the computed input viewport.
   void updateScroll();
   Widget& editWidget() override { return *this; }
   std::string& textBuffer() override { return value_; }
@@ -187,7 +221,11 @@ class TextField : public BasicSurfaceWidget, private internal::TextEditTarget {
     kTrailingTap = 128
   };
   std::string value_;
-  roo::string_view label_, supporting_, error_, prefix_, suffix_;
+  roo::string_view label_;
+  roo::string_view supporting_;
+  roo::string_view error_;
+  roo::string_view prefix_;
+  roo::string_view suffix_;
   const MonoIcon* leading_ = nullptr;
   const MonoIcon* trailing_ = nullptr;
   uint8_t flags_;

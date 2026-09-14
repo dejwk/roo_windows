@@ -53,9 +53,9 @@ policy on top of this baseline.
 - Use `///` for Doxygen comments; do not use block-form Doxygen comments.
 - All public classes and public methods should have Doxygen comments at the
   declaration site.
-- Leave one empty separator line between public methods or functions that have
-  Doxygen comments, including one-line declarations. Adjacent undocumented
-  one-line declarations may omit the separator.
+- Always leave an empty line between declarations or implementations. The
+  only exception is a group of declarations or definitions that each fit
+  entirely on a single line, including any comments.
 - Always leave one empty separator line between adjacent `struct` or `class`
   declarations.
 - Doxygen comments should summarize implemented behavior, or intended behavior
