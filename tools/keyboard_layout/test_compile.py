@@ -1,4 +1,6 @@
 import copy
+import hashlib
+import re
 import importlib.util
 import json
 from pathlib import Path
@@ -62,9 +64,37 @@ class CompilerTest(unittest.TestCase):
                     path = ROOT / 'generated' / (name + '.rwkb')
                 self.assertEqual(data, path.read_bytes(), str(path))
 
+    def test_annotated_records_preserve_bytes(self):
+        # Comments must never change the byte stream or split key/letter records.
+        for name in ('en_us', 'pl_pl', 'accent_demo'):
+            source = compiler.load(ROOT / 'layouts' / (name + '.json'))
+            data = compiler.compile_layout(source)
+            rows = compiler.annotated_rows(source, data)
+            values = []
+            for line in rows.splitlines():
+                values.extend(int(v, 16) for v in re.findall(r'0x[0-9A-F]{2}', line.split('//')[0]))
+            self.assertEqual(data, bytes(values))
+            if name != 'accent_demo':
+                letter = next(line for line in rows.splitlines() if "// 'b', 'B'" in line)
+                self.assertEqual(11, len(re.findall(r'0x[0-9A-F]{2}', letter.split('//')[0])))
+            if name == 'pl_pl':
+                self.assertIn("// 'ą', 'Ą'", rows)
+
+    def test_comment_escaping(self):
+        # Authored labels and characters cannot inject new C++ source lines.
+        key = self.demo['pages'][0]['rows'][0]['keys'][0]
+        for text in ('\n', "'", '\\', '😀'):
+            key['text'] = text
+            key['upper'] = text
+            data = compiler.compile_layout(self.demo)
+            rows = compiler.annotated_rows(self.demo, data)
+            self.assertIn('// ' + repr(text) + ', ' + repr(text), rows)
+
     def test_captured_assets(self):
         en = compiler.compile_layout(compiler.load(ROOT/'layouts/en_us.json'))
         self.assertEqual(1192,len(en))
+        # Freeze the independently verified legacy capture after deleting its C++ tables.
+        self.assertEqual('097abf8076ccbd581f30bf848046d098d9d672345ee35cb4dc96f8e9a5833893', hashlib.sha256(en).hexdigest())
         pl = compiler.load(ROOT/'layouts/pl_pl.json')
         letters={k['text']:k for row in pl['pages'][0]['rows'] for k in row['keys'] if 'text' in k}
         for base, accent in zip('acelnosz','ąćęłńóśż'):

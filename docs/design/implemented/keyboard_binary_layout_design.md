@@ -24,14 +24,13 @@ through the row.
 
 ## Background
 
-The current [layout types](../../../src/roo_windows/keyboard_layout/keyboard_layout.h)
-form a pointer hierarchy: keyboard → pages → rows → keys. A page is a keyboard
+Before this design, the layout types formed a pointer hierarchy: keyboard → pages → rows → keys. A page is a keyboard
 screen, such as letters or symbols. Rows use integer horizontal grid units;
 ordinary English letter keys occupy two units, allowing a one-unit stagger.
 Each row has lowercase and uppercase key arrays. Some rows already share those
 arrays when case makes no difference.
 
-The [US layout](../../../src/roo_windows/keyboard_layout/en_us.cpp) has three
+The original US layout (retained in Git history) had three
 20-unit, four-row pages and 101 displayed key positions. Its uppercase arrays
 add 28 records. On a conventional 32-bit ABI, `KeySpec` occupies 12 bytes, including
 padding; a row occupies 16 bytes. These are ABI estimates, to be measured in the
@@ -445,7 +444,7 @@ The structs below are transient return values, not serialized records or retaine
 per-key objects. All declarations belong to `roo_windows`.
 
 ```cpp
-class KeyboardLayoutView {
+class KeyboardLayout {
  public:
   enum class Error : uint8_t { kOk, kInvalidData, kUnsupportedVersion };
   enum class Function : uint8_t {
@@ -484,10 +483,10 @@ class KeyboardLayoutView {
   };
 
   /// Creates an empty view.
-  KeyboardLayoutView() = default;
+  KeyboardLayout() = default;
 
   /// Validates borrowed PROGMEM bytes; clears out on failure.
-  static Error Open(const uint8_t* data, size_t size, KeyboardLayoutView& out);
+  static Error Open(const uint8_t* data, size_t size, KeyboardLayout& out);
 
   /// Returns whether this view has no layout.
   bool empty() const;
@@ -568,7 +567,7 @@ For example, a renderer's row loop is:
 ```cpp
 const auto range = layout.findKeyRange(page, row, first_column, past_column);
 for (int index = range.first; index < range.past_last; ++index) {
-  KeyboardLayoutView::Key key;
+  KeyboardLayout::Key key;
   if (!layout.readKey(page, row, index, key)) break;
   // key.start and key.width directly determine the pixel rectangle.
   // Paint the face only when it intersects the original pixel clip.
@@ -577,7 +576,7 @@ for (int index = range.first; index < range.past_last; ++index) {
 
 The widget's geometry helpers and added state are private. This sketch shows the
 state relevant to the new resource costs; the existing emitter, repeat task,
-legacy layout path, caps state, and damage tracking remain as described above.
+caps state and damage tracking remain as described above.
 
 ```cpp
 // Within KeyboardWidget (a private implementation class).
@@ -585,7 +584,7 @@ struct Grid {
   int cell_width, row_height, left, top;
 };
 
-KeyboardLayoutView layout_;  // Shared blob; no retained decoded tables.
+KeyboardLayout layout_;  // Shared blob; no retained decoded tables.
 
 struct AlternativeSelection {
   Rect strip_bounds_in_window;
@@ -613,16 +612,16 @@ The additions to the existing `Keyboard` and `Widget` APIs are:
 ```cpp
 // Within Keyboard; existing connect, show/hide, setTask, page and caps APIs stay.
 /// Borrows layout bytes for the lifetime of this keyboard.
-Keyboard(ApplicationContext& context, KeyboardLayoutView layout);
+Keyboard(ApplicationContext& context, KeyboardLayout layout);
 
 /// Replaces borrowed layout bytes, canceling input and resetting page/caps.
 /// Preserves visibility; after startup call on the application UI thread.
-void setLayout(KeyboardLayoutView layout);
+void setLayout(KeyboardLayout layout);
 
 // Generated accessors in their respective headers.
 /// Returns a view over static flash storage, validated once on first use.
-KeyboardLayoutView accentDemoLayout();
-KeyboardLayoutView kbEngUSLayout();
+KeyboardLayout accentDemoLayout();
+KeyboardLayout kbEngUSLayout();
 
 // Within Widget.
 /// Receives local-coordinate moves while this widget owns a long press.
@@ -648,14 +647,13 @@ convert underscore-separated JSON `name` words to lower camel case and append
 `Layout` (for example, `accent_demo` → `accentDemoLayout`); the built-in US accessor
 uses the explicitly maintained public spelling `kbEngUSLayout`.
 
-Keep the legacy `KeyboardSpec*` constructor and `kbEngUS()` temporarily, alongside
-a generated `kbEngUSLayout()` accessor. The legacy path keeps its old complexity
-and cannot express the new features. Migrate repository callers, document custom
-layout conversion, then remove the legacy types and constructor in an explicitly
-breaking release. No runtime conversion or heap-backed compatibility cache is
-introduced. New geometry, shape, and popup APIs land with working implementations;
-the movement hook's no-op default is deliberate behavior for existing widgets,
-not an unfinished implementation.
+The initial migration retained the legacy pointer tables for parity checks.
+The approved follow-up removes those types and the legacy constructor entirely.
+`KeyboardLayout` is the sole reader in `keyboard_layout.h/.cpp`; generated byte
+arrays use `kLayoutData`. Existing callers must regenerate custom JSON layouts
+and use the generated accessors. The generated US asset now occupies `en_us.h/.cpp`.
+Every generated key and alternative has its own annotated line, with section
+offsets and a format legend for debugging; the binary bytes remain unchanged.
 
 ## Implementation Plan
 

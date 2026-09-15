@@ -3,10 +3,15 @@
 Date: 2026-09-15. Implements phases 1–6 of the
 [compact keyboard design](design/implemented/keyboard_binary_layout_design.md).
 
+This report records the original six-phase implementation measurements. The
+subsequent cleanup removes legacy support and renames `KeyboardLayoutView` to
+`KeyboardLayout`; its generated C++ annotations preserve the recorded binary
+sizes. Object and firmware numbers below describe the pre-cleanup build.
+
 ## Delivered behavior
 
-The application keyboard uses generated en-US bytes by default. Existing
-`KeyboardSpec` callers remain supported. `KeyboardLayoutView` validates a borrowed
+The application keyboard uses generated en-US bytes by default. At that checkpoint, existing
+`KeyboardSpec` callers remained supported (removed in the follow-up cleanup). `KeyboardLayout` validates a borrowed
 RWKB blob without allocating, then reads fixed records directly from flash.
 Coordinate lookup uses a binary search within the row; clipped painting searches
 only its two range endpoints and visits the resulting keys. Circular action faces
@@ -42,7 +47,7 @@ using `target_check.py`, `-fno-exceptions`, `-fno-rtti`, and cross-toolchain `nm
 | Object | Original | Implemented | Change/budget |
 | --- | ---: | ---: | --- |
 | `KeyboardWidget` | 84 bytes | 108 bytes | +24; maximum +32 |
-| Borrowed `KeyboardLayoutView` | — | 8 bytes | Included in widget total |
+| Borrowed `KeyboardLayout` | — | 8 bytes | Included in widget total |
 | Active `AlternativesPin` | — | 32 bytes | Maximum 64 |
 
 These are object sizes, excluding allocator metadata and shared host bookkeeping.
@@ -66,7 +71,7 @@ for circular faces and partial popup repaint against full repaint.
 
 ```sh
 python3 tools/keyboard_layout/test_compile.py
-bazel test //:keyboard_layout_view_test //:keyboard_presentation_pin_test \
+bazel test //:keyboard_layout_test //:keyboard_presentation_pin_test \
   //:touch_sensor_test //:application_test //:text_field_keyboard_avoidance_test \
   //:display_window_test //examples/keyboard/polish_place_name:polish_place_name \
   --test_output=errors
@@ -116,3 +121,21 @@ They omit four captured symbols: `√`, `∆`, `℅`, `€`. The generated Polis
 those characters; displaying all symbol pages requires a font with that coverage.
 Generic punctuation/currency popups, suggestions, gesture typing, Android system
 controls and multi-scalar case expansions are outside this captured layout.
+
+## Legacy-removal follow-up
+
+The approved cleanup removes `KeyboardSpec`, its helper records and functions,
+the legacy US tables, and all renderer fallback branches. `KeyboardLayout` in
+`keyboard_layout.h/.cpp` is now the only reader; `en_us.h/.cpp` contains the
+generated US asset. Generated C++ includes field/offset explanations and one
+annotated record per key or alternative. Tests reconstruct the byte stream from
+those records and pin the previously verified US capture by SHA-256.
+
+Validation after cleanup: all 79 focused C++ tests (reader, keyboard presentation,
+touch sensor, application and keyboard avoidance) and eight Python compiler tests
+passed. The Polish emulator example compiled. The ESP32 translation-unit check
+passed with exceptions and RTTI disabled; `KeyboardWidget` is now 104 bytes,
+`KeyboardLayout` is 8 bytes, and the active alternatives pin remains 32 bytes.
+This follow-up did not repeat the full firmware link or physical touchscreen run.
+No affected callers were found in neighboring Roo library source trees. The
+application's local Polish-default selection was preserved outside the commits.

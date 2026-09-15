@@ -7,7 +7,7 @@ JSON sources live in `layouts/`; generated `.rwkb` binary files live in
 From the repository root:
 
 ```sh
-python3 tools/keyboard_layout/compile.py tools/keyboard_layout/layouts/en_us.json --output-prefix src/roo_windows/keyboard_layout/en_us_binary
+python3 tools/keyboard_layout/compile.py tools/keyboard_layout/layouts/en_us.json --output-prefix src/roo_windows/keyboard_layout/en_us
 python3 tools/keyboard_layout/compile.py tools/keyboard_layout/layouts/pl_pl.json --output-prefix src/roo_windows/keyboard_layout/pl_pl
 python3 tools/keyboard_layout/compile.py tools/keyboard_layout/layouts/accent_demo.json --output-prefix src/roo_windows/keyboard_layout/accent_demo
 python3 tools/keyboard_layout/test_compile.py
@@ -23,6 +23,11 @@ action keys and long-press alternatives. Generated `kbEngUSLayout()` and
 `kbPolPLLayout()` accessors return borrowed validated views. Static entry points
 use `Open()` to follow the library's C++ naming conventions.
 
+Generated C++ uses `kLayoutData` for the byte array. It documents the byte order,
+field widths and section offsets; every key and alternative is on its own line
+with a short comment such as `// 'b', 'B'`. These annotations do not change the
+`.rwkb` bytes. The initializer disables clang-format to preserve record boundaries.
+
 The binary contract is in the
 [design](../../docs/design/implemented/keyboard_binary_layout_design.md).
 A binary is at most 65,535 bytes. Failed validation leaves an empty view; normal
@@ -32,8 +37,9 @@ firmware uses generated accessors whose bytes are checked once on first use.
 
 `en_us.json` preserves all three pages of the pre-migration `en_us.cpp`, including
 symbols, widths, stagger, case pairs, labels, and targets. It deliberately adds
-no new accents or circles. The C++ parity test compares every generated record
-against the retained legacy tables. Its binary is 1,192 bytes.
+no new accents or circles. The initial C++ parity test verified every generated record against the legacy
+tables before their removal. A compiler test now pins that verified binary by
+SHA-256. Its binary is 1,192 bytes.
 
 ## Polish reference and adaptations
 
@@ -96,10 +102,12 @@ captured keyboard data.
 ## Migration and target validation
 
 The application-owned keyboard now defaults to `kbEngUSLayout()` from
-`roo_windows/keyboard_layout/en_us_binary.h`. Custom callers can replace a legacy
+`roo_windows/keyboard_layout/en_us.h`. Custom callers can replace a legacy
 `Keyboard(context, kbEngUS())` with `Keyboard(context, kbEngUSLayout())`.
-The old `KeyboardSpec` constructor and `kbEngUS()` tables remain available;
-removing them is a future breaking-release change. Generated data contains no
+The old `KeyboardSpec` constructor, helper types, and `kbEngUS()` tables have
+been removed. Replace custom C++ tables with JSON and regenerate them.
+`KeyboardLayoutView` is now `KeyboardLayout`, declared in
+`roo_windows/keyboard_layout/keyboard_layout.h`; the old view header is removed. Generated data contains no
 pointers, and a layout view borrows its bytes for the duration of its use.
 
 The [acceptance report](../../docs/keyboard_layout_acceptance.md) records tests,
