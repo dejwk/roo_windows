@@ -31,7 +31,7 @@ def main():
     flags += ['-fno-exceptions', '-fno-rtti', '-fstack-usage']
     sources = [root / 'src/roo_windows' / p for p in (
         'activities/keyboard.cpp', 'core/gesture_detector.cpp',
-        'keyboard_layout/keyboard_layout_view.cpp', 'keyboard_layout/en_us_binary.cpp',
+        'keyboard_layout/keyboard_layout.cpp', 'keyboard_layout/en_us.cpp',
         'keyboard_layout/pl_pl.cpp')]
     example = output / 'example.cpp'
     example.write_text('#include "' + str(root / 'examples/keyboard/polish_place_name/polish_place_name.ino') + '"\n')
@@ -40,7 +40,7 @@ def main():
     probe.write_text('#include "' + str(sources[0]) + '"\nextern "C" {\n'
         'char keyboard_widget_bytes[sizeof(roo_windows::KeyboardWidget)];\n'
         'char keyboard_pin_bytes[sizeof(roo_windows::AlternativesPin)];\n'
-        'char keyboard_view_bytes[sizeof(roo_windows::KeyboardLayoutView)];\n}\n')
+        'char keyboard_view_bytes[sizeof(roo_windows::KeyboardLayout)];\n}\n')
     sources.append(probe)
     if args.baseline_source:
         sources.append(args.baseline_source.resolve())

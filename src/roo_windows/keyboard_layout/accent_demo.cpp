@@ -17,11 +17,11 @@ const uint8_t kData[] PROGMEM = {
     0x00, 0x00, 0xC8, 0x00, 0x01, 0x19, 0x00, 0x01, 0x18,
 };
 }  // namespace
-KeyboardLayoutView accentDemoLayout() {
-  static const KeyboardLayoutView layout = [] {
-    KeyboardLayoutView value;
-    CHECK(KeyboardLayoutView::Open(kData, sizeof(kData), value) ==
-          KeyboardLayoutView::Error::kOk);
+KeyboardLayout accentDemoLayout() {
+  static const KeyboardLayout layout = [] {
+    KeyboardLayout value;
+    CHECK(KeyboardLayout::Open(kData, sizeof(kData), value) ==
+          KeyboardLayout::Error::kOk);
     return value;
   }();
   return layout;

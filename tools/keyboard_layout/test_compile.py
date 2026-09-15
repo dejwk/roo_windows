@@ -54,7 +54,7 @@ class CompilerTest(unittest.TestCase):
 
     def test_generated_assets_are_current(self):
         repository = ROOT.parents[1]
-        for name, basename in [('en_us', 'en_us_binary'), ('pl_pl', 'pl_pl'), ('accent_demo', 'accent_demo')]:
+        for name, basename in [('en_us', 'en_us'), ('pl_pl', 'pl_pl'), ('accent_demo', 'accent_demo')]:
             prefix = repository / 'src/roo_windows/keyboard_layout' / basename
             outputs = compiler.artifacts(compiler.load(ROOT / 'layouts' / (name + '.json')), prefix)
             for path, data in outputs.items():

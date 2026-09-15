@@ -1,4 +1,4 @@
-#include "roo_windows/keyboard_layout/keyboard_layout_view.h"
+#include "roo_windows/keyboard_layout/keyboard_layout.h"
 
 #include <algorithm>
 
@@ -13,22 +13,21 @@ bool IsScalar(uint32_t value) {
 
 }  // namespace
 
-uint32_t KeyboardLayoutView::read(size_t offset, int bytes) const {
+uint32_t KeyboardLayout::read(size_t offset, int bytes) const {
   uint32_t result = 0;
   while (bytes-- > 0) result = (result << 8) | pgm_read_byte(data_ + offset++);
   return result;
 }
 
-bool KeyboardLayoutView::span(size_t offset, size_t length) const {
+bool KeyboardLayout::span(size_t offset, size_t length) const {
   return offset >= 8 && offset <= size_ && length <= size_ - offset;
 }
 
-KeyboardLayoutView::Error KeyboardLayoutView::Open(const uint8_t* data,
-                                                   size_t size,
-                                                   KeyboardLayoutView& out) {
-  out = KeyboardLayoutView();
+KeyboardLayout::Error KeyboardLayout::Open(const uint8_t* data, size_t size,
+                                           KeyboardLayout& out) {
+  out = KeyboardLayout();
   if (data == nullptr || size < 8 || size > 65535) return Error::kInvalidData;
-  KeyboardLayoutView candidate;
+  KeyboardLayout candidate;
   candidate.data_ = data;
   candidate.size_ = size;
   if (candidate.read(0, 4) != 0x52574B42) return Error::kInvalidData;
@@ -41,7 +40,7 @@ KeyboardLayoutView::Error KeyboardLayoutView::Open(const uint8_t* data,
 
 // Validate UTF-8 without a RAM copy, including overlong and surrogate
 // rejection.
-bool KeyboardLayoutView::validLabel(size_t offset) const {
+bool KeyboardLayout::validLabel(size_t offset) const {
   if (!span(offset, 1)) return false;
   size_t length = read(offset++);
   if (length == 0 || !span(offset, length)) return false;
@@ -77,7 +76,7 @@ bool KeyboardLayoutView::validLabel(size_t offset) const {
 }
 
 // Validate all referenced records before allowing unchecked fixed-field reads.
-bool KeyboardLayoutView::validate() const {
+bool KeyboardLayout::validate() const {
   const int pages = read(5);
   if (pages == 0 || !span(8, pages * 4)) return false;
   for (int p = 0; p < pages; ++p) {
@@ -128,27 +127,27 @@ bool KeyboardLayoutView::validate() const {
   return true;
 }
 
-uint8_t KeyboardLayoutView::pageCount() const { return empty() ? 0 : read(5); }
+uint8_t KeyboardLayout::pageCount() const { return empty() ? 0 : read(5); }
 
-size_t KeyboardLayoutView::pageOffset(int page) const {
+size_t KeyboardLayout::pageOffset(int page) const {
   return page < 0 || page >= pageCount() ? 0 : 8 + 4 * page;
 }
 
-size_t KeyboardLayoutView::rowOffset(int page, int row) const {
+size_t KeyboardLayout::rowOffset(int page, int row) const {
   size_t offset = pageOffset(page);
   return offset == 0 || row < 0 || row >= static_cast<int>(read(offset + 1))
              ? 0
              : read(offset + 2, 2) + 4 * row;
 }
 
-size_t KeyboardLayoutView::keyOffset(int page, int row, int key) const {
+size_t KeyboardLayout::keyOffset(int page, int row, int key) const {
   size_t offset = rowOffset(page, row);
   return offset == 0 || key < 0 || key >= static_cast<int>(read(offset))
              ? 0
              : read(offset + 2, 2) + 11 * key;
 }
 
-bool KeyboardLayoutView::readPage(int page, Page& out) const {
+bool KeyboardLayout::readPage(int page, Page& out) const {
   out = Page();
   size_t offset = pageOffset(page);
   if (!offset) return false;
@@ -157,7 +156,7 @@ bool KeyboardLayoutView::readPage(int page, Page& out) const {
   return true;
 }
 
-bool KeyboardLayoutView::readRow(int page, int row, Row& out) const {
+bool KeyboardLayout::readRow(int page, int row, Row& out) const {
   out = Row();
   size_t offset = rowOffset(page, row);
   if (!offset) return false;
@@ -165,7 +164,7 @@ bool KeyboardLayoutView::readRow(int page, int row, Row& out) const {
   return true;
 }
 
-bool KeyboardLayoutView::readKey(int page, int row, int key, Key& out) const {
+bool KeyboardLayout::readKey(int page, int row, int key, Key& out) const {
   out = Key();
   size_t offset = keyOffset(page, row, key);
   if (!offset) return false;
@@ -184,9 +183,8 @@ bool KeyboardLayoutView::readKey(int page, int row, int key, Key& out) const {
   return true;
 }
 
-bool KeyboardLayoutView::readAlternative(int page, int row, int key,
-                                         int alternative,
-                                         Character& out) const {
+bool KeyboardLayout::readAlternative(int page, int row, int key,
+                                     int alternative, Character& out) const {
   out = Character();
   size_t offset = keyOffset(page, row, key);
   if (!offset || (read(offset + 2) & 7) != 0) return false;
@@ -198,8 +196,8 @@ bool KeyboardLayoutView::readAlternative(int page, int row, int key,
   return true;
 }
 
-bool KeyboardLayoutView::copyLabel(int page, int row, int key, char* buffer,
-                                   size_t capacity, size_t& length) const {
+bool KeyboardLayout::copyLabel(int page, int row, int key, char* buffer,
+                               size_t capacity, size_t& length) const {
   length = 0;
   size_t offset = keyOffset(page, row, key);
   if (!offset || (read(offset + 2) & 7) != 5 || buffer == nullptr) return false;
@@ -211,7 +209,7 @@ bool KeyboardLayoutView::copyLabel(int page, int row, int key, char* buffer,
   return true;
 }
 
-int KeyboardLayoutView::findKey(int page, int row, int column) const {
+int KeyboardLayout::findKey(int page, int row, int column) const {
   size_t offset = rowOffset(page, row);
   if (!offset || column < 0 ||
       column >= static_cast<int>(read(pageOffset(page))))
@@ -231,8 +229,9 @@ int KeyboardLayoutView::findKey(int page, int row, int column) const {
                                                                     : -1;
 }
 
-KeyboardLayoutView::KeyRange KeyboardLayoutView::findKeyRange(
-    int page, int row, int first_column, int past_column) const {
+KeyboardLayout::KeyRange KeyboardLayout::findKeyRange(int page, int row,
+                                                      int first_column,
+                                                      int past_column) const {
   size_t offset = rowOffset(page, row);
   if (!offset) return {};
   const int width = read(pageOffset(page));

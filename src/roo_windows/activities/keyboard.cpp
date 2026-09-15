@@ -97,14 +97,7 @@ static const roo_time::Duration kDeleteRepeatInterval = roo_time::Millis(60);
 // the number of keys and pages.
 class KeyboardWidget final : public SurfaceWidget {
  public:
-  KeyboardWidget(ApplicationContext& context, const KeyboardSpec* spec,
-                 TextInputEmitter& text_input)
-      : SurfaceWidget(context),
-        spec_(spec),
-        text_input_(text_input),
-        repeat_(context.scheduler(), [this]() { repeatDelete(); }) {}
-
-  KeyboardWidget(ApplicationContext& context, KeyboardLayoutView layout,
+  KeyboardWidget(ApplicationContext& context, KeyboardLayout layout,
                  TextInputEmitter& text_input)
       : SurfaceWidget(context),
         layout_(layout),
@@ -129,10 +122,9 @@ class KeyboardWidget final : public SurfaceWidget {
   }
   void setCapsState(Keyboard::CapsState caps_state);
   void setPage(int idx);
-  void setLayout(KeyboardLayoutView layout) {
+  void setLayout(KeyboardLayout layout) {
     onCancel();
     page_idx_ = -1;
-    spec_ = nullptr;
     layout_ = layout;
     caps_state_ = Keyboard::CAPS_STATE_LOW;
     if (isVisible()) setPage(0);
@@ -200,12 +192,10 @@ class KeyboardWidget final : public SurfaceWidget {
   void dirty(const Rect& bounds);
   void includeDamage(const Rect& bounds);
 
-  KeyboardLayoutView::Page page() const;
-  KeyboardLayoutView::Key keyAt(int row, int key,
-                                bool include_start = false) const;
+  KeyboardLayout::Page page() const;
+  KeyboardLayout::Key keyAt(int row, int key) const;
 
-  const KeyboardSpec* spec_ = nullptr;
-  KeyboardLayoutView layout_;
+  KeyboardLayout layout_;
   int16_t page_idx_ = -1;
   TextInputEmitter& text_input_;
   roo_scheduler::SingletonTask repeat_;
@@ -338,7 +328,7 @@ class AlternativesPin final : public PresentationPin {
 
 Rect KeyboardWidget::activeAllocation() const {
   const Grid g = grid();
-  const KeyboardLayoutView::Key key = keyAt(active_row_, active_key_);
+  const KeyboardLayout::Key key = keyAt(active_row_, active_key_);
   const int left = g.left + key.start * g.cell_width;
   const int top = g.top + active_row_ * g.row_height;
   XDim dx;
@@ -349,7 +339,7 @@ Rect KeyboardWidget::activeAllocation() const {
 }
 
 uint32_t KeyboardWidget::alternativeRune(int choice) const {
-  KeyboardLayoutView::Character ch = keyAt(active_row_, active_key_).character;
+  KeyboardLayout::Character ch = keyAt(active_row_, active_key_).character;
   if (choice > 0)
     layout_.readAlternative(page_idx_, active_row_, active_key_, choice - 1,
                             ch);
@@ -358,7 +348,7 @@ uint32_t KeyboardWidget::alternativeRune(int choice) const {
 
 void KeyboardWidget::showAlternatives() {
   if (alternatives_.active || !isPresented()) return;
-  const KeyboardLayoutView::Key key = keyAt(active_row_, active_key_);
+  const KeyboardLayout::Key key = keyAt(active_row_, active_key_);
   if (key.alternative_count == 0) return;
   const Rect viewport = getMainWindow()->bounds();
   const Rect allocation = activeAllocation();
@@ -468,44 +458,21 @@ KeyboardWidget::Grid KeyboardWidget::grid() const {
               kExtraTopPaddingPx};
 }
 
-KeyboardLayoutView::Page KeyboardWidget::page() const {
-  KeyboardLayoutView::Page result;
-  if (page_idx_ < 0) return result;
-  if (spec_ != nullptr) {
-    result.width = spec_->pages[page_idx_].row_width;
-    result.row_count = spec_->pages[page_idx_].row_count;
-  } else {
-    layout_.readPage(page_idx_, result);
-  }
+KeyboardLayout::Page KeyboardWidget::page() const {
+  KeyboardLayout::Page result;
+  layout_.readPage(page_idx_, result);
   return result;
 }
 
-// Decode legacy layouts only during migration; generated records need no scan.
-KeyboardLayoutView::Key KeyboardWidget::keyAt(int row_idx, int key_idx,
-                                              bool include_start) const {
-  KeyboardLayoutView::Key result;
-  if (page_idx_ < 0 || row_idx < 0 || key_idx < 0) return result;
-  if (spec_ == nullptr) {
-    layout_.readKey(page_idx_, row_idx, key_idx, result);
-    return result;
-  }
-  const KeyboardRowSpec& row = spec_->pages[page_idx_].rows[row_idx];
-  const KeySpec& key = row.keys[key_idx];
-  result.start = row.start_offset;
-  if (include_start) {
-    for (int i = 0; i < key_idx; ++i) result.start += row.keys[i].width;
-  }
-  result.width = key.width;
-  result.function = static_cast<KeyboardLayoutView::Function>(key.function);
-  result.character = {key.data, row.keys_caps[key_idx].data};
-  result.target_page = key.data & 255;
-  result.label_bytes = key.data >> 16;
+KeyboardLayout::Key KeyboardWidget::keyAt(int row_idx, int key_idx) const {
+  KeyboardLayout::Key result;
+  layout_.readKey(page_idx_, row_idx, key_idx, result);
   return result;
 }
 
 Rect KeyboardWidget::keyBounds(int row_idx, int key_idx) const {
   const Grid g = grid();
-  const KeyboardLayoutView::Key key = keyAt(row_idx, key_idx, true);
+  const KeyboardLayout::Key key = keyAt(row_idx, key_idx);
   return keyBounds(g, g.left + key.start * g.cell_width, row_idx, key.width);
 }
 
@@ -525,20 +492,7 @@ void KeyboardWidget::findKey(XDim x, YDim y) {
   const int row_idx = (y - g.top) / g.row_height;
   const int col = (x - g.left) / g.cell_width;
   if (row_idx >= page().row_count || col >= page().width) return;
-  int key_idx = -1;
-  if (spec_ == nullptr) {
-    key_idx = layout_.findKey(page_idx_, row_idx, col);
-  } else {
-    const KeyboardRowSpec& row = spec_->pages[page_idx_].rows[row_idx];
-    int left = row.start_offset;
-    for (int i = 0; i < row.key_count; ++i) {
-      if (col >= left && col < left + row.keys[i].width) {
-        key_idx = i;
-        break;
-      }
-      left += row.keys[i].width;
-    }
-  }
+  const int key_idx = layout_.findKey(page_idx_, row_idx, col);
   if (key_idx >= 0) {
     active_row_ = row_idx;
     active_key_ = key_idx;
@@ -546,15 +500,15 @@ void KeyboardWidget::findKey(XDim x, YDim y) {
 }
 
 uint32_t KeyboardWidget::rune(int row_idx, int key_idx) const {
-  const KeyboardLayoutView::Character ch = keyAt(row_idx, key_idx).character;
+  const KeyboardLayout::Character ch = keyAt(row_idx, key_idx).character;
   return caps_state_ == Keyboard::CAPS_STATE_LOW ? ch.lower : ch.upper;
 }
 
 void KeyboardWidget::paintKey(PaintContext& ctx, int row_idx, int key_idx,
                               const Rect& face) const {
-  const KeyboardLayoutView::Key key = keyAt(row_idx, key_idx);
+  const KeyboardLayout::Key key = keyAt(row_idx, key_idx);
   Rect bounds = face;
-  const bool circle = key.shape == KeyboardLayoutView::Shape::kCircle;
+  const bool circle = key.shape == KeyboardLayout::Shape::kCircle;
   if (circle) {
     // Decoration radii are byte-sized; keep the face circular at large scales.
     const int side =
@@ -567,10 +521,10 @@ void KeyboardWidget::paintKey(PaintContext& ctx, int row_idx, int key_idx,
   PaintContext local = ctx.clipped(bounds);
   if (local.empty()) return;
   Color background = colorTheme().modifierButton;
-  if (key.function == KeyboardLayoutView::Function::kText ||
-      key.function == KeyboardLayoutView::Function::kSpace) {
+  if (key.function == KeyboardLayout::Function::kText ||
+      key.function == KeyboardLayout::Function::kSpace) {
     background = colorTheme().normalButton;
-  } else if (key.function == KeyboardLayoutView::Function::kEnter) {
+  } else if (key.function == KeyboardLayout::Function::kEnter) {
     background = colorTheme().acceptButton;
   }
   if (isPressed() && active_row_ == row_idx && active_key_ == key_idx) {
@@ -590,7 +544,7 @@ void KeyboardWidget::paintKey(PaintContext& ctx, int row_idx, int key_idx,
   content.setBgcolor(background);
   const MonoIcon* icon = nullptr;
   switch (key.function) {
-    case KeyboardLayoutView::Function::kText: {
+    case KeyboardLayout::Function::kText: {
       char utf8[4];
       int size = roo_io::WriteUtf8Char(utf8, rune(row_idx, key_idx));
       PaintKeyContent(content,
@@ -599,38 +553,30 @@ void KeyboardWidget::paintKey(PaintContext& ctx, int row_idx, int key_idx,
                       bounds);
       break;
     }
-    case KeyboardLayoutView::Function::kSwitchPage: {
+    case KeyboardLayout::Function::kSwitchPage: {
       char label[255];
       size_t length = 0;
-      if (spec_ != nullptr) {
-        const KeyboardRowSpec& row = spec_->pages[page_idx_].rows[row_idx];
-        const uint32_t data = row.keys[key_idx].data;
-        length = data >> 16;
-        std::copy_n(row.pageswitch_key_labels + ((data >> 8) & 255), length,
-                    label);
-      } else {
-        layout_.copyLabel(page_idx_, row_idx, key_idx, label, sizeof(label),
-                          length);
-      }
+      layout_.copyLabel(page_idx_, row_idx, key_idx, label, sizeof(label),
+                        length);
       PaintKeyContent(content,
                       StringViewLabel(roo::string_view(label, length),
                                       font_button(), colorTheme().text),
                       bounds);
       break;
     }
-    case KeyboardLayoutView::Function::kEnter:
+    case KeyboardLayout::Function::kEnter:
       icon = &ic_outlined_24_action_done();
       break;
-    case KeyboardLayoutView::Function::kDelete:
+    case KeyboardLayout::Function::kDelete:
       icon = &ic_outlined_24_content_backspace();
       break;
-    case KeyboardLayoutView::Function::kShift:
+    case KeyboardLayout::Function::kShift:
       icon = caps_state_ == Keyboard::CAPS_STATE_LOW ? &shift_24()
              : caps_state_ == Keyboard::CAPS_STATE_HIGH
                  ? &shift_filled_24()
                  : &caps_lock_filled_24();
       break;
-    case KeyboardLayoutView::Function::kSpace:
+    case KeyboardLayout::Function::kSpace:
       content.clear();
       break;
   }
@@ -695,17 +641,7 @@ void KeyboardWidget::paint(PaintContext& ctx) const {
                                  static_cast<int>(clip.xMax()) + 1);
   if (left < past) {
     for (int row_idx = first_row; row_idx <= last_row; ++row_idx) {
-      if (spec_ != nullptr) {
-        const KeyboardRowSpec& row = spec_->pages[page_idx_].rows[row_idx];
-        int x = g.left + row.start_offset * g.cell_width;
-        for (int key = 0; key < row.key_count && x < past; ++key) {
-          const Rect face = keyBounds(g, x, row_idx, row.keys[key].width);
-          if (face.intersects(clip)) paintKey(ctx, row_idx, key, face);
-          x += row.keys[key].width * g.cell_width;
-        }
-        continue;
-      }
-      const KeyboardLayoutView::KeyRange range = layout_.findKeyRange(
+      const KeyboardLayout::KeyRange range = layout_.findKeyRange(
           page_idx_, row_idx, (left - g.left) / g.cell_width,
           (past - g.left + g.cell_width - 1) / g.cell_width);
       for (int key = range.first; key < range.past_last; ++key) {
@@ -726,7 +662,7 @@ void KeyboardWidget::setCapsState(Keyboard::CapsState caps_state) {
 }
 
 void KeyboardWidget::setPage(int idx) {
-  const int count = spec_ != nullptr ? spec_->page_count : layout_.pageCount();
+  const int count = layout_.pageCount();
   if (idx < -1 || idx >= count || idx == page_idx_) return;
   onCancel();
   page_idx_ = idx;
@@ -744,23 +680,23 @@ void KeyboardWidget::onShowPress(XDim x, YDim y) {
   if (active_key_ < 0 || isPressed()) return;
   setPressed(true);
   dirty(activeBounds());
-  const KeyboardLayoutView::Key key = keyAt(active_row_, active_key_);
+  const KeyboardLayout::Key key = keyAt(active_row_, active_key_);
   switch (key.function) {
-    case KeyboardLayoutView::Function::kText:
+    case KeyboardLayout::Function::kText:
       showPresentationPin(std::unique_ptr<PresentationPin>(
           new (std::nothrow) PressHighlighterPin(*this)));
       break;
-    case KeyboardLayoutView::Function::kShift:
+    case KeyboardLayout::Function::kShift:
       setCapsState(caps_state_ == Keyboard::CAPS_STATE_LOW
                        ? Keyboard::CAPS_STATE_HIGH
                        : Keyboard::CAPS_STATE_LOW);
       break;
-    case KeyboardLayoutView::Function::kDelete:
+    case KeyboardLayout::Function::kDelete:
       // Schedule before synchronous delivery, which may hide this keyboard.
       repeat_.scheduleAfter(kDeleteRepeatDelay);
       text_input_.deleteBackward();
       break;
-    case KeyboardLayoutView::Function::kSwitchPage:
+    case KeyboardLayout::Function::kSwitchPage:
       setPage(key.target_page);
       break;
     default:
@@ -772,19 +708,19 @@ void KeyboardWidget::onSingleTapUp(XDim x, YDim y) {
   if (active_key_ < 0) return;
   if (!isPressed()) onShowPress(x, y);
   if (active_key_ < 0) return;  // Page switches cancel the old key.
-  const KeyboardLayoutView::Function function =
+  const KeyboardLayout::Function function =
       keyAt(active_row_, active_key_).function;
   const uint32_t ch =
-      function == KeyboardLayoutView::Function::kText ? activeRune() : ' ';
+      function == KeyboardLayout::Function::kText ? activeRune() : ' ';
   const Keyboard::CapsState caps = caps_state();
   onCancel();
-  if (function == KeyboardLayoutView::Function::kText) {
+  if (function == KeyboardLayout::Function::kText) {
     if (caps == Keyboard::CAPS_STATE_HIGH)
       setCapsState(Keyboard::CAPS_STATE_LOW);
     text_input_.commitRune(ch);
-  } else if (function == KeyboardLayoutView::Function::kSpace) {
+  } else if (function == KeyboardLayout::Function::kSpace) {
     text_input_.commitRune(' ');
-  } else if (function == KeyboardLayoutView::Function::kEnter) {
+  } else if (function == KeyboardLayout::Function::kEnter) {
     text_input_.performAction(TextInputAction::kDone);
   }
 }
@@ -794,12 +730,12 @@ void KeyboardWidget::onLongPress(XDim x, YDim y) {
   if (!isPressed()) onShowPress(x, y);
   if (active_key_ < 0) return;
   if (keyAt(active_row_, active_key_).function ==
-      KeyboardLayoutView::Function::kText) {
+      KeyboardLayout::Function::kText) {
     showAlternatives();
     return;
   }
   if (keyAt(active_row_, active_key_).function ==
-          KeyboardLayoutView::Function::kShift &&
+          KeyboardLayout::Function::kShift &&
       caps_state_ == Keyboard::CAPS_STATE_HIGH) {
     setCapsState(Keyboard::CAPS_STATE_HIGH_LOCKED);
   }
@@ -849,12 +785,7 @@ const KeyboardWidget* Keyboard::contents() const {
   return (KeyboardWidget*)contents_.get();
 }
 
-Keyboard::Keyboard(ApplicationContext& context, const KeyboardSpec* spec)
-    : contents_(new KeyboardWidget(context, spec, text_input_)) {
-  contents_->setVisibility(Visibility::kGone);
-}
-
-Keyboard::Keyboard(ApplicationContext& context, KeyboardLayoutView layout)
+Keyboard::Keyboard(ApplicationContext& context, KeyboardLayout layout)
     : contents_(new KeyboardWidget(context, layout, text_input_)) {
   contents_->setVisibility(Visibility::kGone);
 }
@@ -882,7 +813,7 @@ void Keyboard::connect(Application& destination) {
   text_input_.connect(destination);
 }
 
-void Keyboard::setLayout(KeyboardLayoutView layout) {
+void Keyboard::setLayout(KeyboardLayout layout) {
   contents()->setLayout(layout);
 }
 

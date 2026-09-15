@@ -1085,8 +1085,8 @@ cc_test(
 )
 
 cc_test(
-    name = "keyboard_layout_view_test",
-    srcs = ["test/keyboard_layout_view_test.cpp"],
+    name = "keyboard_layout_test",
+    srcs = ["test/keyboard_layout_test.cpp"],
     linkstatic = 1,
     deps = [":roo_windows", "@roo_testing//:arduino_gtest_main"],
 )

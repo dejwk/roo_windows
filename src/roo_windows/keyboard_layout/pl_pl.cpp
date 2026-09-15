@@ -128,11 +128,11 @@ const uint8_t kData[] PROGMEM = {
     0x32, 0x33, 0x05, 0x3D, 0x20, 0x5C, 0x20, 0x3C, 0x03, 0x41, 0x42, 0x43,
 };
 }  // namespace
-KeyboardLayoutView kbPolPLLayout() {
-  static const KeyboardLayoutView layout = [] {
-    KeyboardLayoutView value;
-    CHECK(KeyboardLayoutView::Open(kData, sizeof(kData), value) ==
-          KeyboardLayoutView::Error::kOk);
+KeyboardLayout kbPolPLLayout() {
+  static const KeyboardLayout layout = [] {
+    KeyboardLayout value;
+    CHECK(KeyboardLayout::Open(kData, sizeof(kData), value) ==
+          KeyboardLayout::Error::kOk);
     return value;
   }();
   return layout;

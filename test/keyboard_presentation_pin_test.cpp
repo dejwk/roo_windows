@@ -4,7 +4,7 @@
 #include "roo_testing/system/timer.h"
 #include "roo_windows/core/task.h"
 #include "roo_windows/keyboard_layout/accent_demo.h"
-#include "roo_windows/keyboard_layout/en_us_binary.h"
+#include "roo_windows/keyboard_layout/en_us.h"
 #include "roo_windows/widgets/button.h"
 #include "roo_windows/widgets/text_field.h"
 #include "roo_windows_render_test_support.h"
@@ -89,6 +89,7 @@ class KeyboardPresentationPinTest : public RooWindowsRenderTestSized<412, 320> {
                TextField::NONE) {}
 
   void SetUp() override {
+    app_.keyboard().setLayout(kbEngUSLayout());
     task_ = &app_.addTaskFullScreen(field_);
     task_->textFieldEditor().edit(&field_, false);
     app_.keyboard().show();

@@ -9,7 +9,6 @@
 #include "roo_windows/core/text_input.h"
 #include "roo_windows/core/widget.h"
 #include "roo_windows/keyboard_layout/keyboard_layout.h"
-#include "roo_windows/keyboard_layout/keyboard_layout_view.h"
 
 namespace roo_windows {
 
@@ -21,7 +20,6 @@ class Application;
 ///
 /// Renders a borrowed generated layout with one surface widget. Layout bytes
 /// must outlive the keyboard or remain alive until replaced by setLayout().
-/// The legacy spec constructor is retained for custom-layout migration.
 ///
 /// Emits semantic text input to its connected application. Tracks caps
 /// state (`LOW`, `HIGH`, `HIGH_LOCKED`) and current page. Its fixed popup task
@@ -34,14 +32,12 @@ class Keyboard {
     CAPS_STATE_HIGH_LOCKED = 2,
   };
 
-  Keyboard(ApplicationContext& context, const KeyboardSpec* spec);
-
   /// Borrows validated layout bytes, which must outlive this keyboard.
-  Keyboard(ApplicationContext& context, KeyboardLayoutView layout);
+  Keyboard(ApplicationContext& context, KeyboardLayout layout);
 
   /// Replaces the borrowed layout, canceling input and resetting page/caps.
   /// Preserves visibility. Call on the application's UI thread after startup.
-  void setLayout(KeyboardLayoutView layout);
+  void setLayout(KeyboardLayout layout);
 
   /// Returns the underlying `KeyboardWidget` that renders the layout.
   Widget& getContents();

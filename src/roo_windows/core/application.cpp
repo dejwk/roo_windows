@@ -6,7 +6,7 @@
 #include "roo_threads/mutex.h"
 #include "roo_threads/semaphore.h"
 #include "roo_windows/dialogs/alert_dialog.h"
-#include "roo_windows/keyboard_layout/en_us_binary.h"
+#include "roo_windows/keyboard_layout/en_us.h"
 
 namespace roo_windows {
 
