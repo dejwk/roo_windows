@@ -70,6 +70,8 @@ TEST(KeyboardLayoutTest, CheckedReadsAndAlternatives) {
   View::Key key;
   ASSERT_TRUE(view.readKey(0, 0, 1, key));
   EXPECT_EQ(3, key.alternative_count);
+  EXPECT_EQ(1, key.alternative_rows);
+  EXPECT_EQ(0, key.default_alternative);
   View::Character ch;
   ASSERT_TRUE(view.readAlternative(0, 0, 1, 0, ch));
   EXPECT_EQ(U'é', ch.lower);
@@ -90,7 +92,7 @@ TEST(KeyboardLayoutTest, CheckedReadsAndAlternatives) {
 
 // Verifies hostile/truncated binary input is rejected before record access.
 TEST(KeyboardLayoutTest, RejectsMalformedBlobs) {
-  const std::vector<uint8_t> valid = {'R', 'W', 'K', 'B', 1, 1, 0,   27, 2,
+  const std::vector<uint8_t> valid = {'R', 'W', 'K', 'B', 2, 1, 0,   27, 2,
                                       1,   0,   12,  1,   0, 0, 16,  0,  2,
                                       0,   0,   0,   'a', 0, 0, 'A', 0,  0};
   View view;
@@ -113,17 +115,45 @@ TEST(KeyboardLayoutTest, RejectsMalformedBlobs) {
               View::Open(bad.data(), bad.size(), view));
   }
   std::vector<uint8_t> bad = valid;
-  bad[4] = 2;
+  bad[4] = 1;
   EXPECT_EQ(View::Error::kUnsupportedVersion,
             View::Open(bad.data(), bad.size(), view));
   EXPECT_TRUE(view.empty());
+}
+
+// Verifies authored row counts and bottom-row defaults are validated before
+// use.
+TEST(KeyboardLayoutTest, ValidatesAlternativeGeometry) {
+  std::vector<uint8_t> data = {
+      'R', 'W', 'K',  'B', 2, 1,    0, 48, 2,    1,   0, 12,
+      1,   0,   0,    16,  0, 2,    0, 0,  0,    'e', 0, 0,
+      'E', 0,   27,   3,   2, 2,    0, 0,  0xe9, 0,   0, 0xc9,
+      0,   0,   0xe8, 0,   0, 0xc8, 0, 1,  0x19, 0,   1, 0x18};
+  View view;
+  ASSERT_EQ(View::Error::kOk, View::Open(data.data(), data.size(), view));
+  View::Key key;
+  ASSERT_TRUE(view.readKey(0, 0, 0, key));
+  EXPECT_EQ(2, key.alternative_rows);
+  EXPECT_EQ(2, key.default_alternative);
+  for (int rows : {0, 4}) {
+    auto bad = data;
+    bad[28] = rows;
+    EXPECT_EQ(View::Error::kInvalidData,
+              View::Open(bad.data(), bad.size(), view));
+  }
+  for (int index : {0, 1, 3}) {
+    auto bad = data;
+    bad[29] = index;
+    EXPECT_EQ(View::Error::kInvalidData,
+              View::Open(bad.data(), bad.size(), view));
+  }
 }
 
 // Verifies all 255 row-local indices remain usable without a sentinel
 // collision.
 TEST(KeyboardLayoutTest, MaximumWidthRowHasNoReservedKeyIndex) {
   std::vector<uint8_t> data(16 + 255 * 11, 0);
-  const uint8_t header[] = {'R', 'W', 'K', 'B', 1,   1, 0, 0,
+  const uint8_t header[] = {'R', 'W', 'K', 'B', 2,   1, 0, 0,
                             255, 1,   0,   12,  255, 0, 0, 16};
   std::copy(std::begin(header), std::end(header), data.begin());
   data[6] = data.size() >> 8;
@@ -146,7 +176,7 @@ TEST(KeyboardLayoutTest, MaximumWidthRowHasNoReservedKeyIndex) {
 // Verifies flash label validation rejects overlong UTF-8 and invalid payload
 // offsets.
 TEST(KeyboardLayoutTest, RejectsInvalidLabelAndMenuPayloads) {
-  std::vector<uint8_t> data = {'R', 'W', 'K', 'B', 1,  1,  0, 30, 2,    1,
+  std::vector<uint8_t> data = {'R', 'W', 'K', 'B', 2,  1,  0, 30, 2,    1,
                                0,   12,  1,   0,   0,  16, 0, 2,  5,    0,
                                0,   0,   0,   0,   27, 0,  0, 2,  0xC3, 0xA9};
   View view;

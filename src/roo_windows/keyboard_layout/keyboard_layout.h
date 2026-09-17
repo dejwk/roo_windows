@@ -5,7 +5,7 @@
 
 namespace roo_windows {
 
-/// Checked, copyable view borrowing immutable RWKB version 1 program-memory
+/// Checked, copyable view borrowing immutable RWKB version 2 program-memory
 /// data.
 class KeyboardLayout {
  public:
@@ -43,6 +43,8 @@ class KeyboardLayout {
     uint8_t target_page = 0;
     uint8_t label_bytes = 0;
     uint8_t alternative_count = 0;
+    uint8_t alternative_rows = 0;
+    uint8_t default_alternative = 0;
   };
 
   struct KeyRange {

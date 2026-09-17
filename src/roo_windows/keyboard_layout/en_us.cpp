@@ -5,7 +5,7 @@
 #include "roo_logging.h"
 namespace roo_windows {
 namespace {
-// RWKB v1. Multibyte integers are big-endian; offsets are blob-relative.
+// RWKB v2. Multibyte integers are big-endian; offsets are blob-relative.
 // Page and row records are 4 bytes. Key records are 11 bytes:
 //   start:u8, width:u8, flags:u8, lower/target:u24, upper/label:u24, menu:u16.
 // Flags: function in bits 0..2 (text/delete/enter/shift/space/switch_page),
@@ -14,7 +14,7 @@ namespace {
 // clang-format off
 const uint8_t kLayoutData[] PROGMEM = {
     // 0x0000: Header: magic[4], version, page count, total bytes:u16
-    0x52, 0x57, 0x4B, 0x42, 0x01, 0x03, 0x04, 0xA8,  // RWKB v1, 3 pages, 1192 bytes
+    0x52, 0x57, 0x4B, 0x42, 0x02, 0x03, 0x04, 0xA8,  // RWKB v2, 3 pages, 1192 bytes
     // 0x0008: Pages: grid width, row count, rows offset:u16
     0x14, 0x04, 0x00, 0x14,  // 'letters'
     0x14, 0x04, 0x00, 0x24,  // 'digits'

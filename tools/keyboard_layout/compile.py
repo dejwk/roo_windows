@@ -63,7 +63,7 @@ def load(path):
 
 def compile_layout(source):
     fields(source, {'format', 'name', 'pages'}, {'format', 'name', 'pages'}, '$')
-    integer(source['format'], 1, 1, 'format')
+    integer(source['format'], 2, 2, 'format')
     if not isinstance(source['name'], str) or not re.fullmatch(r'[a-z][a-z0-9]*(?:_[a-z0-9]+)*', source['name']):
         fail('name', 'expected lowercase underscore-separated identifier')
     pages = array(source['pages'], 1, 255, 'pages')
@@ -91,7 +91,7 @@ def compile_layout(source):
                     fields(key, {'gap'}, {'gap'}, kp)
                     cursor += integer(key['gap'], 1, 255, kp + '.gap')
                 else:
-                    fields(key, {'text','upper','action','width','shape','alternatives','target','label'}, set(), kp)
+                    fields(key, {'text','upper','action','width','shape','alternatives','alternative_rows','default_alternative','target','label'}, set(), kp)
                     if ('text' in key) == ('action' in key):
                         fail(kp, 'specify exactly one of text or action')
                     w = integer(key.get('width', 2), 1, 255, kp + '.width')
@@ -99,6 +99,8 @@ def compile_layout(source):
                     if shape not in ('rounded_rect', 'circle'):
                         fail(kp + '.shape', 'unknown shape')
                     menu, label = None, None
+                    if 'alternatives' not in key and any(f in key for f in ('alternative_rows', 'default_alternative')):
+                        fail(kp, 'alternative geometry requires alternatives')
                     if 'text' in key:
                         if shape != 'rounded_rect' or any(f in key for f in ('target','label')):
                             fail(kp, 'text keys cannot have action labels, targets or circles')
@@ -109,14 +111,20 @@ def compile_layout(source):
                                 ap = f'{kp}.alternatives[{a}]'
                                 fields(alt, {'text','upper'}, {'text'}, ap)
                                 pairs.append(pair(alt, ap))
-                            menu = tuple(pairs)
+                            fields(key, set(key), {'alternative_rows', 'default_alternative'}, kp)
+                            menu_rows = integer(key['alternative_rows'], 1, len(pairs), kp + '.alternative_rows')
+                            columns = (len(pairs) + menu_rows - 1) // menu_rows
+                            if columns > 5 or (len(pairs) + columns - 1) // columns != menu_rows:
+                                fail(kp, 'alternative rows must be occupied and have at most five columns')
+                            default = integer(key['default_alternative'], (menu_rows - 1) * columns, len(pairs) - 1, kp + '.default_alternative')
+                            menu = (menu_rows, default, tuple(pairs))
                             menus.setdefault(menu, 0)
                     else:
                         action = key['action']
                         if not isinstance(action, str) or action not in ACTIONS:
                             fail(kp + '.action', 'unknown action')
                         function, low, high = ACTIONS[action], 0, 0
-                        if any(f in key for f in ('upper','alternatives')):
+                        if any(f in key for f in ('upper','alternatives','alternative_rows','default_alternative')):
                             fail(kp, 'action cannot have uppercase or alternatives')
                         if action == 'switch_page':
                             if not isinstance(key.get('target'), str) or key['target'] not in ids:
@@ -139,7 +147,7 @@ def compile_layout(source):
                 fail(rp, 'row must contain a key')
             rows.append(keys)
         normalized.append((width, rows))
-    data = bytearray(b'RWKB\x01' + bytes([len(pages)]) + b'\0\0')
+    data = bytearray(b'RWKB\x02' + bytes([len(pages)]) + b'\0\0')
     def reserve(size):
         offset = len(data)
         data.extend(bytes(size))
@@ -162,12 +170,13 @@ def compile_layout(source):
         put(row_offset+2, offset, 2)
         key_entries.extend((offset+11*k, key) for k, key in enumerate(keys))
     for menu in menus:
-        offset = reserve(1 + 6 * len(menu))
+        rows, default, pairs = menu
+        offset = reserve(3 + 6 * len(pairs))
         menus[menu] = offset
-        data[offset] = len(menu)
-        for a, (low, high) in enumerate(menu):
-            put(offset+1+6*a, low, 3)
-            put(offset+4+6*a, high, 3)
+        data[offset:offset+3] = bytes([len(pairs), rows, default])
+        for a, (low, high) in enumerate(pairs):
+            put(offset+3+6*a, low, 3)
+            put(offset+6+6*a, high, 3)
     for label in labels:
         offset = reserve(1 + len(label))
         labels[label] = offset
@@ -198,7 +207,7 @@ def annotated_rows(source, data):
     def pair(offset):
         return character(read(offset, 3)) + ', ' + character(read(offset + 3, 3))
     section(0, 'Header: magic[4], version, page count, total bytes:u16')
-    record(0, 8, f"RWKB v1, {len(source['pages'])} pages, {len(data)} bytes")
+    record(0, 8, f"RWKB v2, {len(source['pages'])} pages, {len(data)} bytes")
     section(8, 'Pages: grid width, row count, rows offset:u16')
     for p, page in enumerate(source['pages']):
         record(8 + p * 4, 4, repr(page['id']))
@@ -235,10 +244,10 @@ def annotated_rows(source, data):
                     comment += f', alternatives @0x{menu:04X}'
                 record(pos, 11, comment)
     for offset in sorted(menus):
-        section(offset, 'Alternatives: count, then lower:u24 / upper:u24 pairs')
-        record(offset, 1, f'{data[offset]} alternatives')
+        section(offset, 'Alternatives: count, rows, default index, then lower:u24 / upper:u24 pairs')
+        record(offset, 3, f'{data[offset]} alternatives, {data[offset+1]} rows, default {data[offset+2]}')
         for i in range(data[offset]):
-            record(offset + 1 + i * 6, 6, pair(offset + 1 + i * 6))
+            record(offset + 3 + i * 6, 6, pair(offset + 3 + i * 6))
     for offset in sorted(labels):
         section(offset, 'Label: byte count, then UTF-8 bytes')
         record(offset, 1, f'{data[offset]} bytes')
@@ -269,7 +278,7 @@ KeyboardLayout {name}();
 #include "roo_logging.h"
 namespace roo_windows {{
 namespace {{
-// RWKB v1. Multibyte integers are big-endian; offsets are blob-relative.
+// RWKB v2. Multibyte integers are big-endian; offsets are blob-relative.
 // Page and row records are 4 bytes. Key records are 11 bytes:
 //   start:u8, width:u8, flags:u8, lower/target:u24, upper/label:u24, menu:u16.
 // Flags: function in bits 0..2 (text/delete/enter/shift/space/switch_page),
@@ -318,7 +327,7 @@ def size_report(data):
                 if data[key + 2] & 7 == 5:
                     labels.add(int.from_bytes(data[key + 6:key + 9], 'big'))
     return {'header/pages': 8 + 4 * pages, 'rows': 4 * rows, 'keys': 11 * keys,
-            'alternatives': sum(1 + 6 * data[m] for m in menus),
+            'alternatives': sum(3 + 6 * data[m] for m in menus),
             'labels': sum(1 + data[label] for label in labels)}
 
 

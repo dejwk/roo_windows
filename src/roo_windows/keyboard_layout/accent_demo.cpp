@@ -5,7 +5,7 @@
 #include "roo_logging.h"
 namespace roo_windows {
 namespace {
-// RWKB v1. Multibyte integers are big-endian; offsets are blob-relative.
+// RWKB v2. Multibyte integers are big-endian; offsets are blob-relative.
 // Page and row records are 4 bytes. Key records are 11 bytes:
 //   start:u8, width:u8, flags:u8, lower/target:u24, upper/label:u24, menu:u16.
 // Flags: function in bits 0..2 (text/delete/enter/shift/space/switch_page),
@@ -14,7 +14,7 @@ namespace {
 // clang-format off
 const uint8_t kLayoutData[] PROGMEM = {
     // 0x0000: Header: magic[4], version, page count, total bytes:u16
-    0x52, 0x57, 0x4B, 0x42, 0x01, 0x01, 0x00, 0x69,  // RWKB v1, 1 pages, 105 bytes
+    0x52, 0x57, 0x4B, 0x42, 0x02, 0x01, 0x00, 0x6B,  // RWKB v2, 1 pages, 107 bytes
     // 0x0008: Pages: grid width, row count, rows offset:u16
     0x0A, 0x02, 0x00, 0x0C,  // 'letters'
     // 0x000C: Rows for 'letters': key count, reserved, keys offset:u16
@@ -28,8 +28,8 @@ const uint8_t kLayoutData[] PROGMEM = {
     0x00, 0x02, 0x0B, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // shift, circle
     0x02, 0x06, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // space
     0x08, 0x02, 0x0A, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // enter, circle
-    // 0x0056: Alternatives: count, then lower:u24 / upper:u24 pairs
-    0x03,  // 3 alternatives
+    // 0x0056: Alternatives: count, rows, default index, then lower:u24 / upper:u24 pairs
+    0x03, 0x01, 0x00,  // 3 alternatives, 1 rows, default 0
     0x00, 0x00, 0xE9, 0x00, 0x00, 0xC9,  // 'é', 'É'
     0x00, 0x00, 0xE8, 0x00, 0x00, 0xC8,  // 'è', 'È'
     0x00, 0x01, 0x19, 0x00, 0x01, 0x18,  // 'ę', 'Ę'

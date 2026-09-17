@@ -31,7 +31,7 @@ KeyboardLayout::Error KeyboardLayout::Open(const uint8_t* data, size_t size,
   candidate.data_ = data;
   candidate.size_ = size;
   if (candidate.read(0, 4) != 0x52574B42) return Error::kInvalidData;
-  if (candidate.read(4) != 1) return Error::kUnsupportedVersion;
+  if (candidate.read(4) != 2) return Error::kUnsupportedVersion;
   if (candidate.read(6, 2) != size || !candidate.validate())
     return Error::kInvalidData;
   out = candidate;
@@ -104,12 +104,19 @@ bool KeyboardLayout::validate() const {
         if (function == 0) {
           if ((flags & 8) || !IsScalar(low) || !IsScalar(high)) return false;
           if (menu != 0) {
-            if (!span(menu, 1)) return false;
+            if (!span(menu, 3)) return false;
             const int n = read(menu);
-            if (n == 0 || n > 9 || !span(menu + 1, 6 * n)) return false;
+            const int rows = read(menu + 1), selected = read(menu + 2);
+            if (n == 0 || n > 9 || rows == 0 || rows > n ||
+                !span(menu + 3, 6 * n))
+              return false;
+            const int columns = (n + rows - 1) / rows;
+            if (columns > 5 || (n + columns - 1) / columns != rows ||
+                selected < (rows - 1) * columns || selected >= n)
+              return false;
             for (int a = 0; a < n; ++a) {
-              if (!IsScalar(read(menu + 1 + 6 * a, 3)) ||
-                  !IsScalar(read(menu + 4 + 6 * a, 3)))
+              if (!IsScalar(read(menu + 3 + 6 * a, 3)) ||
+                  !IsScalar(read(menu + 6 + 6 * a, 3)))
                 return false;
             }
           }
@@ -176,6 +183,8 @@ bool KeyboardLayout::readKey(int page, int row, int key, Key& out) const {
     out.character = {read(offset + 3, 3), read(offset + 6, 3)};
     size_t menu = read(offset + 9, 2);
     out.alternative_count = menu == 0 ? 0 : read(menu);
+    out.alternative_rows = menu == 0 ? 0 : read(menu + 1);
+    out.default_alternative = menu == 0 ? 0 : read(menu + 2);
   } else if (out.function == Function::kSwitchPage) {
     out.target_page = read(offset + 3, 3);
     out.label_bytes = read(read(offset + 6, 3));
@@ -191,8 +200,8 @@ bool KeyboardLayout::readAlternative(int page, int row, int key,
   size_t menu = read(offset + 9, 2);
   if (!menu || alternative < 0 || alternative >= static_cast<int>(read(menu)))
     return false;
-  out = {read(menu + 1 + 6 * alternative, 3),
-         read(menu + 4 + 6 * alternative, 3)};
+  out = {read(menu + 3 + 6 * alternative, 3),
+         read(menu + 6 + 6 * alternative, 3)};
   return true;
 }
 

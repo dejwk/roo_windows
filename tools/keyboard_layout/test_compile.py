@@ -18,9 +18,9 @@ class CompilerTest(unittest.TestCase):
 
     def test_demo_offsets_and_size(self):
         data = compiler.compile_layout(self.demo)
-        self.assertEqual(b'RWKB\x01\x01\x00\x69', data[:8])
+        self.assertEqual(b'RWKB\x02\x01\x00\x6b', data[:8])
         self.assertEqual(bytes([10, 2, 0, 12]), data[8:12])
-        self.assertEqual(105, len(data))
+        self.assertEqual(107, len(data))
         self.assertEqual(len(data), sum(compiler.size_report(data).values()))
         self.assertEqual(data, compiler.compile_layout(copy.deepcopy(self.demo)))
 
@@ -38,12 +38,26 @@ class CompilerTest(unittest.TestCase):
     def test_actions_and_alternative_limit(self):
         key = self.demo['pages'][0]['rows'][0]['keys'][1]
         key['alternatives'] = [{'text':'ą','upper':'Ą'}] * 9
+        key['alternative_rows'] = 2
+        key['default_alternative'] = 5
         compiler.compile_layout(self.demo)
         key['alternatives'].append({'text':'ę'})
         with self.assertRaisesRegex(ValueError, '1..9'):
             compiler.compile_layout(self.demo)
         with self.assertRaisesRegex(ValueError, 'duplicate'):
             json.loads('{"format":1,"format":1}', object_pairs_hook=compiler.unique_object)
+
+    def test_authored_menu_geometry(self):
+        for rows, default in [(0, 0), (4, 0), (2, 0), (1, 3)]:
+            key = self.demo['pages'][0]['rows'][0]['keys'][1]
+            key['alternative_rows'], key['default_alternative'] = rows, default
+            with self.assertRaises(ValueError):
+                compiler.compile_layout(self.demo)
+        key['alternative_rows'], key['default_alternative'] = 2, 2
+        compiler.compile_layout(self.demo)
+        del key['default_alternative']
+        with self.assertRaises(ValueError):
+            compiler.compile_layout(self.demo)
 
     def test_non_bmp_and_size_limit(self):
         self.demo['pages'][0]['rows'][0]['keys'][0]['text'] = '😀'
@@ -94,12 +108,16 @@ class CompilerTest(unittest.TestCase):
         en = compiler.compile_layout(compiler.load(ROOT/'layouts/en_us.json'))
         self.assertEqual(1192,len(en))
         # Freeze the independently verified legacy capture after deleting its C++ tables.
-        self.assertEqual('097abf8076ccbd581f30bf848046d098d9d672345ee35cb4dc96f8e9a5833893', hashlib.sha256(en).hexdigest())
+        self.assertEqual('097abf8076ccbd581f30bf848046d098d9d672345ee35cb4dc96f8e9a5833893', hashlib.sha256(en[:4] + b'\x01' + en[5:]).hexdigest())
         pl = compiler.load(ROOT/'layouts/pl_pl.json')
         letters={k['text']:k for row in pl['pages'][0]['rows'] for k in row['keys'] if 'text' in k}
         for base, accent in zip('acelnosz','ąćęłńóśż'):
-            self.assertEqual(accent, letters[base]['alternatives'][0]['text'])
-        self.assertEqual(['ż','ź','ž'],[a['text'] for a in letters['z']['alternatives']])
+            self.assertEqual(accent, letters[base]['alternatives'][letters[base]['default_alternative']]['text'])
+        self.assertEqual({'ż','ź','ž'},{a['text'] for a in letters['z']['alternatives']})
+        self.assertEqual(['ç', 'ć', 'č'], [a['text'] for a in letters['c']['alternatives']])
+        self.assertEqual(1, letters['c']['default_alternative'])
+        self.assertEqual(2, letters['e']['alternative_rows'])
+        self.assertEqual(5, letters['e']['default_alternative'])
         compiler.compile_layout(pl)
 
 

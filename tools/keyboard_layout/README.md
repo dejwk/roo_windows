@@ -39,7 +39,7 @@ firmware uses generated accessors whose bytes are checked once on first use.
 symbols, widths, stagger, case pairs, labels, and targets. It deliberately adds
 no new accents or circles. The initial C++ parity test verified every generated record against the legacy
 tables before their removal. A compiler test now pins that verified binary by
-SHA-256. Its binary is 1,192 bytes.
+SHA-256, normalizing the format-version byte. Its binary is 1,192 bytes.
 
 ## Polish reference and adaptations
 
@@ -62,7 +62,7 @@ licensed under Apache License 2.0. The JSON expresses the factual key assignment
 and geometry; it does not embed the Android implementation.
 
 The Roo adaptation preserves the three phone pages and Polish letter alternatives
-in source order. It converts percentages to a 20-unit grid. It uses Roo action
+with the preferred Polish character moved to the authored default position. It converts percentages to a 20-unit grid. It uses Roo action
 icons, colors, enter/done semantics and popup placement, not Android theme,
 autocorrection, gesture typing, language switching, voice input, emoji, or
 context-sensitive email/URL/password variants. Generic punctuation/currency/symbol
@@ -71,8 +71,8 @@ language-specific letter popups. `a` has nine alternatives, which increased the
 original design's limit of eight by one. Non-Polish `ß` remains `ß` in its upper
 variant because the scalar-only format cannot emit a multi-character uppercase
 expansion. Polish accented uppercase pairs are explicit. The pl-PL binary is
-1,440 bytes. Alternatives wrap left-to-right into rows of at most five choices
-(including the base letter), balanced to use four columns for eight choices.
+1,456 bytes. Alternatives use the authored row count, filled left-to-right then
+top-to-bottom, with at most five columns. The base letter is not inserted.
 Popup row height is `ascent - 2 * descent + Scaled(8)`, with no additional row gap.
 Letters use a baseline half an ascent below the cell center. The circular highlight
 has radius half the row height. Column width is exactly equal to row height,
@@ -81,13 +81,27 @@ is separate from these square cells.
 The pin retains `Scaled(4)` outer padding. Corner radius is half the row height
 plus `Scaled(4)`, so a single-row pin has semicircular ends.
 
-The grid stays centered over the held key where possible, leaning left for even
-column counts. At viewport edges it shifts by whole columns, always keeping an
-occupied bottom-row choice centered over the key. That choice is selected by
-default. Horizontal movement below the pin, through the held key's row, selects
-from the bottom row. Moving above the pin or below that key row cancels the press
-permanently. Unused cells select nothing. If the aligned popup cannot fit above
-the key, the ordinary base-letter hold behavior remains available.
+Each JSON key with `alternatives` also declares `alternative_rows` and
+`default_alternative` (a zero-based index into the alternatives array, in the
+bottom row). Columns are `ceil(count / alternative_rows)`. For example, Polish
+`e` declares two rows and default index 5:
+
+```text
+è é ê ë
+ė ę ē
+```
+
+Polish `c` is `ç ć č`, with default index 1. The keyboard positions the declared
+default over the held key. If that would clip horizontally, it shifts the popup
+into view while retaining the default. Holding and releasing commits that accent.
+Below the pin, horizontal movement is measured from the original key and projected
+relative to the default's column; inside the pin, visible cells determine selection.
+Moving above the pin or below the original key row cancels permanently. Unused
+cells select nothing. If the declared grid cannot fit above the key or within
+the viewport width, ordinary base-letter hold behavior remains available.
+
+RWKB version 2 stores each menu as `count:u8, rows:u8, default_index:u8`, then
+`count` lowercase/uppercase `u24` pairs. There is no older-blob compatibility path.
 
 A custom keyboard can be constructed as `Keyboard(context, kbPolPLLayout())`.
 Attach its `getContents()` to a task, call `setTask(task)`, connect it to the editor

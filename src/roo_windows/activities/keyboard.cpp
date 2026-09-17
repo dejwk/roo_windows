@@ -303,8 +303,7 @@ class AlternativesPin final : public PresentationPin {
   void paint(PaintContext& ctx) const override {
     const Rect strip = target_.alternatives_.strip;
     const int count = target_.keyAt(target_.active_row_, target_.active_key_)
-                          .alternative_count +
-                      1;
+                          .alternative_count;
     const int columns = target_.alternativeColumns();
     const int rows = (count + columns - 1) / columns;
     const Rect grid = target_.alternativeGrid();
@@ -369,10 +368,8 @@ Rect KeyboardWidget::activeAllocation() const {
 }
 
 uint32_t KeyboardWidget::alternativeRune(int choice) const {
-  KeyboardLayout::Character ch = keyAt(active_row_, active_key_).character;
-  if (choice > 0)
-    layout_.readAlternative(page_idx_, active_row_, active_key_, choice - 1,
-                            ch);
+  KeyboardLayout::Character ch;
+  layout_.readAlternative(page_idx_, active_row_, active_key_, choice, ch);
   return alternatives_.caps == Keyboard::CAPS_STATE_LOW ? ch.lower : ch.upper;
 }
 
@@ -390,46 +387,32 @@ void KeyboardWidget::showAlternatives() {
   if (key.alternative_count == 0) return;
   const Rect viewport = getMainWindow()->bounds();
   const Rect allocation = activeAllocation();
-  const int count = key.alternative_count + 1;
+  const int count = key.alternative_count;
   const int padding = Scaled(4);
   const int row_height = AlternativeRowHeight();
   const int cell = row_height;
-  const int limit = std::max<int>(
-      1, std::min<int>(5, (viewport.width() - 2 * padding) / cell));
-  const int rows = (count + limit - 1) / limit;
+  const int rows = key.alternative_rows;
   const int columns = (count + rows - 1) / rows;
   const int height = rows * row_height + 2 * padding;
   const int top = allocation.yMin() - height;
   if (row_height <= 0 || row_height / 2 + padding > 255 ||
       top < viewport.yMin() || allocation.yMin() > viewport.yMax() + 1)
     return;
-  // Center on a real bottom-row choice. Even grids prefer the right middle
-  // column, making the pin lean left. Edge corrections move whole columns.
-  const int last_row_count = count - (rows - 1) * columns;
-  const int preferred_column = std::min(columns / 2, last_row_count - 1);
-  int anchor = -1, left = 0, distance = columns + 1;
-  for (int column = 0; column < last_row_count; ++column) {
-    const int candidate =
-        (allocation.xMin() + allocation.xMax() + 1 - cell) / 2 - column * cell -
-        padding;
-    const int delta = std::abs(column - preferred_column);
-    if (candidate >= viewport.xMin() &&
-        candidate + columns * cell + 2 * padding <= viewport.xMax() + 1 &&
-        delta <= distance) {
-      left = candidate;
-      anchor = column;
-      distance = delta;
-    }
-  }
-  if (anchor < 0) return;
   const int width = cell * columns + 2 * padding;
+  if (width > viewport.width()) return;
+  const int desired_left =
+      (allocation.xMin() + allocation.xMax() + 1 - cell) / 2 -
+      (key.default_alternative % columns) * cell - padding;
+  const int left =
+      std::max<int>(viewport.xMin(),
+                    std::min<int>(desired_left, viewport.xMax() + 1 - width));
   std::unique_ptr<PresentationPin> pin(new (std::nothrow)
                                            AlternativesPin(*this));
   if (!pin) return;  // Preserve the ordinary preview and hold behavior.
   alternatives_.strip = Rect(left, top, left + width - 1, top + height - 1);
   alternatives_.caps = caps_state_;
   alternatives_.columns = columns;
-  alternatives_.selected = (rows - 1) * columns + anchor;
+  alternatives_.selected = key.default_alternative;
   hidePresentationPin();
   if (showPresentationPin(std::move(pin)) !=
       PresentationPinShowResult::kShown) {
@@ -453,17 +436,26 @@ void KeyboardWidget::selectAlternative(XDim x, YDim y) {
     return;
   }
   const Rect grid = alternativeGrid();
-  const int count = keyAt(active_row_, active_key_).alternative_count + 1;
+  const int count = keyAt(active_row_, active_key_).alternative_count;
   const int columns = alternativeColumns();
   const int rows = (count + columns - 1) / columns;
   int selected = -1;
-  if (wx >= grid.xMin() && wx <= grid.xMax()) {
-    // Extend only the bottom row down through the triggering key's row.
+  if (wy > strip.yMax()) {
+    // Below the popup, anchor horizontal movement to the authored default,
+    // even when the visible pin had to shift at a viewport edge.
+    const int cell = grid.width() / columns;
+    const int default_column =
+        keyAt(active_row_, active_key_).default_alternative % columns;
+    const int virtual_left =
+        (base.xMin() + base.xMax() + 1 - cell) / 2 - default_column * cell;
+    if (wx >= virtual_left && wx < virtual_left + columns * cell)
+      selected = (rows - 1) * columns + (wx - virtual_left) / cell;
+  } else if (wx >= grid.xMin() && wx <= grid.xMax()) {
     const int row = std::min<int>(
         rows - 1, std::max<int>(0, wy - grid.yMin()) / (grid.height() / rows));
     selected = row * columns + (wx - grid.xMin()) / (grid.width() / columns);
-    if (selected >= count) selected = -1;
   }
+  if (selected >= count) selected = -1;
   if (selected == alternatives_.selected) return;
   alternatives_.selected = selected;
   setPresentationPinDirty();

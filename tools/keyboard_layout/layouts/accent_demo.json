@@ -1,5 +1,5 @@
 {
-  "format": 1,
+  "format": 2,
   "name": "accent_demo",
   "pages": [
     {
@@ -31,7 +31,9 @@
                   "text": "ę",
                   "upper": "Ę"
                 }
-              ]
+              ],
+              "alternative_rows": 1,
+              "default_alternative": 0
             },
             {
               "action": "delete",

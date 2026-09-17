@@ -204,9 +204,9 @@ class BinaryPopupTest : public KeyboardPresentationPinTest {
 
   int aWidth() const { return popupRowHeight(); }
   int eWidth() const { return popupRowHeight(); }
-  int aX(int column) const { return 46 + (column - 1) * aWidth(); }
-  int eX(int column) const { return 106 + (column - 2) * eWidth(); }
-  int demoX(int column) const { return 166 + (column - 2) * popupRowHeight(); }
+  int aX(int column) const { return 46 + column * aWidth(); }
+  int eX(int column) const { return 106 + (column - 1) * eWidth(); }
+  int demoX(int column) const { return 166 + column * popupRowHeight(); }
 
   // Expected center for a tightly packed row directly above a known key row.
   int popupY(int key_top, int row, int rows) const {
@@ -224,16 +224,17 @@ class BinaryPopupTest : public KeyboardPresentationPinTest {
   Keyboard& binary_;
 };
 
-// Verifies all ten Polish a choices occupy two rows of five, in source order.
+// Verifies all nine Polish a choices occupy two rows of five, in authored
+// order.
 TEST_F(BinaryPopupTest, PolishAlternativesWrapAfterFiveChoices) {
   binary_.setLayout(kbPolPLLayout());
   ASSERT_TRUE(refresh());
   keys().layout(Rect(0, 0, 411, 173));
   EXPECT_EQ(aWidth(), popupRowHeight());
   std::string expected;
-  const char* choices[] = {"a",   u8"ą", u8"á", u8"à", u8"â",
-                           u8"ä", u8"æ", u8"ã", u8"å", u8"ā"};
-  for (int i = 0; i < 10; ++i) {
+  const char* choices[] = {u8"á", u8"à", u8"â", u8"ä", u8"æ",
+                           u8"ą", u8"ã", u8"å", u8"ā"};
+  for (int i = 0; i < 9; ++i) {
     keys().onDown(46, 68);
     keys().onLongPress(46, 68);
     ASSERT_TRUE(keys().hasPresentationPin());
@@ -247,15 +248,14 @@ TEST_F(BinaryPopupTest, PolishAlternativesWrapAfterFiveChoices) {
   }
 }
 
-// Verifies eight choices balance into two rows of four in source order.
-TEST_F(BinaryPopupTest, EightChoicesUseFourColumns) {
+// Verifies seven choices occupy two rows of four in authored order.
+TEST_F(BinaryPopupTest, SevenChoicesUseFourColumns) {
   binary_.setLayout(kbPolPLLayout());
   ASSERT_TRUE(refresh());
   keys().layout(Rect(0, 0, 411, 173));
   std::string expected;
-  const char* choices[] = {"e",   u8"ę", u8"è", u8"é",
-                           u8"ê", u8"ë", u8"ė", u8"ē"};
-  for (int i = 0; i < 8; ++i) {
+  const char* choices[] = {u8"è", u8"é", u8"ê", u8"ë", u8"ė", u8"ę", u8"ē"};
+  for (int i = 0; i < 7; ++i) {
     keys().onDown(106, 28);
     keys().onLongPress(106, 28);
     keys().onLongPressFinished(eX(i % 4), popupY(8, i / 4, 2));
@@ -315,13 +315,14 @@ TEST_F(BinaryPopupTest, AlternativesUseHalfAscentBaseline) {
     }
   }
   const roo_display::GlyphMetrics glyph =
-      font_body1().getHorizontalStringMetrics(u8"ą");
+      font_body1().getHorizontalStringMetrics(u8"à");
   EXPECT_EQ(baseline + glyph.screen_extents().yMin(), ink_top);
   EXPECT_EQ(baseline + glyph.screen_extents().yMax(), ink_bottom);
   keys().onCancel();
 }
 
-// Verifies the balanced popup ends after its fourth column on both rows.
+// Verifies the unused bottom-right cell and points past the grid select
+// nothing.
 TEST_F(BinaryPopupTest, BalancedRowsHaveNoPhantomFifthColumn) {
   binary_.setLayout(kbPolPLLayout());
   ASSERT_TRUE(refresh());
@@ -334,7 +335,11 @@ TEST_F(BinaryPopupTest, BalancedRowsHaveNoPhantomFifthColumn) {
   keys().onDown(106, 28);
   keys().onLongPress(106, 28);
   keys().onLongPressFinished(eX(3), popupY(8, 1, 2));
-  EXPECT_EQ(u8"ē", field_.content());
+  EXPECT_TRUE(field_.content().empty());
+  keys().onDown(106, 28);
+  keys().onLongPress(106, 28);
+  keys().onLongPressFinished(eX(1), popupY(8, 1, 2));
+  EXPECT_EQ(u8"ę", field_.content());
 }
 
 // Verifies the popup corner includes the outer padding in its radius, including
@@ -365,31 +370,31 @@ TEST_F(BinaryPopupTest, MultiRowPopupHasRoundedOuterCorners) {
 TEST_F(BinaryPopupTest, SlideSelectsAccentAndClearsPopup) {
   hold();
   ASSERT_TRUE(refresh());
-  keys().onLongPressMove(demoX(1), 48);
+  keys().onLongPressMove(demoX(0), 48);
   ASSERT_TRUE(refresh());
-  keys().onLongPressFinished(demoX(1), 48);
+  keys().onLongPressFinished(demoX(0), 48);
   EXPECT_EQ(u8"é", field_.content());
   EXPECT_FALSE(keys().hasPresentationPin());
-  keys().onLongPressFinished(demoX(1), 48);
+  keys().onLongPressFinished(demoX(0), 48);
   EXPECT_EQ(u8"é", field_.content());
   ASSERT_TRUE(refresh());
 }
 
 // Verifies release coordinates work without a preceding MOVE and consume
 // one-shot caps.
-TEST_F(BinaryPopupTest, ReleaseSelectsUppercaseAndExplicitBaseChoice) {
+TEST_F(BinaryPopupTest, ReleaseSelectsUppercaseAndAuthoredAlternatives) {
   binary_.setCapsState(Keyboard::CAPS_STATE_HIGH);
   hold();
-  keys().onLongPressFinished(demoX(1), 48);
+  keys().onLongPressFinished(demoX(0), 48);
   EXPECT_EQ(u8"É", field_.content());
   EXPECT_EQ(Keyboard::CAPS_STATE_LOW, binary_.caps_state());
   hold();
-  keys().onLongPressFinished(demoX(0), 48);
-  EXPECT_EQ(u8"Ée", field_.content());
+  keys().onLongPressFinished(demoX(1), 48);
+  EXPECT_EQ(u8"Éè", field_.content());
   binary_.setCapsState(Keyboard::CAPS_STATE_HIGH_LOCKED);
   hold();
-  keys().onLongPressFinished(demoX(3), 48);
-  EXPECT_EQ(u8"ÉeĘ", field_.content());
+  keys().onLongPressFinished(demoX(2), 48);
+  EXPECT_EQ(u8"ÉèĘ", field_.content());
   EXPECT_EQ(Keyboard::CAPS_STATE_HIGH_LOCKED, binary_.caps_state());
 }
 
@@ -419,13 +424,13 @@ TEST_F(BinaryPopupTest, HorizontalProjectionSelectsBottomRow) {
   keys().onDown(106, 28);
   keys().onLongPress(106, 28);
   keys().onLongPressMove(-100, 28);
-  keys().onLongPressMove(eX(1), 28);
-  keys().onLongPressFinished(eX(1), 28);
-  EXPECT_EQ(u8"ë", field_.content());
+  keys().onLongPressMove(eX(2), 28);
+  keys().onLongPressFinished(eX(2), 28);
+  EXPECT_EQ(u8"ē", field_.content());
   keys().onDown(106, 28);
   keys().onLongPress(106, 28);
   keys().onLongPressFinished(106, 28);
-  EXPECT_EQ(u8"ëė", field_.content());
+  EXPECT_EQ(u8"ēę", field_.content());
 }
 
 // Verifies crossing either vertical limit cancels permanently, even on return.
@@ -467,7 +472,19 @@ TEST_F(BinaryPopupTest, DefaultChoiceTracksAnchoredColumn) {
       EXPECT_EQ(initial[x - point.first + 17], pixelAt(dx + x, sample_y));
     keys().onLongPressFinished(point.first, point.second);
   }
-  EXPECT_EQ(u8"æėō", field_.content());
+  EXPECT_EQ(u8"ąęó", field_.content());
+}
+
+// Verifies clamping a popup at the viewport edge retains its authored default.
+TEST_F(BinaryPopupTest, ShiftedPopupRetainsDefault) {
+  keys().layout(Rect(200, 0, 611, 173));
+  hold();
+  keys().onLongPressFinished(166, 48);
+  EXPECT_EQ(u8"é", field_.content());
+  hold();
+  keys().onLongPressMove(166 + popupRowHeight(), 48);
+  keys().onLongPressFinished(166 + popupRowHeight(), 48);
+  EXPECT_EQ(u8"éè", field_.content());
 }
 
 // Verifies replacing layout or resizing a live popup cannot commit its stale

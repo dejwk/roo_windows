@@ -224,3 +224,20 @@ The final corner adjustment adds `Scaled(4)` to half the row height, accounting
 for the outer padding and making single-row ends semicircular. The byte-sized
 radius limit is checked including that padding. All 26 keyboard presentation
 tests, including rounded pixels and single-pass repaint comparisons, pass.
+
+## Authored alternatives geometry (RWKB v2)
+
+Menus now store count, row count, and a zero-based default index before their
+case pairs. The reader and compiler validate occupied rows, at most five columns,
+and a default in the bottom row. The keyboard does not insert the base letter.
+Viewport clamping preserves the authored default, including release over the
+original key. Polish `c` is `ç ć č`; `e` has `è é ê ë` above `ė ę ē`.
+
+Validation: all five focused Bazel test targets pass (keyboard layout,
+keyboard presentation, touch sensor, application, text-field avoidance), and the
+Polish place-name example builds. Nine Python compiler tests pass, including
+artifact parity and the requested Polish default positions. Reader tests reject
+invalid menu geometry; popup tests cover shifted defaults and unused cells.
+The ESP32 compile/ABI probe passes using the existing firmware compilation
+database: reader 8 bytes, pin 32 bytes, keyboard widget 104 bytes (unchanged).
+Generated blobs: en-US 1,192 bytes, pl-PL 1,456 bytes, demo 107 bytes.

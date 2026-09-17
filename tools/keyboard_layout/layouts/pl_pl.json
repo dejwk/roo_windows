@@ -1,5 +1,5 @@
 {
-  "format": 1,
+  "format": 2,
   "name": "pl_pl",
   "pages": [
     {
@@ -25,10 +25,6 @@
               "upper": "E",
               "alternatives": [
                 {
-                  "text": "ę",
-                  "upper": "Ę"
-                },
-                {
                   "text": "è",
                   "upper": "È"
                 },
@@ -49,10 +45,16 @@
                   "upper": "Ė"
                 },
                 {
+                  "text": "ę",
+                  "upper": "Ę"
+                },
+                {
                   "text": "ē",
                   "upper": "Ē"
                 }
-              ]
+              ],
+              "alternative_rows": 2,
+              "default_alternative": 5
             },
             {
               "text": "r",
@@ -85,10 +87,6 @@
               "upper": "O",
               "alternatives": [
                 {
-                  "text": "ó",
-                  "upper": "Ó"
-                },
-                {
                   "text": "ö",
                   "upper": "Ö"
                 },
@@ -115,8 +113,14 @@
                 {
                   "text": "ō",
                   "upper": "Ō"
+                },
+                {
+                  "text": "ó",
+                  "upper": "Ó"
                 }
-              ]
+              ],
+              "alternative_rows": 2,
+              "default_alternative": 7
             },
             {
               "text": "p",
@@ -133,10 +137,6 @@
               "width": 2,
               "upper": "A",
               "alternatives": [
-                {
-                  "text": "ą",
-                  "upper": "Ą"
-                },
                 {
                   "text": "á",
                   "upper": "Á"
@@ -158,6 +158,10 @@
                   "upper": "Æ"
                 },
                 {
+                  "text": "ą",
+                  "upper": "Ą"
+                },
+                {
                   "text": "ã",
                   "upper": "Ã"
                 },
@@ -169,7 +173,9 @@
                   "text": "ā",
                   "upper": "Ā"
                 }
-              ]
+              ],
+              "alternative_rows": 2,
+              "default_alternative": 5
             },
             {
               "text": "s",
@@ -177,18 +183,20 @@
               "upper": "S",
               "alternatives": [
                 {
-                  "text": "ś",
-                  "upper": "Ś"
-                },
-                {
                   "text": "ß",
                   "upper": "ß"
+                },
+                {
+                  "text": "ś",
+                  "upper": "Ś"
                 },
                 {
                   "text": "š",
                   "upper": "Š"
                 }
-              ]
+              ],
+              "alternative_rows": 1,
+              "default_alternative": 1
             },
             {
               "text": "d",
@@ -229,7 +237,9 @@
                   "text": "ł",
                   "upper": "Ł"
                 }
-              ]
+              ],
+              "alternative_rows": 1,
+              "default_alternative": 0
             }
           ]
         },
@@ -246,18 +256,20 @@
               "upper": "Z",
               "alternatives": [
                 {
-                  "text": "ż",
-                  "upper": "Ż"
-                },
-                {
                   "text": "ź",
                   "upper": "Ź"
+                },
+                {
+                  "text": "ż",
+                  "upper": "Ż"
                 },
                 {
                   "text": "ž",
                   "upper": "Ž"
                 }
-              ]
+              ],
+              "alternative_rows": 1,
+              "default_alternative": 1
             },
             {
               "text": "x",
@@ -270,18 +282,20 @@
               "upper": "C",
               "alternatives": [
                 {
-                  "text": "ć",
-                  "upper": "Ć"
-                },
-                {
                   "text": "ç",
                   "upper": "Ç"
+                },
+                {
+                  "text": "ć",
+                  "upper": "Ć"
                 },
                 {
                   "text": "č",
                   "upper": "Č"
                 }
-              ]
+              ],
+              "alternative_rows": 1,
+              "default_alternative": 1
             },
             {
               "text": "v",
@@ -306,7 +320,9 @@
                   "text": "ñ",
                   "upper": "Ñ"
                 }
-              ]
+              ],
+              "alternative_rows": 1,
+              "default_alternative": 0
             },
             {
               "text": "m",
