@@ -4,6 +4,7 @@
 #include <memory>
 #include <new>
 
+#include "roo_display/shape/smooth.h"
 #include "roo_display/ui/text_label.h"
 #include "roo_display/ui/tile.h"
 #include "roo_icons/outlined/action.h"
@@ -170,6 +171,8 @@ class KeyboardWidget final : public SurfaceWidget {
   friend class AlternativesPin;
   void showAlternatives();
   void selectAlternative(XDim x, YDim y);
+  int alternativeColumns() const { return alternatives_.columns; }
+  Rect alternativeGrid() const;
   uint32_t alternativeRune(int choice) const;
   Rect activeAllocation() const;
 
@@ -177,6 +180,7 @@ class KeyboardWidget final : public SurfaceWidget {
     Rect strip;
     int8_t selected = -1;
     uint8_t caps = 0;
+    uint8_t columns = 0;
     bool active = false;
   } alternatives_;
 
@@ -206,6 +210,13 @@ class KeyboardWidget final : public SurfaceWidget {
 };
 
 namespace {
+
+// With the baseline half an ascent below center, the lower extent is
+// ascent/2 - descent. Mirror that extent and add scaled clearance.
+int AlternativeRowHeight() {
+  const FontMetrics& metrics = font_body1().metrics();
+  return metrics.ascent() - 2 * metrics.descent() + Scaled(8);
+}
 
 // Draws glyphs without clearing the rounded surface around them.
 void PaintKeyContent(PaintContext& ctx, const Drawable& content,
@@ -274,7 +285,7 @@ class PressHighlighterPin final : public PresentationPin {
   const KeyboardWidget& target_;
 };
 
-// A single paint-only strip keeps gesture and editor ownership on the keyboard.
+// A single paint-only grid keeps gesture and editor ownership on the keyboard.
 class AlternativesPin final : public PresentationPin {
  public:
   explicit AlternativesPin(const KeyboardWidget& target) : target_(target) {}
@@ -294,30 +305,49 @@ class AlternativesPin final : public PresentationPin {
     const int count = target_.keyAt(target_.active_row_, target_.active_key_)
                           .alternative_count +
                       1;
-    const int cell = strip.width() / count;
+    const int columns = target_.alternativeColumns();
+    const int rows = (count + columns - 1) / columns;
+    const Rect grid = target_.alternativeGrid();
+    const int cell = grid.width() / columns;
+    const int height = grid.height() / rows;
+    const uint8_t radius = height / 2 + Scaled(4);
+    const int inset = BorderStyle(radius, 0).getThickness();
+    const Rect inner(strip.xMin() + inset, strip.yMin() + inset,
+                     strip.xMax() - inset, strip.yMax() - inset);
+    const Color background = target_.colorTheme().normalButton;
+    // The circle fits its square cell and the padded popup. Register it once
+    // above the glyphs and the shared background decoration.
+    const int selected = target_.alternatives_.selected;
+    const float highlight_radius = height * 0.5f;
+    if (selected >= 0 && highlight_radius > 0) {
+      ctx.addOverlayShape(roo_display::SmoothFilledCircle(
+          {grid.xMin() + (selected % columns) * cell + (cell - 1) * 0.5f,
+           grid.yMin() + (selected / columns) * height + (height - 1) * 0.5f},
+          highlight_radius,
+          target_.theme().material3Theme().state.resolve(
+              material3::ColorToken::kPrimary, InteractionState::kPressed)));
+    }
     for (int i = 0; i < count; ++i) {
-      const Rect box(strip.xMin() + i * cell, strip.yMin(),
-                     strip.xMin() + (i + 1) * cell - 1, strip.yMax());
-      PaintContext local = ctx.clipped(box);
-      if (local.empty()) continue;
-      Color background = target_.colorTheme().normalButton;
-      if (i == target_.alternatives_.selected) {
-        background = AlphaBlend(
-            background,
-            target_.theme().material3Theme().state.resolve(
-                material3::ColorToken::kPrimary, InteractionState::kPressed));
-      }
+      const int x = grid.xMin() + (i % columns) * cell;
+      const int y = grid.yMin() + (i / columns) * height;
+      const Rect box(x, y, x + cell - 1, y + height - 1);
+      PaintContext content = ctx.clipped(box).clipped(inner);
+      if (content.empty()) continue;
+      content.setBgcolor(background);
       char text[4];
       int bytes = roo_io::WriteUtf8Char(text, target_.alternativeRune(i));
-      local.setBgcolor(background);
-      local.drawTiled(StringViewLabel(roo::string_view(text, bytes),
-                                      font_body1(), target_.colorTheme().text),
-                      box, kCenter | kMiddle);
-      ctx.addExclusion(box);
+      content.drawTiled(
+          StringViewLabel(roo::string_view(text, bytes), font_body1(),
+                          target_.colorTheme().text),
+          box,
+          kCenter | kBaseline.toMiddle().shiftBy(
+                        font_body1().metrics().ascent() / 2));
+      content.addExclusion(inner);
     }
     PaintDecoration decoration;
     decoration.bounds = strip;
-    decoration.background = target_.colorTheme().normalButton;
+    decoration.background = background;
+    decoration.corner_radii = {radius, radius, radius, radius};
     decoration.elevation = kPressPreviewElevation;
     ctx.addDecoration(decoration);
   }
@@ -346,6 +376,14 @@ uint32_t KeyboardWidget::alternativeRune(int choice) const {
   return alternatives_.caps == Keyboard::CAPS_STATE_LOW ? ch.lower : ch.upper;
 }
 
+// Only the outer pin has padding; adjacent grid cells share their edges.
+Rect KeyboardWidget::alternativeGrid() const {
+  const Rect& pin = alternatives_.strip;
+  const int padding = Scaled(4);
+  return Rect(pin.xMin() + padding, pin.yMin() + padding, pin.xMax() - padding,
+              pin.yMax() - padding);
+}
+
 void KeyboardWidget::showAlternatives() {
   if (alternatives_.active || !isPresented()) return;
   const KeyboardLayout::Key key = keyAt(active_row_, active_key_);
@@ -353,26 +391,45 @@ void KeyboardWidget::showAlternatives() {
   const Rect viewport = getMainWindow()->bounds();
   const Rect allocation = activeAllocation();
   const int count = key.alternative_count + 1;
-  const int cell =
-      std::min<int>(std::max<int>(activeBounds().width(), Scaled(32)),
-                    viewport.width() / count);
-  const int height = grid().row_height;
-  if (cell < Scaled(24) || height > viewport.height()) return;
-  const int width = cell * count;
-  const int left = std::max<int>(
-      viewport.xMin(),
-      std::min<int>((allocation.xMin() + allocation.xMax() + 1 - cell) / 2,
-                    viewport.xMax() + 1 - width));
-  int top = allocation.yMin() - Scaled(4) - height;
-  if (top < viewport.yMin()) top = allocation.yMax() + 1 + Scaled(4);
-  top = std::max<int>(viewport.yMin(),
-                      std::min<int>(top, viewport.yMax() + 1 - height));
+  const int padding = Scaled(4);
+  const int row_height = AlternativeRowHeight();
+  const int cell = row_height;
+  const int limit = std::max<int>(
+      1, std::min<int>(5, (viewport.width() - 2 * padding) / cell));
+  const int rows = (count + limit - 1) / limit;
+  const int columns = (count + rows - 1) / rows;
+  const int height = rows * row_height + 2 * padding;
+  const int top = allocation.yMin() - height;
+  if (row_height <= 0 || row_height / 2 + padding > 255 ||
+      top < viewport.yMin() || allocation.yMin() > viewport.yMax() + 1)
+    return;
+  // Center on a real bottom-row choice. Even grids prefer the right middle
+  // column, making the pin lean left. Edge corrections move whole columns.
+  const int last_row_count = count - (rows - 1) * columns;
+  const int preferred_column = std::min(columns / 2, last_row_count - 1);
+  int anchor = -1, left = 0, distance = columns + 1;
+  for (int column = 0; column < last_row_count; ++column) {
+    const int candidate =
+        (allocation.xMin() + allocation.xMax() + 1 - cell) / 2 - column * cell -
+        padding;
+    const int delta = std::abs(column - preferred_column);
+    if (candidate >= viewport.xMin() &&
+        candidate + columns * cell + 2 * padding <= viewport.xMax() + 1 &&
+        delta <= distance) {
+      left = candidate;
+      anchor = column;
+      distance = delta;
+    }
+  }
+  if (anchor < 0) return;
+  const int width = cell * columns + 2 * padding;
   std::unique_ptr<PresentationPin> pin(new (std::nothrow)
                                            AlternativesPin(*this));
   if (!pin) return;  // Preserve the ordinary preview and hold behavior.
   alternatives_.strip = Rect(left, top, left + width - 1, top + height - 1);
   alternatives_.caps = caps_state_;
-  alternatives_.selected = 0;
+  alternatives_.columns = columns;
+  alternatives_.selected = (rows - 1) * columns + anchor;
   hidePresentationPin();
   if (showPresentationPin(std::move(pin)) !=
       PresentationPinShowResult::kShown) {
@@ -391,22 +448,21 @@ void KeyboardWidget::selectAlternative(XDim x, YDim y) {
   const int wx = x + dx, wy = y + dy;
   const Rect strip = alternatives_.strip;
   const Rect base = activeAllocation();
+  if (wy < strip.yMin() || wy > base.yMax()) {
+    onCancel();
+    return;
+  }
+  const Rect grid = alternativeGrid();
+  const int count = keyAt(active_row_, active_key_).alternative_count + 1;
+  const int columns = alternativeColumns();
+  const int rows = (count + columns - 1) / columns;
   int selected = -1;
-  if (strip.contains(wx, wy)) {
-    const int count = keyAt(active_row_, active_key_).alternative_count + 1;
-    selected = (wx - strip.xMin()) / (strip.width() / count);
-  } else if (base.contains(wx, wy)) {
-    selected = 0;
-  } else {
-    const int gap_top =
-        strip.yMax() < base.yMin() ? strip.yMax() + 1 : base.yMax() + 1;
-    const int gap_bottom =
-        strip.yMax() < base.yMin() ? base.yMin() - 1 : strip.yMin() - 1;
-    if (wy >= gap_top && wy <= gap_bottom &&
-        wx >= std::min<int>(strip.xMin(), base.xMin()) &&
-        wx <= std::max<int>(strip.xMax(), base.xMax())) {
-      selected = alternatives_.selected;
-    }
+  if (wx >= grid.xMin() && wx <= grid.xMax()) {
+    // Extend only the bottom row down through the triggering key's row.
+    const int row = std::min<int>(
+        rows - 1, std::max<int>(0, wy - grid.yMin()) / (grid.height() / rows));
+    selected = row * columns + (wx - grid.xMin()) / (grid.width() / columns);
+    if (selected >= count) selected = -1;
   }
   if (selected == alternatives_.selected) return;
   alternatives_.selected = selected;

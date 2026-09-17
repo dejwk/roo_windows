@@ -5,6 +5,7 @@
 #include "roo_windows/core/task.h"
 #include "roo_windows/keyboard_layout/accent_demo.h"
 #include "roo_windows/keyboard_layout/en_us.h"
+#include "roo_windows/keyboard_layout/pl_pl.h"
 #include "roo_windows/widgets/button.h"
 #include "roo_windows/widgets/text_field.h"
 #include "roo_windows_render_test_support.h"
@@ -196,6 +197,23 @@ class BinaryPopupTest : public KeyboardPresentationPinTest {
 
   Widget& keys() { return binary_.getContents(); }
 
+  int popupRowHeight() const {
+    return font_body1().metrics().ascent() -
+           2 * font_body1().metrics().descent() + Scaled(8);
+  }
+
+  int aWidth() const { return popupRowHeight(); }
+  int eWidth() const { return popupRowHeight(); }
+  int aX(int column) const { return 46 + (column - 1) * aWidth(); }
+  int eX(int column) const { return 106 + (column - 2) * eWidth(); }
+  int demoX(int column) const { return 166 + (column - 2) * popupRowHeight(); }
+
+  // Expected center for a tightly packed row directly above a known key row.
+  int popupY(int key_top, int row, int rows) const {
+    return key_top - Scaled(4) - (rows - row) * popupRowHeight() +
+           popupRowHeight() / 2;
+  }
+
   void hold() {
     keys().onDown(166, 48);
     keys().onShowPress(166, 48);
@@ -206,35 +224,171 @@ class BinaryPopupTest : public KeyboardPresentationPinTest {
   Keyboard& binary_;
 };
 
+// Verifies all ten Polish a choices occupy two rows of five, in source order.
+TEST_F(BinaryPopupTest, PolishAlternativesWrapAfterFiveChoices) {
+  binary_.setLayout(kbPolPLLayout());
+  ASSERT_TRUE(refresh());
+  keys().layout(Rect(0, 0, 411, 173));
+  EXPECT_EQ(aWidth(), popupRowHeight());
+  std::string expected;
+  const char* choices[] = {"a",   u8"ą", u8"á", u8"à", u8"â",
+                           u8"ä", u8"æ", u8"ã", u8"å", u8"ā"};
+  for (int i = 0; i < 10; ++i) {
+    keys().onDown(46, 68);
+    keys().onLongPress(46, 68);
+    ASSERT_TRUE(keys().hasPresentationPin());
+    const int x = aX(i % 5);
+    const int y = popupY(48, i / 5, 2);
+    keys().onLongPressMove(x, y);
+    ASSERT_TRUE(refresh());
+    keys().onLongPressFinished(x, y);
+    expected += choices[i];
+    EXPECT_EQ(expected, field_.content()) << i;
+  }
+}
+
+// Verifies eight choices balance into two rows of four in source order.
+TEST_F(BinaryPopupTest, EightChoicesUseFourColumns) {
+  binary_.setLayout(kbPolPLLayout());
+  ASSERT_TRUE(refresh());
+  keys().layout(Rect(0, 0, 411, 173));
+  std::string expected;
+  const char* choices[] = {"e",   u8"ę", u8"è", u8"é",
+                           u8"ê", u8"ë", u8"ė", u8"ē"};
+  for (int i = 0; i < 8; ++i) {
+    keys().onDown(106, 28);
+    keys().onLongPress(106, 28);
+    keys().onLongPressFinished(eX(i % 4), popupY(8, i / 4, 2));
+    expected += choices[i];
+    EXPECT_EQ(expected, field_.content()) << i;
+  }
+}
+
+// Verifies selection tints a circle without filling the cell's corners.
+TEST_F(BinaryPopupTest, AlternativeHighlightIsCircular) {
+  binary_.setLayout(kbPolPLLayout());
+  ASSERT_TRUE(refresh());
+  keys().layout(Rect(0, 0, 411, 173));
+  keys().onDown(46, 68);
+  keys().onLongPress(46, 68);
+  keys().onLongPressMove(aX(2), popupY(48, 1, 2));
+  ASSERT_TRUE(refresh());
+  XDim dx;
+  YDim dy;
+  keys().getAbsoluteOffset(dx, dy);
+  const Color normal =
+      QuantizeToArgb4444(context().keyboardColorTheme().normalButton);
+  const int center = aX(2);
+  EXPECT_EQ(normal, pixelAt(dx + center - aWidth() / 2,
+                            dy + 48 - Scaled(4) - popupRowHeight()));
+  EXPECT_NE(normal, pixelAt(dx + center - 1,
+                            dy + popupY(48, 1, 2) + popupRowHeight() / 2 - 4));
+  keys().onCancel();
+}
+
+// Verifies the full accented glyph fits and the baseline sits half an ascent
+// below the cell center, independently of the font's line gap and descent.
+TEST_F(BinaryPopupTest, AlternativesUseHalfAscentBaseline) {
+  binary_.setLayout(kbPolPLLayout());
+  ASSERT_TRUE(refresh());
+  keys().layout(Rect(0, 0, 411, 173));
+  keys().onDown(46, 68);
+  keys().onLongPress(46, 68);
+  keys().onLongPressMove(-100, 68);  // Clear highlight without cancelling.
+  ASSERT_TRUE(refresh());
+  XDim dx;
+  YDim dy;
+  keys().getAbsoluteOffset(dx, dy);
+  const int height = popupRowHeight();
+  const int top = dy + 48 - Scaled(4) - 2 * height;
+  const int baseline =
+      top + (height - 1) / 2 + font_body1().metrics().ascent() / 2;
+  const Color normal =
+      QuantizeToArgb4444(context().keyboardColorTheme().normalButton);
+  int ink_top = top + height, ink_bottom = top - 1;
+  for (int y = top; y < top + height; ++y) {
+    for (int x = dx + aX(1) - aWidth() / 2; x < dx + aX(1) + aWidth() / 2;
+         ++x) {
+      if (pixelAt(x, y) == normal) continue;
+      ink_top = std::min(ink_top, y);
+      ink_bottom = std::max(ink_bottom, y);
+    }
+  }
+  const roo_display::GlyphMetrics glyph =
+      font_body1().getHorizontalStringMetrics(u8"ą");
+  EXPECT_EQ(baseline + glyph.screen_extents().yMin(), ink_top);
+  EXPECT_EQ(baseline + glyph.screen_extents().yMax(), ink_bottom);
+  keys().onCancel();
+}
+
+// Verifies the balanced popup ends after its fourth column on both rows.
+TEST_F(BinaryPopupTest, BalancedRowsHaveNoPhantomFifthColumn) {
+  binary_.setLayout(kbPolPLLayout());
+  ASSERT_TRUE(refresh());
+  keys().layout(Rect(0, 0, 411, 173));
+  keys().onDown(106, 28);
+  keys().onLongPress(106, 28);
+  ASSERT_TRUE(keys().hasPresentationPin());
+  keys().onLongPressFinished(eX(4), popupY(8, 1, 2));
+  EXPECT_TRUE(field_.content().empty());
+  keys().onDown(106, 28);
+  keys().onLongPress(106, 28);
+  keys().onLongPressFinished(eX(3), popupY(8, 1, 2));
+  EXPECT_EQ(u8"ē", field_.content());
+}
+
+// Verifies the popup corner includes the outer padding in its radius, including
+// an edge highlight, while the middle of the side still belongs to the surface.
+TEST_F(BinaryPopupTest, MultiRowPopupHasRoundedOuterCorners) {
+  binary_.setLayout(kbPolPLLayout());
+  ASSERT_TRUE(refresh());
+  keys().layout(Rect(0, 0, 411, 173));
+  keys().onDown(46, 68);
+  keys().onLongPress(46, 68);
+  keys().onLongPressMove(aX(2), popupY(48, 1, 2));
+  ASSERT_TRUE(refresh());
+  XDim dx;
+  YDim dy;
+  keys().getAbsoluteOffset(dx, dy);
+  const Color normal =
+      QuantizeToArgb4444(context().keyboardColorTheme().normalButton);
+  EXPECT_NE(normal, pixelAt(dx + aX(0) - aWidth() / 2 - Scaled(4),
+                            dy + 48 - 2 * popupRowHeight() - 2 * Scaled(4)));
+  EXPECT_EQ(normal, pixelAt(dx + aX(0) - aWidth() / 2 - Scaled(4) + 1,
+                            dy + 48 - 2 * popupRowHeight() - 2 * Scaled(4) +
+                                popupRowHeight() / 2));
+  keys().onCancel();
+}
+
 // Verifies slide selection, popup repaint, and exactly one semantic accent
 // commit.
 TEST_F(BinaryPopupTest, SlideSelectsAccentAndClearsPopup) {
   hold();
   ASSERT_TRUE(refresh());
-  keys().onLongPressMove(232, -36);
+  keys().onLongPressMove(demoX(1), 48);
   ASSERT_TRUE(refresh());
-  keys().onLongPressFinished(232, -36);
+  keys().onLongPressFinished(demoX(1), 48);
   EXPECT_EQ(u8"é", field_.content());
   EXPECT_FALSE(keys().hasPresentationPin());
-  keys().onLongPressFinished(232, -36);
+  keys().onLongPressFinished(demoX(1), 48);
   EXPECT_EQ(u8"é", field_.content());
   ASSERT_TRUE(refresh());
 }
 
 // Verifies release coordinates work without a preceding MOVE and consume
 // one-shot caps.
-TEST_F(BinaryPopupTest, ReleaseSelectsUppercaseAndBaseHoldStillWorks) {
+TEST_F(BinaryPopupTest, ReleaseSelectsUppercaseAndExplicitBaseChoice) {
   binary_.setCapsState(Keyboard::CAPS_STATE_HIGH);
   hold();
-  keys().onLongPressFinished(232, -36);
+  keys().onLongPressFinished(demoX(1), 48);
   EXPECT_EQ(u8"É", field_.content());
   EXPECT_EQ(Keyboard::CAPS_STATE_LOW, binary_.caps_state());
   hold();
-  keys().onLongPressFinished(166, 48);
+  keys().onLongPressFinished(demoX(0), 48);
   EXPECT_EQ(u8"Ée", field_.content());
   binary_.setCapsState(Keyboard::CAPS_STATE_HIGH_LOCKED);
   hold();
-  keys().onLongPressFinished(376, -36);
+  keys().onLongPressFinished(demoX(3), 48);
   EXPECT_EQ(u8"ÉeĘ", field_.content());
   EXPECT_EQ(Keyboard::CAPS_STATE_HIGH_LOCKED, binary_.caps_state());
 }
@@ -257,14 +411,63 @@ TEST_F(BinaryPopupTest, OutsideAndLifecycleChangesCancelSelection) {
   }
 }
 
-// Verifies returning from outside and traversing the gap retains the chosen
-// accent.
-TEST_F(BinaryPopupTest, CanReturnToStripAndCrossTheCorridor) {
-  hold();
-  keys().onLongPressMove(-100, -100);
-  keys().onLongPressMove(232, -36);
-  keys().onLongPressFinished(232, 5);
-  EXPECT_EQ(u8"é", field_.content());
+// Verifies horizontal movement below the popup projects into its bottom row.
+TEST_F(BinaryPopupTest, HorizontalProjectionSelectsBottomRow) {
+  binary_.setLayout(kbPolPLLayout());
+  ASSERT_TRUE(refresh());
+  keys().layout(Rect(0, 0, 411, 173));
+  keys().onDown(106, 28);
+  keys().onLongPress(106, 28);
+  keys().onLongPressMove(-100, 28);
+  keys().onLongPressMove(eX(1), 28);
+  keys().onLongPressFinished(eX(1), 28);
+  EXPECT_EQ(u8"ë", field_.content());
+  keys().onDown(106, 28);
+  keys().onLongPress(106, 28);
+  keys().onLongPressFinished(106, 28);
+  EXPECT_EQ(u8"ëė", field_.content());
+}
+
+// Verifies crossing either vertical limit cancels permanently, even on return.
+TEST_F(BinaryPopupTest, VerticalEscapeCancelsUntilNextPress) {
+  for (bool above : {true, false}) {
+    hold();
+    keys().onLongPressMove(
+        166, above ? 8 - popupRowHeight() - 2 * Scaled(4) - 1 : 88);
+    EXPECT_FALSE(keys().hasPresentationPin());
+    keys().onLongPressMove(166, 48);
+    keys().onLongPressFinished(166, 48);
+    EXPECT_TRUE(field_.content().empty());
+  }
+}
+
+// Verifies left, centered/even, and right-edge placements keep an occupied
+// bottom-row cell centered exactly on the held key.
+TEST_F(BinaryPopupTest, DefaultChoiceTracksAnchoredColumn) {
+  binary_.setLayout(kbPolPLLayout());
+  ASSERT_TRUE(refresh());
+  keys().layout(Rect(0, 0, 411, 173));
+  for (const std::pair<int, int>& point :
+       {std::pair<int, int>{46, 68}, {106, 28}, {346, 28}}) {
+    keys().onDown(point.first, point.second);
+    keys().onLongPress(point.first, point.second);
+    ASSERT_TRUE(keys().hasPresentationPin());
+    ASSERT_TRUE(refresh());
+    XDim dx;
+    YDim dy;
+    keys().getAbsoluteOffset(dx, dy);
+    const int top = point.second == 68 ? 48 : 8;
+    const int sample_y = dy + popupY(top, 1, 2);
+    std::vector<Color> initial;
+    for (int x = point.first - 17; x <= point.first + 17; ++x)
+      initial.push_back(pixelAt(dx + x, sample_y));
+    keys().onLongPressMove(point.first, point.second);
+    ASSERT_TRUE(refresh());
+    for (int x = point.first - 17; x <= point.first + 17; ++x)
+      EXPECT_EQ(initial[x - point.first + 17], pixelAt(dx + x, sample_y));
+    keys().onLongPressFinished(point.first, point.second);
+  }
+  EXPECT_EQ(u8"æėō", field_.content());
 }
 
 // Verifies replacing layout or resizing a live popup cannot commit its stale
@@ -289,10 +492,12 @@ TEST_F(BinaryPopupTest, LayoutAndPresentationChangesCancel) {
   EXPECT_TRUE(field_.content().empty());
 }
 
-// Verifies a popup too tall for its viewport retains ordinary hold-to-commit
-// behavior.
-TEST_F(BinaryPopupTest, UnfittableStripFallsBackToBaseLetter) {
-  keys().layout(Rect(0, 0, 411, 999));
+// Verifies insufficient space above the key keeps ordinary base-letter hold.
+TEST_F(BinaryPopupTest, NoSpaceAboveFallsBackToBaseLetter) {
+  XDim dx;
+  YDim dy;
+  keys().getAbsoluteOffset(dx, dy);
+  keys().layout(Rect(0, -dy, 411, 173 - dy));
   hold();
   keys().onLongPressFinished(166, 48);
   EXPECT_EQ("e", field_.content());
@@ -307,28 +512,35 @@ TEST(KeyboardPaint, AlternativePopupDirtyPaintMatchesFullPaint) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
   Application app(&env, display);
-  app.keyboard().setLayout(accentDemoLayout());
-  app.keyboard().show();
-  ASSERT_TRUE(app.refresh());
-  Widget& keyboard = app.keyboard().getContents();
-  for (int step = 0; step < 4; ++step) {
-    if (step == 0) {
-      keyboard.onDown(166, 48);
-      keyboard.onShowPress(166, 48);
-      keyboard.onLongPress(166, 48);
+  for (bool multirow : {false, true}) {
+    app.keyboard().setLayout(multirow ? kbPolPLLayout() : accentDemoLayout());
+    app.keyboard().show();
+    ASSERT_TRUE(app.refresh());
+    Widget& keyboard = app.keyboard().getContents();
+    if (multirow) keyboard.layout(Rect(0, 0, 411, 173));
+    for (int step = 0; step < 4; ++step) {
+      if (step == 0) {
+        keyboard.onDown(multirow ? 46 : 166, multirow ? 68 : 48);
+        keyboard.onShowPress(multirow ? 46 : 166, multirow ? 68 : 48);
+        keyboard.onLongPress(multirow ? 46 : 166, multirow ? 68 : 48);
+      }
+      if (step == 1)
+        keyboard.onLongPressMove(multirow ? 46 : 166, multirow ? 68 : 48);
+      if (step == 2)
+        keyboard.onLongPressMove(multirow ? 190 : 310, multirow ? 68 : 48);
+      if (step == 3) keyboard.onCancel();
+      device.reset();
+      ASSERT_TRUE(app.refresh());
+      EXPECT_LE(*std::max_element(device.writes.begin(), device.writes.end()),
+                1);
+      const std::vector<roo::byte> partial = pixels;
+      app.root().invalidateInterior();
+      device.reset();
+      ASSERT_TRUE(app.refresh());
+      EXPECT_LE(*std::max_element(device.writes.begin(), device.writes.end()),
+                1);
+      EXPECT_EQ(partial, pixels) << step;
     }
-    if (step == 1) keyboard.onLongPressMove(232, -36);
-    if (step == 2) keyboard.onLongPressMove(376, -36);
-    if (step == 3) keyboard.onCancel();
-    device.reset();
-    ASSERT_TRUE(app.refresh());
-    EXPECT_LE(*std::max_element(device.writes.begin(), device.writes.end()), 1);
-    const std::vector<roo::byte> partial = pixels;
-    app.root().invalidateInterior();
-    device.reset();
-    ASSERT_TRUE(app.refresh());
-    EXPECT_LE(*std::max_element(device.writes.begin(), device.writes.end()), 1);
-    EXPECT_EQ(partial, pixels) << step;
   }
   app.keyboard().hide();
 }

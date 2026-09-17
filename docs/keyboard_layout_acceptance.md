@@ -139,3 +139,88 @@ passed with exceptions and RTTI disabled; `KeyboardWidget` is now 104 bytes,
 This follow-up did not repeat the full firmware link or physical touchscreen run.
 No affected callers were found in neighboring Roo library source trees. The
 application's local Polish-default selection was preserved outside the commits.
+
+## Rounded multi-row alternatives
+
+The follow-up popup uses at most five choices per row (including the base),
+balances eight choices into two rows of four, and wraps in source order. Outer
+corner radius is half the keyboard row height; the selected choice has a centered
+circular state overlay fitted inside its rectangular touch cell. Narrow viewports reduce the column count; unused final-row cells
+clear selection. Rows/columns are derived without new retained fields. Placement,
+release-only selection, the base-key corridor and insufficient-space fallback
+remain supported.
+
+All 82 focused C++ tests and the Polish emulator example build pass. Added checks
+exercise every choice of the two-row Polish `a` popup, the incomplete `e` row,
+rounded-corner pixels, and partial-versus-full repaint with edge highlights and
+no duplicate pixel writes. ESP32 compilation with exceptions and RTTI disabled
+passes. Widget/pin sizes remain 104/32 bytes; the popup paint function's static GCC
+stack-frame report is 320 bytes (not a complete call-chain bound). No physical
+touchscreen run or full firmware relink was performed for this follow-up.
+
+The balancing/highlight refinement also passes all 23 keyboard presentation tests,
+including every Polish `e` choice in a 4×2 grid, absence of a fifth-column target,
+circular-overlay corner pixels, and partial-versus-full repaint checks.
+
+The circular highlight radius is reduced by `Scaled(4)`, clamped to zero. Popup
+painting now registers one state circle and one shared background/outline/shadow
+decoration, removing per-cell decorations and separate shadow bands. The 23
+keyboard tests, including inset pixel checks and single-pass repaint comparisons,
+and the ESP32 compile check pass after this simplification.
+
+## Key-aligned compact popup refinement
+
+The popup now anchors an occupied bottom-row cell above the held key, preferring
+the middle column (right middle for even counts, so the pin leans left). Horizontal
+edge adjustments move whole columns, preserving exact center alignment; cell
+width may shrink to the existing minimum if needed. That aligned choice is the
+initial selection. The rows use font ascent minus descent with no row gaps, and
+only the pin has `Scaled(4)` padding. If the popup cannot fit above the key, the
+ordinary base-letter hold behavior remains available.
+
+The bottom row's hit regions extend through the triggering key's row, so moving
+left/right below the pin selects the corresponding choice. Crossing above the
+pin or below the key row cancels permanently; horizontal exit clears selection
+and permits return. Tests cover all choices, even-column centering, both viewport
+edges, initial-highlight equivalence to projected selection, terminal vertical
+cancellation, insufficient-space fallback and single-pass rounded repainting.
+
+All 86 focused C++ tests (including 25 keyboard presentation tests), the Polish
+emulator example build, and the ESP32 translation-unit check pass. Widget/pin
+sizes remain 104/32 bytes. The static GCC frame report is 336 bytes for popup paint
+and 128 bytes for popup placement; these are not total call-chain bounds. No full
+firmware relink or physical touchscreen run was performed for this refinement.
+
+## Font-height clearance trial
+
+The first revised spacing option uses `ascent - descent + Scaled(8)` per row,
+with no additional inter-row gap and the existing `Scaled(4)` outer padding.
+Each baseline is half an ascent below the cell center. The selection circle's
+radius is half the row height; minimum column width includes that full diameter.
+This supersedes the earlier radius reduction and intrinsic-height-only rows.
+
+All 26 keyboard presentation tests pass, including a raster assertion that the
+full `ą` glyph fits at the half-ascent baseline. The ESP32 compilation check passes;
+widget/pin sizes remain 104/32 bytes and popup paint's static frame remains 336
+bytes. This trial has not been tested on a physical touchscreen.
+
+## Equal-pitch font-metric grid
+
+The final refinement uses `ascent - 2 * descent + Scaled(8)` for both row height
+and column width, excluding the unchanged `Scaled(4)` outer padding. The doubled
+descent accommodates the lower extent when the baseline sits half an ascent
+below center. The selection circle diameter equals the cell pitch. No separate
+glyph-width sizing or horizontal enlargement remains; letter centers have equal
+spacing on both axes. The chosen column count is retained in existing structure
+padding, with no measured widget-size increase.
+
+All 87 focused C++ tests, the Polish emulator example build and the ESP32 compile
+check pass. Tests cover the equal-pitch choice coordinates, full accented-glyph
+height, baseline placement, default/edge alignment, cancellation and single-pass
+repainting. Widget/pin sizes remain 104/32 bytes and the popup paint static frame
+is 336 bytes. No physical touchscreen run was performed.
+
+The final corner adjustment adds `Scaled(4)` to half the row height, accounting
+for the outer padding and making single-row ends semicircular. The byte-sized
+radius limit is checked including that padding. All 26 keyboard presentation
+tests, including rounded pixels and single-pass repaint comparisons, pass.

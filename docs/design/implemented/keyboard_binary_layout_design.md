@@ -152,8 +152,9 @@ Since `4 < 3 + 2`, the point selects `e`. Column 9 finds the delete key as a
 candidate, but fails `9 < 5 + 4`, so the trailing gap selects nothing.
 
 Holding `e` presents `e é è ę`; holding shifted `E` presents `E É È Ę`.
-The base letter is included automatically as choice zero, so holding and releasing
-without sliding still produces the ordinary letter.
+The base letter is included automatically as choice zero. The initial selection
+is the bottom-row choice aligned above the held key; holding and releasing
+without sliding commits that choice.
 
 ![Grid lookup and circular key geometry](keyboard_binary_layout_geometry.svg)
 
@@ -355,31 +356,52 @@ transfer ownership to the popup. Preserve cancellation on detach, lost input,
 and presentation coverage; re-check retained ownership after callbacks.
 
 On long press of a text key with alternatives, replace the ordinary preview pin
-with an alternatives pin, snapshot the current caps state, and select choice zero.
-The popup is a single horizontal strip. Each choice occupies the same rectangular
-cell and uses the normal text-key font. Let `V` be the visible hosting-layer
-rectangle in window coordinates, `n` the number of choices, and `s0` the larger of
-the held face width and `Scaled(32)`. Choose `s = min(s0, floor(V.width / n))`.
-Use the current row height as strip height. Align the base-choice center above
-the held key center, then clamp the whole strip horizontally inside `V`.
-Place it `Scaled(4)` above the allocation; when that does not fit, place it
-below; when neither fits, clamp vertically within `V`, allowing overlap.
-Shadows are clipped to `V`.
+with an alternatives pin, snapshot the current caps state, and select the
+choice aligned above the held key.
+The popup is a rounded grid with at most five choices per row, including the
+base choice, in source order left-to-right then top-to-bottom. It has
+`p = Scaled(4)` outer padding. Row height `h` is the normal text-key font's
+`ascent - 2 * descent + Scaled(8)`: mirror the below-center font extent and add clearance,
+with no further row gap. Place each baseline half an ascent below the cell center,
+using the font metrics rather than the label's line-gap-based anchor.
+The four corner radii are `floor(h / 2) + p`, giving a single-row pin
+semicircular ends including its outer padding. The circular pressed-state overlay has
+radius `h / 2`; every cell has width and height exactly `h`. One shared decoration paints
+the background, rounded outline, shadow and unused cells.
 
-A strip that cannot fit its height, or whose `s < Scaled(24)`, is suppressed:
-retain ordinary hold-to-commit behavior and its normal preview. A failed pin
-allocation uses the same fallback. This explicitly handles very narrow displays
-without adding popup scrolling. The example has only four choices and normally
-fits. The generator reports maximum choice count so authors can assess target
-sizes; it does not pretend to know runtime pixel geometry.
+Let `V` be the hosting-layer viewport and `n` the choice count. Set
+`cell_width = h` so letter centers have identical horizontal and vertical pitch,
+independently of the outer padding. Choose
+`limit = max(1, min(5, floor((V.width - 2*p) / h)))`,
+`rows = ceil(n / limit)` and `columns = ceil(n / rows)`.
+Eight choices therefore use two rows of four. Do not independently measure or
+expand column widths: the font-derived cell size governs both axes.
 
-Selection uses direct division into the strip's equal-width cells. Within the
-popup, highlight the corresponding choice. Within the original key allocation,
-highlight the base choice. Between the top/bottom of the key and the strip,
-retain the last selection inside a vertical corridor whose horizontal extent is
-the union of their extents. Outside those regions, clear selection; returning
-can select again. Test the strip before the base allocation when they overlap.
-This corridor lets a finger reach the strip without canceling in the small gap.
+Anchor a valid bottom-row cell's center exactly above the held key center.
+Prefer column `floor(columns / 2)` (the right middle for even column counts,
+making the pin lean left), restricted to occupied bottom-row cells. Only if
+that placement would clip horizontally, choose the closest other occupied
+column that fits, favoring the larger column index on ties. Positions differ
+by whole cell widths, never arbitrary pixel clamps. Keep the square cell size;
+if key/cell pixel parities differ, use the nearest representable pixel position
+(with at most half a pixel of center displacement). Select that anchored choice initially;
+it is not necessarily the base character.
+
+The pin's bottom edge abuts the top of the triggering key allocation. Its total
+height is `rows*h + 2*p` and width is `columns*cell_width + 2*p`. If the pin
+cannot fit entirely above the key, or no valid horizontal alignment fits,
+retain ordinary base-letter hold behavior. Failed allocation and unsupported
+corner radii above 255 pixels use the same fallback. Shadows are viewport-clipped.
+
+Selection divides the inner grid into equal cells. Below the inner grid, extend
+its bottom row down through the entire row of the original triggering key:
+moving horizontally there selects the corresponding bottom-row choice. There
+is no extension above the pin. Moving above its top or below the triggering
+key's row immediately cancels the gesture; returning cannot revive it. Moving
+outside the grid horizontally or onto an unused final-row cell clears selection
+without committing; horizontal return can select again. Top/bottom padding maps
+to the nearest grid row. No per-choice geometry or additional retained state is
+needed.
 
 On release, recompute selection from the release coordinates using those same
 rules. Copy the selected scalar, clear the popup/press/repeat state and invalidate
@@ -599,8 +621,9 @@ void findKey(XDim x, YDim y);  // Updates existing active row/key indices.
 void onLongPressMove(XDim x, YDim y) override;
 ```
 
-Choice count is derived from the active key; strip cell width is its stored
-rectangle width divided by choice count. The existing active row/key fields
+Choice count is derived from the active key. Columns are calculated once on
+opening from the square cell size and the viewport, then stored in one byte; cell dimensions divide the stored popup bounds minus outer
+padding by columns and rows. The existing active row/key fields
 identify the base allocation, so the popup needs no extra key pointer or array.
 Its `active` flag distinguishes a canceled selection from ordinary hold behavior
 until the gesture ends. The existing pin host owns the visual; the keyboard

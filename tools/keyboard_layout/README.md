@@ -71,8 +71,23 @@ language-specific letter popups. `a` has nine alternatives, which increased the
 original design's limit of eight by one. Non-Polish `ß` remains `ß` in its upper
 variant because the scalar-only format cannot emit a multi-character uppercase
 expansion. Polish accented uppercase pairs are explicit. The pl-PL binary is
-1,440 bytes. Small displays suppress strips that cannot meet minimum cell size,
-as specified by the design.
+1,440 bytes. Alternatives wrap left-to-right into rows of at most five choices
+(including the base letter), balanced to use four columns for eight choices.
+Popup row height is `ascent - 2 * descent + Scaled(8)`, with no additional row gap.
+Letters use a baseline half an ascent below the cell center. The circular highlight
+has radius half the row height. Column width is exactly equal to row height,
+so letter centers have equal horizontal and vertical spacing. Outer padding
+is separate from these square cells.
+The pin retains `Scaled(4)` outer padding. Corner radius is half the row height
+plus `Scaled(4)`, so a single-row pin has semicircular ends.
+
+The grid stays centered over the held key where possible, leaning left for even
+column counts. At viewport edges it shifts by whole columns, always keeping an
+occupied bottom-row choice centered over the key. That choice is selected by
+default. Horizontal movement below the pin, through the held key's row, selects
+from the bottom row. Moving above the pin or below that key row cancels the press
+permanently. Unused cells select nothing. If the aligned popup cannot fit above
+the key, the ordinary base-letter hold behavior remains available.
 
 A custom keyboard can be constructed as `Keyboard(context, kbPolPLLayout())`.
 Attach its `getContents()` to a task, call `setTask(task)`, connect it to the editor
