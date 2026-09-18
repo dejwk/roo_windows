@@ -6,7 +6,7 @@
 #include "roo_display/ui/tile.h"
 #include "roo_scheduler.h"
 #include "roo_time.h"
-#include "roo_windows/activities/keyboard.h"
+#include "roo_windows/keyboard/keyboard.h"
 #include "roo_windows/config.h"
 #include "roo_windows/core/basic_widget.h"
 #include "roo_windows/core/panel.h"

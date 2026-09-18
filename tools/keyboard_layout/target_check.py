@@ -17,7 +17,7 @@ def main():
     output = args.output_dir.resolve()
     output.mkdir(parents=True, exist_ok=True)
     entries = json.loads(args.compile_db.read_text())
-    entry = next(e for e in entries if e['file'].endswith('/activities/keyboard.cpp'))
+    entry = next(e for e in entries if e['file'].endswith('/keyboard/keyboard.cpp'))
     command = shlex.split(entry['command'])
     flags = []
     skip = False
@@ -30,9 +30,9 @@ def main():
             flags.append(arg)
     flags += ['-fno-exceptions', '-fno-rtti', '-fstack-usage']
     sources = [root / 'src/roo_windows' / p for p in (
-        'activities/keyboard.cpp', 'core/gesture_detector.cpp',
-        'keyboard_layout/keyboard_layout.cpp', 'keyboard_layout/en_us.cpp',
-        'keyboard_layout/pl_pl.cpp')]
+        'keyboard/keyboard.cpp', 'core/gesture_detector.cpp',
+        'keyboard/layout/keyboard_layout.cpp', 'keyboard/layout/en_us.cpp',
+        'keyboard/layout/pl_pl.cpp')]
     example = output / 'example.cpp'
     example.write_text('#include "' + str(root / 'examples/keyboard/polish_place_name/polish_place_name.ino') + '"\n')
     sources.append(example)

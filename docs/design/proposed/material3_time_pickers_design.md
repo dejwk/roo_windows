@@ -55,13 +55,13 @@ As of 2026-05, `roo_windows` has no checked-in Material 3 time-picker family.
 What exists today:
 
 - [src/roo_windows/core/application.h](../../../src/roo_windows/core/application.h)
-  already owns one shared [`Keyboard`](../../../src/roo_windows/activities/keyboard.h)
+  already owns one shared [`Keyboard`](../../../src/roo_windows/keyboard/keyboard.h)
   and one shared legacy [`TextFieldEditor`](../../../src/roo_windows/widgets/text_field.h),
 - [src/roo_windows/core/application.cpp](../../../src/roo_windows/core/application.cpp)
   already keeps that keyboard alive in its own popup task from application
   startup, so it can appear above other UI without allocating a new task each
   time,
-- [src/roo_windows/keyboard_layout/en_us.cpp](../../../src/roo_windows/keyboard_layout/en_us.cpp)
+- [src/roo_windows/keyboard/layout/en_us.cpp](../../../src/roo_windows/keyboard/layout/en_us.cpp)
   already defines a dedicated digits page inside the default keyboard layout,
 - [src/roo_windows/material3/button/button.h](../../../src/roo_windows/material3/button/button.h)
   already provides Material 3 text buttons suitable for Cancel and OK actions,
@@ -142,7 +142,7 @@ Four current repo facts directly shape the design.
    wrong visual and structural base. It hardcodes the old title panel,
    dividers, scrollable content area, and legacy footer buttons. A Material 3
    time picker should not subclass it just to inherit scrim presentation.
-2. The shared [Keyboard](../../../src/roo_windows/activities/keyboard.h) is already
+2. The shared [Keyboard](../../../src/roo_windows/keyboard/keyboard.h) is already
    alive in a popup task, so the picker can reuse it for numeric input without
    creating another keyboard subsystem.
 3. The current legacy [TextFieldEditor](../../../src/roo_windows/widgets/text_field.h)
@@ -502,7 +502,7 @@ precision.
 ### Input Mode and Keyboard Session
 
 Input mode reuses the existing shared
-[Keyboard](../../../src/roo_windows/activities/keyboard.h), but it does not reuse the
+[Keyboard](../../../src/roo_windows/keyboard/keyboard.h), but it does not reuse the
 legacy [TextFieldEditor](../../../src/roo_windows/widgets/text_field.h).
 
 That is a deliberate split.
@@ -736,7 +736,7 @@ Code slice:
 
 1. Add `material3::TimeOfDay` plus validation and clamp helpers.
 2. Add a semantic keyboard-page role to
-   [keyboard_layout.h](../../../src/roo_windows/keyboard_layout/keyboard_layout.h)
+   [keyboard_layout.h](../../../src/roo_windows/keyboard/layout/keyboard_layout.h)
    and route the existing digits page through that role.
 3. Add a public `Application::keyboard()` accessor so temporary presenters can
    bind the shared keyboard without reaching through unrelated internals.

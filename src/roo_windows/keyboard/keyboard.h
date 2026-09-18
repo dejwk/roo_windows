@@ -8,7 +8,7 @@
 
 #include "roo_windows/core/text_input.h"
 #include "roo_windows/core/widget.h"
-#include "roo_windows/keyboard_layout/keyboard_layout.h"
+#include "roo_windows/keyboard/layout/keyboard_layout.h"
 
 namespace roo_windows {
 

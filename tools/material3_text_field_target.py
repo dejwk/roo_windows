@@ -11,7 +11,7 @@ def check_no_exceptions(output):
     """Compile changed library units with the target ABI and exceptions disabled."""
     sources = {
         "core/application.cpp", "core/task_panel.cpp",
-        "activities/keyboard.cpp", "widgets/text_field.cpp",
+        "keyboard/keyboard.cpp", "widgets/text_field.cpp",
         "material3/text_field/text_field.cpp",
         "material3/text_field/secure_text_field.cpp",
     }

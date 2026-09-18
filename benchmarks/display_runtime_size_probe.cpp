@@ -1,6 +1,6 @@
 // Target-ABI probe only. Inspect these named symbols with nm; this translation
 // unit intentionally has no executable behavior.
-#include "roo_windows/activities/keyboard.h"
+#include "roo_windows/keyboard/keyboard.h"
 #include "roo_windows/core/application.h"
 #include "roo_windows/core/application_context.h"
 #include "roo_windows/core/focus_manager.h"

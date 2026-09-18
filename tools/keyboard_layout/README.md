@@ -2,14 +2,14 @@
 
 JSON sources live in `layouts/`; generated `.rwkb` binary files live in
 `generated/`. Firmware includes the generated C++ PROGMEM assets in
-`src/roo_windows/keyboard_layout`. No compiler or JSON parser runs on the device.
+`src/roo_windows/keyboard/layout`. No compiler or JSON parser runs on the device.
 
 From the repository root:
 
 ```sh
-python3 tools/keyboard_layout/compile.py tools/keyboard_layout/layouts/en_us.json --output-prefix src/roo_windows/keyboard_layout/en_us
-python3 tools/keyboard_layout/compile.py tools/keyboard_layout/layouts/pl_pl.json --output-prefix src/roo_windows/keyboard_layout/pl_pl
-python3 tools/keyboard_layout/compile.py tools/keyboard_layout/layouts/accent_demo.json --output-prefix src/roo_windows/keyboard_layout/accent_demo
+python3 tools/keyboard_layout/compile.py tools/keyboard_layout/layouts/en_us.json --output-prefix src/roo_windows/keyboard/layout/en_us
+python3 tools/keyboard_layout/compile.py tools/keyboard_layout/layouts/pl_pl.json --output-prefix src/roo_windows/keyboard/layout/pl_pl
+python3 tools/keyboard_layout/compile.py tools/keyboard_layout/layouts/accent_demo.json --output-prefix src/roo_windows/keyboard/layout/accent_demo
 python3 tools/keyboard_layout/test_compile.py
 ```
 
@@ -112,7 +112,7 @@ range endpoints, then decodes each visited key directly.
 For the application-owned keyboard, select a layout before startup:
 
 ```cpp
-#include "roo_windows/keyboard_layout/pl_pl.h"
+#include "roo_windows/keyboard/layout/pl_pl.h"
 app.keyboard().setLayout(roo_windows::kbPolPLLayout());
 ```
 
@@ -131,12 +131,12 @@ captured keyboard data.
 ## Migration and target validation
 
 The application-owned keyboard now defaults to `kbEngUSLayout()` from
-`roo_windows/keyboard_layout/en_us.h`. Custom callers can replace a legacy
+`roo_windows/keyboard/layout/en_us.h`. Custom callers can replace a legacy
 `Keyboard(context, kbEngUS())` with `Keyboard(context, kbEngUSLayout())`.
 The old `KeyboardSpec` constructor, helper types, and `kbEngUS()` tables have
 been removed. Replace custom C++ tables with JSON and regenerate them.
 `KeyboardLayoutView` is now `KeyboardLayout`, declared in
-`roo_windows/keyboard_layout/keyboard_layout.h`; the old view header is removed. Generated data contains no
+`roo_windows/keyboard/layout/keyboard_layout.h`; the old view header is removed. Generated data contains no
 pointers, and a layout view borrows its bytes for the duration of its use.
 
 The [acceptance report](../../docs/keyboard_layout_acceptance.md) records tests,

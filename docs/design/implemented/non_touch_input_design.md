@@ -82,7 +82,7 @@ When this design was proposed in 2026-07:
 - [src/roo_windows/widgets/text_field.h](../../../src/roo_windows/widgets/text_field.h)
   and [src/roo_windows/widgets/text_field.cpp](../../../src/roo_windows/widgets/text_field.cpp)
   contained a shared `TextFieldEditor` and `KeyboardListener`, but they were
-  wired to the on-screen [activities/keyboard.h](../../../src/roo_windows/activities/keyboard.h)
+  wired to the on-screen [keyboard/keyboard.h](../../../src/roo_windows/keyboard/keyboard.h)
   surface, not to a hardware keyboard source.
 - [src/roo_windows/material3/list/list.h](../../../src/roo_windows/material3/list/list.h)
   already carried `pressed`, `focused`, and `hovered` inside

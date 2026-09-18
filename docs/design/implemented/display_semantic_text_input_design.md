@@ -25,7 +25,7 @@ artificial.
 
 ## Background
 
-The built-in [`Keyboard`](../../../src/roo_windows/activities/keyboard.h)
+The built-in [`Keyboard`](../../../src/roo_windows/keyboard/keyboard.h)
 currently calls a `KeyboardListener` with rune, Enter, and delete callbacks.
 Each task owns a `TextFieldEditor`, but the one built-in keyboard listener makes
 software editing effectively application-global already.

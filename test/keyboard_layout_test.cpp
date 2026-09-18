@@ -1,4 +1,4 @@
-#include "roo_windows/keyboard_layout/keyboard_layout.h"
+#include "roo_windows/keyboard/layout/keyboard_layout.h"
 
 #include <algorithm>
 #include <cstring>
@@ -6,9 +6,9 @@
 
 #include "gtest/gtest.h"
 #include "roo_windows/core/theme.h"
-#include "roo_windows/keyboard_layout/accent_demo.h"
-#include "roo_windows/keyboard_layout/en_us.h"
-#include "roo_windows/keyboard_layout/pl_pl.h"
+#include "roo_windows/keyboard/layout/accent_demo.h"
+#include "roo_windows/keyboard/layout/en_us.h"
+#include "roo_windows/keyboard/layout/pl_pl.h"
 
 namespace roo_windows {
 namespace {

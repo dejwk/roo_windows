@@ -2,7 +2,7 @@
 
 #include <functional>
 
-#include "roo_windows/activities/keyboard.h"
+#include "roo_windows/keyboard/keyboard.h"
 #include "roo_windows/containers/horizontal_layout.h"
 #include "roo_windows/containers/vertical_layout.h"
 #include "roo_windows/core/destination.h"
