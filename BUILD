@@ -1142,3 +1142,9 @@ cc_test(
     linkstatic = 1,
     deps = [":roo_windows", ":test_golden_utils", "@roo_testing//:arduino_gtest_main"],
 )
+
+cc_library(
+    name = "material3_date_picker_size_probe",
+    srcs = ["benchmarks/material3_date_picker_size_probe.cpp"],
+    deps = [":roo_windows"],
+)

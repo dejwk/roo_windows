@@ -14,6 +14,7 @@ Status was audited against the source tree and tests on 2026-09-12. “Dependenc
 
 | Design | Dependency status |
 | --- | --- |
+| [Date pickers](implemented/material3_date_pickers_design.md) | Modal calendar/input, internal month/year modes, docked field with exclusive calendar focus, compact promotion, example and focused resource/behavior/golden tests are implemented. Simultaneous source editing and upstream allocation-free glyph paint remain future work. |
 | [Compact keyboard layouts and long-press alternatives](implemented/keyboard_binary_layout_design.md) | Generated en-US/pl-PL assets, validated byte reader, binary-search lookup, circular action faces, and long-press selection are implemented. Host regressions and ESP32-C3 build/resource checks pass; physical touchscreen checks remain manual. |
 | App bars/search surfaces | The component family, focused unit and golden coverage, example, and adaptive scaffold integration are implemented. Focused/expanded search remains separate future work. |
 | Back request coordination | Explicit `Task::requestBack()` routing through the transient slot, task-owned `NavigationHost`, and task callback is implemented. Ordinary physical Back/Escape follows the configured task's focused-widget path first; an active display-wide hosted surface now receives it first. Phase 7 adds source-task filtering for task-bounded coverage. |
@@ -76,7 +77,6 @@ Status was audited against the source tree and tests on 2026-09-12. “Dependenc
 | --- | --- |
 | Button groups | Buttons and icon buttons are implemented; no group implementation exists. |
 | Click delivery policy | Click-animation lifecycle and settlement are implemented; widget-selected semantic delivery timing is not. |
-| [Date pickers](proposed/material3_date_pickers_design.md) | The `roo_time` civil-date prerequisite (`CivilDay`, calendar queries, local-date extraction, and date-only text APIs) is implemented. Buttons, icon buttons, basic dialogs, shared back behavior, and single-line text fields are implemented; picker phases 1–5 remain proposed. |
 | Display runtime Phase 7 task-bounded transient coverage | Phase 6 input is implemented. Phase 7 is reconciled as task-bounded attachment of the one shared window host layer, retaining one active-presentation authority and explicit interaction owner; the extension remains unimplemented. |
 | Display runtime Phase 8 migration and cost audit | Phases 2–6 are implemented and Phase 7 is architecturally reconciled; the shared host, task-coverage extension, final migration documentation, resource audit, and hardware validation remain proposed. |
 | Extended FAB | The base FAB dependency is proposed; buttons and theme support are implemented. |
