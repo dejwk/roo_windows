@@ -8,6 +8,29 @@ allocation-free date-only parsing and formatting are available. Picker phases
 1–5 remain unimplemented. The status of existing and outstanding prerequisites
 is recorded in the [status index](../README.md).
 
+## Implementation reconciliation (2026-09-19)
+
+The implementation uses the current shared `TransientSurfaceHost`, with an
+explicit `Task&` owner and a host-owned scrim, rather than creating popup tasks.
+`ModalDatePicker` is a lightweight presenter with presentation-only widget
+storage. Its `open(Task&)` reports `PresentationStartResult`.
+
+Month and year selection are body modes within the same presentation. No nested
+transient or separately presented menu is required. Year lists use bounded
+120-year pages to keep scroll coordinates within the embedded 16-bit geometry
+range; previous/next controls move between pages. Compact full-screen layouts
+keep header and actions pinned and scroll the calendar at its normal target
+size, including horizontally when seven 48 dp columns cannot fit.
+
+The docked field is editable only while the calendar is closed. Opening the
+calendar ends field editing and captures focus through the normal presenter
+scope. The popup owns its draft; confirm commits to the field and cancellation
+preserves the field's pre-open value and text. Restoring focus must not reopen
+the calendar. Concurrent field editing and calendar interaction is future work.
+These decisions supersede the older popup-task and simultaneous-editing wording
+below. Acceptance and dismissal deliver one terminal virtual hook, after all
+presentation resources detach; the hook may destroy or reopen the presenter.
+
 ## Objective
 
 Add a Material Design 3 single-date picker family to `roo_windows` that fits
@@ -830,7 +853,7 @@ including both formatting backends, string-disabled coverage, and the existing
 date/time and timezone regression suites. The next picker implementation step
 is Phase 1 below.
 
-### Phase 1: Add Bounds and Locale Helpers
+### Phase 1: Add Bounds and Locale Helpers (Implemented)
 
 Code slice:
 
