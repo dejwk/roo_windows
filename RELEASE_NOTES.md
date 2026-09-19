@@ -1,3 +1,17 @@
+# roo_windows 1.7.0
+
+- Added Material 3 dialogs, anchored menus with submenus and keyboard navigation, snackbars, progress indicators, and filled and outlined text fields.
+- Improved task-local text editing, secure UTF-8 input, and automatic scrolling to keep edited fields above the software keyboard.
+- Rebuilt the software keyboard with compact generated English and Polish layouts, circular action keys, and long-press alternatives.
+- Added shared animation and presentation registries; made input and rendering scheduling event-driven so idle application tickers remain dormant.
+- Unified transient surface hosting and task-owned navigation, improving focus isolation, dialog lifetimes, and dismissal behavior.
+- Fixed click feedback, translucent rendering, clipping, blit-cache repainting, text alignment, and button measurement.
+- Expanded examples, rendering tests, resource benchmarks, and keyboard-layout validation.
+- Updated dependencies, including `roo_display` 3.3.0, `roo_io` 2.3.0, `roo_scheduler` 2.2.0, `roo_time` 2.0.0, and `roo_testing` 2.1.2, plus Bazel and CI dependencies.
+- **API changes:** moved keyboard headers to `roo_windows/keyboard/`, replaced legacy keyboard tables with `KeyboardLayout`, introduced `ClickActivationPolicy`, and migrated wall-clock offsets to `roo_time::UtcOffset`.
+
+---
+
 # [roo_windows 1.6.1](https://github.com/dejwk/roo_windows/releases/tag/1.6.1)
 
 Published 2026-08-30.
