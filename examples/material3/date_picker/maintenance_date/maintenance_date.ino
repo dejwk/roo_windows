@@ -53,6 +53,7 @@ static constexpr int kSpiMisoPin = 5;
 static constexpr int kSpiMosiPin = 6;
 static constexpr int kTouchCsPin = 1;
 
+// Native portrait orientation exercises the 240 px compact picker.
 Ili9341spi<kCsPin, kDcPin, kRstPin> screen{Orientation()};
 TouchXpt2046<kTouchCsPin> touch;
 Display display(screen, touch,

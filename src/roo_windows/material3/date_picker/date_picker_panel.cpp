@@ -78,7 +78,9 @@ Rect DatePickerHeader::controlBounds(int control) const {
   int y = height() - kCell;
   if (control == 0) return Rect(0, y, kCell - 1, height() - 1);
   if (control == 3) return Rect(width() - kCell, y, width() - 1, height() - 1);
-  int center = (width() - 2 * kCell) * 3 / 5 + kCell;
+  // Reserve a full target for the year even in a 240 dp portrait window.
+  int center = std::min(width() - 2 * kCell,
+                        (width() - 2 * kCell) * 3 / 5 + kCell);
   return control == 1 ? Rect(kCell, y, center - 1, height() - 1)
                       : Rect(center, y, width() - kCell - 1, height() - 1);
 }

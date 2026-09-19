@@ -132,7 +132,7 @@ Modal presentation centers it with a scrim. Docked presentation uses the menu
 placement resolver's below-start placement, with flipping/clamping and a
 transparent barrier. If the regular panel plus clearance does not fit, both
 variants promote to the full window with a scrim and square corners.
-Viewports smaller than 256 by 240 dp reject admission.
+Viewports smaller than 240 by 240 dp reject admission.
 
 The full-screen fallback pins the header and Cancel/OK actions. Its body
 scrolls in both directions, retaining 48 dp calendar cells; it does not shrink
@@ -203,7 +203,7 @@ The runnable example is
 `//examples/material3/date_picker/maintenance_date:maintenance_date`. It uses
 real ILI9341/XPT2046 setup and ROO_TESTING emulation, demonstrates modal calendar,
 modal input and the docked field, and saves accepted dates into the form.
-Its compact screen demonstrates promotion; the larger golden fixture exercises
+Its native 240 by 320 portrait screen demonstrates promotion; the larger golden fixture exercises
 anchored placement. Physical touchscreen validation remains manual.
 
 The seven date-picker test targets pass with picker sources and test subclasses

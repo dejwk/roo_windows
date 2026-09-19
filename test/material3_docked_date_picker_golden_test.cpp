@@ -68,5 +68,9 @@ TEST(DockedDatePickerGolden, Anchored) {
 }
 // Verifies compact displays promote to a full-screen calendar surface.
 TEST(DockedDatePickerGolden, Compact) { CheckField("compact", 320, 240, true); }
+// Verifies the docked field promotes successfully at native ILI9341 width.
+TEST(DockedDatePickerGolden, Portrait) {
+  CheckField("portrait", 240, 320, true);
+}
 }  // namespace
 }  // namespace roo_windows::material3

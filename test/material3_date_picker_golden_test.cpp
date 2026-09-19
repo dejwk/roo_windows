@@ -4,6 +4,7 @@
 #include "gtest/gtest.h"
 #include "roo_display.h"
 #include "roo_display/core/offscreen.h"
+#include "roo_display/driver/ili9341.h"
 #include "roo_windows/core/application.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/panel.h"
@@ -36,6 +37,15 @@ void CheckPicker(const char* name, int width, int height, DatePickerMode mode,
   ASSERT_EQ(PresentationStartResult::kStarted, picker.open(owner));
   auto& panel =
       *static_cast<internal::DatePickerPanel*>(owner.focus().scopeRoot());
+  if (width == 240) {
+    auto* header = static_cast<internal::DatePickerHeader*>(
+        static_cast<Widget&>(panel).focusChildAt(0));
+    ASSERT_NE(nullptr, header);
+    for (int control = 0; control < 5; ++control) {
+      EXPECT_GE(header->controlBounds(control).width(), Scaled(48));
+      EXPECT_GE(header->controlBounds(control).height(), Scaled(48));
+    }
+  }
   panel.setMode(mode);
   if (invalid) panel.input()->setText("02/");
   ASSERT_TRUE(app.refresh());
@@ -54,6 +64,20 @@ TEST(DatePickerGolden, ModalCalendar) {
 // cells.
 TEST(DatePickerGolden, CompactCalendar) {
   CheckPicker("compact", 320, 240, DatePickerMode::kDays);
+}
+
+// Verifies admission at the example's native portrait ILI9341 dimensions.
+TEST(DatePickerGolden, PortraitCalendar) {
+  roo_display::Ili9341spi<7, 2, 3> screen(roo_display::Orientation::Default());
+  ASSERT_EQ(240, screen.effective_width());
+  ASSERT_EQ(320, screen.effective_height());
+  CheckPicker("portrait", screen.effective_width(), screen.effective_height(),
+              DatePickerMode::kDays);
+}
+
+// Verifies numeric input remains usable at the same portrait width.
+TEST(DatePickerGolden, PortraitInput) {
+  CheckPicker("portrait_input", 240, 320, DatePickerMode::kInput);
 }
 
 // Verifies month selection is an internal body instead of a nested popup.
