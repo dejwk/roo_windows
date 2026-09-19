@@ -12,8 +12,8 @@ popup, scrim, and planned Material 3 text-field infrastructure.
 
 The design provides:
 
-- one compact date-only value type instead of a timezone-bearing wall-time
-  type,
+- one compact date-only value type supplied by `roo_time`, independent of
+  timezone-bearing wall time,
 - one reusable calendar selection substrate with owner-painted month and year
   views,
 - one modal date picker that uses a scrim-backed popup wrapper and falls back
@@ -97,7 +97,7 @@ What does not exist yet:
 
 Those gaps drive the design directly:
 
-1. the family needs its own date-only type,
+1. the family needs a reusable date-only type added to `roo_time`,
 2. today-highlighting cannot be implicitly sourced from `ApplicationContext`,
 3. docked placement must reuse the anchored-popup algorithm instead of opening
    a second popup-positioning subsystem,
@@ -256,7 +256,8 @@ Out of scope:
 
 The family has two public entry points and four shared internal pieces:
 
-1. `material3::CivilDay` is the compact date-only value type.
+1. `roo_time::CivilDay` is the compact date-only value type, added as a
+   prerequisite in `roo_time`.
 2. `material3::ModalDatePicker` is the full-window scrim-backed modal picker.
 3. `material3::DockedDatePickerField` is the editable text field that opens an
    anchored picker when that picker fits and promotes to modal when it does
@@ -289,24 +290,70 @@ The key architectural decisions are:
 
 ### Date Model and Locale Data
 
-The public value type is `CivilDay`, not `roo_time::DateTime`.
+The public picker value type is the proposed `roo_time::CivilDay`. The picker
+uses it directly; it does not introduce a second date type in `material3`.
+`roo_time` owns Gregorian calendar arithmetic and validation. `roo_windows`
+owns selection policy, localized presentation, and interaction.
 
-`CivilDay` stores one signed 32-bit day index in the civil Gregorian calendar.
-`CivilDay::Invalid()` reserves one sentinel value for "no date selected".
-The public API exposes only date-relevant operations: construction from year,
-month, and day; extraction back to year, month, and day; day-of-week lookup;
-and day-wise arithmetic.
+#### Required `roo_time` Extension
 
-The implementation reuses the existing civil-date algorithms already present in
-`roo_time` for conversion and weekday derivation, but it does not expose
-timezone, hour, minute, second, or wall-time semantics on the picker API.
+Add `roo_time/civil_day.h` with a four-byte `CivilDay` storing a signed day
+index relative to 1970-01-01. Supported dates are 0001-01-01 through
+9999-12-31, matching the existing `DateTime` and numeric parser contracts.
+Reserve `INT32_MIN` for invalid; default construction produces invalid.
+
+The public contract includes:
+
+- checked `FromYmd`: invalid year, month, or day returns `Invalid()` without
+  normalization; validation occurs before narrowing input components,
+- year, month, day, and weekday extraction, requiring a valid value,
+- checked `addDays`: invalid input or a result outside the supported range
+  returns invalid, with widened arithmetic to prevent signed overflow,
+- equality, including equality of invalid values, and chronological ordering
+  for valid values; ordering requires both operands to be valid,
+- `IsLeapYear` and `DaysInMonth` for calendar clients, with the supported year
+  range and month range as documented preconditions,
+- and `DateTime::civilDay()` to extract the existing local calendar date
+  without converting it to UTC or retaining time-of-day and offset state.
+
+Keep the raw day index private. There is no implicit conversion between a
+civil date and `WallTime`: choosing an instant requires additional time and
+zone policy, including ambiguity and nonexistent-local-time handling.
+
+The existing `DaysFromCivil`, `CivilFromDays`, and `WeekdayFromDays` routines
+are private to `wall_time.cpp`, so they are not currently a reusable public
+interface. Refactor them into shared internal calendar support used by
+`CivilDay` and `DateTime`. Consolidate the leap-year and month-length logic
+currently repeated in `format.cpp` and `timezone.cpp` into that same support.
+Expose the date abstraction and useful calendar queries, rather than exposing
+unchecked implementation algorithms. Preserve existing `DateTime` behavior
+and its documented constructor preconditions.
+
+Extend `roo_time/format.h` with allocation-free `ParseCivilDay` and
+`FormatCivilDay`, sharing the existing tokenizer, numeric field validation,
+and bounded writer with `ParseDateTime` and `FormatDateTime`. These date-only
+entry points accept `%Y`, `%m`, `%d`, `%F`, `%%`, and literal separators;
+time and offset directives return `TextStatus::kInvalidFormat`. Parsing
+requires a complete year, month, and day and consumes the entire input.
+Use existing `ParseResult`, `FormatResult`, and `TextStatus` contracts:
+failed parsing preserves the destination, formatting reports the required
+length excluding NUL, and nonzero-capacity output is NUL-terminated.
+Formatting an invalid date returns `kInvalidInput` and clears writable output.
+The default numeric grammar uses four-digit years and two-digit months and
+days, matching the existing parser; unpadded input is not accepted in v1.
+
+This extension is a prerequisite, not functionality already present in
+`roo_time`. It keeps calendar correctness and numeric text handling in one
+library while leaving language tables and picker policy in `roo_windows`.
 
 Localization is handled by two shared singleton-like helpers:
 
 1. `DatePickerStrings`, which contains the language-specific month names,
    narrow weekday labels, first weekday, and static UI strings,
 2. `DateTextCodec`, which parses and formats the numeric date representation
-   used by modal input and the docked field.
+   used by modal input and the docked field. Default codecs delegate to
+   `roo_time::ParseCivilDay` and `roo_time::FormatCivilDay`; they select the
+   numeric format and placeholder without duplicating the parser or formatter.
 
 Both helpers are selected by `ROO_WINDOWS_LANG`, matching the existing dialog
 string-constant pattern. English and Polish tables land with the first family
@@ -316,7 +363,18 @@ ships Polish dialog strings. Runtime locale switching stays out of scope.
 Because `ApplicationContext` does not currently expose wall time, today
 highlighting is explicit state on `ModalDatePicker` and
 `DockedDatePickerField`. Leaving `today` invalid disables the today-ring
-visual.
+visual. Applications can already obtain today's local date using
+`roo_time::WallTimeClock`, `TimeZone`, and `ToLocal`:
+
+```cpp
+// With the proposed DateTime::civilDay() accessor:
+picker.setToday(roo_time::ToLocal(clock.now(), zone).civilDay());
+```
+
+The caller supplies a valid clock reading within the zone's supported range
+and refreshes today on opening or when the local date changes. No new global
+clock service is required. Civil-day arithmetic does not add 24 elapsed hours
+to a zoned instant.
 
 ### Shared Session State and Surface Ownership
 
@@ -583,23 +641,46 @@ The chosen paint contract is:
 ## Proposed API
 
 ```cpp
-namespace roo_windows::material3 {
+// Proposed roo_time API, supplied before the picker implementation.
+namespace roo_time {
 
 class CivilDay {
  public:
   CivilDay();
 
   static CivilDay Invalid();
-  static CivilDay FromYmd(int16_t year, uint8_t month, uint8_t day);
+  static CivilDay FromYmd(int32_t year, int32_t month, int32_t day);
 
   bool isValid() const;
   int16_t year() const;
-  uint8_t month() const;
+  Month month() const;
   uint8_t day() const;
-  roo_time::DayOfWeek dayOfWeek() const;
+  DayOfWeek dayOfWeek() const;
 
   CivilDay addDays(int32_t days) const;
+
+  // Equality and chronological comparison operators are also provided.
+ private:
+  int32_t days_since_epoch_;
 };
+
+bool IsLeapYear(int32_t year);
+uint8_t DaysInMonth(int32_t year, Month month);
+
+// Added to DateTime: CivilDay civilDay() const;
+
+ParseResult ParseCivilDay(roo::string_view text, roo::string_view format,
+                         CivilDay* result);
+FormatResult FormatCivilDay(CivilDay value, roo::string_view format,
+                           char* buffer, size_t capacity);
+// Also provide pointer-and-length overloads, as in the existing format API.
+
+}  // namespace roo_time
+
+namespace roo_windows::material3 {
+
+// CivilDay below denotes roo_time::CivilDay, not a new Material value type.
+using roo_time::CivilDay;
 
 struct DatePickerBounds {
   CivilDay first = CivilDay::Invalid();
@@ -632,8 +713,10 @@ class DateTextCodec {
  public:
   virtual ~DateTextCodec() = default;
 
-  virtual bool parse(roo::string_view text, CivilDay& out) const = 0;
-  virtual size_t format(CivilDay day, char* out, size_t out_size) const = 0;
+  virtual roo_time::ParseResult parse(roo::string_view text,
+                                     CivilDay& out) const = 0;
+  virtual roo_time::FormatResult format(CivilDay day, char* out,
+                                       size_t out_size) const = 0;
   virtual roo::string_view placeholder() const = 0;
 };
 
@@ -726,25 +809,39 @@ Authoring reference:
 and
 [roo-windows-widget-authoring.instructions.md](../../../.github/instructions/roo-windows-widget-authoring.instructions.md).
 
-### Phase 1: Add `CivilDay`, Bounds, and Locale Helpers
+### Prerequisite: Extend `roo_time` with Civil Dates
+
+1. Add `roo_time::CivilDay`, checked date construction and arithmetic,
+   calendar queries, and `DateTime::civilDay()`.
+2. Share internal calendar conversion and validation across `CivilDay`,
+   `DateTime`, numeric parsing, and annual timezone rules.
+3. Add date-only parsing and formatting entry points using the existing text
+   engine and result contracts, without a second parser implementation.
+4. Test leap-century cases, pre-epoch dates and weekdays, years 1 and 9999,
+   invalid construction, invalid propagation, arithmetic overflow, comparisons,
+   strict parsing, unchanged output on failure, and buffer sizing/truncation.
+5. Run the existing `roo_time` date/time, formatting, and timezone regression
+   suites as well as the new civil-date tests before integrating the picker.
+
+### Phase 1: Add Bounds and Locale Helpers
 
 Code slice:
 
-1. Add `CivilDay`, `DatePickerBounds`, `DatePickerStrings`, and
-   `DateTextCodec` under `src/roo_windows/material3/date_picker`.
-2. Reuse the existing civil-date math from `roo_time` internally while keeping
-   the public picker API date-only.
-3. Add shared English and Polish strings plus numeric parse or format codecs.
-4. Add focused tests for conversion, weekday rotation, invalid sentinel,
-   bounds behavior, and parse or format success or failure.
+1. Add `DatePickerBounds`, `DatePickerStrings`, and `DateTextCodec` under
+   `src/roo_windows/material3/date_picker`, using `roo_time::CivilDay` directly.
+2. Add shared English and Polish strings and numeric format/placeholder
+   selection, delegating codecs to the new `roo_time` text entry points.
+3. Add focused tests for locale weekday rotation, bounds policy, and codec
+   integration. Calendar arithmetic and text-engine correctness are tested in
+   `roo_time`.
 
 Proposed commit message:
 
-> Material 3 date pickers Phase 1: add civil-day and locale helpers.
+> Material 3 date pickers Phase 1: add bounds and locale helpers.
 >
-> Land the compact date-only value type, picker bounds, and shared compile-time
-> strings and numeric codecs that the date-picker family reuses without paying
-> for month or weekday tables on every widget instance.
+> Consume roo_time civil dates and add picker bounds, shared compile-time
+> strings, and numeric codec adapters that the date-picker family reuses
+> without paying for month or weekday tables on every widget instance.
 
 Validation: run `bazel test //:material3_date_picker_test`.
 
@@ -850,7 +947,8 @@ Testing is split into behavior, visual coverage, and example coverage.
 
 Behavior coverage goes in `material3_date_picker_test` and verifies:
 
-- `CivilDay` conversion, arithmetic, and invalid-state behavior,
+- integration with `roo_time::CivilDay`, including invalid values and
+  supported calendar boundaries (core arithmetic is tested in `roo_time`),
 - locale weekday rotation and codec parse or format behavior,
 - draft-versus-committed selection rules,
 - min or max bounds and `isDateEnabled()` handling,
@@ -879,8 +977,9 @@ future model from the start.
 
 ## Caveats
 
-The first modal calendar phase is independent. The modal-input and docked
-phases intentionally sequence behind the landed Material 3 text-field family.
+The modal calendar phase depends on the `roo_time` civil-date extension. The
+modal-input and docked phases intentionally sequence behind the landed
+Material 3 text-field family.
 That is a real dependency, not an open design question.
 
 The family also keeps localization compile-time for the first implementation.
