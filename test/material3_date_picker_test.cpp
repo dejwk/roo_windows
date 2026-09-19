@@ -1,4 +1,5 @@
 #include "gtest/gtest.h"
+#include "roo_windows/config.h"
 #include "roo_windows/material3/date_picker/date_picker_types.h"
 
 namespace roo_windows::material3 {
@@ -36,6 +37,13 @@ TEST(DatePickerTypes, NumericCodec) {
   char text[11];
   EXPECT_EQ(roo_time::TextStatus::kOk,
             codec.format(day, text, sizeof(text)).status);
+#if ROO_WINDOWS_LANG == ROO_LANG_pl
+  EXPECT_STREQ("29.02.2024", text);
+  EXPECT_EQ(roo_time::kMonday, DefaultDatePickerStrings().first_weekday);
+#else
+  EXPECT_STREQ("02/29/2024", text);
+  EXPECT_EQ(roo_time::kSunday, DefaultDatePickerStrings().first_weekday);
+#endif
   CivilDay parsed;
   EXPECT_EQ(roo_time::TextStatus::kOk, codec.parse(text, parsed).status);
   EXPECT_EQ(day, parsed);

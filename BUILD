@@ -1097,3 +1097,33 @@ cc_test(
     linkstatic = 1,
     deps = [":roo_windows", "@roo_testing//:arduino_gtest_main"],
 )
+
+cc_test(
+    name = "material3_date_picker_presentation_test",
+    srcs = ["test/material3_date_picker_presentation_test.cpp"],
+    linkstatic = 1,
+    deps = [":roo_windows", "@roo_testing//:arduino_gtest_main"],
+)
+
+cc_test(
+    name = "material3_date_picker_golden_test",
+    srcs = ["test/material3_date_picker_golden_test.cpp"],
+    data = glob(["test/goldens/material3_date_picker/*.ppm"], allow_empty = True),
+    linkstatic = 1,
+    deps = [":roo_windows", ":test_golden_utils", "@roo_testing//:arduino_gtest_main"],
+)
+
+cc_test(
+    name = "material3_date_picker_resource_test",
+    srcs = ["test/material3_date_picker_resource_test.cpp", "test/roo_windows_render_test_support.h"],
+    linkstatic = 1,
+    deps = [":roo_windows", "@roo_testing//:arduino_gtest_main"],
+)
+
+cc_test(
+    name = "material3_date_picker_polish_test",
+    srcs = ["test/material3_date_picker_test.cpp", "src/roo_windows/material3/date_picker/date_picker_types.cpp"],
+    local_defines = ["ROO_LANG=ROO_LANG_pl"],
+    linkstatic = 1,
+    deps = [":roo_windows", "@roo_testing//:arduino_gtest_main"],
+)

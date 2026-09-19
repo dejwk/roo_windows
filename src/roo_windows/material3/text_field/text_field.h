@@ -13,7 +13,8 @@ enum class TextFieldVariant : uint8_t { kFilled, kOutlined };
 /// icon pointers must outlive their assignment. Input must be valid single-line
 /// UTF-8. Editing uses the owning Task, never a per-field editor or child
 /// widget.
-class TextField : public BasicSurfaceWidget, private internal::TextEditTarget {
+class TextField : public BasicSurfaceWidget,
+                  private ::roo_windows::internal::TextEditTarget {
  public:
   /// Creates a field with a borrowed label and an empty owned value.
   explicit TextField(ApplicationContext& context, roo::string_view label,
