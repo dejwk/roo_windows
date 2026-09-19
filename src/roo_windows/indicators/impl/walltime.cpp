@@ -12,14 +12,14 @@ using roo_time::WallTimeClock;
 
 WalltimeIndicatorBase::WalltimeIndicatorBase(ApplicationContext& context,
                                              const WallTimeClock* clock,
-                                             UtcOffset utc_offset)
+                                             roo_time::UtcOffset utc_offset)
     : WalltimeIndicatorBase(context, roo_display::color::Transparent, clock,
                             utc_offset) {}
 
 WalltimeIndicatorBase::WalltimeIndicatorBase(ApplicationContext& context,
                                              Color color,
                                              const WallTimeClock* clock,
-                                             UtcOffset utc_offset)
+                                             roo_time::UtcOffset utc_offset)
     : Widget(context),
       color_(color),
       clock_(clock),
