@@ -102,9 +102,11 @@ firmware's `esp_cpu_get_cycle_count()` at the board's 160 MHz profile.
 | Cubic Bezier easing | 270,360 | 1.690 ms | Pass |
 | Mutation-heavy linear | 28,794 | 0.180 ms | Pass |
 
-The host guard measured 17 us linear, 16 us Bezier and 22 us mutation-heavy in
-the recorded run. It remains useful for continuous testing, while the target
-cycle result is the acceptance value.
+The host characterization measured 17 us linear, 16 us Bezier and 22 us
+mutation-heavy in the recorded run. Continuous tests report these timings and
+verify that all 16 tracks receive every frame, but do not gate on host wall
+time: runner preemption and sanitizer overhead can exceed 2 ms. The target
+cycle benchmark retains the 2 ms acceptance gate.
 
 Target object sections for `animation_registry.cpp` plus
 `animation_evaluator.cpp` total 8,938 bytes text and 2,585 bytes rodata, or
