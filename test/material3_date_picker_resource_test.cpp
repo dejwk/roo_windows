@@ -1,5 +1,6 @@
 #include <cstdlib>
 #include <new>
+#include <vector>
 
 #include "gtest/gtest.h"
 #include "roo_windows/material3/date_picker/date_picker_internal.h"
@@ -69,6 +70,65 @@ TEST_F(DatePickerResource, NavigationDoesNotAllocate) {
     tracking = false;
   }
   RecordProperty("paint_allocations_10_frames", std::to_string(allocations));
+  EXPECT_LT(allocations, 400u);
+  picker.dismiss();
+  task.navigation().clear();
+}
+// Verifies coalesced selection/cursor edits match a full repaint and leave an
+// unrelated cell untouched; external invalidation must restore that cell.
+TEST_F(DatePickerResource, IncrementalPaintMatchesInvalidation) {
+  Panel content(context());
+  Task& task = app_.addTaskFullScreen(content);
+  ModalDatePicker picker(context());
+  picker.setValue(roo_time::CivilDay::FromYmd(2024, 2, 14));
+  ASSERT_TRUE(refresh());
+  ASSERT_EQ(PresentationStartResult::kStarted, picker.open(task));
+  ASSERT_TRUE(refresh());
+  auto& panel =
+      *static_cast<internal::DatePickerPanel*>(task.focus().scopeRoot());
+  Widget* body = task.focus().focused();
+  ASSERT_NE(nullptr, body);
+  // Sunday-first February 2024: cell 21 is February 18, away from these edits.
+  XDim bx = 0;
+  YDim by = 0;
+  body->getAbsoluteOffset(bx, by);
+  int16_t x = bx + 10, y = by + 4 * Scaled(48) + 10;
+  const Color original_pixel = pixelAt(x, y);
+  const Color sentinel = roo_display::color::Red;
+  offscreen_.fillPixels(roo_display::BlendingMode::kSource, sentinel, &x, &y,
+                        1);
+  panel.selectDate(roo_time::CivilDay::FromYmd(2024, 2, 15));
+  panel.selectDate(roo_time::CivilDay::FromYmd(2024, 2, 16));
+  ASSERT_TRUE(refresh());
+  EXPECT_EQ(test_support::QuantizeToArgb4444(sentinel), pixelAt(x, y));
+  // Restore just the deliberately corrupted pixel for a whole-raster
+  // comparison.
+  offscreen_.fillPixels(roo_display::BlendingMode::kSource, original_pixel, &x,
+                        &y, 1);
+  std::vector<roo::byte> incremental(raster_, raster_ + sizeof(raster_));
+  panel.invalidateInterior();
+  ASSERT_TRUE(refresh());
+  EXPECT_EQ(incremental,
+            std::vector<roo::byte>(raster_, raster_ + sizeof(raster_)));
+  body->onKeyEvent({KeyPhase::kDown, KeyCode::kLeft, 0, 0});
+  body->onKeyEvent({KeyPhase::kDown, KeyCode::kLeft, 0, 0});
+  ASSERT_TRUE(refresh());
+  incremental.assign(raster_, raster_ + sizeof(raster_));
+  panel.invalidateInterior();
+  ASSERT_TRUE(refresh());
+  EXPECT_EQ(incremental,
+            std::vector<roo::byte>(raster_, raster_ + sizeof(raster_)));
+  Widget* header = static_cast<Widget&>(panel).focusChildAt(0);
+  ASSERT_TRUE(header->requestFocus());
+  ASSERT_TRUE(refresh());
+  header->onKeyEvent({KeyPhase::kDown, KeyCode::kRight, 0, 0});
+  header->onKeyEvent({KeyPhase::kDown, KeyCode::kRight, 0, 0});
+  ASSERT_TRUE(refresh());
+  incremental.assign(raster_, raster_ + sizeof(raster_));
+  panel.invalidateInterior();
+  ASSERT_TRUE(refresh());
+  EXPECT_EQ(incremental,
+            std::vector<roo::byte>(raster_, raster_ + sizeof(raster_)));
   picker.dismiss();
   task.navigation().clear();
 }

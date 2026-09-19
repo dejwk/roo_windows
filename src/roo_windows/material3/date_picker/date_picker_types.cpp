@@ -43,18 +43,22 @@ constexpr char kFormat[] = "%m/%d/%Y";
 constexpr char kPlaceholder[] = "MM/DD/YYYY";
 #endif
 
+/// Shared build-language codec backed by allocation-free civil-date APIs.
 class NumericCodec final : public DateTextCodec {
  public:
+  /// Parses a complete numeric date without changing output on failure.
   roo_time::ParseResult parse(roo::string_view text,
                               CivilDay& out) const override {
     return roo_time::ParseCivilDay(text, kFormat, &out);
   }
 
+  /// Formats the date into caller-owned bounded storage.
   roo_time::FormatResult format(CivilDay day, char* out,
                                 size_t capacity) const override {
     return roo_time::FormatCivilDay(day, kFormat, out, capacity);
   }
 
+  /// Returns the static build-language numeric format hint.
   roo::string_view placeholder() const override { return kPlaceholder; }
 };
 

@@ -82,6 +82,7 @@ class DockedDatePickerField : public TextField {
 
   /// Validates uncommitted text with the shared date policy.
   void onTextChanged() override;
+
   /// Commits valid text on explicit edit confirmation while the picker is idle.
   void onEditFinished(bool confirmed) override;
 

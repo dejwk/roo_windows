@@ -13,6 +13,7 @@ using roo_time::CivilDay;
 
 ModalDatePicker::ModalDatePicker(ApplicationContext& context)
     : context_(context) {}
+
 ModalDatePicker::~ModalDatePicker() = default;
 
 void ModalDatePicker::setValue(CivilDay day) {
@@ -105,6 +106,7 @@ namespace {
 class PickerPreparation final
     : public ::roo_windows::internal::TransientSurfacePreparation {
  public:
+  /// Borrows the panel and its resolved receiving-window rectangle.
   PickerPreparation(DatePickerPanel& panel, Rect bounds)
       : panel_(panel), bounds_(bounds) {}
 

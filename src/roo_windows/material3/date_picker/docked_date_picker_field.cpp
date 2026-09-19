@@ -16,24 +16,30 @@ const MonoIcon& CalendarIcon() {
 }
 }  // namespace
 
+/// Active-only presenter and deferred admission work borrowed by one field.
 class DockedDatePickerField::Picker final : public ModalDatePicker,
                                             private roo_scheduler::Executable {
  public:
+  /// Borrows the source field for configuration and terminal delivery.
   explicit Picker(DockedDatePickerField& field)
       : ModalDatePicker(field.context()), field_(field) {}
 
+  /// Cancels pending scheduler work before destroying the presenter.
   ~Picker() override { cancelPending(); }
 
+  /// Defers focus-triggered admission until focus dispatch unwinds.
   void schedule() {
     pending_ = field_.context().scheduler().scheduleOn(
         roo_time::Uptime::Now(), *this, roo_scheduler::PRIORITY_NORMAL);
   }
 
+  /// Cancels an outstanding admission without invoking field callbacks.
   void cancelPending() {
     if (pending_ >= 0) field_.context().scheduler().cancel(pending_);
     pending_ = -1;
   }
 
+  /// Reports whether the source has an unexecuted admission request.
   bool pending() const { return pending_ >= 0; }
 
  protected:
@@ -110,6 +116,7 @@ CivilDay DockedDatePickerField::displayedMonth() const {
 const DatePickerStrings& DockedDatePickerField::datePickerStrings() const {
   return DefaultDatePickerStrings();
 }
+
 const DateTextCodec& DockedDatePickerField::dateTextCodec() const {
   return DefaultDateTextCodec();
 }

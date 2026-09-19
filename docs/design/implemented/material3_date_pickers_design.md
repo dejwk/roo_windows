@@ -158,8 +158,11 @@ be committed through either touch or keyboard.
 The header and day/month/year cells are owner-painted; there are no per-day
 widgets or row objects. Foreground glyphs settle against their final background
 before rounded decorations and remaining surface fill. Clipping skips
-non-visible body cells. Calendar updates currently invalidate the body;
-finer cell-level damage tracking is a possible later optimization.
+non-visible body cells. Calendar selection and keyboard cursor changes compare against the previous
+paint snapshot and repaint only changed cells. Header updates track changed
+controls and the draft headline. Coalesced edits do not retain intermediate
+selections. External invalidation, including framework focus-surface changes,
+continues to repaint the exposed region. Four active-only flags share one byte.
 
 Idle presenters retain only configuration and a session pointer. Numeric
 input is allocated lazily when that mode is first requested, then retained
@@ -176,17 +179,18 @@ state):
 | Closed `ModalDatePicker` | 36 |
 | Base Material 3 `TextField` | 108 |
 | Closed `DockedDatePickerField` | 136 |
-| Active `DatePickerSession`, including panel | 448 |
-| `DatePickerPanel` (included in session) | 408 |
-| Header / body (each, included in panel) | 36 |
+| Active `DatePickerSession`, including panel | 456 |
+| `DatePickerPanel` (included in session) | 416 |
+| Header (included in panel) | 36 |
+| Body, including paint snapshot (included in panel) | 44 |
 
 Run `benchmarks/material3_date_picker_size_probe.sh COMPILER NM` with sibling
 Roo libraries, or set `ROO_LIBRARIES_ROOT`. This is a target-ABI object-size
 probe, not a firmware flash-size or peak-heap measurement.
 
 The resource regression asserts zero allocations for warmed model navigation.
-Ten full calendar paint frames currently record 1080 allocations through the
-existing `roo_display` glyph-stream renderer. As with Material 3 text fields,
+Ten selection-update frames record 204 allocations (previously 1080) through
+the existing `roo_display` glyph-stream renderer. As with Material 3 text fields,
 removing those upstream allocations is deferred; this implementation does not
 claim allocation-free paint.
 
@@ -216,7 +220,7 @@ regressions pass. The example builds; interactive hardware checks were not run.
 
 - Simultaneous editing of the docked source while its calendar is open.
 - Live anchor tracking and repositioning during a session.
-- A denser compact layout, dynamic input-only panel height, and finer repaint
-  damage tracking, while preserving usable touch targets.
+- A denser compact layout and dynamic input-only panel height, while
+  preserving usable touch targets.
 - Range selection and richer locale-specific headline formatting.
 - Upstream allocation-free glyph rendering.

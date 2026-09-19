@@ -25,6 +25,7 @@ void PaintText(PaintContext& ctx, roo::string_view text, const TextStyle& style,
                Color color, Color background, const Rect& bounds,
                roo_display::Alignment alignment = roo_display::kCenter |
                                                   roo_display::kMiddle) {
+  if (!ctx.localClip().intersects(bounds)) return;
   roo_display::StringViewLabel label(text, style.font(), color,
                                      style.fontOptions());
   PaintContext local = ctx.clipped(bounds);
@@ -79,10 +80,17 @@ Rect DatePickerHeader::controlBounds(int control) const {
   if (control == 0) return Rect(0, y, kCell - 1, height() - 1);
   if (control == 3) return Rect(width() - kCell, y, width() - 1, height() - 1);
   // Reserve a full target for the year even in a 240 dp portrait window.
-  int center = std::min(width() - 2 * kCell,
-                        (width() - 2 * kCell) * 3 / 5 + kCell);
+  int center =
+      std::min(width() - 2 * kCell, (width() - 2 * kCell) * 3 / 5 + kCell);
   return control == 1 ? Rect(kCell, y, center - 1, height() - 1)
                       : Rect(center, y, width() - kCell - 1, height() - 1);
+}
+
+void DatePickerHeader::dirtyPart(int part) {
+  dirty_parts_ |= 1 << part;
+  setDirty(part == 5
+               ? Rect(0, Scaled(24), width() - kCell - 1, height() - kCell - 1)
+               : controlBounds(part));
 }
 
 void DatePickerHeader::paint(PaintContext& ctx) const {
@@ -90,22 +98,26 @@ void DatePickerHeader::paint(PaintContext& ctx) const {
   const auto& colors = theme().material3Theme().color;
   Color bg = panel_.background();
   bool input = panel_.mode() == DatePickerMode::kInput;
-  PaintText(ctx,
-            input ? session.strings().headline_input_date
-                  : session.strings().headline_select_date,
-            text_style_label_large(), colors.onSurfaceVariant, bg,
-            Rect(0, 0, width() - kCell - 1, Scaled(24) - 1),
-            roo_display::kLeft | roo_display::kMiddle);
-  char text[64] = {};
-  if (session.draft.isValid())
-    session.codec().format(session.draft, text, sizeof(text));
-  PaintText(
-      ctx,
-      session.draft.isValid() ? roo::string_view(text) : roo::string_view("—"),
-      text_style_headline_small(), colors.onSurface, bg,
-      Rect(0, Scaled(24), width() - kCell - 1, height() - kCell - 1),
-      roo_display::kLeft | roo_display::kMiddle);
+  if (isInvalidated())
+    PaintText(ctx,
+              input ? session.strings().headline_input_date
+                    : session.strings().headline_select_date,
+              text_style_label_large(), colors.onSurfaceVariant, bg,
+              Rect(0, 0, width() - kCell - 1, Scaled(24) - 1),
+              roo_display::kLeft | roo_display::kMiddle);
+  if (isInvalidated() || (dirty_parts_ & (1 << 5))) {
+    char text[64] = {};
+    if (session.draft.isValid())
+      session.codec().format(session.draft, text, sizeof(text));
+    PaintText(ctx,
+              session.draft.isValid() ? roo::string_view(text)
+                                      : roo::string_view("—"),
+              text_style_headline_small(), colors.onSurface, bg,
+              Rect(0, Scaled(24), width() - kCell - 1, height() - kCell - 1),
+              roo_display::kLeft | roo_display::kMiddle);
+  }
   for (int control = 0; control < 5; ++control) {
+    if (!isInvalidated() && !(dirty_parts_ & (1 << control))) continue;
     Rect bounds = controlBounds(control);
     Color foreground = isFocused() && focused_control_ == control
                            ? colors.primary
@@ -134,12 +146,15 @@ void DatePickerHeader::paint(PaintContext& ctx) const {
       PaintText(ctx, label, text_style_label_large(), foreground, bg, bounds);
     }
   }
+  dirty_parts_ = 0;
 }
 
 void DatePickerHeader::onSingleTapUp(XDim x, YDim y) {
   for (int control = 0; control < 5; ++control) {
     if (controlBounds(control).contains(x, y)) {
+      dirtyPart(focused_control_);
       focused_control_ = control;
+      dirtyPart(focused_control_);
       requestFocus();
       panel_.activateHeader(control);
       return;
@@ -151,9 +166,10 @@ bool DatePickerHeader::onKeyEvent(const KeyEvent& event) {
   if (event.phase != KeyPhase::kDown && event.phase != KeyPhase::kRepeat)
     return false;
   if (event.code == KeyCode::kLeft || event.code == KeyCode::kRight) {
+    dirtyPart(focused_control_);
     focused_control_ =
         (focused_control_ + (event.code == KeyCode::kLeft ? 4 : 1)) % 5;
-    invalidateInterior();
+    dirtyPart(focused_control_);
     return true;
   }
   if (event.code == KeyCode::kEnter || event.code == KeyCode::kSpace) {
@@ -194,7 +210,7 @@ void DatePickerBody::paint(PaintContext& ctx) const {
   const DatePickerSession& session = panel_.session();
   const auto& colors = theme().material3Theme().color;
   bool days = panel_.mode() == DatePickerMode::kDays;
-  if (days) {
+  if (days && isInvalidated()) {
     for (int col = 0; col < 7; ++col) {
       PaintText(
           ctx,
@@ -208,6 +224,19 @@ void DatePickerBody::paint(PaintContext& ctx) const {
   for (int i = 0; i < cellCount(); ++i) {
     Rect cell = cellBounds(i);
     if (!ctx.localClip().intersects(cell)) continue;
+    // External invalidation repaints all exposed pixels. A state-only repaint
+    // needs just cells whose selection or keyboard marker changed since paint.
+    bool old_selected = false;
+    bool new_selected = false;
+    if (days) {
+      CivilDay day = GridDay(session.month, session.strings().first_weekday, i);
+      old_selected = day.isValid() && day == painted_draft_;
+      new_selected = day.isValid() && day == session.draft;
+    }
+    if (!isInvalidated() && old_selected == new_selected &&
+        (painted_focused_ && painted_cursor_ == i) ==
+            (isFocused() && cursor_ == i))
+      continue;
     char number[8];
     roo::string_view text;
     bool enabled = true, selected = false, today = false;
@@ -233,10 +262,16 @@ void DatePickerBody::paint(PaintContext& ctx) const {
     if (!enabled)
       color =
           AlphaBlend(background(), Color(97, color.r(), color.g(), color.b()));
-    PaintCell(ctx, text, cell, color, background(), colors.primary, selected,
-              today, isFocused() && cursor_ == i);
+    PaintContext cell_ctx = ctx.clipped(cell);
+    PaintCell(cell_ctx, text, cell, color, background(), colors.primary,
+              selected, today, isFocused() && cursor_ == i);
+    cell_ctx.clear();
+    ctx.addExclusion(cell);
   }
-  ctx.clear();
+  if (isInvalidated()) ctx.clear();
+  painted_draft_ = session.draft;
+  painted_cursor_ = cursor_;
+  painted_focused_ = isFocused();
 }
 
 void DatePickerBody::activate(int index) {
@@ -261,6 +296,7 @@ void DatePickerBody::onSingleTapUp(XDim x, YDim y) {
   int index = row * columns + x / (width() / columns);
   if (index >= cellCount()) return;
   cursor_ = index;
+  setDirty();
   requestFocus();
   activate(index);
 }
@@ -280,7 +316,7 @@ void DatePickerBody::resetCursor() {
     cursor_ = std::max(0, std::min(cellCount() - 1,
                                    session.month.year() - panel_.firstYear()));
   }
-  invalidateInterior();
+  setDirty();
 }
 
 void DatePickerBody::revealCursor() { panel_.scrollTo(cellBounds(cursor_)); }
@@ -322,7 +358,7 @@ bool DatePickerBody::onKeyEvent(const KeyEvent& event) {
   }
   cursor_ = std::max(0, std::min(cellCount() - 1, next));
   revealCursor();
-  invalidateInterior();
+  setDirty();
   return true;
 }
 
@@ -358,7 +394,11 @@ DatePickerPanel::DatePickerPanel(ApplicationContext& context,
       body_(context, *this),
       viewport_(context, body_),
       cancel_(context, *this, false),
-      confirm_(context, *this, true) {
+      confirm_(context, *this, true),
+      full_screen_(false),
+      syncing_input_(false),
+      reveal_pending_(true),
+      focus_pending_(false) {
   attachChild(header_);
   attachChild(viewport_);
   attachChild(cancel_);
@@ -382,13 +422,17 @@ Widget* DatePickerPanel::preferredFocusChild() {
 ColorToken DatePickerPanel::containerRole() const {
   return ColorToken::kSurfaceContainerHigh;
 }
+
 Color DatePickerPanel::background() const {
   return theme().material3Theme().color.surfaceContainerHigh;
 }
+
 BorderStyle DatePickerPanel::getBorderStyle() const {
   return BorderStyle(full_screen_ ? 0 : Scaled(28), 0);
 }
+
 void DatePickerPanel::paint(PaintContext& ctx) const { ctx.clear(); }
+
 Dimensions DatePickerPanel::getSuggestedMinimumDimensions() const {
   return Dimensions(7 * kCell + 2 * kInset,
                     kHeader + 7 * kCell + kFooter + kInset);
@@ -408,6 +452,7 @@ Widget& DatePickerPanel::getChild(int index) {
       return *input_;
   }
 }
+
 const Widget& DatePickerPanel::getChild(int index) const {
   switch (index) {
     case 0:
@@ -422,6 +467,7 @@ const Widget& DatePickerPanel::getChild(int index) const {
       return *input_;
   }
 }
+
 Dimensions DatePickerPanel::onMeasure(WidthSpec width, HeightSpec height) {
   Dimensions desired = getSuggestedMinimumDimensions();
   int w = width.resolveSize(desired.width()),
@@ -437,6 +483,7 @@ Dimensions DatePickerPanel::onMeasure(WidthSpec width, HeightSpec height) {
                     HeightSpec::Exactly(Scaled(80)));
   return Dimensions(w, h);
 }
+
 void DatePickerPanel::onLayout(bool, const Rect&) {
   header_.layout(Rect(kInset, kInset / 2, width() - kInset - 1, kHeader - 1));
   viewport_.layout(Rect(kInset, kHeader, width() - kInset - 1,
@@ -476,13 +523,13 @@ void DatePickerPanel::scrollTo(const Rect& cell) {
 
 void DatePickerPanel::updateSelection() {
   confirm_.setEnabled(session_.enabled(session_.draft));
-  header_.invalidateInterior();
   body_.resetCursor();
 }
 
 void DatePickerPanel::selectDate(CivilDay day) {
-  if (!session_.enabled(day)) return;
+  if (!session_.enabled(day) || session_.draft == day) return;
   session_.draft = day;
+  header_.dirtyPart(5);
   updateSelection();
 }
 
@@ -517,6 +564,9 @@ void DatePickerPanel::activateHeader(int control) {
     CivilDay next = ShiftMonth(session_.month, control == 0 ? -1 : 1);
     if (next.isValid()) {
       session_.month = next;
+      header_.dirtyPart(1);
+      header_.dirtyPart(2);
+      body_.invalidateInterior();
       reveal_pending_ = true;
       requestLayout();
       updateSelection();
@@ -568,7 +618,9 @@ void DatePickerPanel::inputChanged() {
   bool valid = session_.codec().parse(input_->text(), parsed).status ==
                    roo_time::TextStatus::kOk &&
                session_.enabled(parsed);
-  session_.draft = valid ? parsed : CivilDay::Invalid();
+  CivilDay next = valid ? parsed : CivilDay::Invalid();
+  if (session_.draft != next) header_.dirtyPart(5);
+  session_.draft = next;
   if (valid)
     input_->clearError();
   else
