@@ -512,6 +512,7 @@ TEST_F(HostTest, AttachesOwnerBoundRootAndRestoresFocus) {
   EXPECT_FALSE(
       app_.root().transient_presentation_slot().hasActivePresentation());
   EXPECT_EQ(1, registration.detach_count);
+  task_content_.removeLast();
 }
 
 // Verifies empty, outside, and invalid-policy surfaces fail without mutating
@@ -685,6 +686,7 @@ TEST_F(HostTest, CapturesOnlyOwnerTaskSourceGeometry) {
   source.layout(Rect(0, 0, -1, -1));
   EXPECT_FALSE(CaptureTransientSourceGeometry(owner_, source, unchanged));
   EXPECT_EQ(Rect(1, 2, 3, 4), unchanged.bounds_in_window);
+  task_content_.removeLast();
 }
 
 // Verifies detached mini-trees and both display-attached and task-nested host

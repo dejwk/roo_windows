@@ -24,6 +24,16 @@ void* operator new(size_t bytes) {
   return result;
 }
 void* operator new[](size_t bytes) { return ::operator new(bytes); }
+// Keep nothrow allocations on the same malloc/free path under ASan.
+void* operator new(size_t size, const std::nothrow_t&) noexcept {
+  if (g_track_touch_allocations) ++g_touch_allocations;
+  return std::malloc(size ? size : 1);
+}
+void* operator new[](size_t size, const std::nothrow_t& tag) noexcept {
+  return ::operator new(size, tag);
+}
+void operator delete(void* p, const std::nothrow_t&) noexcept { std::free(p); }
+void operator delete[](void* p, const std::nothrow_t&) noexcept { std::free(p); }
 void operator delete(void* ptr) noexcept { std::free(ptr); }
 void operator delete[](void* ptr) noexcept { std::free(ptr); }
 void operator delete(void* ptr, size_t) noexcept { std::free(ptr); }

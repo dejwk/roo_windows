@@ -533,8 +533,6 @@ TEST(Material3NavigationRail,
   ASSERT_TRUE(inbox_raw->isPressed());
   ASSERT_FALSE(inbox_raw->isClicking());
   ASSERT_TRUE(inbox_raw->isDirty());
-  ASSERT_TRUE(app.refresh());
-  ASSERT_FALSE(inbox_raw->isDirty());
   ASSERT_EQ(0, rail_raw->selectedIndex());
 
   keys.push(KeyEvent{KeyPhase::kUp, KeyCode::kEnter, 0, 0});
@@ -544,6 +542,11 @@ TEST(Material3NavigationRail,
   EXPECT_EQ(1, rail_raw->selectedIndex());
   EXPECT_TRUE(inbox_raw->selected());
   EXPECT_EQ(std::vector<int>({1}), rail_raw->invoked);
+  EXPECT_FALSE(inbox_raw->isClicking());
+  EXPECT_EQ(nullptr, inbox_raw->getClickAnimation());
+  // Input dispatch may leave painting for a later frame. Complete that frame
+  // explicitly so this assertion does not depend on scheduler timing.
+  ASSERT_TRUE(app.refresh());
   EXPECT_FALSE(inbox_raw->isDirty());
 }
 
