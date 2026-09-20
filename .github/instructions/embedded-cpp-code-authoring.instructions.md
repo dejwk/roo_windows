@@ -20,15 +20,25 @@ policy on top of this baseline.
 
 ## Core Conventions
 
-- Follow Google-style C++. Namespace-level functions and static methods use
+- Follow Google C++ Style as the baseline. Format changed C++ files with the
+  repository's Google-based `.clang-format` configuration. Namespace-level
+  functions and static methods use
   `CapitalizedNames()`, while instance methods use `camelCase()`. Trivial
   accessors and mutators (one-line field getters/setters and STL-mimicking
   container methods) may keep `snake_case()` when that reads more naturally,
   matching the spelling of the underlying field. Language- and
   framework-mandated names such as allocation operators and Arduino `setup()`
   and `loop()` retain their required spelling.
-- Favor readability. Avoid redundant branches, repeated explanations, and
-  unnecessary line count when the code can stay clear without them.
+- Optimize code for human readability and maintainability over terseness. Do
+  not compress declarations, control flow, or documentation merely to reduce
+  line count.
+- Prefer cohesive semantic groupings, descriptive names, explicit ownership,
+  visible dependency boundaries, and enough whitespace to make related
+  concepts easy to scan. Avoid unnecessary abstraction, cleverness, and
+  indirection.
+- Preserve existing documentation and explanatory comments during refactors
+  unless they are obsolete. Relocate them with the declarations or behavior
+  they describe.
 - Keep `CHECK` and related assertion macros at their point of use so failures
   report the source line that expresses the violated contract.
 - Embedded-target code must build with exceptions disabled (`-fno-exceptions`);
@@ -47,19 +57,38 @@ policy on top of this baseline.
 - Avoid `auto` unless the type is obvious from the initializer context, such
   as `std::make_unique<...>()`, or the spelled-out type would be excessively
   complex.
+- Name local variables of type `Status` `status`, not `error`. Reserve `error`
+  for API fields or parameters whose contract specifically names an error.
+- Do not depend on implicit conversions from integers, enums, or pointers to
+  `bool`. Compare integers with zero, scoped enums with named enumerators, and
+  pointers with `nullptr`; use direct conditions only for actual `bool` values.
 - Be conservative about RAM. Flash is usually cheaper than per-instance state,
   so prefer shared data, existing ownership points, and zero-cost hooks when
   possible.
 - Use `///` for Doxygen comments; do not use block-form Doxygen comments.
 - All public classes and public methods should have Doxygen comments at the
   declaration site.
-- Always leave an empty line between declarations or implementations. The
+- In addition to Google C++ Style, always leave an empty line between
+  declarations or implementations. The
   only exception is a group of declarations or definitions that each fit
   entirely on a single line, including any comments.
 - Always leave one empty separator line between adjacent `struct` or `class`
   declarations.
-- Doxygen comments should summarize implemented behavior, or intended behavior
-  for pure-virtual and otherwise contract-defining declarations.
+- Use braces for every `if`, `else`, `for`, `while`, and similar control-flow
+  body unless the complete control statement, including its body, fits on one
+  line. Do not omit braces merely because the body has one statement.
+- Declare one variable or data member per declaration statement. Do not combine
+  same-typed names with commas; separate declarations make initialization,
+  ownership, and later edits unambiguous.
+- Doxygen comments should say what the declared class, function, or method
+  does. Do not document only auxiliary properties such as ownership,
+  inheritance, or scheduling context; include those details after the
+  behavioral summary when they matter.
+- Document every meaningful parameter with `@param name`, using the parameter
+  name from the declaration. Document return values, ownership, lifetime,
+  failure behavior, and scheduling context when they affect correct use.
+- For pure-virtual and otherwise contract-defining declarations, describe the
+  behavior that implementations must provide.
 - Every code change must ship with focused unit tests.
 - Non-trivial test cases should carry brief `Verifies ...` comments stating the
   contract or regression being checked. The comment should apply to the whole
@@ -97,14 +126,20 @@ policy on top of this baseline.
   validation commands, compile-coverage checks, and integration builds.
 - Before handing code over for review or submitting it, run `clang-format` on
   every changed C++ source and header file.
+- Before finishing a refactor, compare the old and new public API documentation
+  and verify that useful context was not lost.
 
 ## Checklist
 
 - Public API declarations have `///` Doxygen comments.
+- Doxygen comments describe behavior and use `@param` markers for meaningful
+  parameters.
 - Namespace-level functions and static methods use `CapitalizedNames()` unless
   their spelling is fixed by the language or framework.
 - Documented public methods and functions have empty separator lines between
   their declarations.
+- Multi-line control-flow statements use braces.
+- Each variable and data member has its own declaration statement.
 - Adjacent `struct` and `class` declarations have empty separator lines.
 - The code change includes focused unit tests.
 - Non-trivial tests have short `Verifies ...` comments immediately before the
@@ -112,10 +147,13 @@ policy on top of this baseline.
 - Validation uses the narrowest relevant target first.
 - `clang-format` has been run on every changed C++ source and header file
   before review or submission.
+- Refactors preserve useful public API documentation and explanatory context.
 - Complex implementation comments explain intent, not mechanics.
 - Complex algorithms explain their main strategy and important branches.
 - Non-trivial helper functions and methods are documented.
 - The change does not add avoidable per-instance RAM cost.
+- Local `Status` variables are named `status`.
+- Boolean conditions do not implicitly convert integers, enums, or pointers.
 - If the change implements a design-doc stage, the response includes a
   proposed commit message with a standalone summary sentence followed by a
   descriptive paragraph, references the design doc, and reflects any
