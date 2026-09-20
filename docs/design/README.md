@@ -89,4 +89,4 @@ Status was audited against the source tree and tests on 2026-09-12. “Dependenc
 | Split button | Buttons, icon buttons, non-touch input, and menus are implemented; split buttons remain proposed. |
 | Time pickers | Buttons, icon buttons, basic dialogs, and shared back behavior are implemented; single-line text fields are implemented; picker-specific integration remains proposed. |
 | Toolbars | Buttons, icon buttons, and menus are implemented; FABs and toolbars are proposed. |
-| Wi-Fi configuration | Existing Wi-Fi transport/configuration APIs are external prerequisites; single-line text fields and dialogs are implemented; the Material 3 configuration screen remains proposed. |
+| [Wi-Fi configuration UI](proposed/material3_wifi_configuration_design.md) | The `roo_wifi` 2.0 backend and legacy-consumer migration have landed locally; publication still awaits its documented hardware gates. Material 3 fields, dialogs and navigation are implemented. UI presentation, forms and application-policy integration remain proposed. |
