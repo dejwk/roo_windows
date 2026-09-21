@@ -3,11 +3,11 @@
 ## Implementation status
 
 **Proposed.** None of the Material 3 UI scope is implemented. The required
-`roo_wifi` 2.0 backend API has landed locally and the legacy
-`roo_windows_wifi` model has been migrated to it. Backend publication and the
-physical-device checks listed in its validation report remain release gates,
-not UI design work. The status of the remaining prerequisites is recorded in
-the [status index](../README.md).
+`roo_wifi` 2.0 backend API has landed locally, and `roo_windows_wifi` package
+metadata already declares it. Backend publication and the physical-device
+checks listed in its validation report remain release gates, not UI design
+work. The status of the remaining prerequisites is recorded in the
+[status index](../README.md).
 
 ## Objective
 
@@ -43,7 +43,7 @@ already provides.
 
 The correct next step is not to keep accreting one-off rows onto the legacy
 `HorizontalLayout` and `VerticalLayout` activities. The flow needs a new
-activity and widget set that is designed as a coherent Material 3 settings
+destination and widget set that is designed as a coherent Material 3 settings
 surface and that preserves the embedded RAM budget.
 
 ## Background
@@ -134,7 +134,7 @@ That quantitative difference is large enough to drive the design:
 3. details and form sections use richer small Material 3 settings rows because
    their row count is low,
 4. and optional advanced edit controls such as static IP and manual proxy live
-   only on the single edit activity rather than adding fields or callbacks to
+   only on the single edit destination rather than adding fields or callbacks to
    every row instance.
 
 ### Current Framework API
@@ -187,7 +187,8 @@ The Material 3 flow consumes these concrete landed contracts:
   randomized-MAC, and scan-while-connected capabilities.
 - `Controller::loadProfile()`, `saveProfile()`, `connect(ProfileId)`, and
   `removeProfile()` operate on nonzero application-assigned keys. The backend
-  neither allocates keys nor enumerates them.
+  does not allocate keys. `Controller::forEachProfile()` enumerates committed
+  saved-profile IDs without a separate catalog.
 - `Controller::Listener` separates scan publication, scan busy state, physical
   enablement, link changes, profile invalidation, and terminal operation
   results. Admitted requests return a nonzero `OperationId`; immediate
@@ -204,21 +205,22 @@ services. None of those UI or application concerns extend the Wi-Fi backend.
 
 ### Functional Requirements
 
-1. Provide a top-level Wi-Fi settings activity with a master switch, a current
+1. Provide a top-level Wi-Fi settings destination with a master switch, a current
    connection summary when one exists, available scan results, an `Add network`
-   entry point, and a `Saved networks` entry point when the application supplies
-   a catalog of known profile keys. Backend persistence alone does not imply
-   that stored configurations can be listed.
+   entry point, and a `Saved networks` entry point backed by controller profile
+   enumeration.
 2. Support direct one-tap connect for open or already-saved networks, while new
    secured or hidden networks route through an edit flow.
-3. Provide a network-details activity that can show and edit at least:
+3. Provide a network-details destination that can show and edit at least:
    auto-connect, privacy mode, metered treatment, IP settings summary, proxy
    summary, and forget or disconnect actions when supported.
-4. Provide an add or edit network activity that can create a hidden network and
+4. Provide an add or edit network destination that can create a hidden network and
    edit a saved network using one shared form.
-5. Support the common personal security modes in v1: open, WEP, WPA or WPA2
-   personal, and WPA3 personal. Enterprise or certificate-backed flows are out
-   of scope for the first version.
+5. Support the personal modes represented by the backend when their
+   `Support::authentication_modes` bits are set: open, WEP, WPA personal, WPA2
+   personal, WPA/WPA2 transition, WPA3 personal, and WPA2/WPA3 transition.
+   Enterprise, WAPI, unknown, and other modes remain displayable but cannot be
+   provisioned by the first-version form.
 6. Support manual IPv4 configuration with address, prefix length, gateway,
    primary DNS, and secondary DNS.
 7. Support manual proxy configuration with host, port, and bypass list, plus
@@ -226,15 +228,15 @@ services. None of those UI or application concerns extend the Wi-Fi backend.
 8. Keep the details page usable when a scanned network disappears during a
    refresh; the screen should show `Out of range` rather than dismissing
    itself.
-9. Keep edit drafts local to the edit activity until the user confirms `Save`
+9. Keep edit drafts local to the edit destination until the user confirms `Save`
    or `Connect`.
 10. Reflect asynchronous operations such as scan start, connect in progress,
-    connect failure, and forget completion without rebuilding the activity
+    connect failure, and forget completion without rebuilding the destination
     stack.
 
 ### Interaction Requirements
 
-1. The top-level settings activity automatically starts a scan on entry when
+1. The top-level settings destination automatically starts a scan on entry when
    Wi-Fi is enabled and the cached result set is stale, and also exposes an
    explicit refresh action.
 2. The current-network summary row opens details instead of reconnecting.
@@ -251,21 +253,21 @@ services. None of those UI or application concerns extend the Wi-Fi backend.
 7. The flow must remain compatible with the framework-level focus and keyboard
    contracts from [non_touch_input_design.md](../implemented/non_touch_input_design.md); it
    must not introduce a Wi-Fi-specific input model.
-8. `Add network` remains reachable even when Wi-Fi is off; `Saved networks`
-   remains reachable when an application catalog is supplied. Only live scan
-   results and live connection rows depend on radio enablement.
+8. `Add network` and `Saved networks` remain reachable when Wi-Fi is off. Only
+   live scan results and live connection rows depend on radio enablement.
 
 ### API Requirements
 
 1. Consume the backend's scan, connection, profile, and link configuration
    APIs without requiring UI-specific types or action flags in `roo_wifi`.
 2. The high-level Wi-Fi flow must be constructible as one owner object that
-   pre-allocates and reuses its activities, matching the current
-   `Configurator` ownership model rather than allocating a fresh activity tree
+   pre-allocates and reuses its destinations, matching the current
+   `Configurator` ownership model rather than allocating a fresh destination tree
    on each navigation step.
-3. Saved profiles use application-assigned persistent keys; scan results need documented snapshot
-   lifetimes and AP identity. UI selection and row summaries belong in
-   `roo_windows_wifi`, and the edit activity owns mutable draft text locally.
+3. Saved profiles use application-assigned persistent keys and allocation-free
+   enumeration; scan results have documented snapshot lifetimes and AP identity.
+   UI selection, ordering, and row summaries belong in `roo_windows_wifi`, and
+   the edit destination owns mutable draft text locally.
 4. Available and saved networks must use recycled fixed-height row widgets
    rather than one `material3::ListEntry` instance per network.
 5. Public widget additions should stay small and purpose-built: one signal
@@ -289,8 +291,8 @@ services. None of those UI or application concerns extend the Wi-Fi backend.
    from nested `HorizontalLayout` and `TextLabel` trees just because the screen
    is settings-like.
 3. Optional edit-only state such as password visibility, static IPv4 fields,
-   and proxy fields must live only on the edit activity.
-4. Reuse one choice activity and one confirmation dialog inside the flow owner
+   and proxy fields must live only on the edit destination.
+4. Reuse one choice destination and one confirmation dialog inside the flow owner
    rather than allocating a new chooser surface for every enum-setting tap.
 
 ### Non-Goals for the First Version
@@ -313,12 +315,12 @@ current legacy flow with a modern embedded Material 3 one.
 
 In scope:
 
-- one owner object for the activity graph,
-- one top-level settings activity,
-- one saved-networks activity,
-- one network-details activity,
-- one add or edit network activity,
-- one internal single-choice activity reused for setting enums,
+- one owner object for the destination graph,
+- one top-level settings destination,
+- one saved-networks destination,
+- one network-details destination,
+- one add or edit network destination,
+- one internal single-choice destination reused for setting enums,
 - one confirmation dialog for destructive actions such as forget,
 - and three small public widgets: a signal glyph, a recyclable network row,
   and a config form.
@@ -336,23 +338,25 @@ That model derives rows and actions from borrowed backend data; it is not a
 second Wi-Fi controller. A selection owns the SSID/security pair and optional
 persistent profile ID so it survives scan replacement. `WifiEditableConfig`
 owns the current form's editable values. An optional application-supplied
-`NetworkPolicyProvider` reads/applies proxy and metered settings independently
-of Wi-Fi profile storage. The application owns the backend and provider, which
-outlive the flow.
+`WifiProfileIdAllocator` supplies keys for additional saved profiles when the
+flow's single provisioning key is insufficient. `NetworkPolicyProvider`
+reads/applies proxy and metered settings independently of Wi-Fi profile
+storage. The application owns the backend and providers, which outlive the
+flow.
 
 ### Key Decisions
 
 1. The public integration surface is one reusable `WifiSettingsFlow` owner that
-   pre-allocates activities and pushes borrowed destinations through `Task::navigation()`.
+   pre-allocates destinations and pushes them through `Task::navigation()`.
 2. Available and saved networks use a dedicated recycled `WifiNetworkRow`
    widget on top of `ListLayout`, not the generic `material3::List` container.
 3. Details and choice pages use the richer Material 3 list vocabulary because
    their row count is small and their slot composition is more varied.
 4. Add network, edit network, hidden network entry, and wrong-password repair
-   all route through one `WifiEditNetworkActivity` backed by one owned draft
+   all route through one `WifiEditNetworkDestination` backed by one owned draft
    object.
 5. Manual IP configuration is inline inside the advanced section of the edit
-   activity, not a separate micro-activity.
+   destination, not a separate leaf destination.
 6. Manual proxy configuration is also inline in that advanced section, with
    only `None` and `Manual` modes in v1; PAC is deferred.
 7. `roo_wifi` owns Wi-Fi domain state and operations. A small presentation model
@@ -360,7 +364,7 @@ outlive the flow.
 8. Proxy/metered settings use an optional application policy provider. Backend
    support and provider availability jointly determine which controls appear.
 
-![Wi-Fi configuration activity flow and major surface regions](figures/material3_wifi_configuration_layout.svg)
+![Wi-Fi configuration destination flow and major surface regions](figures/material3_wifi_configuration_layout.svg)
 
 ## Design Details
 
@@ -372,13 +376,13 @@ without duplicating their implementation here:
 | Backend input or operation | UI responsibility |
 | --- | --- |
 | AP scan snapshots and full authentication metadata | Group/order rows, retain selected display text, and reacquire borrowed data after updates. |
-| Application-assigned profile keys and profile operations | Edit known configurations. An optional application catalog allocates/lists keys and enables unambiguous AP-to-profile matching. |
+| `Controller::forEachProfile()` and profile operations | Enumerate committed saved-profile IDs, load their metadata, derive ordering and AP matching, and edit them by application-assigned key. |
 | Connection configuration, state and results | Validate field text, submit commands, match completions to the flow's requests, and render progress/errors. |
 | Supported platform operations and available diagnostics | Derive control visibility and actions alongside application-provider support. |
 | Explicit save, connect and remove operations | Compose Save/Connect/Forget workflows; do not reimplement retries, credential storage, or native cancellation. |
 
-A save-and-connect UI action first obtains a nonzero key from the application
-catalog (or uses the explicitly supplied provisioning key), calls
+A save-and-connect UI action first obtains a nonzero application-assigned key
+from the optional allocator (or uses the explicitly supplied provisioning key), calls
 `saveProfile(key, ...)`, waits for the matching successful operation result,
 commits any application policy as described below, then calls `connect(key)`.
 `OperationResult::profile_id` confirms the same caller-assigned key; it is not a
@@ -416,12 +420,61 @@ new scan snapshot; the UI retains its selected text and shows `Out of range`.
 When it reappears, the UI matches the selection against the new snapshot. A
 connected profile remains current regardless of scan visibility.
 
+`LinkState` does not carry a profile ID. Correlate an explicit saved-profile
+connect through its `OperationId` and successful `OperationResult::profile_id`.
+For a startup or otherwise unobserved connection, attach an enumerated profile
+only when SSID and security match one saved key unambiguously; otherwise present
+the link as current without claiming a saved-profile identity.
+
 Rebuild grouping indices after scan notification and rebind visible rows before
 paint. Reacquire borrowed data when a paused destination resumes. The flow owns
 its one edit draft and selected text; it does not mirror the backend's complete
 profile store or connection state. The model translates backend outcomes into
 labels, focus changes, available actions, and errors, without implementing
 Wi-Fi retries or persistence itself.
+
+### Profile Enumeration and Key Allocation
+
+The flow calls `Controller::forEachProfile()` to discover committed
+saved-profile IDs, then calls `loadProfile()` from the visitor for non-secret
+metadata. Enumeration order is unspecified, so the presentation model owns
+ordering and a compact retained `ProfileId` index. Incomplete and deleted
+records are excluded by the backend. The flow must not save or remove a profile
+from inside the visitor; it finishes enumeration before admitting any mutation.
+
+Committed-ID discovery and metadata readability are separate. If
+`loadProfile()` reports `kCorrupt` or another read failure for one visited ID,
+the flow omits that row, reports that some saved networks could not be loaded,
+and retains the ID for retry or an explicit forget/repair path. An enumeration
+failure does not publish a partial replacement index: retain the previous model,
+show that saved networks could not be refreshed, and allow retry.
+
+Enumeration itself is allocation-free. Growing the UI's retained key and
+summary capacity is model-refresh work, not paint or row-rebind work, and its
+retained and peak cost is included in resource acceptance.
+
+Enumeration discovers identities but deliberately does not allocate them.
+`provisioning_key` supports a single-profile application. An optional
+`WifiProfileIdAllocator` supplies a nonzero application-owned key when saving a
+new profile beyond that slot; the flow rejects zero, any enumerated key, or any
+candidate for which `loadProfile()` returns something other than `kNotFound`.
+A failed save does not publish the candidate key, and the allocator may reuse
+it according to application policy. This provider does not enumerate or persist
+profile metadata. Its deliberately small public contract is:
+
+```cpp
+class WifiProfileIdAllocator {
+ public:
+  virtual ~WifiProfileIdAllocator() = default;
+  virtual bool nextProfileId(roo_wifi::ProfileId& out) = 0;
+};
+```
+
+Returning `false` means no key is currently available, so Save is unavailable
+for an additional profile. Calls run on the same serialized context as the
+controller. Implementations may be stateless because the controller's profile
+write slot serializes saves and the flow revalidates each candidate immediately
+before admission.
 
 ### Optional Application Policies
 
@@ -540,11 +593,11 @@ supporting text is empty. A separate compact list may select `56dp` for all its
 rows; height never changes per item. This matches `ListLayout` recycling.
 
 The row does not store per-instance callbacks. Activation still routes through
-the enclosing activity or list container.
+the enclosing destination or list container.
 
 #### `WifiConfigForm`
 
-The edit activity has only one live instance, so the form can afford richer
+The edit destination has only one live instance, so the form can afford richer
 composition than the scan list.
 
 `WifiConfigForm` therefore uses the generic Material 3 components from the
@@ -553,9 +606,9 @@ adjacent designs:
 - text fields for SSID, password, IP, gateway, DNS, proxy host, proxy port,
   and proxy bypass list,
 - switch rows for hidden network and auto-connect,
-- list rows that open a small single-choice activity for security, privacy,
+- list rows that open a small single-choice destination for security, privacy,
   metered mode, IP settings, and proxy mode,
-- and inline action buttons at the bottom of the activity.
+- and inline action buttons at the bottom of the destination.
 
 The form owns the single edit draft and validation state on behalf of the edit
 destination. Field-owned strings are the active editable values; materialize
@@ -563,48 +616,60 @@ the backend configuration only for validation/commit, rather than maintaining
 a second synchronized draft in the destination. The form does not talk to the
 controller directly.
 
-### Activity Set and Navigation
+### Destination Set and Navigation
 
 The flow owner is a new `WifiSettingsFlow` facade that plays the same role the
-legacy `Configurator` plays today, but with a richer activity graph.
+legacy `Configurator` plays today, but with a richer destination graph.
 
 ```cpp
 namespace roo_windows_wifi {
 
 class NetworkPolicyProvider;
+class WifiProfileIdAllocator;
+class WifiSettingsDestination;
+class WifiSavedNetworksDestination;
+class WifiNetworkDetailsDestination;
+class WifiEditNetworkDestination;
 
 class WifiSettingsFlow {
  public:
   WifiSettingsFlow(roo_windows::ApplicationContext& context,
                    roo_wifi::Controller& controller,
+                   roo_wifi::ProfileId provisioning_key = 1,
+                   WifiProfileIdAllocator* profile_ids = nullptr,
                    NetworkPolicyProvider* policies = nullptr);
 
   roo_windows::Destination& main();
-  WifiSettingsActivity& settingsActivity();
-  WifiNetworkDetailsActivity& detailsActivity();
-  WifiEditNetworkActivity& editActivity();
-  WifiSavedNetworksActivity& savedNetworksActivity();
+  WifiSettingsDestination& settingsDestination();
+  WifiNetworkDetailsDestination& detailsDestination();
+  WifiEditNetworkDestination& editDestination();
+  WifiSavedNetworksDestination& savedNetworksDestination();
 };
 
 }  // namespace roo_windows_wifi
 ```
 
-The flow allocates its activities once and reuses them for the life of the
+The flow allocates its destinations once and reuses them for the life of the
 owner. That keeps navigation predictable and avoids heap churn each time the
-user opens details or edits a network.
+user opens details or edits a network. `provisioning_key` supports the common
+single-profile application and must be nonzero. The controller, not the flow,
+enumerates saved profiles. When `profile_ids` is installed, it supplies a
+nonzero candidate key before a new profile save. The flow treats any enumerated
+key or any load result other than `kNotFound` as occupied. Saving becomes
+authoritative only after the matching backend operation succeeds.
 
-Despite their retained `Activity` suffix, these classes derive from
-`Destination` and implement `Widget& getContents()`. Each owns its scaffold and
-contents. The flow owns its destinations, listener, choice surface, and alert
-dialog by value; it is neither copyable nor movable. The controller, application context, and any supplied policy provider outlive
-it. Remove all flow destinations from navigation
-and dismiss its dialog before destroying the flow. A destination already in
-history cannot be pushed again; reuse the existing route instead.
+These classes derive from `Destination` and implement `Widget& getContents()`.
+Each owns its scaffold and contents. The flow owns its destinations, listener,
+choice surface, and alert dialog by value; it is neither copyable nor movable.
+The controller, application context, and any supplied providers outlive it.
+Remove all flow destinations from navigation and dismiss its dialog before
+destroying the flow. A destination already in history cannot be pushed again;
+reuse the existing route instead.
 
 A representative caller, after constructing an application and controller:
 
 ```cpp
-roo_windows_wifi::WifiSettingsFlow settings(app.context(), wifi);
+roo_windows_wifi::WifiSettingsFlow settings(app.context(), wifi, 1);
 roo_windows::Task& task = app.addTaskFullScreen();
 task.navigation().push(settings.main());
 // Before settings is destroyed, remove its destinations from task.navigation().
@@ -616,23 +681,24 @@ committing the draft. Back from the form discards local edits. Back from the
 choice destination preserves the draft. The forget dialog uses the requesting
 destination's task as interaction owner.
 
-The activity graph is:
+The destination graph is:
 
-1. `WifiSettingsActivity` as the root,
-2. `WifiSavedNetworksActivity` for stored networks,
-3. `WifiNetworkDetailsActivity` for a selected network,
-4. `WifiEditNetworkActivity` for add, edit, hidden-network, and password-repair
-   flows,
-5. one internal `WifiChoiceActivity` reused for small enum choices,
+1. `WifiSettingsDestination` as the root,
+2. `WifiSavedNetworksDestination` for stored networks,
+3. `WifiNetworkDetailsDestination` for a selected network,
+4. `WifiEditNetworkDestination` for add, edit, hidden-network, and
+   password-repair flows,
+5. one internal `WifiChoiceDestination` reused for small enum choices,
 6. and one internal confirmation dialog for destructive actions such as
    `Forget`.
 
-The public API exposes only the first four activities plus the flow owner.
-`WifiChoiceActivity` and the confirmation dialog remain implementation details.
+The public API exposes only the first four destinations plus the flow owner.
+`WifiChoiceDestination` and the confirmation dialog remain implementation
+details.
 
-### `WifiSettingsActivity`
+### `WifiSettingsDestination`
 
-The top-level settings activity has five sections. Keep header and footer
+The top-level settings destination has five sections. Keep header and footer
 chrome in scaffold slots and give `ListLayout` a bounded body viewport; do not
 measure the recycled list to its full content height inside another vertical
 scroller. Short details and form bodies use the existing scrolling containers.
@@ -651,27 +717,25 @@ The key interaction decisions are:
 - the current-network row opens details rather than reconnecting,
 - available rows connect immediately only when the target is open or already
   saved,
-- unknown secured rows open `WifiEditNetworkActivity` with SSID and security
+- unknown secured rows open `WifiEditNetworkDestination` with SSID and security
   prefilled,
-- and `Add network` opens the same edit activity in manual-entry mode with an
+- and `Add network` opens the same edit destination in manual-entry mode with an
   empty draft.
 
-When Wi-Fi is off, the activity suppresses the current and available network
-sections but leaves `Add network` visible, together with `Saved networks` when
-an application catalog is supplied.
+When Wi-Fi is off, the destination suppresses the current and available network
+sections but leaves `Add network` and `Saved networks` visible.
 
 That choice is intentional. Editing saved configurations and preparing a hidden
 network entry are valid tasks even when the radio is off.
 
-### `WifiSavedNetworksActivity`
+### `WifiSavedNetworksDestination`
 
-This destination is optional. `roo_wifi::Store` only loads, saves, and removes
-caller-known keys; it does not enumerate profiles. The application supplies the
-set of known keys to the flow, which loads metadata by key. Without that catalog,
-hide the destination and allow provisioning and editing explicitly supplied keys.
-Do not infer a complete saved list from scans. Catalog ownership, key allocation,
-and updates belong to the application; the backend does not persist an index for
-this page. The example can use a fixed application-owned key for provisioning.
+This destination uses `Controller::forEachProfile()` and `loadProfile()`; it
+does not infer saved profiles from scans or maintain a second persistent index.
+Enumeration discovers every committed profile ID in unspecified order, after
+which the UI derives stable display order and AP matches. An empty enumeration
+shows the empty saved-networks state. The optional profile-ID allocator is used
+only when creating an additional saved profile, never for listing existing ones.
 
 Saved networks use the same recycled `WifiNetworkRow` widget and list plumbing
 as live scan results. The rows differ only in their supporting text policy.
@@ -687,7 +751,7 @@ Selecting a saved network always opens details rather than connecting
 immediately. The user is intentionally one step away from destructive actions
 such as forget, and one step away from advanced edits such as static IP.
 
-### `WifiNetworkDetailsActivity`
+### `WifiNetworkDetailsDestination`
 
 The details page is the read-mostly screen for the flow's selected network
 (owned SSID/security and optional persistent profile ID).
@@ -708,15 +772,15 @@ The settings section uses low-cardinality Material 3 rows for:
 - IP settings summary,
 - and proxy summary.
 
-The information section shows read-only text rows for:
+The information section shows read-only text rows for available landed
+`LinkState` and scan values:
 
 - security,
-- MAC address,
+- BSSID and station MAC address,
 - IP address,
 - gateway,
 - DNS,
-- frequency,
-- link speed,
+- channel and signal strength,
 - and the resolved status text.
 
 Rows are shown according to two rules.
@@ -724,7 +788,7 @@ Rows are shown according to two rules.
 1. Show values supplied by the Wi-Fi backend or installed application services.
 2. Derive interactive actions in the presentation model from backend operation
    support, provider support, and the current UI/request state; route interactive
-   rows to the edit or choice activity. Remaining informative rows are read-only.
+   rows to the edit or choice destination. Remaining informative rows are read-only.
 
 This keeps one UI usable across platforms without adding UI action flags to
 `roo_wifi`.
@@ -733,9 +797,9 @@ If the scanned network disappears during a refresh, the page keeps the last
 known summary and changes the status line to `Out of range`. It does not pop
 itself from the stack.
 
-### `WifiEditNetworkActivity`
+### `WifiEditNetworkDestination`
 
-`WifiEditNetworkActivity` is the one mutable form surface in the flow.
+`WifiEditNetworkDestination` is the one mutable form surface in the flow.
 
 It serves four entry paths:
 
@@ -760,14 +824,14 @@ The visible structure is:
 - conditional manual proxy fields when `Proxy = Manual`,
 - and bottom action buttons.
 
-The edit activity uses inline advanced controls instead of a second IP-only
-activity for two reasons.
+The edit destination uses inline advanced controls instead of a second IP-only
+destination for two reasons.
 
 First, Android-like Wi-Fi forms already treat IP and proxy as advanced fields
 of the same network draft.
 
-Second, a separate IP activity would force the UI to copy partial draft state
-between activities and would add navigation cost on small displays without
+Second, a separate IP destination would force the UI to copy partial draft state
+between destinations and would add navigation cost on small displays without
 reducing memory in any meaningful way, because there is only one live edit form
 at a time.
 
@@ -802,20 +866,20 @@ It does not introduce a special dotted-quad keypad widget in v1.
 That is the correct scope cut. The text-field family already owns text entry;
 the Wi-Fi form only needs domain validation.
 
-### Choice Activities and Enum Editing
+### Choice Destination and Enum Editing
 
 Security, privacy, metered treatment, IP settings, and proxy mode all use the
-same internal `WifiChoiceActivity`.
+same internal `WifiChoiceDestination`.
 
-That activity is a small single-select list with a title, one Material 3 list
+That destination is a small single-select list with a title, one Material 3 list
 section, and trailing radio affordances. It writes the chosen enum back into
-the edit activity's draft or, for lightweight details-page policy changes such
+the edit destination's draft or, for lightweight details-page policy changes such
 as auto-connect or metered mode, through a confirmed update to the backend
 profile or application provider respectively. Preserve unrelated fields and
 credentials and handle each service's result.
 
 The design intentionally does not use popup menus for these choices. On
-embedded displays, a full-activity choice list is easier to read, easier to
+embedded displays, a full-destination choice list is easier to read, easier to
 scroll, and more consistent with the rest of the settings flow.
 
 ### Paint, Layout, and Update Strategy
@@ -825,7 +889,7 @@ The Wi-Fi flow deliberately uses two different UI construction styles.
 `WifiNetworkRow` is owner-painted and recycled because list multiplicity makes
 RAM the primary constraint.
 
-The details and edit activities use richer composition because they are
+The details and edit destinations use richer composition because they are
 low-cardinality surfaces and clearer code is worth the slightly larger widget
 tree.
 
@@ -836,9 +900,8 @@ The update strategy follows the landed `Controller::Listener` event split.
 2. `onScanStateChanged()` updates busy presentation. `onScanChanged()`
    reacquires `scanSnapshot()` and refreshes the scan model using
    `ListLayout::modelChanged()` (or `modelItemChanged()` for a single row).
-3. `onProfilesChanged()` invalidates known-profile details; when a catalog is
-   supplied, they also reload its known keys. Application catalog changes update
-   the saved-networks list independently of backend notifications.
+3. `onProfilesChanged()` invalidates known-profile details and triggers a fresh
+   `forEachProfile()` pass followed by metadata reload and saved-list reordering.
 4. `onOperationFinished()` results are matched by `OperationId` to the flow's
    requests; the UI updates busy indicators, enabled actions, and inline
    feedback. A request with ID zero is handled immediately from its returned
@@ -851,7 +914,7 @@ full edit draft on failure and offer explicit replacement; do not promise that
 the previous settings survived or retry using Keep for an incomplete profile.
 If the commit outcome is unknown, reload the known key before reporting success.
 
-The edit activity ignores scan-result churn while a draft is open. A scan
+The edit destination ignores scan-result churn while a draft is open. A scan
 refresh must not wipe what the user is typing.
 
 ## Proposed API
@@ -864,11 +927,12 @@ namespace roo_windows_wifi {
 
 class WifiSettingsFlow;
 class NetworkPolicyProvider;
+class WifiProfileIdAllocator;
 
-class WifiSettingsActivity;
-class WifiSavedNetworksActivity;
-class WifiNetworkDetailsActivity;
-class WifiEditNetworkActivity;
+class WifiSettingsDestination;
+class WifiSavedNetworksDestination;
+class WifiNetworkDetailsDestination;
+class WifiEditNetworkDestination;
 
 class WifiSignalGlyph;
 class WifiNetworkRow;
@@ -878,11 +942,12 @@ class WifiConfigForm;
 ```
 
 The flow uses the landed `roo_wifi::Controller` through its internal
-presentation model and optionally borrows a `NetworkPolicyProvider`. No
-UI-shaped facade is added to `roo_wifi`. Backend functionality lands with its
-own domain tests and documented support; UI fields are derived only from
-working operations. A capability absent from `Controller::support()` is omitted
-or disabled rather than presented as a successful save.
+presentation model and optionally borrows a `WifiProfileIdAllocator` and
+`NetworkPolicyProvider`. No UI-shaped facade is added to `roo_wifi`. Backend
+functionality has its own domain tests and documented support; UI fields are
+derived only from working operations. A capability absent from
+`Controller::support()` is omitted or disabled rather than presented as a
+successful save.
 
 ## Implementation Plan
 
@@ -907,12 +972,14 @@ publish machine-specific absolute paths in package manifests.
 
 ### Backend Baseline and Release Gate
 
-The portable observation/operation contracts, known-key profiles, static IPv4,
-MAC policy, capability reporting, persistence, and ESP32 adapter required by
-this design have landed in `lib/roo_wifi`. The migrated legacy UI model provides
-an additional downstream compile/integration proof. UI development therefore
-targets the checked-in 2.0 headers from Phase 1 onward rather than waiting for
-incremental backend phases.
+The portable observation/operation contracts, committed-profile enumeration,
+known-key profiles, static IPv4, MAC policy, capability reporting, persistence,
+and ESP32 adapter required by this design have landed in `lib/roo_wifi`. UI
+development therefore targets the checked-in 2.0 headers from Phase 1 onward
+rather than waiting for incremental backend phases. The legacy
+`roo_windows_wifi` model remains a downstream regression target until the
+replacement flow supersedes it; its compatibility build is validation work,
+not evidence used to redefine the backend contract.
 
 The backend's [validation report](../../../../roo_wifi/docs/backend_validation.md)
 still requires physical ESP32 lifecycle, persistence/power-interruption, and
@@ -949,8 +1016,8 @@ build `//examples/material3/network_settings:network_settings`.
 
 ### Phase 2: Add Saved Networks, Details, and Confirmation
 
-Extend the flow with an optional application-catalog-backed saved-networks
-destination and known-profile details, capability-aware
+Extend the flow with a controller-enumerated saved-networks destination and
+known-profile details, capability-aware
 policy/info rows, and one reusable `AlertDialog` for forget. Add details-page
 profile updates with completion/error handling. Preserve owned last-known
 summary when a scanned network disappears. Extend the example in this commit.
@@ -1031,6 +1098,10 @@ Add focused tests for:
 - details-page row enablement based on capability flags,
 - local form validation for password, static IPv4, and proxy fields,
 - preservation of the edit draft during scan-result churn,
+- empty, unordered, stopped, failed, and partially unreadable profile
+  enumeration without publishing a partial replacement model,
+- profile-ID allocation with no key available, zero, collision, failed save,
+  and successful refresh through `onProfilesChanged()`,
 - translation of backend rejection/completion into UI feedback and draft state,
 - credential intent, save/connect sequencing, forget behavior and UI listener teardown,
 - UI-local grouping, profile matching, selection retention and action derivation,
@@ -1082,11 +1153,11 @@ cleanly while the UI has only the old SSID/password state model. Landing the
 richer `roo_wifi` 2.0 configuration contract first resolved that dependency;
 this design now builds the replacement UI on it.
 
-#### Put Manual IP and Proxy Editing on Separate Leaf Activities
+#### Put Manual IP and Proxy Editing on Separate Leaf Destinations
 
 This was rejected because it would multiply navigation steps and force the UI
-to shuttle partial drafts between activities without producing a meaningful RAM
-win. One edit activity with an expandable advanced section is both closer to
+to shuttle partial drafts between destinations without producing a meaningful RAM
+win. One edit destination with an expandable advanced section is both closer to
 Android's Wi-Fi configuration pattern and simpler to validate.
 
 #### Retheme the Existing Legacy `WifiIndicator` In Place
@@ -1099,7 +1170,7 @@ the Material 3 contract isolated.
 ## Future Work
 
 - Add enterprise EAP and certificate-backed credential flows on top of the same
-  edit-activity draft model.
+  edit-destination draft model.
 - Add read-only IPv6 diagnostics first, then evaluate whether static IPv6
   editing is worth the extra field and validation cost.
 - Add QR-code share, captive-portal handoff, and wide-screen two-pane layouts

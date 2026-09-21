@@ -25,7 +25,7 @@
     </marker>
   </defs>
 
-  <text x="28" y="34" class="title">Material 3 Wi-Fi configuration activity flow and major surface regions</text>
+  <text x="28" y="34" class="title">Material 3 Wi-Fi configuration destination flow and major surface regions</text>
   <text x="28" y="56" class="subtitle">The flow keeps high-multiplicity network lists recyclable, while details and edit surfaces use richer Material 3 settings rows and inline advanced options.</text>
 
   <g transform="translate(36,100)">
@@ -35,7 +35,7 @@
     <circle cx="188" cy="36" r="8" fill="#93c5fd" stroke="#2563eb" stroke-width="1.2"/>
     <path d="M 184 36 L 188 40 L 194 32" stroke="#1d4ed8" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
 
-    <text x="18" y="78" class="section">1. Root activity</text>
+    <text x="18" y="78" class="section">1. Root destination</text>
     <rect x="18" y="90" width="194" height="48" rx="12" class="row-strong"/>
     <text x="34" y="112" class="label">Wi-Fi</text>
     <text x="34" y="127" class="small">Master switch row</text>
