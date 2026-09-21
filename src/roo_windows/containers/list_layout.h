@@ -148,6 +148,9 @@ class ListLayout : public Panel {
     element_count_ = model.elementCount();
   }
 
+  /// Detaches recycled children before the owning row pool is destroyed.
+  ~ListLayout() override { removeAll(); }
+
   void setPadding(Padding padding) {
     if (padding_ == padding) return;
     padding_ = padding;

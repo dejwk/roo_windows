@@ -1148,3 +1148,9 @@ cc_library(
     srcs = ["benchmarks/material3_date_picker_size_probe.cpp"],
     deps = [":roo_windows"],
 )
+
+cc_test(
+    name = "list_layout_lifetime_test",
+    srcs = ["test/list_layout_lifetime_test.cpp"],
+    deps = [":roo_windows", "@googletest//:gtest_main"],
+)
