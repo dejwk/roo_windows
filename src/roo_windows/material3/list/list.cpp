@@ -1711,24 +1711,41 @@ void List::refreshEntryVisualContexts() {
   if (!contexts_dirty_) return;
 
   const int count = static_cast<int>(entries_.size());
+  int visible_count = 0;
+  for (const ListEntry* entry : entries_) {
+    if (!entry->isGone()) ++visible_count;
+  }
   const int first_selected_idx =
       selection_policy_.mode == SelectionMode::kSingle
           ? FirstSelectedIndex(selected_entries_)
           : -1;
 
+  int visible_idx = 0;
   for (int i = 0; i < count; ++i) {
     ListEntry& entry = *entries_[i];
     ListEntryVisualContext context = entry.visualContext();
     context.variant = variant_;
     context.style = style_;
-    context.position = PositionForIndex(i, count);
     context.selected = ResolvedSelectedState(
         selected_entries_, selection_policy_, i, first_selected_idx);
     context.focused = entry.isFocused();
-    bool next_selected = ResolvedSelectedState(
-        selected_entries_, selection_policy_, i + 1, first_selected_idx);
-    context.show_divider = ShouldShowDivider(divider_policy_, i, count,
-                                             context.selected, next_selected);
+    if (entry.isGone()) {
+      context.position = ListItemPosition::kSingle;
+      context.show_divider = false;
+    } else {
+      context.position = PositionForIndex(visible_idx, visible_count);
+      int next_visible_idx = i + 1;
+      while (next_visible_idx < count && entries_[next_visible_idx]->isGone()) {
+        ++next_visible_idx;
+      }
+      bool next_selected = ResolvedSelectedState(
+          selected_entries_, selection_policy_, next_visible_idx,
+          first_selected_idx);
+      context.show_divider = ShouldShowDivider(
+          divider_policy_, visible_idx, visible_count, context.selected,
+          next_selected);
+      ++visible_idx;
+    }
     context.divider_mode = divider_policy_.mode;
     context.divider_start_inset = divider_policy_.start_inset;
     context.divider_end_inset = divider_policy_.end_inset;
@@ -1797,6 +1814,9 @@ Widget& List::getChild(int idx) {
 }
 
 Dimensions List::onMeasure(WidthSpec width, HeightSpec height) {
+  // A row may have become gone since the last list policy update. Resolve
+  // grouping from the current visible set before measuring or painting it.
+  contexts_dirty_ = true;
   refreshEntryVisualContexts();
 
   int16_t resolved_width = 0;

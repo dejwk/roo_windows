@@ -1596,6 +1596,34 @@ TEST(Material3List, ListPropagatesPositionVariantStyleAndSegmentedGap) {
             third.offsetTop());
 }
 
+TEST(Material3List, SegmentedListSkipsGoneRowsWhenResolvingPositions) {
+  roo_scheduler::Scheduler scheduler;
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
+  TestList list(context);
+  TestListEntry first(context);
+  TestListEntry hidden(context);
+  TestListEntry last(context);
+  StandardListItem first_item(StandardListItemInit::OneLine("First"));
+  StandardListItem hidden_item(StandardListItemInit::OneLine("Hidden"));
+  StandardListItem last_item(StandardListItemInit::OneLine("Last"));
+  first.setItem(first_item);
+  hidden.setItem(hidden_item);
+  last.setItem(last_item);
+
+  list.setStyle(ListStyle::kSegmented);
+  list.add(first);
+  list.add(hidden);
+  list.add(last);
+  hidden.setVisibility(Visibility::kGone);
+
+  list.measure(WidthSpec::Exactly(180), HeightSpec::Unspecified(0));
+
+  EXPECT_EQ(ListItemPosition::kFirst, first.visualContext().position);
+  EXPECT_EQ(ListItemPosition::kSingle, hidden.visualContext().position);
+  EXPECT_EQ(ListItemPosition::kLast, last.visualContext().position);
+}
+
 TEST(Material3List, ListEntryResolvesFlatSegmentedAndSelectedFills) {
   roo_scheduler::Scheduler scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
