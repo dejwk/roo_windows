@@ -698,17 +698,22 @@ details.
 
 ### `WifiSettingsDestination`
 
-The top-level settings destination has five sections. Keep header and footer
-chrome in scaffold slots and give `ListLayout` a bounded body viewport; do not
-measure the recycled list to its full content height inside another vertical
-scroller. Short details and form bodies use the existing scrolling containers.
+The top-level settings destination has five sections. Only the app bar is
+pinned in the scaffold. The switch, current connection, available networks and
+navigation rows share one scrolling body; fixed switch/footer bands leave too
+little space for networks on a 320×240 display. The column may lay out the
+recycled list at its logical content height, but `ListLayout` must retain only
+a window-sized row pool and bind the visible range through the outer viewport.
+Verify that bound with the complete settings composition, not just an isolated
+list. Short details and form bodies use the existing scrolling containers.
 
 1. Header: title plus a refresh action.
 2. Wi-Fi switch row: a Material 3 list row with a trailing switch.
 3. Current network section: shown only when connected or connecting.
 4. Available networks section: recycled `WifiNetworkRow` list plus a scanning
    status row when a scan is running.
-5. Footer actions: `Add network` and `Saved networks` rows.
+5. Scrolling navigation actions: full-width `Add network` and `Saved networks`
+   rows with leading icons and trailing navigation affordances.
 
 The key interaction decisions are:
 
