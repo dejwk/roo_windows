@@ -291,6 +291,29 @@ TEST(Material3Button, DisabledElevatedVariantDropsElevation) {
   EXPECT_EQ(0, elevated.getElevation());
 }
 
+// Material 3 buttons already resolve disabled content against the surface.
+// Applying the framework disablement filter again makes text almost vanish.
+TEST_F(Material3ButtonClickAnimationTest, DisabledTextUsesResolvedPaletteOnce) {
+  auto button =
+      std::make_unique<Button>(context(), "Connect", ButtonVariant::kText);
+  Button* button_ptr = button.get();
+  app_.add(std::move(button), roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
+  ASSERT_TRUE(refresh());
+  button_ptr->setEnabled(false);
+  ASSERT_TRUE(refresh());
+
+  const auto& colors = context().theme().material3Theme().color;
+  const Color expected = QuantizeToArgb4444(
+      roo_display::AlphaBlend(colors.surface, colors.onSurface.withA(0x61)));
+  int matching_pixels = 0;
+  for (int y = 0; y < kHeight; ++y) {
+    for (int x = 0; x < kWidth; ++x) {
+      if (pixelAt(x, y) == expected) ++matching_pixels;
+    }
+  }
+  EXPECT_GT(matching_pixels, 0);
+}
+
 // Verifies that adding a leading icon expands the measured width, proving that
 // icon slot and gap geometry participate in sizing.
 TEST(Material3Button, IconChangesNaturalWidth) {

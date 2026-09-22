@@ -137,6 +137,9 @@ class Button : public BasicSurfaceWidget {
   uint8_t getElevation() const override;
 
   // Widget overrides.
+  /// Disabled colors are already resolved by the Material 3 button palette.
+  bool useAutomaticDisabledStyle() const override { return false; }
+
   /// Paints the button's label and optional leading icon.
   void paint(PaintContext& ctx) const override;
 
