@@ -455,8 +455,9 @@ void Widget::setVisibility(Visibility visibility) {
   if (visibility == previous) return;
   if (visibility != Visibility::kVisible) {
     focusManager().onWidgetEligibilityChanging(*this);
-    ClickAnimation* anim = ClickAnimationController(*this);
-    if (anim != nullptr) anim->cancel(*this);
+    if (MainWindow* window = getMainWindow(); window != nullptr) {
+      window->cancelGesturesInSubtree(*this);
+    }
   }
   state_ &= ~(kWidgetHidden | kWidgetGone);
   state_ |= (kWidgetHidden * (visibility == Visibility::kInvisible));
@@ -485,6 +486,9 @@ void Widget::setEnabled(bool enabled) {
   if (isEnabled() == enabled) return;
   if (!enabled) {
     focusManager().onWidgetEligibilityChanging(*this);
+    if (MainWindow* window = getMainWindow(); window != nullptr) {
+      window->cancelGesturesInSubtree(*this);
+    }
   }
   state_ ^= kWidgetEnabled;
   if (isVisible() && repaintOnEnabledChange()) {

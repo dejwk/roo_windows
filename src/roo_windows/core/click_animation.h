@@ -72,6 +72,10 @@ class ClickAnimation {
   /// Cancels the interaction only when it is owned by `target`.
   void cancel(Widget& target);
 
+  /// Cancels animated or deferred click ownership within a subtree.
+  /// @param subtree Root whose descendants are losing interaction eligibility.
+  void cancelInSubtree(const Widget& subtree);
+
   /// Forces an active visual interaction owned by `target` to paint its final
   /// frame while preserving whether its semantic action is still pending,
   /// already delivered, or unconfirmed.

@@ -174,6 +174,16 @@ void ClickAnimation::cancel(Widget& widget) {
   widget.invalidateInterior();
 }
 
+void ClickAnimation::cancelInSubtree(const Widget& subtree) {
+  for (const Widget* current = target_; current != nullptr;
+       current = current->parent()) {
+    if (current == &subtree) {
+      cancel(*target_);
+      return;
+    }
+  }
+}
+
 bool ClickAnimation::forceFinalFrame(const Widget& widget) {
   if (target_ != &widget) return false;
   // Finishing changes only the visual deadline. Separate phases retain whether

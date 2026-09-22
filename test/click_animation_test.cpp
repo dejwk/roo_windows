@@ -6,8 +6,57 @@
 #include "roo_windows/core/basic_widget.h"
 #include "roo_windows/core/environment.h"
 
+namespace roo_windows::test {
+struct ApplicationWorkTestAccess {
+  // Samples and dispatches touch synchronously, without a polling thread.
+  static void PollPointer(Application& app) {
+    app.window_.touch_sensor_.pollOnce();
+    app.window_.gesture_detector_.tick();
+  }
+};
+}  // namespace roo_windows::test
+
 namespace roo_windows {
 namespace {
+
+class ManualTouchDevice : public roo_display::TouchDevice {
+ public:
+  ManualTouchDevice(int16_t width, int16_t height)
+      : width_(width), height_(height) {}
+
+  void set(bool down, int16_t x, int16_t y) {
+    down_ = down;
+    x_ = x;
+    y_ = y;
+  }
+
+  roo_display::TouchResult getTouch(roo_display::TouchPoint* points,
+                                    int max_points) override {
+    roo_time::Uptime timestamp = roo_time::Uptime::Now();
+    if (!down_ || max_points <= 0) {
+      return roo_display::TouchResult(timestamp, 0);
+    }
+    points[0].id = 0;
+    points[0].x = ScaleToRaw(x_, width_);
+    points[0].y = ScaleToRaw(y_, height_);
+    points[0].z = 100;
+    points[0].vx = 0;
+    points[0].vy = 0;
+    return roo_display::TouchResult(timestamp, 1);
+  }
+
+ private:
+  static int16_t ScaleToRaw(int16_t value, int16_t extent) {
+    return extent <= 1 ? 0
+                       : static_cast<int16_t>((4095LL * value) / (extent - 1));
+  }
+
+  int16_t width_;
+  int16_t height_;
+  bool down_ = false;
+  int16_t x_ = 0;
+  int16_t y_ = 0;
+};
 
 class CountingKeys : public KeySource {
  public:
@@ -61,6 +110,11 @@ class ClickFrameTest : public testing::Test {
     app_.add(std::move(widget), roo_display::Box(0, 0, 15, 15));
     ASSERT_TRUE(app_.refresh());
   }
+  void touch(bool down) {
+    touch_.set(down, 8, 8);
+    test::ApplicationWorkTestAccess::PollPointer(app_);
+  }
+
   ClickAnimation& animation() { return app_.root().click_animation(); }
   void dispatch() {
     scheduler_.executeEligibleTasksUpToNow(roo_scheduler::Priority::kMinimum,
@@ -69,13 +123,69 @@ class ClickFrameTest : public testing::Test {
   roo::byte raster_[32 * 32 * 2] = {};
   roo_display::OffscreenDevice<roo_display::Argb4444> device_{
       32, 32, raster_, roo_display::Argb4444()};
-  roo_display::Display display_{device_};
+  ManualTouchDevice touch_{32, 32};
+  roo_display::Display display_{device_, touch_};
   roo_scheduler::Scheduler scheduler_;
   Environment environment_{scheduler_};
   CountingKeys keys_;
   Application app_{&environment_, display_, keys_, false};
   ClickFrameWidget* target_ = nullptr;
 };
+
+// Verifies hiding or disabling the target or an ancestor cancels ownership
+// immediately, even if eligibility is restored before the finger is released.
+TEST_F(ClickFrameTest, EligibilityChangeCancelsRetainedGesture) {
+  for (bool ancestor : {false, true}) {
+    for (int change = 0; change < 3; ++change) {
+      Widget& changed = ancestor ? static_cast<Widget&>(app_.root()) : *target_;
+      touch(true);
+      ASSERT_NE(nullptr,
+                app_.window().gestureDetector().currentGestureTarget());
+      ASSERT_TRUE(animation().isBusy());
+      if (change == 0) {
+        changed.setEnabled(false);
+      } else {
+        changed.setVisibility(change == 1 ? Visibility::kInvisible
+                                          : Visibility::kGone);
+      }
+      EXPECT_EQ(nullptr,
+                app_.window().gestureDetector().currentGestureTarget());
+      EXPECT_EQ(roo_time::Uptime::Max(),
+                app_.window().gestureDetector().nextTimeoutDeadline());
+      EXPECT_FALSE(animation().isBusy());
+      EXPECT_FALSE(target_->isClicking());
+      EXPECT_FALSE(target_->isPressed());
+      changed.setEnabled(true);
+      changed.setVisibility(Visibility::kVisible);
+      ASSERT_TRUE(app_.refresh());
+      touch(false);
+      system_time_delay_micros(400000);
+      test::ApplicationWorkTestAccess::PollPointer(app_);
+      ASSERT_TRUE(app_.refresh());
+      EXPECT_EQ(0, target_->clicks);
+      EXPECT_FALSE(animation().isBusy());
+    }
+  }
+  touch(true);
+  touch(false);
+  system_time_delay_micros(200000);
+  ASSERT_TRUE(app_.refresh());
+  EXPECT_EQ(1, target_->clicks);
+}
+
+// Verifies subtree cancellation also retires clicks awaiting a refresh without
+// an animated target, including when the gesture already received its release.
+TEST_F(ClickFrameTest, HiddenAncestorCancelsDeferredNonAnimatedClick) {
+  target_->policy = ClickActivationPolicy::kAfterRefreshNoAnimation;
+  touch(true);
+  touch(false);
+  ASSERT_TRUE(animation().isBusy());
+  app_.root().setVisibility(Visibility::kInvisible);
+  EXPECT_FALSE(animation().isBusy());
+  app_.root().setVisibility(Visibility::kVisible);
+  ASSERT_TRUE(app_.refresh());
+  EXPECT_EQ(0, target_->clicks);
+}
 
 // Verifies paints consume click dirtiness, while the controller retains a
 // stable 20 ms deadline that repeated queries cannot postpone.

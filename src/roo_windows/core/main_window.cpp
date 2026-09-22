@@ -128,11 +128,8 @@ void MainWindow::cancelTaskKeyActivationForDisplayCoverage() {
   }
 }
 
-void MainWindow::gestureTargetSubtreeDetaching(Widget& subtree) {
-  const Widget* click_target = click_animation_.target();
-  if (click_target != nullptr && IsInSubtree(*click_target, subtree)) {
-    click_animation_.cancel(*const_cast<Widget*>(click_target));
-  }
+void MainWindow::cancelGesturesInSubtree(Widget& subtree) {
+  click_animation_.cancelInSubtree(subtree);
   app_.window().cancelGestureTargetsInSubtree(subtree);
 }
 

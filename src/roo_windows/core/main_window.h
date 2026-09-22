@@ -141,8 +141,9 @@ class MainWindow : public Container {
   /// Cancels Enter/Space activation armed in any task covered by the host.
   void cancelTaskKeyActivationForDisplayCoverage();
 
-  /// Removes gesture-detector references before `subtree` loses parent links.
-  void gestureTargetSubtreeDetaching(Widget& subtree);
+  /// Cancels retained gestures and click feedback in a widget subtree.
+  /// @param subtree Attached subtree becoming hidden, disabled, or detached.
+  void cancelGesturesInSubtree(Widget& subtree);
 
   /// Delivers a completed outside activation after touch dispatch unwinds.
   void flushPendingOutsideInteraction();

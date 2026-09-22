@@ -53,7 +53,7 @@ void Container::detachChild(Widget* child) {
   if (live_context != nullptr) {
     if (MainWindow* window = getMainWindow(); window != nullptr) {
       live_context->presentations().noteSubtreeDetach(*child);
-      window->gestureTargetSubtreeDetaching(*child);
+      window->cancelGesturesInSubtree(*child);
       window->presentationAnchorSubtreeDetaching(*child);
       window->transientActivityObserverSubtreeDetaching(*child);
     }
