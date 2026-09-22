@@ -360,7 +360,10 @@ void SimpleScrollablePanel::applyScrollResult(
     scroll_bar_.setRange(scroll_pix_begin,
                          scroll_pix_begin + scroll_pix_height - 1);
   }
-  c->moveTo(c->bounds().translate(visual_x + m.left(), visual_y + m.top()));
+  const XDim new_x = visual_x + m.left();
+  const YDim new_y = visual_y + m.top();
+  if (c->offsetLeft() == new_x && c->offsetTop() == new_y) return;
+  c->moveTo(c->bounds().translate(new_x, new_y));
   onScrollPositionChanged();
 }
 

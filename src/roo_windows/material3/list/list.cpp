@@ -915,6 +915,20 @@ void ListEntry::refreshFromItem() {
 }
 
 void ListEntry::setVisualContext(const ListEntryVisualContext& context) {
+  if (visual_context_.variant == context.variant &&
+      visual_context_.style == context.style &&
+      visual_context_.position == context.position &&
+      visual_context_.selected == context.selected &&
+      visual_context_.enabled == context.enabled &&
+      visual_context_.pressed == context.pressed &&
+      visual_context_.focused == context.focused &&
+      visual_context_.hovered == context.hovered &&
+      visual_context_.show_divider == context.show_divider &&
+      visual_context_.divider_mode == context.divider_mode &&
+      visual_context_.divider_start_inset == context.divider_start_inset &&
+      visual_context_.divider_end_inset == context.divider_end_inset) {
+    return;
+  }
   visual_context_ = context;
   invalidateInterior();
 }
