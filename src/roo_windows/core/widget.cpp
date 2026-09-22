@@ -487,7 +487,7 @@ void Widget::setEnabled(bool enabled) {
     focusManager().onWidgetEligibilityChanging(*this);
   }
   state_ ^= kWidgetEnabled;
-  if (isVisible()) {
+  if (isVisible() && repaintOnEnabledChange()) {
     invalidateInterior();
   }
   notifyStateChanged(kWidgetEnabled);

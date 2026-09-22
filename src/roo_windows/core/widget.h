@@ -488,6 +488,11 @@ class Widget {
 
   void setVisibility(Visibility visibility);
 
+  // Interaction-only containers can opt out of enabled-state repainting.
+  // Override only when enabled state does not affect their own or inherited
+  // appearance; focus changes still invalidate their affected widgets.
+  virtual bool repaintOnEnabledChange() const { return true; }
+
   void setEnabled(bool enabled);
 
   /// Updates whether this widget is hovered by a pointing device.
