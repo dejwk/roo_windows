@@ -72,6 +72,7 @@ class Canvas {
   void clip(const roo_display::Box& box) { clip_box_.clip(box); }
 
   /// Fills the entire clip box with the current background color.
+  /// Does nothing when clipping leaves no visible pixels.
   void clear() const;
 
   /// Fills the rectangle `[xMin..xMax] x [yMin..yMax]` (local coordinates)

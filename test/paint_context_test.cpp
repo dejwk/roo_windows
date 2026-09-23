@@ -101,6 +101,41 @@ class PaintContextTest : public testing::Test {
   Application app_;
 };
 
+// Records driver submissions without letting an invalid rectangle reach a
+// framebuffer. OffscreenDevice alone would silently ignore empty rectangles.
+class ClearRecordingDisplay : public OffscreenDevice<Argb4444> {
+ public:
+  explicit ClearRecordingDisplay(roo::byte* pixels)
+      : OffscreenDevice(32, 24, pixels, Argb4444()) {}
+
+  void fillRects(BlendingMode, Color, int16_t*, int16_t*, int16_t*, int16_t*,
+                 uint16_t count) override {
+    rectangles += count;
+  }
+
+  int rectangles = 0;
+};
+
+// Verifies clearing a clip outside the viewport submits no empty rectangles.
+// Hardware drivers can turn their negative dimensions into huge pixel counts.
+TEST_F(PaintContextTest, ClearSkipsEmptyClipAtEveryViewportEdge) {
+  ClearRecordingDisplay output(raster_);
+  Surface surface(output, 0, 0, Box(0, 0, 31, 23), false, color::White,
+                  FillMode::kVisible, BlendingMode::kSourceOver);
+  Canvas canvas(&surface);
+  for (const Box& outside : {Box(0, -8, 31, -2), Box(0, 25, 31, 32),
+                             Box(-8, 0, -2, 23), Box(33, 0, 40, 23)}) {
+    Canvas clipped(canvas);
+    clipped.clip(outside);
+    ASSERT_TRUE(clipped.clip_box().empty());
+    clipped.clear();
+    EXPECT_EQ(output.rectangles, 0);
+  }
+  canvas.clip(Box(0, 23, 31, 32));
+  canvas.clear();
+  EXPECT_EQ(output.rectangles, 1);
+}
+
 TEST_F(PaintContextTest, DerivedContextsUpdateOriginAndLocalClip) {
   Surface surface(display_.output(), 5, 7, Box(6, 8, 15, 17),
                   /*is_write_once=*/false, display_.getBackgroundColor(),

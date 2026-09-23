@@ -9,6 +9,7 @@
 namespace roo_windows {
 
 void Canvas::clear() const {
+  if (clip_box_.empty()) return;
   out().fillRect(surface_->blending_mode(), clip_box_, bgcolor());
 }
 
