@@ -92,6 +92,8 @@ class CircularBuffer {
   Widget& operator[](int idx) { return *elements_[pos(idx)]; }
   const Widget& operator[](int idx) const { return *elements_[pos(idx)]; }
 
+  Widget& storage(size_t index) { return *elements_[index]; }
+
   bool empty() const { return count_ == 0; }
 
   size_t capacity() const { return elements_.size(); }
@@ -120,37 +122,32 @@ inline Rect unclippedRegion(const Widget* w) {
   return rect;
 }
 
-/// Virtualized vertical list backed by a `ListModel` and a single prototype
-/// widget.
-///
-/// Only the currently visible window of model items is materialized as child
-/// widgets, which are recycled via the internal `CircularBuffer` as the user
-/// scrolls. Call `modelChanged()` / `modelRangeChanged()` /
-/// `modelItemChanged()` to push updates from the model back into the rendered
-/// view.
+/// Virtualized fixed-stride list borrowing a model and owning a reusable pool.
+/// Model notifications run on the UI context, outside painting. Derived
+/// adapters override protected geometry and binding hooks without replacing the
+/// recycler.
 class ListLayout : public Panel {
  public:
   using PrototypeFn = std::function<std::unique_ptr<Widget>()>;
 
-  // Creates a list layout that uses the specified prototype element.
+  /// Creates a recycler borrowing @p model, allocating rows with @p
+  /// prototype_fn.
   ListLayout(ApplicationContext& context, ListModel& model,
              PrototypeFn prototype_fn)
       : Panel(context),
-        padding_(),
         model_(model),
         elements_(context),
         prototype_fn_(std::move(prototype_fn)),
-        prototype_(prototype_fn_()),
-        first_(0),
-        last_(-1),
-        in_paint_children_(false),
-        paint_offset_(0) {
+        prototype_(prototype_fn_()) {
+    CHECK(prototype_ != nullptr);
     element_count_ = model.elementCount();
+    CHECK_GE(element_count_, 0);
   }
 
-  /// Detaches recycled children before the owning row pool is destroyed.
+  /// Detaches children before destroying their owning pool.
   ~ListLayout() override { removeAll(); }
 
+  /// Sets content padding and requests measurement.
   void setPadding(Padding padding) {
     if (padding_ == padding) return;
     padding_ = padding;
@@ -159,252 +156,274 @@ class ListLayout : public Panel {
 
   Padding getPadding() const override { return padding_; }
 
-  // Notifies this view that the contents of the list has changed. Causes the
-  // list to be updated and rendered. If the element count has changed, the list
-  // is laid out, with new elements appearning or gone elements disappearing.
-  void modelChanged() { modelRangeChanged(first_, last_ + 1); }
+  /// Refreshes all active bindings and publishes the current model count.
+  void modelChanged() { modelRangeChanged(0, element_count_); }
 
-  // Returns the index of the first model item in the visible range.
+  /// Returns the first bound model index, or zero for an empty active range.
   int first() const { return first_; }
 
-  // Returns the index of the last model item in the visible range.
+  /// Returns the last bound index; less than first() when none are bound.
   int last() const { return last_; }
 
-  // Notifies this view that the range of the list has changed. Causes the range
-  // to be updated and rendered. If the element count has changed, the list
-  // is laid out, with new elements appearning or gone elements disappearing.
-  //
-  // If the element count has changed but the common subset of the elements has
-  // not changed (e.g. if elements has been only added or only removed from the
-  // end), specify an empty range (e.g., 0, 0).
+  /// Publishes count changes and refreshes bindings in [begin, end).
+  /// An empty range publishes append/end-truncation without refreshing
+  /// survivors.
   void modelRangeChanged(int begin, int end) {
-    int prev_count = element_count_;
+    checkModelNotification();
+    int old_count = element_count_;
     element_count_ = model_.elementCount();
-    if (prev_count != element_count_) {
-      requestLayout();
+    CHECK_GE(element_count_, 0);
+    while (last_ >= element_count_ && first_ <= last_) {
+      releaseBack();
     }
-    if (first_ > last_) return;
-    if (end <= first_ || begin > last_) return;
-    int i = 0;
-    int pos = first_;
-    if (begin > first_) {
-      i = begin - first_;
-      pos += i;
+    if (first_ > last_) {
+      first_ = 0;
+      last_ = -1;
     }
-    while (pos <= last_ && pos < end && pos < element_count_) {
-      setFromModel(pos, elements_[i]);
-      ++i;
-      ++pos;
+    for (int i = std::max(begin, first_); i <= last_ && i < end; ++i) {
+      bindRow(i, elements_[i - first_]);
+      layoutRow(i, elements_[i - first_]);
     }
-    setDirty();
+    if (old_count != element_count_) requestLayout();
+    invalidateInterior();
+    onModelChanged(old_count);
   }
 
-  // Notifies this view that the specified list item has changed. Causes the
-  // item to be updated and rendered. If the element count has changed, the list
-  // is laid out, with new elements appearning or gone elements disappearing.
-  void modelItemChanged(int idx) { modelRangeChanged(idx, idx + 1); }
+  /// Refreshes one model index while also publishing count changes.
+  void modelItemChanged(int index) { modelRangeChanged(index, index + 1); }
 
   bool respectsChildrenBoundaries() const override { return true; }
 
  protected:
+  /// Prepares fixed row content once for each prototype or pool allocation.
+  virtual void prepareRow(Widget& row) {}
+
+  /// Replaces the row's model-dependent state before measurement or input.
+  virtual void bindRow(int index, Widget& row) { model_.set(index, row); }
+
+  /// Releases a binding after input cancellation, before reuse or model reset.
+  virtual void unbindRow(Widget& row) {}
+
+  /// Validates adapter-specific notification preconditions.
+  virtual void checkModelNotification() const {}
+
+  /// Notifies an adapter after count publication and active content refresh.
+  virtual void onModelChanged(int old_count) {}
+
+  /// Measures the fixed stride from a prepared prototype and its margins.
+  virtual YDim rowStride() const { return row_height_; }
+
+  /// Computes content extent with checked wide intermediate arithmetic.
+  virtual YDim contentExtent() const {
+    int64_t extent = static_cast<int64_t>(element_count_) * rowStride() +
+                     padding_.top() + padding_.bottom();
+    CHECK_GE(extent, 0);
+    CHECK_LE(extent, Rect::MaximumRect().yMax());
+    return static_cast<YDim>(extent);
+  }
+
+  /// Returns the surface bounds for one row in local content coordinates.
+  virtual Rect rowBounds(int index) const {
+    Margins margins = prototype_->getMargins();
+    YDim top = padding_.top() + index * rowStride() + margins.top();
+    return Rect(padding_.left() + margins.left(), top,
+                width() - padding_.right() - margins.right() - 1,
+                top + row_height_ - margins.top() - margins.bottom() - 1);
+  }
+
+  /// Finds a bounded active interval; an empty interval has end < begin.
+  virtual void viewportRange(const Rect& viewport, int& begin, int& end) const {
+    begin = 0;
+    end = -1;
+    if (element_count_ == 0 || viewport.empty() || rowStride() <= 0) return;
+    YDim top = std::max<YDim>(0, viewport.yMin() - padding_.top());
+    YDim bottom = viewport.yMax() - padding_.top();
+    if (bottom < 0) return;
+    begin = std::min<int>(element_count_, top / rowStride());
+    end = std::min<int>(element_count_ - 1, bottom / rowStride());
+    if (begin <= end && !rowBounds(begin).intersects(viewport)) ++begin;
+    if (begin <= end && !rowBounds(end).intersects(viewport)) --end;
+  }
+
+  /// Releases every live binding while retaining prepared allocations.
+  void releaseRows() {
+    while (first_ <= last_) releaseBack();
+    first_ = 0;
+    last_ = -1;
+  }
+
+  /// Publishes a count without reading the model, for reset protocols.
+  void setElementCount(int count) {
+    CHECK_GE(count, 0);
+    element_count_ = count;
+  }
+
+  int elementCount() const { return element_count_; }
+  YDim rowHeight() const { return row_height_; }
+  Widget& prototype() { return *prototype_; }
+  const Widget& prototype() const { return *prototype_; }
+  size_t poolCapacity() const { return elements_.capacity(); }
+
+  /// Finds a live binding without allocating or visiting model elements.
+  Widget* materializedRow(int index) {
+    return index >= first_ && index <= last_ ? &elements_[index - first_]
+                                             : nullptr;
+  }
+
+  const Widget* materializedRow(int index) const {
+    return index >= first_ && index <= last_ ? &elements_[index - first_]
+                                             : nullptr;
+  }
+
+  /// Replaces the active window for keyboard focus without scanning intervening
+  /// rows.
+  Widget* materialize(int index) {
+    CHECK_GE(index, 0);
+    CHECK_LT(index, element_count_);
+    CHECK_GT(elements_.capacity(), 0u);
+    int begin = std::max(0, index - static_cast<int>(elements_.capacity()) / 2);
+    int end = std::min(element_count_ - 1,
+                       begin + static_cast<int>(elements_.capacity()) - 1);
+    synchronizeRange(begin, end);
+    return materializedRow(index);
+  }
+
   void propagateDirty(const Widget* child, const Rect& rect) override {
-    if (in_paint_children_) return;
-    Panel::propagateDirty(child, rect);
+    if (!synchronizing_) Panel::propagateDirty(child, rect);
   }
 
   void childHidden(const Widget* child) override {
-    if (in_paint_children_) return;
-    Panel::childHidden(child);
+    if (!synchronizing_) Panel::childHidden(child);
   }
 
   void childShown(const Widget* child) override {
-    if (in_paint_children_) return;
-    Panel::childShown(child);
+    if (!synchronizing_) Panel::childShown(child);
   }
 
   void onRequestLayout() override {
-    if (in_paint_children_) return;
-    Widget::onRequestLayout();
+    if (!synchronizing_) Widget::onRequestLayout();
   }
 
-  const Widget& getChild(int idx) const override {
-    return elements_[((elements_.capacity() - idx - 1) + paint_offset_) %
-                     elements_.capacity()];
-  }
-
-  Widget& getChild(int idx) override {
-    return elements_[((elements_.capacity() - idx - 1) + paint_offset_) %
-                     elements_.capacity()];
-  }
-
-  void paintChildren(PaintContext& ctx) override {
-    paint_offset_ = (paint_offset_ + 1) % elements_.capacity();
-    CHECK(!in_paint_children_);
-    in_paint_children_ = true;
-    // NOTE: we are not just using clipbox, because it could result in removing
-    // some children that just happen to not need rendering at the moment -
-    // but we want to keep them so that they can keep receiving events.
-    Rect rect = unclippedRegion(this);
-    int new_first = (rect.yMin() + 1) / element_height();
-    if (new_first < 0) new_first = 0;
-    int new_last = rect.yMax() / element_height();
-    if (new_last < new_first) new_last = new_first - 1;
-    if (new_last - new_first >= element_count_) {
-      new_last = new_first + element_count_ - 1;
-    }
-
-    // First, see if we need to shrink the list from any side.
-    while (first_ < new_first && first_ <= last_) {
-      elements_.pop_front().setVisibility(Visibility::kGone);
-      ++first_;
-    }
-    while (new_last < last_ && first_ <= last_) {
-      elements_.pop_back().setVisibility(Visibility::kGone);
-      --last_;
-    }
-    if (first_ > last_) {
-      // All hidden; nothing to reuse.
-      first_ = new_first;
-      last_ = first_ - 1;
-    }
-    // Now, grow if needed.
-    while (first_ > new_first) {
-      show(--first_, elements_.push_front());
-    }
-    while (last_ < new_last) {
-      show(++last_, elements_.push_back());
-    }
-
-    // markClean();
-    in_paint_children_ = false;
-
-    // Now that we have set up all the children, we are ready to paint them.
-    Panel::paintChildren(ctx);
+  void paintChildren(PaintContext& context) override {
+    int begin;
+    int end;
+    viewportRange(unclippedRegion(this), begin, end);
+    synchronizeRange(begin, end);
+    Panel::paintChildren(context);
   }
 
   PreferredSize getPreferredSize() const override {
-    PreferredSize element = prototype_->getPreferredSize();
-    return PreferredSize(PreferredSize::MatchParentWidth(),
-                         element.height().isExact()
-                             ? PreferredSize::ExactHeight(
-                                   calculateHeight(element.height().value()))
-                             : element.height());
+    PreferredSize preferred = prototype_->getPreferredSize();
+    Margins margins = prototype_->getMargins();
+    if (!preferred.height().isExact()) {
+      return {PreferredSize::MatchParentWidth(), preferred.height()};
+    }
+    int64_t extent =
+        static_cast<int64_t>(element_count_) *
+            (preferred.height().value() + margins.top() + margins.bottom()) +
+        padding_.top() + padding_.bottom();
+    CHECK_LE(extent, Rect::MaximumRect().yMax());
+    return {PreferredSize::MatchParentWidth(),
+            PreferredSize::ExactHeight(extent)};
   }
 
   Dimensions onMeasure(WidthSpec width, HeightSpec height) override {
-    int16_t h_padding = padding_.left() + padding_.right();
-    // int16_t v_padding = padding_.top() + padding_.bottom();
-    // Measure the element under new constraints, and see how many max instances
-    // will fit on the screen.
+    if (!prototype_prepared_) {
+      prepareRow(*prototype_);
+      prototype_prepared_ = true;
+    }
     Margins margins = prototype_->getMargins();
-    int16_t h_margin = margins.left() + margins.right();
-    int16_t v_margin = margins.top() + margins.bottom();
+    XDim horizontal =
+        padding_.left() + padding_.right() + margins.left() + margins.right();
     PreferredSize preferred = prototype_->getPreferredSize();
-    Dimensions d = prototype_->measure(
-        width.getChildWidthSpec(h_padding + h_margin, preferred.width()),
+    Dimensions measured = prototype_->measure(
+        width.getChildWidthSpec(horizontal, preferred.width()),
         preferred.height().isExact()
             ? HeightSpec::Exactly(preferred.height().value())
             : HeightSpec::Unspecified(40));
-    YDim h = d.height();
-    if (h == 0) {
-      h = prototype_->getNaturalDimensions().height();
-    }
-    if (h == 0) h = Scaled(15);
-    h += v_margin;
-    return Dimensions(width.resolveSize(d.width() + h_margin + h_padding),
-                      height.resolveSize(calculateHeight(h)));
+    row_height_ =
+        std::max<YDim>(1, measured.height()) + margins.top() + margins.bottom();
+    return {width.resolveSize(measured.width() + horizontal),
+            height.resolveSize(contentExtent())};
   }
 
   void onLayout(bool changed, const Rect& rect) override {
-    // NOTE: because we do deferred layout in paint, we don't actually call
-    // the superclass' onLayout from here.
-    if (rect.height() <= 0) {
-      return;
+    synchronizing_ = true;
+    releaseRows();
+    // Reserve against the whole viewport, including sections currently
+    // offscreen. This guarantees bounded keyboard materialization and
+    // allocation-free scroll.
+    YDim viewport_height =
+        getMainWindow() == nullptr ? rect.height() : getMainWindow()->height();
+    CHECK_GT(rowStride(), 0);
+    size_t capacity = std::min<int64_t>(
+        element_count_, std::max<YDim>(0, viewport_height) / rowStride() + 2);
+    size_t old_capacity = elements_.capacity();
+    elements_.ensure_capacity(capacity, prototype_fn_);
+    for (size_t i = old_capacity; i < elements_.capacity(); ++i) {
+      Widget& row = elements_.storage(i);
+      prepareRow(row);
+      row.setVisibility(Visibility::kGone);
+      add(row);
     }
-    prototype_->setVisibility(Visibility::kVisible);
-    int16_t h =
-        (element_count_ == 0) ? rect.height() : rect.height() / element_count_;
-    prototype_->layout(Rect(0, 0, rect.width() - 1, h - 1));
-    prototype_->setVisibility(Visibility::kGone);
-    bool moved = (rect.yMin() != parent_bounds().yMin() ||
-                  rect.yMax() != parent_bounds().yMax());
-    size_t capacity = (getMainWindow()->height() - 2) / element_height() + 2;
-    if (capacity != elements_.capacity() || moved) {
-      // Invalidate all the children so that they get repositioned during next
-      // paintChildren().
-      while (last_-- >= first_) {
-        elements_.pop_back().setVisibility(Visibility::kGone);
-      }
-      removeAll();
-      if (element_count_ == 0) return;
-      while (getChildrenCount() > 1) {
-        removeLast();
-      }
-      elements_.ensure_capacity(capacity, prototype_fn_);
-      for (size_t i = 0; i < elements_.capacity(); i++) {
-        add(elements_[i]);
-      }
-      first_ = 0;
-      last_ = -1;
-    }
+    synchronizing_ = false;
   }
 
  private:
-  void setFromModel(int pos, Widget& e) {
-    model_.set(pos, e);
-    if (e.isLayoutRequested()) {
-      layoutElement(pos, e);
+  void releaseBack() {
+    Widget& row = elements_.pop_back();
+    --last_;
+    row.setVisibility(Visibility::kGone);
+    unbindRow(row);
+  }
+
+  void layoutRow(int index, Widget& row) {
+    Rect bounds = rowBounds(index);
+    row.measure(WidthSpec::Exactly(bounds.width()),
+                HeightSpec::Exactly(bounds.height()));
+    row.layout(bounds);
+  }
+
+  void show(int index, Widget& row) {
+    bindRow(index, row);
+    layoutRow(index, row);
+    row.setVisibility(Visibility::kVisible);
+  }
+
+  // Range changes are idempotent; resumed painting never rotates or rebinds
+  // rows.
+  void synchronizeRange(int begin, int end) {
+    CHECK(!synchronizing_);
+    synchronizing_ = true;
+    CHECK_LE(std::max(0, end - begin + 1),
+             static_cast<int>(elements_.capacity()));
+    while (first_ < begin && first_ <= last_) {
+      Widget& row = elements_.pop_front();
+      ++first_;
+      row.setVisibility(Visibility::kGone);
+      unbindRow(row);
     }
-  }
-
-  // Configures the given element to represent the item at the given pos.
-  void show(int pos, Widget& e) {
-    Margins m = prototype_->getMargins();
-    if (element_height() <= m.top() + m.bottom()) {
-      // Won't fit anyway.
-      return;
+    while (end < last_ && first_ <= last_) releaseBack();
+    if (first_ > last_) {
+      first_ = begin;
+      last_ = begin - 1;
     }
-    setFromModel(pos, e);
-    e.setVisibility(Visibility::kVisible);
+    while (first_ > begin) show(--first_, elements_.push_front());
+    while (last_ < end) show(++last_, elements_.push_back());
+    synchronizing_ = false;
   }
-
-  void layoutElement(int pos, Widget& e) {
-    Margins m = prototype_->getMargins();
-    int16_t h_padding = padding_.left() + padding_.right();
-    // int16_t v_padding = padding_.top() + padding_.bottom();
-    Dimensions d = e.measure(
-        WidthSpec::Exactly(width() - m.left() - m.right() - h_padding),
-        HeightSpec::Exactly(element_height() - m.top() - m.bottom()));
-    int hoffset = m.left() + padding_.left();
-    int voffset = pos * element_height() + padding_.top() + m.top();
-    // TODO: support gravity, and margins. And maybe dividers?
-    e.layout(Rect(hoffset, voffset, hoffset + d.width() - 1,
-                  voffset + d.height() - 1));
-  }
-
-  YDim calculateHeight(int16_t desired_element_height) const {
-    int16_t v_padding = padding_.top() - padding_.bottom();
-    YDim tops = Rect::MaximumRect().yMax() - v_padding;
-    if (element_count_ >= tops) return 1;
-    if (element_count_ * desired_element_height > tops) {
-      return (tops / element_count_) * element_count_ + v_padding;
-    }
-    return desired_element_height * element_count_ + v_padding;
-  }
-
-  int element_height() const { return prototype_->height(); }
 
   Padding padding_;
   ListModel& model_;
   CircularBuffer elements_;
-  std::function<std::unique_ptr<Widget>()> prototype_fn_;
+  PrototypeFn prototype_fn_;
   std::unique_ptr<Widget> prototype_;
-  int element_count_;
-  int element_height_;
-  int first_;
-  int last_;
-  bool in_paint_children_;
-  int paint_offset_;
+  int element_count_ = 0;
+  YDim row_height_ = 1;
+  int first_ = 0;
+  int last_ = -1;
+  bool synchronizing_ = false;
+  bool prototype_prepared_ = false;
 };
 
 }  // namespace roo_windows

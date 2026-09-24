@@ -322,6 +322,10 @@ class ListEntry : public Container {
   /// replaces bound slot widgets.
   void refreshFromItem();
 
+  /// Clears borrowed framework text views without reading the bound item.
+  /// Recyclers call this after model unbind; prepared slot allocations survive.
+  void releaseTextViews();
+
   /// Stores list-resolved visual context for this entry.
   void setVisualContext(const ListEntryVisualContext& context);
 
@@ -354,6 +358,10 @@ class ListEntry : public Container {
   void onFocusChanged(bool focused) override;
 
  protected:
+  /// Keeps allocated text slots when their content becomes empty.
+  /// Recycled subclasses override this without adding state to ordinary rows.
+  virtual bool retainsTextSlots() const { return false; }
+
   /// Resolves the primary text color used when text slots are synchronized.
   /// Derived row families may override this to match a specialized container.
   virtual Color headlineColor() const;

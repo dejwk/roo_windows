@@ -1805,6 +1805,36 @@ TEST(Material3List, BaselineTypesStayWithinPhaseOneSizeBudget) {
             sizeof(ListEntry) + sizeof(StandardListItem) + sizeof(void*));
 }
 
+class RetainedHeadlineRow : public TestListRow<HeadlineListItem> {
+ public:
+  using TestListRow<HeadlineListItem>::TestListRow;
+
+ protected:
+  bool retainsTextSlots() const override { return true; }
+};
+
+// Verifies empty recycled text and released views preserve the prepared widget.
+TEST(Material3List, PreparedTextRetainsStorageAcrossEmptyBindings) {
+  roo_scheduler::Scheduler scheduler;
+  Environment environment(scheduler);
+  ApplicationContext context(scheduler, environment.theme(),
+                             environment.keyboardColorTheme());
+  RetainedHeadlineRow row(context, "Prepared");
+  ASSERT_EQ(row.getChildrenCount(), 1);
+  Widget* label = &row.getChild(0);
+  row.item().setHeadline({});
+  row.refreshFromItem();
+  EXPECT_EQ(&row.getChild(0), label);
+  EXPECT_TRUE(label->isGone());
+  row.item().setHeadline("Rebound");
+  row.refreshFromItem();
+  EXPECT_EQ(&row.getChild(0), label);
+  EXPECT_TRUE(label->isVisible());
+  row.releaseTextViews();
+  EXPECT_EQ(&row.getChild(0), label);
+  EXPECT_TRUE(label->isGone());
+}
+
 // Verifies long eager lists keep 24-bit vertical positions through layout.
 TEST(Material3ListGeometry, HeightAboveSigned16Bit) {
   roo_scheduler::Scheduler scheduler;

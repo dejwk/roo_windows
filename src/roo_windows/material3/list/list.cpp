@@ -797,6 +797,21 @@ void ListEntry::detachBoundChildren() {
   item_ = nullptr;
 }
 
+void ListEntry::releaseTextViews() {
+  auto release = [](Widget* slot, TextSlotMode mode) {
+    if (slot == nullptr) return;
+    if (mode == TextSlotMode::kLabel) {
+      static_cast<StringViewLabel*>(slot)->setText({});
+    } else if (mode == TextSlotMode::kBlock) {
+      static_cast<TextBlock*>(slot)->setText({});
+    }
+    slot->setVisibility(Visibility::kGone);
+  };
+  release(overline_text_, overline_mode_);
+  release(headline_text_, headline_mode_);
+  release(supporting_text_, supporting_mode_);
+}
+
 void ListEntry::syncTextSlotsFromItem() {
   if (item_ == nullptr) {
     clearTextSlots();
@@ -810,9 +825,19 @@ void ListEntry::syncTextSlotsFromItem() {
                           const TextStyle& text_style,
                           roo_display::Color color) {
     if (text.empty()) {
-      clearTextSlot(slot, mode);
+      if (!retainsTextSlots()) {
+        clearTextSlot(slot, mode);
+      } else if (slot != nullptr) {
+        if (mode == TextSlotMode::kLabel) {
+          static_cast<StringViewLabel*>(slot)->setText({});
+        } else {
+          static_cast<TextBlock*>(slot)->setText({});
+        }
+        slot->setVisibility(Visibility::kGone);
+      }
       return;
     }
+    if (slot != nullptr) slot->setVisibility(Visibility::kVisible);
 
     TextSlotMode desired_mode =
         UsesBlockSlot(policy) ? TextSlotMode::kBlock : TextSlotMode::kLabel;
