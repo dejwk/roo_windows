@@ -848,6 +848,14 @@ class ListRow : public ListEntry {
   Item item_;
 };
 
+class DynamicListBase;
+
+/// Logical selection address; never points to a recycled row widget.
+struct ListRowLocation {
+  Widget* section = nullptr;
+  int index = 0;
+};
+
 /// Material 3 list container that owns row sequencing policy.
 class List : public Container {
  public:
@@ -875,6 +883,29 @@ class List : public Container {
   /// Adds an adopted row entry to the list.
   void add(std::unique_ptr<ListEntry> entry);
 
+  /// Adds a borrowed dynamic section; the section must outlive this list.
+  void add(DynamicListBase& section);
+
+  /// Adopts a dynamic section and its reusable row pool.
+  void add(std::unique_ptr<DynamicListBase> section);
+
+  /// Selects a member static row in single mode; invalid requests return false.
+  bool select(ListEntry& entry);
+
+  /// Selects an index without materializing or scrolling it, in single mode.
+  bool select(DynamicListBase& section, int index);
+
+  /// Clears single selection, notifying only on an actual change.
+  void clearSelection();
+
+  /// Returns the selected logical location, empty outside single mode.
+  ListRowLocation selection() const { return selection_; }
+
+  /// Sets a member static row's multiple-selection flag; false in other modes.
+  bool setSelected(ListEntry& entry, bool selected);
+
+  bool invokeChild(Widget& child) override;
+
   /// Clears all row entries from the list.
   void clear();
 
@@ -883,6 +914,10 @@ class List : public Container {
   bool onKeyEvent(const KeyEvent& event) override;
 
  protected:
+  /// Observes current single selection after state and invalidation
+  /// publication. May reselect or clear content; suppressed during destruction.
+  virtual void onSingleSelectionChanged(ListRowLocation selection) {}
+
   void paint(PaintContext& ctx) const override;
   int getChildrenCount() const override;
   const Widget& getChild(int idx) const override;
@@ -891,19 +926,48 @@ class List : public Container {
   void onLayout(bool changed, const Rect& rect) override;
 
  private:
+  friend class DynamicListBase;
+  struct Section {
+    Widget* widget;
+    bool dynamic;
+    bool selected;
+  };
+  struct Invocation {
+    List* owner;
+    ListEntry* row;
+    Widget* section;
+    Invocation* previous;
+    Invocation(List& list, ListEntry& entry, Widget* section);
+    ~Invocation();
+  };
+  void checkMutation() const;
+  void invalidateInvocations(Widget* section);
+  bool invokeRow(ListRowLocation location, ListEntry& row);
+  bool replaceSelection(ListRowLocation location);
   void onStructureOrPolicyChanged();
-  void addEntryInternal(ListEntry* entry, WidgetRef ref);
-  void markEntryContextsDirty();
-  void refreshEntryVisualContexts();
-  int16_t interRowGap(int previous_idx, int next_idx) const;
+  void addSection(WidgetRef ref, bool dynamic);
+  void resolveContexts();
+  int sectionCount(const Section& section) const;
+  bool selected(const Section& section, int index) const;
+  ListEntryVisualContext rowContext(int section, int index) const;
+  DividerInsetHint rowHint(int section, int index) const;
+  Rect rowBounds(int section, int index) const;
+  YDim interSectionGap(int previous, int next) const;
+  int uniformGap() const;
+  int findSection(const Widget* widget) const;
+  void sectionChanged(DynamicListBase& section, bool layout = true);
+  void paintBand(PaintContext& context, int section, int index, YDim gap) const;
 
-  std::vector<ListEntry*> entries_;
-  std::vector<uint8_t> selected_entries_;
-  ListVariant variant_;
-  ListStyle style_;
+  std::vector<Section> sections_;
+  ListVariant variant_ = ListVariant::kExpressive;
+  ListStyle style_ = ListStyle::kStandard;
   ListSelectionPolicy selection_policy_;
   ListDividerPolicy divider_policy_;
-  bool contexts_dirty_;
+  ListRowLocation selection_;
+  Invocation* invocation_ = nullptr;
+  int logical_count_ = 0;
+  bool clearing_ = false;
+  bool destroying_ = false;
 };
 
 }  // namespace material3

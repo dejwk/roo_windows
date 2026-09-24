@@ -1154,3 +1154,10 @@ cc_test(
     srcs = ["test/list_layout_lifetime_test.cpp"],
     deps = [":roo_windows", "@googletest//:gtest_main"],
 )
+
+cc_test(
+    name = "material3_dynamic_list_test",
+    srcs = ["test/material3_dynamic_list_test.cpp", "test/roo_windows_render_test_support.h"],
+    linkstatic = 1,
+    deps = [":roo_windows", "@roo_testing//:arduino_gtest_main"],
+)

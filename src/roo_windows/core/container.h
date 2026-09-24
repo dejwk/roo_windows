@@ -31,6 +31,11 @@ class Container : public SurfaceWidget {
  public:
   Container(ApplicationContext& context);
 
+  /// Allows an owning container to route an accepted direct-child invocation.
+  /// Return true after handling the action; the caller must then return without
+  /// touching the child because application callbacks may have destroyed it.
+  virtual bool invokeChild(Widget& child) { return false; }
+
   /// Returns the container's resolved background color, derived from its
   /// effective container role.
   Color background() const override {

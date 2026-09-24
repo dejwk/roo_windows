@@ -170,6 +170,8 @@ class ListLayout : public Panel {
   /// survivors.
   void modelRangeChanged(int begin, int end) {
     checkModelNotification();
+    CHECK(!synchronizing_);
+    synchronizing_ = true;
     int old_count = element_count_;
     element_count_ = model_.elementCount();
     CHECK_GE(element_count_, 0);
@@ -184,6 +186,7 @@ class ListLayout : public Panel {
       bindRow(i, elements_[i - first_]);
       layoutRow(i, elements_[i - first_]);
     }
+    synchronizing_ = false;
     if (old_count != element_count_) requestLayout();
     invalidateInterior();
     onModelChanged(old_count);
@@ -257,6 +260,9 @@ class ListLayout : public Panel {
     CHECK_GE(count, 0);
     element_count_ = count;
   }
+
+  ListModel& listModel() { return model_; }
+  const ListModel& listModel() const { return model_; }
 
   int elementCount() const { return element_count_; }
   YDim rowHeight() const { return row_height_; }
@@ -349,7 +355,6 @@ class ListLayout : public Panel {
 
   void onLayout(bool changed, const Rect& rect) override {
     synchronizing_ = true;
-    releaseRows();
     // Reserve against the whole viewport, including sections currently
     // offscreen. This guarantees bounded keyboard materialization and
     // allocation-free scroll.
@@ -359,12 +364,18 @@ class ListLayout : public Panel {
     size_t capacity = std::min<int64_t>(
         element_count_, std::max<YDim>(0, viewport_height) / rowStride() + 2);
     size_t old_capacity = elements_.capacity();
-    elements_.ensure_capacity(capacity, prototype_fn_);
+    if (capacity > old_capacity) {
+      releaseRows();
+      elements_.ensure_capacity(capacity, prototype_fn_);
+    }
     for (size_t i = old_capacity; i < elements_.capacity(); ++i) {
       Widget& row = elements_.storage(i);
       prepareRow(row);
       row.setVisibility(Visibility::kGone);
       add(row);
+    }
+    for (int index = first_; index <= last_; ++index) {
+      layoutRow(index, elements_[index - first_]);
     }
     synchronizing_ = false;
   }

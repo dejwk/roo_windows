@@ -1703,6 +1703,8 @@ TEST(Material3List, ListResolvesSelectionAndDividerContext) {
 
   selection_policy.mode = SelectionMode::kSingle;
   list.setSelectionPolicy(selection_policy);
+  EXPECT_EQ(list.selection().section, nullptr);
+  EXPECT_TRUE(list.select(first));
 
   EXPECT_TRUE(first.visualContext().selected);
   EXPECT_FALSE(second.visualContext().selected);
