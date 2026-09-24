@@ -10,6 +10,7 @@
 #include "roo_logging.h"
 #include "roo_windows/core/application_context.h"
 #include "roo_windows/core/theme.h"
+#include "roo_windows/material3/list/list_geometry.h"
 #include "roo_windows/material3/theme.h"
 #include "roo_windows/material3/typography.h"
 #include "roo_windows/widgets/text_block.h"
@@ -70,13 +71,6 @@ struct RowLayoutMetrics {
   int16_t body_x;
   int16_t body_y;
   int16_t body_width;
-};
-
-struct DividerMetrics {
-  int16_t start_x;
-  int16_t end_x;
-  int16_t y;
-  bool visible;
 };
 
 RowTokens TokensFor(ListVariant variant) {
@@ -198,19 +192,19 @@ int16_t ConstrainWidth(int16_t desired, WidthSpec spec) {
     case UNSPECIFIED:
       return desired;
     case AT_MOST:
-      return std::min<int16_t>(desired, spec.value());
+      return std::min<YDim>(desired, spec.value());
     case EXACTLY:
       return spec.value();
   }
   return desired;
 }
 
-int16_t ConstrainHeight(int16_t desired, HeightSpec spec) {
+YDim ConstrainHeight(YDim desired, HeightSpec spec) {
   switch (spec.kind()) {
     case UNSPECIFIED:
       return desired;
     case AT_MOST:
-      return std::min<int16_t>(desired, spec.value());
+      return std::min<YDim>(desired, spec.value());
     case EXACTLY:
       return spec.value();
   }
@@ -353,40 +347,6 @@ RowLayoutMetrics ResolveRowLayout(ListEntry& entry, WidthSpec width_spec,
                           body_width};
 }
 
-DividerMetrics ResolveDividerMetrics(const ListEntry& entry, int16_t x_offset,
-                                     int16_t y) {
-  const ListEntryVisualContext& context = entry.visualContext();
-  if (!context.show_divider || context.divider_mode == DividerMode::kNone ||
-      entry.width() <= 0) {
-    return DividerMetrics{0, -1, 0, false};
-  }
-
-  int16_t start_inset = 0;
-  int16_t end_inset = 0;
-  if (context.divider_mode == DividerMode::kInset) {
-    start_inset = context.divider_start_inset;
-    end_inset = context.divider_end_inset;
-    const ListItem* item = entry.item();
-    if (item != nullptr) {
-      DividerInsetHint hint = item->dividerInsetHint();
-      start_inset = std::max<int16_t>(start_inset, hint.start_inset);
-      end_inset = std::max<int16_t>(end_inset, hint.end_inset);
-    }
-  }
-
-  int16_t start_x = x_offset + start_inset;
-  int16_t end_x = x_offset + entry.width() - 1 - end_inset;
-  if (start_x > end_x) return DividerMetrics{0, -1, y, false};
-  return DividerMetrics{start_x, end_x, y, true};
-}
-
-ListItemPosition PositionForIndex(int idx, int count) {
-  if (count <= 1) return ListItemPosition::kSingle;
-  if (idx == 0) return ListItemPosition::kFirst;
-  if (idx == count - 1) return ListItemPosition::kLast;
-  return ListItemPosition::kMiddle;
-}
-
 int FirstSelectedIndex(const std::vector<uint8_t>& selected_entries) {
   for (int i = 0; i < static_cast<int>(selected_entries.size()); ++i) {
     if (selected_entries[i] != 0) return i;
@@ -406,6 +366,39 @@ bool ResolvedSelectedState(const std::vector<uint8_t>& selected_entries,
   return true;
 }
 
+}  // namespace
+
+namespace internal {
+DividerMetrics ResolveDividerMetrics(const ListEntryVisualContext& context,
+                                     DividerInsetHint hint, XDim width,
+                                     XDim x_offset, YDim y) {
+  if (!context.show_divider || context.divider_mode == DividerMode::kNone ||
+      width <= 0) {
+    return DividerMetrics{0, -1, 0, false};
+  }
+
+  int16_t start_inset = 0;
+  int16_t end_inset = 0;
+  if (context.divider_mode == DividerMode::kInset) {
+    start_inset = context.divider_start_inset;
+    end_inset = context.divider_end_inset;
+    start_inset = std::max<int16_t>(start_inset, hint.start_inset);
+    end_inset = std::max<int16_t>(end_inset, hint.end_inset);
+  }
+
+  int16_t start_x = x_offset + start_inset;
+  int16_t end_x = x_offset + width - 1 - end_inset;
+  if (start_x > end_x) return DividerMetrics{0, -1, y, false};
+  return DividerMetrics{start_x, end_x, y, true};
+}
+
+ListItemPosition PositionForIndex(int idx, int count) {
+  if (count <= 1) return ListItemPosition::kSingle;
+  if (idx == 0) return ListItemPosition::kFirst;
+  if (idx == count - 1) return ListItemPosition::kLast;
+  return ListItemPosition::kMiddle;
+}
+
 bool ShouldShowDivider(const ListDividerPolicy& divider_policy, int idx,
                        int count, bool selected, bool next_selected) {
   if (divider_policy.mode == DividerMode::kNone || idx >= count - 1) {
@@ -417,7 +410,30 @@ bool ShouldShowDivider(const ListDividerPolicy& divider_policy, int idx,
   return true;
 }
 
-}  // namespace
+int16_t ResolveGap(ListStyle style, DividerMode divider_mode,
+                   const ListEntryVisualContext& previous,
+                   const ListEntryVisualContext& next) {
+  int16_t gap = 0;
+  if (style == ListStyle::kSegmented && divider_mode == DividerMode::kNone) {
+    gap = Scaled(kSegmentedListGapDp);
+  } else if (previous.variant == ListVariant::kExpressive &&
+             previous.style == ListStyle::kStandard &&
+             (previous.show_divider || (previous.selected && next.selected))) {
+    gap = Scaled(kExpressiveStandardSeparatorDp);
+  }
+
+  if (previous.show_divider) {
+    gap += DividerThicknessPx();
+  }
+  return gap;
+}
+
+}  // namespace internal
+
+using internal::DividerMetrics;
+using internal::PositionForIndex;
+using internal::ResolveDividerMetrics;
+using internal::ShouldShowDivider;
 
 // Keeps the avatar-specific paint logic private to the convenience item layer
 // instead of introducing a broader public widget before the API needs one.
@@ -1664,25 +1680,9 @@ void List::markEntryContextsDirty() {
 
 int16_t List::interRowGap(int previous_idx, int next_idx) const {
   if (previous_idx < 0 || next_idx < 0) return 0;
-
-  const ListEntryVisualContext& previous =
-      entries_[previous_idx]->visualContext();
-  const ListEntryVisualContext& next = entries_[next_idx]->visualContext();
-
-  int16_t gap = 0;
-  if (style_ == ListStyle::kSegmented &&
-      divider_policy_.mode == DividerMode::kNone) {
-    gap = Scaled(kSegmentedListGapDp);
-  } else if (previous.variant == ListVariant::kExpressive &&
-             previous.style == ListStyle::kStandard &&
-             (previous.show_divider || (previous.selected && next.selected))) {
-    gap = Scaled(kExpressiveStandardSeparatorDp);
-  }
-
-  if (previous.show_divider) {
-    gap += DividerThicknessPx();
-  }
-  return gap;
+  return internal::ResolveGap(style_, divider_policy_.mode,
+                              entries_[previous_idx]->visualContext(),
+                              entries_[next_idx]->visualContext());
 }
 
 void List::paint(PaintContext& ctx) const {
@@ -1699,11 +1699,14 @@ void List::paint(PaintContext& ctx) const {
         const ListEntry& previous = *entries_[previous_visible_idx];
         int16_t gap = interRowGap(previous_visible_idx, i);
         if (gap >= divider_thickness) {
-          int16_t divider_top = previous.offsetTop() + previous.height() +
-                                (gap - divider_thickness) / 2;
-          int16_t divider_bottom = divider_top + divider_thickness - 1;
+          YDim divider_top = previous.offsetTop() + previous.height() +
+                             (gap - divider_thickness) / 2;
+          YDim divider_bottom = divider_top + divider_thickness - 1;
           DividerMetrics divider = ResolveDividerMetrics(
-              previous, previous.offsetLeft(), divider_top);
+              previous.visualContext(),
+              previous.item() == nullptr ? DividerInsetHint{}
+                                         : previous.item()->dividerInsetHint(),
+              previous.width(), previous.offsetLeft(), divider_top);
           if (divider.visible) {
             Rect divider_bounds(divider.start_x, divider_top, divider.end_x,
                                 divider_bottom);
@@ -1752,12 +1755,12 @@ void List::refreshEntryVisualContexts() {
       while (next_visible_idx < count && entries_[next_visible_idx]->isGone()) {
         ++next_visible_idx;
       }
-      bool next_selected = ResolvedSelectedState(
-          selected_entries_, selection_policy_, next_visible_idx,
-          first_selected_idx);
-      context.show_divider = ShouldShowDivider(
-          divider_policy_, visible_idx, visible_count, context.selected,
-          next_selected);
+      bool next_selected =
+          ResolvedSelectedState(selected_entries_, selection_policy_,
+                                next_visible_idx, first_selected_idx);
+      context.show_divider =
+          ShouldShowDivider(divider_policy_, visible_idx, visible_count,
+                            context.selected, next_selected);
       ++visible_idx;
     }
     context.divider_mode = divider_policy_.mode;
@@ -1849,7 +1852,7 @@ Dimensions List::onMeasure(WidthSpec width, HeightSpec height) {
     resolved_width = ConstrainWidth(resolved_width, width);
   }
 
-  int16_t total_height = 0;
+  YDim total_height = 0;
   int previous_visible_idx = -1;
   for (int i = 0; i < static_cast<int>(entries_.size()); ++i) {
     ListEntry* entry = entries_[i];
@@ -1859,6 +1862,8 @@ Dimensions List::onMeasure(WidthSpec width, HeightSpec height) {
     if (previous_visible_idx >= 0) {
       total_height += interRowGap(previous_visible_idx, i);
     }
+    CHECK_LE(static_cast<int64_t>(total_height) + measured.height(),
+             Rect::MaximumRect().yMax());
     total_height += measured.height();
     previous_visible_idx = i;
   }
@@ -1870,7 +1875,7 @@ void List::onLayout(bool changed, const Rect& rect) {
   (void)changed;
   refreshEntryVisualContexts();
 
-  int16_t y = 0;
+  YDim y = 0;
   int previous_visible_idx = -1;
   for (int i = 0; i < static_cast<int>(entries_.size()); ++i) {
     ListEntry* entry = entries_[i];

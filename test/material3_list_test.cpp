@@ -532,7 +532,6 @@ TEST(Material3List, NavigationRowsInvokeOnceThroughClickHook) {
 
   row.onClicked();
   EXPECT_EQ(1, invocation_count);
-
 }
 
 // Verifies that Phase 10 selection convenience items expose semantic state
@@ -708,19 +707,19 @@ TEST_F(Material3ListRenderTest,
 
   panel_ptr->setExpanded(true);
   ASSERT_TRUE(refresh());
-  Dimensions start = panel_ptr->measure(WidthSpec::Unspecified(0),
-                                        HeightSpec::Unspecified(0));
+  Dimensions start =
+      panel_ptr->measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
   EXPECT_EQ(0, start.height());
 
   // Repeated measurement does not advance registry-owned time.
-  Dimensions repeated = panel_ptr->measure(WidthSpec::Unspecified(0),
-                                           HeightSpec::Unspecified(0));
+  Dimensions repeated =
+      panel_ptr->measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
   EXPECT_EQ(start.height(), repeated.height());
 
   delay(45);
   ASSERT_TRUE(refresh());
-  Dimensions middle = panel_ptr->measure(WidthSpec::Unspecified(0),
-                                         HeightSpec::Unspecified(0));
+  Dimensions middle =
+      panel_ptr->measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
   EXPECT_TRUE(panel_ptr->isAnimating());
   EXPECT_GT(middle.height(), 0);
   EXPECT_LT(middle.height(), 30);
@@ -728,8 +727,8 @@ TEST_F(Material3ListRenderTest,
   delay(70);
   ASSERT_TRUE(refresh());
   EXPECT_FALSE(panel_ptr->isAnimating());
-  Dimensions expanded = panel_ptr->measure(WidthSpec::Unspecified(0),
-                                           HeightSpec::Unspecified(0));
+  Dimensions expanded =
+      panel_ptr->measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
   EXPECT_EQ(30, expanded.height());
 }
 
@@ -749,30 +748,32 @@ TEST_F(Material3ListRenderTest, ExpandablePanelRapidReversalIsContinuous) {
   delay(65);
   ASSERT_TRUE(refresh());
   const int16_t outward =
-      panel_ptr->measure(WidthSpec::Unspecified(0),
-                         HeightSpec::Unspecified(0)).height();
+      panel_ptr->measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0))
+          .height();
   ASSERT_GT(outward, 0);
   ASSERT_LT(outward, 40);
 
   panel_ptr->setExpanded(false);
   ASSERT_TRUE(refresh());
   const int16_t reversal =
-      panel_ptr->measure(WidthSpec::Unspecified(0),
-                         HeightSpec::Unspecified(0)).height();
+      panel_ptr->measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0))
+          .height();
   EXPECT_EQ(outward, reversal);
   delay(30);
   ASSERT_TRUE(refresh());
   const int16_t returning =
-      panel_ptr->measure(WidthSpec::Unspecified(0),
-                         HeightSpec::Unspecified(0)).height();
+      panel_ptr->measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0))
+          .height();
   EXPECT_GT(returning, 0);
   EXPECT_LT(returning, reversal);
 
   delay(60);
   ASSERT_TRUE(refresh());
   EXPECT_FALSE(panel_ptr->isAnimating());
-  EXPECT_EQ(0, panel_ptr->measure(WidthSpec::Unspecified(0),
-                                  HeightSpec::Unspecified(0)).height());
+  EXPECT_EQ(
+      0,
+      panel_ptr->measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0))
+          .height());
 }
 
 // Verifies hidden time is excluded from a panel's finite transition and the
@@ -793,24 +794,28 @@ TEST_F(Material3ListRenderTest, ExpandablePanelPausesWhileHidden) {
   panel_ptr->setVisibility(Visibility::kInvisible);
   ASSERT_TRUE(refresh());
   const int16_t paused =
-      panel_ptr->measure(WidthSpec::Unspecified(0),
-                         HeightSpec::Unspecified(0)).height();
+      panel_ptr->measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0))
+          .height();
   ASSERT_GT(paused, 0);
   ASSERT_LT(paused, 40);
 
   delay(150);
   ASSERT_TRUE(refresh());
   EXPECT_TRUE(panel_ptr->isAnimating());
-  EXPECT_EQ(paused, panel_ptr->measure(WidthSpec::Unspecified(0),
-                                      HeightSpec::Unspecified(0)).height());
+  EXPECT_EQ(
+      paused,
+      panel_ptr->measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0))
+          .height());
 
   panel_ptr->setVisibility(Visibility::kVisible);
   ASSERT_TRUE(refresh());
   delay(100);
   ASSERT_TRUE(refresh());
   EXPECT_FALSE(panel_ptr->isAnimating());
-  EXPECT_EQ(40, panel_ptr->measure(WidthSpec::Unspecified(0),
-                                   HeightSpec::Unspecified(0)).height());
+  EXPECT_EQ(
+      40,
+      panel_ptr->measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0))
+          .height());
 }
 
 // Verifies navigation detachment cancels an active channel and the next
@@ -833,8 +838,8 @@ TEST_F(Material3ListRenderTest,
   delay(45);
   ASSERT_TRUE(refresh());
   const int16_t partial =
-      panel.measure(WidthSpec::Unspecified(0),
-                    HeightSpec::Unspecified(0)).height();
+      panel.measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0))
+          .height();
   ASSERT_GT(partial, 0);
   ASSERT_LT(partial, 30);
 
@@ -848,8 +853,9 @@ TEST_F(Material3ListRenderTest,
   ASSERT_TRUE(refresh());
   EXPECT_TRUE(panel.isExpanded());
   EXPECT_FALSE(panel.isAnimating());
-  EXPECT_EQ(30, panel.measure(WidthSpec::Unspecified(0),
-                              HeightSpec::Unspecified(0)).height());
+  EXPECT_EQ(30,
+            panel.measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0))
+                .height());
   task.navigation().clear();
 }
 
@@ -1797,6 +1803,28 @@ TEST(Material3List, BaselineTypesStayWithinPhaseOneSizeBudget) {
   EXPECT_LE(sizeof(List), kListBudget);
   EXPECT_LE(sizeof(ListRow<StandardListItem>),
             sizeof(ListEntry) + sizeof(StandardListItem) + sizeof(void*));
+}
+
+// Verifies long eager lists keep 24-bit vertical positions through layout.
+TEST(Material3ListGeometry, HeightAboveSigned16Bit) {
+  roo_scheduler::Scheduler scheduler;
+  Environment environment(scheduler);
+  ApplicationContext context(scheduler, environment.theme(),
+                             environment.keyboardColorTheme());
+  List list(context);
+  ListEntry* last = nullptr;
+  for (int i = 0; i < 600; ++i) {
+    auto row = std::make_unique<ListRow<HeadlineListItem>>(context, "Row");
+    last = row.get();
+    list.add(std::move(row));
+  }
+  Dimensions measured =
+      list.measure(WidthSpec::Exactly(240), HeightSpec::Unspecified(0));
+  EXPECT_GT(measured.height(), 32767);
+  list.layout(Rect(0, 0, 239, measured.height() - 1));
+  ASSERT_NE(last, nullptr);
+  EXPECT_EQ(last->offsetTop() + last->height(), measured.height());
+  EXPECT_GT(last->offsetTop(), 32767);
 }
 
 }  // namespace
