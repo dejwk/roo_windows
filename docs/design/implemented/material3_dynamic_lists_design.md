@@ -354,8 +354,8 @@ parent clear rejects reselection and recursive clear is a no-op.
 
 #### Single-selection convenience model
 
-The helper provides `selectedIndex()` (`-1` means none), `select(index,state)`
-(default `kSelected`), and `clearSelection()`. It owns the index and supplies
+The helper provides `selectedIndex()` (`-1` means none), `select(index)`,
+and `clearSelection()` (equivalent to `select(-1)`). It owns the index and supplies
 selection metadata; callers only implement content binding. Its optional
 protected `onSelectionChanged(index,state)` reports the committed transition,
 old deselection before new selection, after visual synchronization. A hook may
@@ -613,7 +613,7 @@ template <typename Row = ListRow<RadioListItem>>
 class DynamicSingleSelectionListModel : public DynamicListModel<Row> {
  public:
   int selectedIndex() const;
-  bool select(int index, SelectionState state = SelectionState::kSelected);
+  bool select(int index);  // -1 clears selection.
   void clearSelection();
  protected:
   void onSelectionChanged(int index, SelectionState state) override {}

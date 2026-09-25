@@ -130,31 +130,26 @@ class DynamicSingleSelectionListModel : public DynamicListModel<Row> {
   /// Returns the selected index, or -1 when the group has no selection.
   int selectedIndex() const { return selected_index_; }
 
-  /// Selects or deselects @p index, returning false for an invalid index.
-  /// Deselecting an unselected row and selecting the current row are no-ops.
-  /// Visible controls update before notification; offscreen rows update on
-  /// bind.
-  bool select(int index, SelectionState state = SelectionState::kSelected) {
+  /// Selects @p index, or clears selection when @p index is -1.
+  /// Returns false for other invalid indices or nonparticipating rows.
+  /// Selecting the current index is a no-op. Visible controls update before
+  /// notification; offscreen rows update on bind.
+  bool select(int index) {
     CHECK(!notifying_);
-    if (index < 0 || index >= this->elementCount()) return false;
-    if (state == SelectionState::kSelected &&
-        this->rowState(index).participation ==
-            SelectionParticipation::kAction) {
+    if (index < -1 || (index >= 0 && index >= this->elementCount())) {
       return false;
     }
-    int next = state == SelectionState::kSelected ? index : -1;
-    if (state == SelectionState::kDeselected && index != selected_index_) {
-      return true;
+    if (index >= 0 && this->rowState(index).participation ==
+                          SelectionParticipation::kAction) {
+      return false;
     }
-    changeSelection(next);
+    changeSelection(index);
     return true;
   }
 
   /// Clears selection, including an index whose backing row was removed.
-  void clearSelection() {
-    CHECK(!notifying_);
-    changeSelection(-1);
-  }
+  /// Equivalent to select(-1).
+  void clearSelection() { select(-1); }
 
   /// Supplies selection metadata without consulting or allocating row widgets.
   DynamicListRowState rowState(int index) const override {
@@ -178,7 +173,11 @@ class DynamicSingleSelectionListModel : public DynamicListModel<Row> {
   }
 
   void setSelected(int index, SelectionState state) final {
-    select(index, state);
+    if (state == SelectionState::kSelected) {
+      select(index);
+    } else if (index == selected_index_) {
+      clearSelection();
+    }
   }
 
   // Publish a complete transition before any application callback can run.

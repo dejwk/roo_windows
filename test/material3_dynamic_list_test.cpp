@@ -201,9 +201,17 @@ TEST_F(DynamicListTest, ModelOwnedSingleSelection) {
   EXPECT_EQ(model.changes[2], std::make_pair(1, SelectionState::kSelected));
   model.select(1);
   EXPECT_EQ(model.changes.size(), 3u);
-  model.select(0, SelectionState::kDeselected);
+  EXPECT_FALSE(model.select(-2));
   EXPECT_EQ(model.selectedIndex(), 1);
-  EXPECT_FALSE(model.select(-1));
+  ASSERT_TRUE(model.select(-1));
+  EXPECT_EQ(model.selectedIndex(), -1);
+  EXPECT_FALSE(section.row(1)->item().isSelected());
+  EXPECT_EQ(model.changes.back(),
+            std::make_pair(1, SelectionState::kDeselected));
+  size_t changes_after_clear = model.changes.size();
+  ASSERT_TRUE(model.select(-1));
+  model.clearSelection();
+  EXPECT_EQ(model.changes.size(), changes_after_clear);
   EXPECT_FALSE(model.select(10000));
   ASSERT_TRUE(model.select(9000));
   EXPECT_FALSE(section.row(1)->item().isSelected());
@@ -249,8 +257,8 @@ TEST_F(DynamicListTest, IndependentGroupsAndAppend) {
   EXPECT_EQ(first_model.selectedIndex(), 0);
   EXPECT_TRUE(first.row(0)->item().isSelected());
   first.beginModelReset();
-  first_model.clearSelection();
   first_model.count = 0;
+  first_model.clearSelection();
   first.endModelReset();
   EXPECT_EQ(first_model.selectedIndex(), -1);
 }

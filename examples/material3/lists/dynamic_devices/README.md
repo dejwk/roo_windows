@@ -5,7 +5,8 @@ Mix fixed actions with recycled radio rows in one scrollable list.
 supplies only content. The helper owns the selected index; the framework routes
 row/radio activation and updates highlighting and radio state automatically.
 
-Use `model.select(index)` or `model.clearSelection()` for programmatic changes.
+Use `model.select(index)` for programmatic selection. `model.select(-1)` clears
+selection; `model.clearSelection()` is equivalent.
 An optional `onSelectionChanged(index, SelectionState)` override can react to
 `kSelected`/`kDeselected` transitions. No view pointers, per-device callbacks,
 index searches, or explicit row-refresh calls are needed in the application.
