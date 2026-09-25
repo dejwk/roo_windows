@@ -1,24 +1,37 @@
 # Dynamic device list
 
-The model owns device data and reports activated indices for the current model
-revision; it has no pointers to the list or dynamic section. The screen
-coordinates model mutations, selection, and row notifications.
+Mix fixed actions with recycled radio rows in one scrollable list.
+`DeviceModel` derives from `DynamicSingleSelectionListModel<DeviceRow>` and
+supplies only content. The helper owns the selected index; the framework routes
+row/radio activation and updates highlighting and radio state automatically.
 
-A changing model appears between “Add device” and “Advanced”. Use touch or
-Up/Down to navigate; the radio accessory selects a device. “Add device” performs
-a reset before vector growth can invalidate borrowed text, then restores the
-application's selection by its saved index, which append preserves. Reset cancels
-old interactions before mutation; no ID-to-index scan is needed. The selection
-hook synchronizes the known old/new radio accessories separately from row
-highlighting.
+Use `model.select(index)` or `model.clearSelection()` for programmatic changes.
+An optional `onSelectionChanged(index, SelectionState)` override can react to
+`kSelected`/`kDeselected` transitions. No view pointers, per-device callbacks,
+index searches, or explicit row-refresh calls are needed in the application.
 
-Remove the two static `add()` calls to use a sole dynamic collection. Add another
-`DynamicList` with its own model to compose multiple collections in the same
-visual group. Each collection has its own fixed-height prototype and retained
-viewport-sized pool.
+“Add device” and “Advanced” explicitly use
+`SelectionParticipation::kAction`: they invoke without becoming selection
+choices. The parent keeps its default selection mode; the device model owns
+its independent group. Advanced displays a placeholder status in its own row.
 
-For custom row surfaces, pass a typed factory returning a `ListEntry` subclass.
-Override `retainsTextSlots()` when using standard text slots, establish every
-slot in `prepare()`, and keep slot classes fixed in `bind()`. Custom widgets fit
-in ordinary item slots; their binding allocations remain the application's
-responsibility. Both models and borrowed rows must outlive their containing list.
+Adding a device brackets vector growth with `beginModelReset()` and
+`endModelReset()` to release borrowed strings. Append preserves indices and
+therefore selection. For removal/reordering, clear or remap selection while
+bindings are released. The helper does not search for stable application IDs.
+
+Remove the static `add()` calls for a sole dynamic collection. Another helper
+model creates a second independent radio group. Each model can attach to one
+section and must outlive it; each section retains its own viewport-sized pool.
+
+For selection spanning the whole list, use `DynamicListModel<Row>` and parent
+single mode instead. For multiple selection, implement
+`onSelectionChanged(index, state)` to update flags returned by `rowState()`.
+Standard checkbox items synchronize automatically. Parent selection modes and
+the independent single-selection helper cannot be combined.
+
+Build/run the emulator with:
+
+```sh
+bazel run //examples/material3/lists/dynamic_devices:dynamic_devices
+```

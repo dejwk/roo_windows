@@ -88,9 +88,7 @@ void InitDisplay() {
 
 // *************** DYNAMIC LIST EXAMPLE BEGIN
 
-#include <functional>
 #include <string>
-#include <utility>
 #include <vector>
 
 #include "roo_windows/containers/scrollable_panel.h"
@@ -100,124 +98,80 @@ namespace {
 
 using DeviceRow = material3::ListRow<material3::RadioListItem>;
 
-/// Application data and row bindings, independent of any list widget.
-class DeviceModel : public material3::DynamicListModel<DeviceRow> {
+/// Device data and one selected index; the framework manages radio state.
+class DeviceModel
+    : public material3::DynamicSingleSelectionListModel<DeviceRow> {
  public:
-  /// Creates a model that reports device activation through @p
-  /// on_device_invoked.
-  explicit DeviceModel(std::function<void(int)> on_device_invoked)
-      : on_device_invoked_(std::move(on_device_invoked)) {}
-
   /// Returns the number of available devices.
   int elementCount() const override { return devices_.size(); }
 
-  /// Prepares one fixed headline slot, also defining the prototype's row
-  /// height.
+  /// Prepares the fixed headline slot and representative prototype height.
   void prepare(DeviceRow& row) const override {
     row.item().setHeadline("Device");
   }
 
-  /// Binds text, radio state, and the domain action for the current device.
+  /// Supplies content; the selection helper supplies radio state and routing.
   void bind(int index, DeviceRow& row) const override {
-    const Device& device = devices_[index];
-    row.item().setHeadline(device.name);
-    row.item().setSelected(device.id == selected_device_id_);
-    // The index belongs to this binding's model revision. Reset cancels old
-    // interactions and unbind() releases this callback before indices can
-    // change.
-    row.item().setOnInvoked([this, index]() { on_device_invoked_(index); });
+    row.item().setHeadline(devices_[index]);
   }
 
-  /// Releases borrowed text and the previous device action before reuse/reset.
-  void unbind(DeviceRow& row) const override {
-    row.item().setHeadline({});
-    row.item().setOnInvoked({});
-  }
+  /// Releases text before the vector may move its backing strings.
+  void unbind(DeviceRow& row) const override { row.item().setHeadline({}); }
 
   /// Directs keyboard navigation to each row's radio accessory.
   material3::DynamicListSectionState sectionState() const override {
     return {true, material3::DynamicListFocusTarget::kDescendant};
   }
 
-  /// Returns the stable application ID at @p index.
-  int deviceId(int index) const { return devices_[index].id; }
-
-  /// Updates application state; the screen separately notifies affected rows.
-  void setSelectedDeviceId(int device_id) { selected_device_id_ = device_id; }
-
-  /// Adds a device. The screen must release old bindings before vector growth.
+  /// Appends a device while the screen has released borrowed text bindings.
   void addDevice() {
-    int device_id = next_device_id_++;
-    devices_.push_back({device_id, "Device " + std::to_string(device_id)});
+    devices_.push_back("Device " + std::to_string(devices_.size() + 1));
   }
 
  private:
-  struct Device {
-    int id;
-    std::string name;
-  };
-
-  std::vector<Device> devices_ = {{1, "Kitchen"}, {2, "Living room"}};
-  std::function<void(int)> on_device_invoked_;
-  int selected_device_id_ = 0;
-  int next_device_id_ = 3;
+  std::vector<std::string> devices_ = {"Kitchen", "Living room"};
 };
 
-/// Full-width list that forwards its selection hook to the screen controller.
+/// Uses the viewport width while retaining scrollable content height.
 class DeviceList : public material3::List {
  public:
-  /// Creates a list reporting logical selection through @p
-  /// on_selection_changed.
-  DeviceList(
-      ApplicationContext& context,
-      std::function<void(material3::ListRowLocation)> on_selection_changed)
-      : List(context), on_selection_changed_(std::move(on_selection_changed)) {}
+  /// Creates a full-width list using @p context.
+  explicit DeviceList(ApplicationContext& context) : List(context) {}
 
-  /// Uses the viewport width while retaining scrollable content height.
+  /// Fills the viewport horizontally and wraps all rows vertically.
   PreferredSize getPreferredSize() const override {
     return {PreferredSize::MatchParentWidth(),
             PreferredSize::WrapContentHeight()};
   }
-
- protected:
-  void onSingleSelectionChanged(material3::ListRowLocation location) override {
-    on_selection_changed_(location);
-  }
-
- private:
-  std::function<void(material3::ListRowLocation)> on_selection_changed_;
 };
 
-/// Coordinates model updates, logical selection, and the two fixed action rows.
+/// Coordinates safe data replacement and two non-selectable action rows.
 class DeviceScreen : public SimpleScrollablePanel {
  public:
   /// Creates a scrollable device chooser using @p context.
   explicit DeviceScreen(ApplicationContext& context)
       : SimpleScrollablePanel(context),
-        model_([this](int index) { list_.select(devices_, index); }),
         devices_(context, model_),
         add_(context, "Add device"),
         advanced_(context, "Advanced"),
-        list_(context, [this](material3::ListRowLocation location) {
-          selectionChanged(location);
-        }) {
+        list_(context) {
     add_.item().setOnInvoked([this]() { addDevice(); });
-    advanced_.item().setOnInvoked([this]() { list_.select(advanced_); });
+    advanced_.item().setOnInvoked([this]() {
+      advanced_.item().setHeadline("Advanced settings unavailable");
+      advanced_.refreshFromItem();
+    });
+    // Actions invoke normally without becoming selection choices.
+    add_.item().setSelectionParticipation(
+        material3::SelectionParticipation::kAction);
+    advanced_.item().setSelectionParticipation(
+        material3::SelectionParticipation::kAction);
     list_.setStyle(material3::ListStyle::kSegmented);
-
-    // The screen owns selection coordination. Radio activation and row actions
-    // both reach this screen with a known index in the current model revision.
-    material3::ListSelectionPolicy policy;
-    policy.mode = material3::SelectionMode::kSingle;
-    // Automatic selection would select "Add device" before its callback and
-    // clear the device selection we want to preserve. Select explicitly
-    // instead.
-    policy.selection_follows_press = false;
-    list_.setSelectionPolicy(policy);
+    // Parent-wide selection stays at its default, kNone. The model owns the
+    // device group; no callbacks or selection-policy override are needed.
     list_.add(add_);
     list_.add(devices_);
     list_.add(advanced_);
-    list_.select(devices_, 0);
+    model_.select(0);
     setContents(list_);
   }
 
@@ -225,31 +179,14 @@ class DeviceScreen : public SimpleScrollablePanel {
   ~DeviceScreen() override { clearContents(); }
 
  private:
-  // Row highlighting and radio accessory state are separate. Update the model,
-  // then refresh only the known old/new indices; no selection-discovery scan.
-  void selectionChanged(material3::ListRowLocation location) {
-    int old_index = selected_index_;
-    selected_index_ = location.section == &devices_ ? location.index : -1;
-    model_.setSelectedDeviceId(
-        selected_index_ >= 0 ? model_.deviceId(selected_index_) : 0);
-    if (replacing_model_) return;
-    if (old_index >= 0) devices_.modelItemChanged(old_index);
-    if (selected_index_ >= 0 && selected_index_ != old_index) {
-      devices_.modelItemChanged(selected_index_);
-    }
-  }
-
-  // Vector growth can move strings referenced by pooled rows. Begin reset
-  // releases those views before mutation; end reset publishes the new data.
+  // Reset releases borrowed strings before vector growth. Appending preserves
+  // every existing index, so the model's selection remains valid automatically.
+  // For removal/reordering, clear or remap selection while bindings are
+  // released.
   void addDevice() {
-    // This mutation only appends, so every existing index keeps its identity.
-    int previous_index = selected_index_;
-    replacing_model_ = true;
     devices_.beginModelReset();
     model_.addDevice();
     devices_.endModelReset();
-    replacing_model_ = false;
-    if (previous_index >= 0) list_.select(devices_, previous_index);
   }
 
   // Declaration order matters: the model and borrowed rows outlive the list.
@@ -258,8 +195,6 @@ class DeviceScreen : public SimpleScrollablePanel {
   material3::ListRow<material3::InvokableListItemBase> add_;
   material3::ListRow<material3::InvokableListItemBase> advanced_;
   DeviceList list_;
-  int selected_index_ = -1;
-  bool replacing_model_ = false;
 };
 
 }  // namespace
