@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <chrono>
 #include <functional>
 #include <iostream>
@@ -222,6 +223,123 @@ TEST_F(DynamicListTest, ModelOwnedSingleSelection) {
   model.clearSelection();
   EXPECT_EQ(model.selectedIndex(), -1);
   EXPECT_FALSE(section.row(9000)->item().isSelected());
+}
+
+// Verifies selection changes repaint only the old/new rows, while repeated row
+// and radio activation still invokes actions without dirtying settled content.
+TEST_F(DynamicListTest, SelectionInvalidationStaysWithinChangedRows) {
+  SingleModel model;
+  model.count = 3;
+  ChoiceSection<RadioListItem> section(context(), model);
+  Row action(context(), "Action");
+  List list(context());
+  list.setStyle(ListStyle::kSegmented);
+  list.add(section);
+  list.add(action);
+  SimpleScrollablePanel scroll(context(), list);
+  Mount mount(app_, scroll);
+  ASSERT_TRUE(model.select(0));
+  ASSERT_TRUE(refresh());
+  ASSERT_TRUE(refresh());
+  int invocations = 0;
+  section.row(0)->item().setOnInvoked([&]() { ++invocations; });
+  section.row(0)->onClicked();
+  EXPECT_EQ(invocations, 1);
+  EXPECT_FALSE(list.isDirty());
+  ASSERT_TRUE(refresh());
+  section.row(0)->item().radioButton().onClicked();
+  EXPECT_EQ(invocations, 2);
+  EXPECT_FALSE(list.isDirty());
+  ASSERT_TRUE(refresh());
+  section.row(1)->item().radioButton().onClicked();
+  EXPECT_EQ(model.selectedIndex(), 1);
+  EXPECT_TRUE(section.row(0)->isInvalidated());
+  EXPECT_TRUE(section.row(1)->isInvalidated());
+  EXPECT_FALSE(section.row(2)->isDirty());
+  EXPECT_FALSE(action.isDirty());
+  EXPECT_FALSE(list.isInvalidated());
+  ASSERT_TRUE(refresh());
+  EXPECT_TRUE(model.select(2));
+  EXPECT_FALSE(section.row(0)->isDirty());
+  EXPECT_TRUE(section.row(1)->isInvalidated());
+  EXPECT_TRUE(section.row(2)->isInvalidated());
+  EXPECT_FALSE(action.isDirty());
+  ASSERT_TRUE(refresh());
+  EXPECT_TRUE(model.select(0));
+  EXPECT_FALSE(section.row(1)->isDirty());
+  ASSERT_TRUE(refresh());
+  std::vector<roo::byte> incremental(raster_, raster_ + sizeof(raster_));
+  list.invalidateInterior();
+  ASSERT_TRUE(refresh());
+  EXPECT_TRUE(std::equal(incremental.begin(), incremental.end(), raster_));
+}
+
+// Verifies parent-owned single selection also avoids invalidating unrelated
+// dynamic rows and repeated selection remains a rendering no-op.
+TEST_F(DynamicListTest, ParentSelectionInvalidatesOnlyChangedRows) {
+  Model model;
+  model.count = 3;
+  Section section(context(), model);
+  List list(context());
+  list.setStyle(ListStyle::kSegmented);
+  list.setSelectionPolicy(SingleSelection());
+  list.add(section);
+  SimpleScrollablePanel scroll(context(), list);
+  Mount mount(app_, scroll);
+  ASSERT_TRUE(list.select(section, 0));
+  ASSERT_TRUE(refresh());
+  ASSERT_TRUE(refresh());
+  section.row(0)->onClicked();
+  EXPECT_FALSE(list.isDirty());
+  ASSERT_TRUE(refresh());
+  ASSERT_TRUE(list.select(section, 1));
+  EXPECT_TRUE(section.row(0)->isInvalidated());
+  EXPECT_TRUE(section.row(1)->isInvalidated());
+  EXPECT_FALSE(section.row(2)->isDirty());
+  EXPECT_FALSE(list.isInvalidated());
+}
+
+// Verifies incremental selection repaint matches a full redraw when dividers
+// disappear/reappear inside a section and at either static/dynamic boundary.
+TEST_F(DynamicListTest, SelectionRepaintsChangedDividerBands) {
+  class SelectableModel : public ChoiceModel<CheckboxListItem> {
+   public:
+    DynamicListRowState rowState(int index) const override {
+      return {selected[index], {}};
+    }
+  } model;
+  ChoiceSection<CheckboxListItem> section(context(), model);
+  Row header(context(), "Header");
+  Row footer(context(), "Footer");
+  FullWidthList list(context());
+  list.add(header);
+  list.add(section);
+  list.add(footer);
+  ListSelectionPolicy policy;
+  policy.mode = SelectionMode::kMultiple;
+  list.setSelectionPolicy(policy);
+  ListDividerPolicy dividers;
+  dividers.mode = DividerMode::kFullWidth;
+  list.setDividerPolicy(dividers);
+  ASSERT_TRUE(list.setSelected(header, true));
+  ASSERT_TRUE(list.setSelected(footer, true));
+  SimpleScrollablePanel scroll(context(), list);
+  Mount mount(app_, scroll);
+  ASSERT_TRUE(refresh());
+  ASSERT_TRUE(refresh());
+  for (SelectionState state :
+       {SelectionState::kSelected, SelectionState::kDeselected}) {
+    for (int index = 0; index < 3; ++index) {
+      ASSERT_TRUE(list.setSelected(section, index, state));
+      ASSERT_TRUE(refresh());
+      std::vector<roo::byte> incremental(raster_, raster_ + sizeof(raster_));
+      list.invalidateInterior();
+      ASSERT_TRUE(refresh());
+      EXPECT_TRUE(std::equal(incremental.begin(), incremental.end(), raster_))
+          << "row=" << index
+          << " selected=" << (state == SelectionState::kSelected);
+    }
+  }
 }
 
 // Verifies independent groups and static action participation, including normal

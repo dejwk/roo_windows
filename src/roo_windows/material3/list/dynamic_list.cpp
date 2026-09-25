@@ -140,7 +140,7 @@ Dimensions DynamicListBase::onMeasure(WidthSpec width, HeightSpec height) {
 
 void DynamicListBase::selectionChanged() {
   if (resetting()) return;
-  if (owner_ != nullptr) owner_->sectionChanged(*this, false);
+  if (owner_ != nullptr) owner_->resolveContexts();
 }
 
 void DynamicListBase::syncSelection(ListEntry& row, int index) {
@@ -175,9 +175,11 @@ void DynamicListBase::refreshContexts() {
     syncSelection(row, index);
     ListEntryVisualContext visual = owner_->rowContext(section_index_, index);
     visual.focused = row.isFocused();
+    if (row.visualContext().show_divider != visual.show_divider) {
+      owner_->invalidateDividerAfter(section_index_, index);
+    }
     row.setVisualContext(visual);
   }
-  invalidateInterior();
 }
 
 int DynamicListBase::indexOf(const Widget& row) const {

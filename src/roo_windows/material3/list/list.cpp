@@ -387,6 +387,9 @@ bool ShouldShowDivider(const ListDividerPolicy& divider_policy, int idx,
   if (divider_policy.mode == DividerMode::kNone || idx >= count - 1) {
     return false;
   }
+  // Selecting or deselecting a neighbor can hide or restore this divider when
+  // both rows may be selected together (multiple selection or independent
+  // selection groups). Within one single-selection group, this cannot happen.
   if (divider_policy.suppress_between_selected && selected && next_selected) {
     return false;
   }
@@ -1838,6 +1841,9 @@ void List::resolveContexts() {
           count != 0 &&
           ShouldShowDivider(divider_policy_, logical, logical_count_,
                             context.selected, next_selected);
+      if (row.visualContext().show_divider != context.show_divider) {
+        invalidateDividerAfter(i, 0);
+      }
       row.setVisualContext(context);
       if (row.item() != nullptr && row.item()->selectionControl() != nullptr) {
         if (selection_policy_.mode != SelectionMode::kNone &&
@@ -1923,7 +1929,6 @@ bool List::replaceSelection(ListRowLocation location) {
   ListRowLocation previous_selection = selection_;
   selection_ = location;
   resolveContexts();
-  invalidateInterior();
   int previous = -1;
   for (int i = 0; i < static_cast<int>(sections_.size()); ++i) {
     if (sectionCount(sections_[i]) == 0) continue;
@@ -2018,7 +2023,7 @@ bool List::setSelected(DynamicListBase& section, int index,
   if (current.selected == (state == SelectionState::kSelected)) return true;
   Invocation call(*this, nullptr, &section);
   section.model().setSelected(index, state);
-  if (call.valid && call.owner != nullptr) sectionChanged(section, false);
+  if (call.valid && call.owner != nullptr) resolveContexts();
   return true;
 }
 
@@ -2156,6 +2161,34 @@ const Widget& List::getChild(int index) const {
   return *sections_[index].widget;
 }
 Widget& List::getChild(int index) { return *sections_[index].widget; }
+
+// Dividers occupy container-owned gaps outside row bounds, so a row repaint
+// alone cannot hide or restore them when adjacent-selection suppression
+// changes.
+void List::invalidateDividerAfter(int section, int index) {
+  const Section& current = sections_[section];
+  if (current.dynamic && index + 1 < sectionCount(current)) {
+    auto& dynamic = static_cast<DynamicListBase&>(*current.widget);
+    YDim top = dynamic.rowBounds(index).yMax() + 1;
+    YDim bottom = dynamic.rowBounds(index + 1).yMin() - 1;
+    if (top <= bottom) {
+      dynamic.invalidateInterior(Rect(0, top, dynamic.width() - 1, bottom));
+    }
+    return;
+  }
+  int next = section + 1;
+  while (next < static_cast<int>(sections_.size()) &&
+         sectionCount(sections_[next]) == 0) {
+    ++next;
+  }
+  if (next == static_cast<int>(sections_.size())) return;
+  Rect row = rowBounds(section, index);
+  YDim top = row.yMax() + 1;
+  YDim bottom = rowBounds(next, 0).yMin() - 1;
+  if (top <= bottom) {
+    invalidateInterior(Rect(row.xMin(), top, row.xMax(), bottom));
+  }
+}
 
 void List::paintBand(PaintContext& context, int section, int index,
                      YDim gap) const {

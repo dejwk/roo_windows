@@ -838,7 +838,20 @@ class RadioListItem : public InvokableListItemBase {
   void handleInvoke() override;
 
  private:
-  RadioButton radio_button_;
+  // Radio list activation selects, matching handleInvoke(), without a transient
+  // deselection when the already-selected accessory is clicked.
+  class RadioAffordance : public RadioButton {
+   public:
+    using RadioButton::RadioButton;
+
+    /// Selects the accessory before delivering its action.
+    void onClicked() override {
+      setOn();
+      Widget::onClicked();
+    }
+  };
+
+  RadioAffordance radio_button_;
   uint8_t placement_ : 1;
 };
 
@@ -1049,6 +1062,8 @@ class List : public Container {
   int uniformGap() const;
   int findSection(const Widget* widget) const;
   void sectionChanged(DynamicListBase& section, bool layout = true);
+  // Repaints a changed separator in the container that owns its gap surface.
+  void invalidateDividerAfter(int section, int index);
   void paintBand(PaintContext& context, int section, int index, YDim gap) const;
 
   std::vector<Section> sections_;
