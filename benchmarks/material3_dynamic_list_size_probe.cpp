@@ -18,3 +18,11 @@ SIZE_PROBE(roo_windows::material3::DynamicList<>, dynamic_list);
 SIZE_PROBE(
     roo_windows::material3::ListRow<roo_windows::material3::HeadlineListItem>,
     headline_row);
+
+SIZE_PROBE(
+    roo_windows::material3::DynamicListModel<
+        roo_windows::material3::ListRow<roo_windows::material3::RadioListItem>>,
+    dynamic_model);
+SIZE_PROBE(roo_windows::material3::DynamicSingleSelectionListModel<>,
+           single_selection_model);
+SIZE_PROBE(roo_windows::material3::InvokableListItemBase, invokable_item);

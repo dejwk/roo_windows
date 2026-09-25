@@ -57,6 +57,16 @@ rows, checkbox/radio/switch selection items, and reusable animated
 `ExpandablePanel` content. Material 3 menus now derive `MenuItem` from
 `ListItem` and `MenuEntry` from `ListEntry`, completing the menu-reuse phase.
 
+The [dynamic-list selection extension](material3_dynamic_lists_design.md#selection-ownership-and-participation)
+adds per-item `SelectionParticipation` (`kSelectable`/`kAction`), enum-based
+model selection notifications, and an optional independent single-selection
+model. Standard radio/checkbox items synchronize automatically when participating
+in an active selection group. Their framework-managed activation reports the
+item action without toggling the control twice. Action rows remain invokable
+without changing selection; switches/custom controls remain independent unless
+they opt in. This supersedes the original manual accessory synchronization
+pattern for participating controls.
+
 What exists today:
 
 - Material 3 controls under `roo_windows/material3` currently include

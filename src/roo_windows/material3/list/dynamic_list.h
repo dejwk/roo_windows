@@ -12,6 +12,7 @@ namespace material3 {
 struct DynamicListRowState {
   bool selected = false;
   DividerInsetHint divider_inset_hint = {};
+  SelectionParticipation participation = SelectionParticipation::kSelectable;
 };
 
 /// Uniform keyboard target policy for one virtualized section.
@@ -24,9 +25,18 @@ struct DynamicListSectionState {
 };
 
 namespace internal {
+// One section observes the optional selection helper; no model-row storage.
+class SelectionListener {
+ public:
+  virtual void selectionChanged() = 0;
+};
+
 // Type-erased model bridge; no callback or bridge object per allocated row.
 class DynamicModel : public ListModel {
  public:
+  virtual bool ownsSelection() const { return false; }
+  virtual void setSelectionListener(SelectionListener* listener) {}
+  virtual void setSelected(int index, SelectionState state) {}
   virtual void prepareEntry(ListEntry& row) const = 0;
   virtual void unbindEntry(ListEntry& row) const = 0;
   virtual DynamicListRowState rowState(int index) const = 0;
@@ -74,12 +84,26 @@ class DynamicListModel : private internal::DynamicModel {
   /// mode.
   virtual DynamicListRowState rowState(int index) const override { return {}; }
 
+  /// Receives per-item selection transitions on the UI context. In parent
+  /// single mode this reports committed state; in multiple mode update the
+  /// backing selected flag returned by rowState(). Controls refresh
+  /// automatically. May clear/reset the view; the model must survive the
+  /// callback.
+  virtual void onSelectionChanged(int index, SelectionState state) {}
+
+  /// Reports whether this model owns an independent selection group.
+  bool ownsSelection() const override { return false; }
+
   /// Returns the enabled/focus policy, uniform across all indices.
   virtual DynamicListSectionState sectionState() const override { return {}; }
 
  private:
   template <typename>
   friend class DynamicList;
+  void setSelected(int index, SelectionState state) override {
+    onSelectionChanged(index, state);
+  }
+
   void set(int index, Widget& row) const override {
     bind(index, static_cast<Row&>(row));
   }
@@ -91,11 +115,96 @@ class DynamicListModel : private internal::DynamicModel {
   }
 };
 
+/// Owns one optional selection independently of other sections and static
+/// actions. Attach to at most one DynamicList at a time, inside a List with
+/// selection mode kNone. Standard radio items synchronize automatically; custom
+/// items can implement selectionControl()/applySelection(). The model must
+/// outlive its section. All operations run on the UI context.
+///
+/// Reset preserves the index for append/content replacement. Before removing or
+/// reordering rows, clear selection or explicitly remap it while bindings are
+/// released. No identity lookup is performed by the framework.
+template <typename Row = ListRow<RadioListItem>>
+class DynamicSingleSelectionListModel : public DynamicListModel<Row> {
+ public:
+  /// Returns the selected index, or -1 when the group has no selection.
+  int selectedIndex() const { return selected_index_; }
+
+  /// Selects or deselects @p index, returning false for an invalid index.
+  /// Deselecting an unselected row and selecting the current row are no-ops.
+  /// Visible controls update before notification; offscreen rows update on
+  /// bind.
+  bool select(int index, SelectionState state = SelectionState::kSelected) {
+    CHECK(!notifying_);
+    if (index < 0 || index >= this->elementCount()) return false;
+    if (state == SelectionState::kSelected &&
+        this->rowState(index).participation ==
+            SelectionParticipation::kAction) {
+      return false;
+    }
+    int next = state == SelectionState::kSelected ? index : -1;
+    if (state == SelectionState::kDeselected && index != selected_index_) {
+      return true;
+    }
+    changeSelection(next);
+    return true;
+  }
+
+  /// Clears selection, including an index whose backing row was removed.
+  void clearSelection() {
+    CHECK(!notifying_);
+    changeSelection(-1);
+  }
+
+  /// Supplies selection metadata without consulting or allocating row widgets.
+  DynamicListRowState rowState(int index) const override {
+    return {index == selected_index_, {}};
+  }
+
+  /// Identifies this model as an independent selection owner.
+  bool ownsSelection() const final { return true; }
+
+ protected:
+  /// Reacts to a committed transition, old deselection before new selection.
+  /// Optional application notification; controls already reflect the new state.
+  /// May clear/reset the view, but must not destroy this model or recursively
+  /// change its selection. The old index may no longer exist after a mutation.
+  void onSelectionChanged(int index, SelectionState state) override {}
+
+ private:
+  void setSelectionListener(internal::SelectionListener* listener) final {
+    CHECK(listener == nullptr || listener_ == nullptr);
+    listener_ = listener;
+  }
+
+  void setSelected(int index, SelectionState state) final {
+    select(index, state);
+  }
+
+  // Publish a complete transition before any application callback can run.
+  void changeSelection(int next) {
+    if (selected_index_ == next) return;
+    int previous = selected_index_;
+    selected_index_ = next;
+    if (listener_ != nullptr) listener_->selectionChanged();
+    notifying_ = true;
+    if (previous >= 0) {
+      onSelectionChanged(previous, SelectionState::kDeselected);
+    }
+    if (next >= 0) onSelectionChanged(next, SelectionState::kSelected);
+    notifying_ = false;
+  }
+
+  internal::SelectionListener* listener_ = nullptr;
+  int selected_index_ = -1;
+  bool notifying_ = false;
+};
+
 /// Shared Material adapter over the generic recycler; insert into a List.
 /// Each section uses one prototype height and uniform gaps. The model outlives
 /// the section; borrowed sections outlive their parent or are explicitly
 /// cleared.
-class DynamicListBase : public ListLayout {
+class DynamicListBase : public ListLayout, private internal::SelectionListener {
  public:
   /// Releases live bindings before pool or model bridge destruction.
   ~DynamicListBase() override;
@@ -140,6 +249,8 @@ class DynamicListBase : public ListLayout {
   const internal::DynamicModel& model() const;
   bool resetting() const { return (flags_ & 1) != 0; }
   bool cleaning() const { return (flags_ & 2) != 0; }
+  void selectionChanged() override;
+  void syncSelection(ListEntry& row, int index);
   void refreshContexts();
   int indexOf(const Widget& row) const;
   ListEntry* focusRow(int index);

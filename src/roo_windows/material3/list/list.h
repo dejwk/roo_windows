@@ -22,6 +22,12 @@ class StringViewLabel;
 
 namespace material3 {
 
+/// Explicit state used by list selection operations and notifications.
+enum class SelectionState : uint8_t { kSelected, kDeselected };
+
+/// Separates selection choices from actions that leave selection unchanged.
+enum class SelectionParticipation : uint8_t { kSelectable, kAction };
+
 class AvatarVisual;
 
 /// Selects the Material 3 list visual family.
@@ -224,8 +230,27 @@ class ListItem {
   /// Returns whether the text block prefers top alignment.
   virtual bool preferTopTextAlignment() const { return false; }
 
+  /// Determines whether selection operations may select this item.
+  virtual SelectionParticipation selectionParticipation() const {
+    return SelectionParticipation::kSelectable;
+  }
+
   /// Returns whether this item participates in row invocation.
   virtual bool isInvokable() const { return false; }
+
+  /// Returns the control participating in model-owned selection, if any.
+  /// The dynamic section owns its interactive-change handler in this mode.
+  virtual Widget* selectionControl() { return nullptr; }
+
+  /// Installs framework selection routing; an empty handler restores normal
+  /// item invocation. Custom selection controls must implement this hook.
+  virtual void setSelectionHandler(std::function<void()> handler) {}
+
+  /// Invokes an action after the framework has already synchronized selection.
+  virtual void invokeSelection() { invoke(); }
+
+  /// Synchronizes a participating control without emitting an interaction.
+  virtual void applySelection(SelectionState state) {}
 
   /// Invokes the item's action when the bound row is activated.
   virtual void invoke() {}
@@ -590,8 +615,23 @@ class InvokableListItemBase : public HeadlineSupportingListItemBase {
   /// Returns whether this item currently allows row invocation.
   bool isInvokable() const override;
 
+  /// Returns whether this item is a selectable choice or an independent action.
+  SelectionParticipation selectionParticipation() const override {
+    return action_only_ ? SelectionParticipation::kAction
+                        : SelectionParticipation::kSelectable;
+  }
+
+  /// Configures participation before insertion/binding. Actions still invoke
+  /// normally but cannot acquire selection through presses or explicit select.
+  void setSelectionParticipation(SelectionParticipation participation) {
+    action_only_ = participation == SelectionParticipation::kAction;
+  }
+
   /// Runs item-specific invoke behavior and the optional invoke callback.
   void invoke() override;
+
+  /// Reports activation without toggling an already synchronized control.
+  void invokeSelection() override { notifyInvoked(); }
 
   /// Sets an optional invoke callback used by row or affordance presses.
   void setOnInvoked(std::function<void()> on_invoked);
@@ -604,7 +644,8 @@ class InvokableListItemBase : public HeadlineSupportingListItemBase {
   virtual void handleInvoke();
 
  private:
-  bool always_invokable_;
+  bool always_invokable_ : 1;
+  bool action_only_ : 1;
   std::function<void()> on_invoked_;
 };
 
@@ -714,6 +755,23 @@ class CheckboxListItem : public InvokableListItemBase {
   /// Returns the owned checkbox affordance.
   const Checkbox& checkbox() const;
 
+  /// Exposes the checkbox for framework-managed model selection.
+  Widget* selectionControl() override { return &checkbox_; }
+
+  /// Installs selection routing or restores ordinary item activation.
+  void setSelectionHandler(std::function<void()> handler) override {
+    if (handler) {
+      checkbox_.setOnInteractiveChange(std::move(handler));
+    } else {
+      checkbox_.setOnInteractiveChange([this]() { notifyInvoked(); });
+    }
+  }
+
+  /// Updates the checkbox without generating an interaction.
+  void applySelection(SelectionState state) override {
+    setChecked(state == SelectionState::kSelected);
+  }
+
  protected:
   void handleInvoke() override;
 
@@ -743,6 +801,23 @@ class RadioListItem : public InvokableListItemBase {
 
   /// Returns the trailing slot widget when placement is trailing.
   const Widget* trailing() const override;
+
+  /// Exposes the radio for framework-managed model selection.
+  Widget* selectionControl() override { return &radio_button_; }
+
+  /// Installs selection routing or restores ordinary item activation.
+  void setSelectionHandler(std::function<void()> handler) override {
+    if (handler) {
+      radio_button_.setOnInteractiveChange(std::move(handler));
+    } else {
+      radio_button_.setOnInteractiveChange([this]() { notifyInvoked(); });
+    }
+  }
+
+  /// Updates the radio without invoking its application action.
+  void applySelection(SelectionState state) override {
+    setSelected(state == SelectionState::kSelected);
+  }
 
   /// Returns whether the radio affordance is selected.
   bool isSelected() const;
@@ -871,7 +946,8 @@ class List : public Container {
   /// Sets the Material 3 list style used for future visual propagation.
   void setStyle(ListStyle style);
 
-  /// Sets the selection policy used for future visual propagation.
+  /// Sets parent-wide selection and synchronizes participating radio/checkbox
+  /// controls. Independent single-selection models require mode kNone.
   void setSelectionPolicy(const ListSelectionPolicy& policy);
 
   /// Sets the divider policy used for future visual propagation.
@@ -903,6 +979,12 @@ class List : public Container {
 
   /// Sets a member static row's multiple-selection flag; false in other modes.
   bool setSelected(ListEntry& entry, bool selected);
+
+  /// Requests a dynamic multiple-selection change and refreshes visible
+  /// controls. The model applies @p state in onSelectionChanged(); returns
+  /// false for an invalid/nonparticipating row or when multiple selection is
+  /// not active.
+  bool setSelected(DynamicListBase& section, int index, SelectionState state);
 
   /// Routes an accepted static-row action through selection and lifetime
   /// guards.
@@ -946,10 +1028,12 @@ class List : public Container {
     ListEntry* row;
     Widget* section;
     Invocation* previous;
-    Invocation(List& list, ListEntry& entry, Widget* section);
+    bool valid = true;
+    Invocation(List& list, ListEntry* entry, Widget* section);
     ~Invocation();
   };
-  void checkMutation() const;
+  // Reject reentrant mutations from a model unbind() cleanup hook.
+  void checkNotCleaningBindings() const;
   void invalidateInvocations(Widget* section);
   bool invokeRow(ListRowLocation location, ListEntry& row);
   bool replaceSelection(ListRowLocation location);

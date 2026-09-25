@@ -9,10 +9,13 @@ namespace material3 {
 DynamicListBase::DynamicListBase(ApplicationContext& context,
                                  internal::DynamicModel& model,
                                  PrototypeFn factory)
-    : ListLayout(context, model, std::move(factory)) {}
+    : ListLayout(context, model, std::move(factory)) {
+  model.setSelectionListener(this);
+}
 
 DynamicListBase::~DynamicListBase() {
   CHECK(!cleaning());
+  model().setSelectionListener(nullptr);
   flags_ |= 2;
   releaseRows();
 }
@@ -44,6 +47,7 @@ void DynamicListBase::bindRow(int index, Widget& widget) {
   CHECK(!resetting());
   auto& row = static_cast<ListEntry&>(widget);
   model().set(index, row);
+  syncSelection(row, index);
   row.refreshFromItem();
   DynamicListSectionState state = model().sectionState();
   row.setEnabled(state.enabled);
@@ -61,6 +65,7 @@ void DynamicListBase::bindRow(int index, Widget& widget) {
 void DynamicListBase::unbindRow(Widget& widget) {
   auto& row = static_cast<ListEntry&>(widget);
   if (owner_ != nullptr) owner_->invalidateInvocations(this);
+  if (row.item() != nullptr) row.item()->setSelectionHandler({});
   model().unbindEntry(row);
   row.releaseTextViews();
 }
@@ -68,7 +73,7 @@ void DynamicListBase::unbindRow(Widget& widget) {
 void DynamicListBase::beginModelReset() {
   CHECK(!resetting());
   CHECK(!cleaning());
-  if (owner_ != nullptr) owner_->checkMutation();
+  if (owner_ != nullptr) owner_->checkNotCleaningBindings();
   flags_ |= 3;
   if (owner_ != nullptr) owner_->invalidateInvocations(this);
   releaseRows();
@@ -133,10 +138,41 @@ Dimensions DynamicListBase::onMeasure(WidthSpec width, HeightSpec height) {
   return ListLayout::onMeasure(width, height);
 }
 
+void DynamicListBase::selectionChanged() {
+  if (resetting()) return;
+  if (owner_ != nullptr) owner_->sectionChanged(*this, false);
+}
+
+void DynamicListBase::syncSelection(ListEntry& row, int index) {
+  if (row.item() == nullptr) return;
+  bool managed = model().ownsSelection() ||
+                 (owner_ != nullptr &&
+                  owner_->selection_policy_.mode != SelectionMode::kNone);
+  managed = managed &&
+            model().rowState(index).participation ==
+                SelectionParticipation::kSelectable &&
+            row.item()->selectionParticipation() ==
+                SelectionParticipation::kSelectable;
+  if (!managed) {
+    row.item()->setSelectionHandler({});
+    return;
+  }
+  bool selected = owner_ == nullptr
+                      ? model().rowState(index).selected
+                      : owner_->rowContext(section_index_, index).selected;
+  row.item()->applySelection(selected ? SelectionState::kSelected
+                                      : SelectionState::kDeselected);
+  Widget* control = row.item()->selectionControl();
+  if (control != nullptr) {
+    row.item()->setSelectionHandler([this, &row]() { invokeChild(row); });
+  }
+}
+
 void DynamicListBase::refreshContexts() {
   if (resetting() || owner_ == nullptr) return;
   for (int index = first(); index <= last(); ++index) {
     auto& row = static_cast<ListEntry&>(*materializedRow(index));
+    syncSelection(row, index);
     ListEntryVisualContext visual = owner_->rowContext(section_index_, index);
     visual.focused = row.isFocused();
     row.setVisualContext(visual);

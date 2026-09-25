@@ -8,7 +8,7 @@ selection, and input behavior.
 
 ## Implementation status
 
-All four phases are implemented. Validation results below record host tests,
+All five phases are implemented. Validation results below record host tests,
 emulator build coverage, and the ESP32-C3 ABI audit. Physical-device interaction
 has not been validated in this change.
 
@@ -113,7 +113,8 @@ hooks keep Material policy out of the base container.
 Replace `List`'s entry vector and parallel selected-byte vector with one private
 vector of tagged records. Each record contains a raw `Widget*`, a kind tag
 (entry or dynamic section), and a static multiple-selection bit. Single
-selection is stored separately as one location in the parent list.
+selection is stored as one location in the parent list, or as an independent
+index in an opt-in single-selection model.
 The typed insertion overloads establish the tag; no RTTI, pointer tagging,
 wrapper widget per static row, or public generic child protocol is needed.
 
@@ -138,8 +139,8 @@ and is not another accepted section type.
 ### Row content and model contract
 
 The model provides count, typed binding, cheap per-index visual state, and
-section-wide interaction state. Per-index state contains multiple-selection
-state and divider inset hints. Enabled state and focus-target policy are uniform
+section-wide interaction state. Per-index state contains model-owned selection
+state, selection participation, and divider inset hints. Enabled state and focus-target policy are uniform
 across every row in a dynamic section; neither can vary by model index. The
 focus-target policy is none, row surface, or descendant. Descendant policy
 requires each enabled row to contain an eligible focus target in its slots.
@@ -147,7 +148,7 @@ These properties are available without creating widgets, so an offscreen
 neighbor can influence a visible row's separator and keyboard navigation can
 skip an entire ineligible section.
 Defaults cover an enabled, unselected, non-invokable text row with no focus
-target. Its selection flag is ignored in single-selection mode: the parent supplies that state by
+target. Its selection flag is ignored in parent single-selection mode: the parent supplies that state by
 comparing the row's location with its stored selection.
 
 Binding updates an already constructed pooled row. The framework calls
@@ -273,84 +274,118 @@ framework recycler and prepared one-line/string-view rows. Wrapped/custom
 content must document and budget its own binding costs; this proposal does not
 claim to solve the separate text-system allocation work.
 
-### Selection ownership
+### Selection ownership and participation
 
-Single selection belongs to `List`, because it must be exclusive across static
-entries and all dynamic sections. Store one `ListRowLocation`: a borrowed
-direct-child pointer plus a local model index (zero for a static entry). A null
-pointer represents no selection. The pointer identifies the section, not a
-pooled widget or a flattened ordinal, so scrolling and changes in preceding
-sections do not move selection to another item.
+Two explicit ownership modes share the same rendering and input machinery:
 
-`select(entry)` and `select(section, index)` replace this location directly;
-`clearSelection()` clears it. These operations require `kSingle` mode and
-validate parent membership and index bounds without inspecting other model
-rows. Invalid requests return false and leave selection unchanged. Selecting
-the same location succeeds without a change notification. Programmatic selection
-can address disabled or offscreen rows; it does not acquire focus or scroll.
+- Parent-wide selection uses `ListSelectionPolicy`: `kSingle` owns one
+  `ListRowLocation` spanning static rows and dynamic sections; `kMultiple` stores
+  static flags in section records and dynamic flags in application models.
+- `DynamicSingleSelectionListModel<Row>` owns one optional index for its own
+  section. Its parent must use `kNone`; conflicting ownership fails `CHECK`.
+  Multiple such models form independent groups in one visual list. Static
+  actions do not clear their selections.
 
-For any row, selected state is an O(1) location comparison. No model query is
-needed to discover the single selection, and the framework never searches for
-the first selected flag. A materialized old/new row gets its context updated;
-an unmaterialized row receives the correct context at its next bind. At most
-their neighboring bands need selection-related invalidation. Locating a pooled
-widget and normal parent context/layout traversal are separate work from
-discovering selection.
+`SelectionParticipation::{kSelectable,kAction}` separates selection from
+invocation. An action still invokes, focuses, and receives normal press feedback,
+but cannot acquire selection or clear another row's selection. Static items
+expose `selectionParticipation()`; `InvokableListItemBase` provides
+`setSelectionParticipation()`. Configure it before insertion/binding. Dynamic
+models expose participation in `rowState(index)` so offscreen programmatic
+selection never constructs or scans rows. A bound item's participation can
+further exclude its activation; model metadata is authoritative for offscreen
+requests. Selection eligibility does not change keyboard eligibility.
 
-The application can retain its domain-level selected ID. It sets the initial
-row location explicitly and receives `onSingleSelectionChanged(location)` on
-actual changes, including programmatic changes and automatic clearing. This is
-a protected virtual no-op hook on `List`, with no stored callback object.
-Publish the new location and invalidation before notifying; do not hold section
-record references across application callbacks. During list destruction suppress
-notifications. A callback observes the current location, not an old borrowed
-location whose section might already be disappearing.
+For parent-wide single selection, store a direct-child pointer and local index
+(zero for a static entry). A null pointer means no selection. `select(entry)`
+and `select(section,index)` validate membership, participation, reset state and
+bounds. Invalid requests return false; selecting the same location is a no-op.
+Disabled/offscreen rows can be selected programmatically without focusing or
+scrolling. `clearSelection()` clears the location. Single selection is never
+inferred by searching model flags.
 
-Clear/reset guards are installed before clearing selection or invoking any
-application callback. While `List::clear()` is in progress, every `select()`
-request returns false without changing selection. Recursive `clear()` is a
-no-op; the outer call owns detachment and keeps the guard until it completes.
-While a section is resetting, selection requests into that section return false;
-selection elsewhere remains allowed unless the parent is clearing. These guards
-also apply to requests made from selection-change callbacks.
-Reset delivers its selection-change notification only after binding cleanup,
-as specified under [Updates and invalidation](#updates-and-invalidation).
+#### Per-item model notifications
 
-With `selection_follows_press`, an accepted row invocation in `kSingle` mode
-selects that row. Touch down, focus movement, scrolling, and binding do not
-select it. Static and dynamic invocation paths report the same logical location;
-independent slot controls retain their existing action routing. Applications
-using a radio accessory as the selection action call `select()` from that action.
-With `selection_follows_press` disabled, selection changes only through the
-explicit API or the invalidation rules below. Invocation/callback delivery must
-use the existing lifecycle checks so a callback that removes content cannot
-cause a subsequent invocation on a stale item.
+`DynamicListModel<Row>::onSelectionChanged(int index, SelectionState state)` is
+a virtual no-op by default. `SelectionState` is an enum with `kSelected` and
+`kDeselected`, not a boolean argument.
 
-The implementation uses a state-free `Container::invokeChild()` hook to route
-accepted direct-row invocations to the owning list. A stack-scoped invocation
-guard links into `List` only during callback delivery. Clear, reset, recycling,
-and destruction invalidate pending row pointers; after notification, the guard
-is checked before invoking the item or delivering the row's interactive-change
-handler. List destruction also clears the guard's owner pointer, so unwinding
-never writes to a destroyed list. This adds one parent pointer, no per-row state,
-and no callback allocation. Slot controls continue their own action routing.
+In parent single mode, commit the new location and visible control state first,
+then notify the old model of deselection and the new model of selection. A
+switch inside one model produces two per-item notifications. The optional
+parent `onSingleSelectionChanged(location)` hook remains available and follows
+model notifications. Mode changes and reset clearing also notify; destruction
+suppresses notifications. The model does not need to maintain a second selection
+index in this mode.
 
-Multiple selection remains distributed: dynamic flags belong to the model,
-and `setSelected(entry, bool)` updates the static section record in `kMultiple`
-mode. It returns false in other modes or for a nonmember. It does not modify
-dynamic models; application actions update those and notify their section.
-`kNone` renders every row unselected. Changing selection mode clears the single
-location; entering `kSingle` starts with no selection, without scanning or
-importing multiple-selection flags. Multiple-selection flags are retained while
-inactive. Static insertion continues to seed only the multiple-selection bit
-from the entry's initial context. The old single-mode insertion-snapshot
-behavior is replaced by explicit selection after insertion.
+In multiple mode, a row/control activation requests the opposite of
+`rowState(index).selected`. The model's hook updates that backing flag; the list
+then rereads metadata and synchronizes visible controls. A model may reject a
+request by leaving the flag unchanged. `List::setSelected(section,index,state)`
+uses the same path for programmatic changes. Selecting another row does not
+clear existing flags. External data changes still use the existing model
+notifications. Static multiple flags use the existing `setSelected(entry,bool)`.
 
-Radio/check/switch accessory state remains separate from row highlighting,
-as in the current list API. Application bindings/callbacks synchronize radio
-accessories with the selected location. They update the known old/new items,
-without searching the model. The example demonstrates this explicitly; neither
-`List::select()` nor the selection callback implicitly rewrites domain data.
+`selection_follows_press` applies to selectable rows and participating controls
+in parent modes; `kAction` rows are always excluded. When false, activation
+invokes the action without modifying authoritative selection. Offscreen rows
+receive current selection when bound; updates walk sections and visible rows,
+never all model indices.
+
+#### Standard controls and lifetime safety
+
+Radio and checkbox convenience items expose a selection control. In an active
+selection group, the framework owns that control's interactive-change routing
+and synchronizes it through `applySelection(SelectionState)`. Both the row and
+its control enter the same logical operation. `invokeSelection()` reports the
+application action without running the control's default toggle a second time.
+Controls are synchronized before action delivery. Disabling selection or
+unbinding restores ordinary item invocation. Switches and arbitrary controls
+remain independent unless a custom item explicitly implements these hooks.
+Application code should use item invocation/model hooks rather than replace a
+managed control's interactive-change handler.
+
+State-free item/container hooks avoid new base-row fields. Stack-scoped guards
+protect callback delivery: reset, recycling, clear, and destruction cancel
+pending row access, and reentrant single-selection changes supersede pending
+selection notifications. A callback may clear/reset the view. Models must
+survive their callbacks. Cleanup hooks cannot mutate selection or list structure;
+parent clear rejects reselection and recursive clear is a no-op.
+
+#### Single-selection convenience model
+
+The helper provides `selectedIndex()` (`-1` means none), `select(index,state)`
+(default `kSelected`), and `clearSelection()`. It owns the index and supplies
+selection metadata; callers only implement content binding. Its optional
+protected `onSelectionChanged(index,state)` reports the committed transition,
+old deselection before new selection, after visual synchronization. A hook may
+clear/reset the view, but cannot destroy the model or recursively change the
+same helper's selection; recursive changes fail `CHECK`.
+
+An internal `SelectionListener` connects the helper to one dynamic section.
+This is needed for `model.select()` to update visible widgets without requiring
+application calls to `modelItemChanged()`. The helper holds one non-owning
+listener pointer, with no concrete view pointer in application subclasses. The
+section attaches on construction and disconnects before destruction. A helper
+can attach to at most one section at a time; sharing fails `CHECK`. This is a
+single notification connection, not an observer collection. It carries only
+functional change delivery, not virtual calls for checking author invariants.
+Selection changes from prepare/bind/unbind are forbidden by the model contract.
+Model lifetime
+must exceed section lifetime, as with the existing model contract.
+
+Reset releases bindings but preserves the helper's index. Appending therefore
+preserves selection without callbacks, scans, or save/restore code. Before
+removal/reorder, the application must clear or remap selection while bindings
+are released. The framework does not infer stable identity from a reused index.
+`clearSelection()` also clears an index whose data was already removed; its
+old-index notification must not dereference that removed element.
+
+The device example uses the helper, marks both fixed rows `kAction`, and leaves
+parent selection at its default. No selection-forwarding List subclass,
+per-device callbacks, selected-ID lookup, manual radio refresh, or
+`selection_follows_press` override is needed. Its List subclass only supplies
+full-width layout.
 
 ### Updates and invalidation
 
@@ -369,7 +404,7 @@ every notification; do not retain a dirty-range index or observer list.
 and releases every outstanding pool binding, including inactive rows retained
 in the pool. Rows already unbound are not unbound again. It publishes the
 section's zero logical contribution and requests parent layout/invalidation
-before clearing selection, and clears selection only when it still points into
+before clearing parent-owned selection, and clears that selection only when it still points into
 that section. The resulting selection-change notification is the final
 operation: all binding cleanup and section/parent state updates finish before
 notification. Neither the reset method nor its notification helper accesses the
@@ -496,13 +531,17 @@ or ordinary row gains a data member. New virtual hooks add code/vtable entries.
 
 Budget up to 20 B of parent scalar state (logical count, an 8 B single-selection
 location, a pointer to the active invocation guard, and clear/destruction flags),
-and 20 B of adapter state per dynamic section (owner pointer, logical prefix,
-section-vector index, gap, flags). Row height and extent calculation
+and 24 B of adapter overhead per dynamic section (owner pointer, logical prefix,
+section-vector index, gap, flags, and selection-listener interface vptr). Row height and extent calculation
 reuse the recycler. Logical focus is derived from the focus manager's real
 focused subtree and the active range, avoiding a second focus record that could
 outlive visibility changes.
 The typed model bridge uses the existing model vtable/reference; it adds no
-per-row callback. The existing prototype factory is stored once per section.
+per-row callback storage. Selection routing reuses standard controls' existing
+interactive-change handler storage. The optional single-selection model costs
+16 B total on ESP32-C3 versus 4 B for the basic model: one observer pointer, one
+index, a callback guard and alignment. The existing prototype factory is stored
+once per section.
 Only the small factory bridge is templated; geometry, context and recycling
 live in a shared non-template base to limit compiled code growth.
 
@@ -533,9 +572,9 @@ synchronous and
 allocation-free. A model containing expensive storage lookups needs its own
 cached view.
 
-## Proposed API
+## API
 
-Names below are proposed additions; existing APIs stay available. `Row` must
+The following APIs are implemented; existing APIs stay available. `Row` must
 derive from `ListEntry`. The typed model uses a private `ListModel` bridge that
 casts the factory-validated row type once; callers need no `Widget&` casts.
 
@@ -543,6 +582,7 @@ casts the factory-validated row type once; callers need no `Widget&` casts.
 struct DynamicListRowState {
   bool selected = false;  // Used only in SelectionMode::kMultiple.
   DividerInsetHint divider_inset_hint = {};
+  SelectionParticipation participation = SelectionParticipation::kSelectable;
 };
 
 enum class DynamicListFocusTarget : uint8_t {
@@ -566,6 +606,17 @@ class DynamicListModel /* internal ListModel bridge */ {
   virtual void unbind(Row& row) const {}  // release borrowed data/action captures
   virtual DynamicListRowState rowState(int index) const { return {}; }
   virtual DynamicListSectionState sectionState() const { return {}; }
+  virtual void onSelectionChanged(int index, SelectionState state) {}
+};
+
+template <typename Row = ListRow<RadioListItem>>
+class DynamicSingleSelectionListModel : public DynamicListModel<Row> {
+ public:
+  int selectedIndex() const;
+  bool select(int index, SelectionState state = SelectionState::kSelected);
+  void clearSelection();
+ protected:
+  void onSelectionChanged(int index, SelectionState state) override {}
 };
 
 class DynamicListBase : public ListLayout {
@@ -761,6 +812,18 @@ and elapsed time. Run tests
 serially using the persistent Bazel output/cache configuration; never place
 Bazel storage under `/tmp` or override the global resource limits.
 
+### Phase 5: Simplify selection and action participation
+
+Commit: `Material 3 dynamic lists Phase 5: simplify model selection and action participation`.
+
+Add enum-based per-item notifications for parent single/multiple modes,
+participation metadata and static action configuration, standard-control routing
+and synchronization, guarded callback dispatch, and the optional independent
+single-selection model. Measure its incremental ESP32-C3 cost and cover
+programmatic, row, control, reset, reentrant, and destructive callback paths.
+Update the device example to remove application selection plumbing, then build
+its emulator target and run static-list/menu compatibility checks.
+
 ## Testing Plan
 
 Use a small eager `List` as the reference for row surfaces, contexts, and
@@ -778,7 +841,7 @@ The phased validations above define the individual cases and exit criteria.
 
 ## Validation results (2026-09-25)
 
-All 20 tests in `//:material3_dynamic_list_test` pass, including 12 exact
+The initial 20 tests in `//:material3_dynamic_list_test` pass, including 12 exact
 framebuffer comparisons with eager lists and four reviewed goldens (mixed,
 selected, offscreen, and changed theme/background). Tests cover reset/reentrant
 cleanup, adopted destruction, borrowed detachment, touch cancellation, separator
@@ -819,13 +882,28 @@ with exceptions and RTTI disabled:
 | `List` | 88 |
 | `ListEntry` | 88 |
 | `ListItem` | 4 |
-| `DynamicListBase` | 144 |
-| `DynamicList<>` | 144 |
+| `DynamicListBase` | 148 |
+| `DynamicList<>` | 148 |
 | `ListRow<HeadlineListItem>` | 104 |
 
-The adapter adds 20 bytes over `ListLayout`; the typed facade adds no state.
+The adapter adds 24 bytes over `ListLayout`; the typed facade adds no state.
+The selection extension measures 4 B for the basic model, 16 B for the optional
+single-selection helper, and 44 B for `InvokableListItemBase`. Participation
+shares the existing invokable-item flag byte.
 No fields were added to `Widget`, `Container`, `ListEntry`, or `ListItem` for
 this feature. Pools retain peak capacity per section, as specified above.
+
+### Selection convenience validation
+
+Nine additional focused tests cover programmatic, row, and radio selection;
+offscreen rebinding; independent groups; append reset; explicit action exclusion;
+parent model notifications; checkbox multiple selection without double toggles;
+return to unmanaged control behavior; rejected/opt-out interactions; reentrant
+notifications; callback destruction; and ownership checks. All 29 dynamic tests,
+static-list tests, and recycler lifetime tests pass under ASan.
+The resource table above records the initial implementation before per-item
+participation metadata; the bounded-work test continues to compare equal counts
+for 100 and 10,000 rows rather than require those historical absolute counts.
 
 ## Caveats
 

@@ -1363,6 +1363,7 @@ InvokableListItemBase::InvokableListItemBase(roo::string_view headline,
     : HeadlineSupportingListItemBase(headline, supporting, headline_policy,
                                      supporting_policy),
       always_invokable_(always_invokable),
+      action_only_(false),
       on_invoked_() {}
 
 bool InvokableListItemBase::isInvokable() const {
@@ -1649,12 +1650,13 @@ List::~List() {
   destroying_ = true;
   clear();
   for (Invocation* call = invocation_; call != nullptr; call = call->previous) {
+    call->valid = false;
     call->owner = nullptr;
     call->row = nullptr;
   }
 }
 
-void List::checkMutation() const {
+void List::checkNotCleaningBindings() const {
   for (const Section& section : sections_) {
     if (section.dynamic) {
       CHECK(!static_cast<DynamicListBase*>(section.widget)->cleaning());
@@ -1664,7 +1666,10 @@ void List::checkMutation() const {
 
 void List::invalidateInvocations(Widget* section) {
   for (Invocation* call = invocation_; call != nullptr; call = call->previous) {
-    if (section == nullptr || call->section == section) call->row = nullptr;
+    if (section == nullptr || call->section == section) {
+      call->valid = false;
+      call->row = nullptr;
+    }
   }
 }
 
@@ -1683,6 +1688,22 @@ int List::sectionCount(const Section& section) const {
 }
 
 bool List::selected(const Section& section, int index) const {
+  if (!section.dynamic) {
+    const ListItem* item =
+        static_cast<const ListEntry*>(section.widget)->item();
+    if (item != nullptr &&
+        item->selectionParticipation() == SelectionParticipation::kAction)
+      return false;
+  }
+  if (section.dynamic) {
+    const auto& model =
+        static_cast<const DynamicListBase*>(section.widget)->model();
+    if (model.rowState(index).participation ==
+        SelectionParticipation::kAction) {
+      return false;
+    }
+    if (model.ownsSelection()) return model.rowState(index).selected;
+  }
   if (selection_policy_.mode == SelectionMode::kNone) return false;
   if (selection_policy_.mode == SelectionMode::kSingle) {
     return selection_.section == section.widget && selection_.index == index;
@@ -1777,6 +1798,8 @@ void List::resolveContexts() {
     Section& section = sections_[i];
     if (section.dynamic) {
       auto& dynamic = static_cast<DynamicListBase&>(*section.widget);
+      CHECK(!dynamic.model().ownsSelection() ||
+            selection_policy_.mode == SelectionMode::kNone);
       dynamic.logical_start_ = total;
       dynamic.section_index_ = i;
     }
@@ -1816,6 +1839,18 @@ void List::resolveContexts() {
           ShouldShowDivider(divider_policy_, logical, logical_count_,
                             context.selected, next_selected);
       row.setVisualContext(context);
+      if (row.item() != nullptr && row.item()->selectionControl() != nullptr) {
+        if (selection_policy_.mode != SelectionMode::kNone &&
+            row.item()->selectionParticipation() ==
+                SelectionParticipation::kSelectable) {
+          row.item()->applySelection(context.selected
+                                         ? SelectionState::kSelected
+                                         : SelectionState::kDeselected);
+          row.item()->setSelectionHandler([this, &row]() { invokeChild(row); });
+        } else {
+          row.item()->setSelectionHandler({});
+        }
+      }
     }
     logical += count;
   }
@@ -1828,7 +1863,7 @@ void List::onStructureOrPolicyChanged() {
 }
 
 void List::addSection(WidgetRef ref, bool dynamic) {
-  checkMutation();
+  checkNotCleaningBindings();
   CHECK(!clearing_);
   Widget* widget = ref.get();
   CHECK(widget != nullptr);
@@ -1853,7 +1888,7 @@ void List::add(std::unique_ptr<DynamicListBase> section) {
 }
 
 void List::clear() {
-  checkMutation();
+  checkNotCleaningBindings();
   if (clearing_) return;
   clearing_ = true;
   invalidateInvocations(nullptr);
@@ -1863,6 +1898,10 @@ void List::clear() {
     sections_.pop_back();
     if (section.dynamic) {
       static_cast<DynamicListBase*>(section.widget)->owner_ = nullptr;
+    }
+    if (!section.dynamic) {
+      ListItem* item = static_cast<ListEntry*>(section.widget)->item();
+      if (item != nullptr) item->setSelectionHandler({});
     }
     detachChild(section.widget);
   }
@@ -1876,6 +1915,10 @@ bool List::replaceSelection(ListRowLocation location) {
   if (selection_.section == location.section &&
       selection_.index == location.index) {
     return true;
+  }
+  // A nested transition supersedes outstanding model notifications.
+  for (Invocation* call = invocation_; call != nullptr; call = call->previous) {
+    if (call->row == nullptr) call->valid = false;
   }
   ListRowLocation previous_selection = selection_;
   selection_ = location;
@@ -1896,39 +1939,64 @@ bool List::replaceSelection(ListRowLocation location) {
     }
     previous = i;
   }
-  if (!destroying_) onSingleSelectionChanged(location);
+  if (destroying_) return true;
+  Invocation new_call(*this, nullptr, location.section);
+  int old_section = findSection(previous_selection.section);
+  if (old_section >= 0 && sections_[old_section].dynamic) {
+    static_cast<DynamicListBase*>(previous_selection.section)
+        ->model()
+        .setSelected(previous_selection.index, SelectionState::kDeselected);
+  }
+  if (!new_call.valid || new_call.owner == nullptr) return true;
+  int new_section = findSection(location.section);
+  if (new_section >= 0 && sections_[new_section].dynamic) {
+    static_cast<DynamicListBase*>(location.section)
+        ->model()
+        .setSelected(location.index, SelectionState::kSelected);
+  }
+  if (!new_call.valid || new_call.owner == nullptr) return true;
+  onSingleSelectionChanged(location);
   return true;
 }
 
 bool List::select(ListEntry& entry) {
-  checkMutation();
+  checkNotCleaningBindings();
   if (clearing_ || selection_policy_.mode != SelectionMode::kSingle ||
-      findSection(&entry) < 0 || entry.isGone()) {
+      findSection(&entry) < 0 || entry.isGone() ||
+      (entry.item() != nullptr && entry.item()->selectionParticipation() ==
+                                      SelectionParticipation::kAction)) {
     return false;
   }
   return replaceSelection({&entry, 0});
 }
 
 bool List::select(DynamicListBase& section, int index) {
-  checkMutation();
+  checkNotCleaningBindings();
   if (clearing_ || selection_policy_.mode != SelectionMode::kSingle ||
       section.owner_ != this || section.resetting() || section.isGone() ||
-      index < 0 || index >= section.elementCount()) {
+      index < 0 || index >= section.elementCount() ||
+      section.model().rowState(index).participation ==
+          SelectionParticipation::kAction) {
     return false;
   }
   return replaceSelection({&section, index});
 }
 
 void List::clearSelection() {
-  checkMutation();
+  checkNotCleaningBindings();
   if (selection_.section != nullptr) replaceSelection({});
 }
 
 bool List::setSelected(ListEntry& entry, bool selected) {
-  checkMutation();
+  checkNotCleaningBindings();
   int index = findSection(&entry);
   if (clearing_ || index < 0 ||
       selection_policy_.mode != SelectionMode::kMultiple) {
+    return false;
+  }
+  if (selected && entry.item() != nullptr &&
+      entry.item()->selectionParticipation() ==
+          SelectionParticipation::kAction) {
     return false;
   }
   if (sections_[index].selected == selected) return true;
@@ -1937,32 +2005,51 @@ bool List::setSelected(ListEntry& entry, bool selected) {
   return true;
 }
 
+bool List::setSelected(DynamicListBase& section, int index,
+                       SelectionState state) {
+  checkNotCleaningBindings();
+  if (clearing_ || selection_policy_.mode != SelectionMode::kMultiple ||
+      section.owner_ != this || section.resetting() || section.isGone() ||
+      index < 0 || index >= section.elementCount()) {
+    return false;
+  }
+  DynamicListRowState current = section.model().rowState(index);
+  if (current.participation == SelectionParticipation::kAction) return false;
+  if (current.selected == (state == SelectionState::kSelected)) return true;
+  Invocation call(*this, nullptr, &section);
+  section.model().setSelected(index, state);
+  if (call.valid && call.owner != nullptr) sectionChanged(section, false);
+  return true;
+}
+
 void List::setVariant(ListVariant variant) {
-  checkMutation();
+  checkNotCleaningBindings();
   if (variant_ == variant) return;
   variant_ = variant;
   onStructureOrPolicyChanged();
 }
 
 void List::setStyle(ListStyle style) {
-  checkMutation();
+  checkNotCleaningBindings();
   if (style_ == style) return;
   style_ = style;
   onStructureOrPolicyChanged();
 }
 
 void List::setSelectionPolicy(const ListSelectionPolicy& policy) {
-  checkMutation();
+  checkNotCleaningBindings();
   bool clear =
       selection_policy_.mode != policy.mode && selection_.section != nullptr;
   selection_policy_ = policy;
-  if (clear) selection_ = {};
+  if (clear) {
+    replaceSelection({});  // Terminal: callbacks may destroy this list.
+    return;
+  }
   onStructureOrPolicyChanged();
-  if (clear && !destroying_) onSingleSelectionChanged({});
 }
 
 void List::setDividerPolicy(const ListDividerPolicy& policy) {
-  checkMutation();
+  checkNotCleaningBindings();
   divider_policy_ = policy;
   onStructureOrPolicyChanged();
 }
@@ -2004,8 +2091,8 @@ bool List::invokeChild(Widget& child) {
   return invokeRow({&child, 0}, static_cast<ListEntry&>(child));
 }
 
-List::Invocation::Invocation(List& list, ListEntry& entry, Widget* section)
-    : owner(&list), row(&entry), section(section), previous(list.invocation_) {
+List::Invocation::Invocation(List& list, ListEntry* entry, Widget* section)
+    : owner(&list), row(entry), section(section), previous(list.invocation_) {
   list.invocation_ = this;
 }
 
@@ -2015,13 +2102,50 @@ List::Invocation::~Invocation() {
 
 bool List::invokeRow(ListRowLocation location, ListEntry& row) {
   if (!row.isClickable() || !row.isEnabled()) return true;
-  Invocation call(*this, row, location.section);
-  if (selection_policy_.mode == SelectionMode::kSingle &&
+  Invocation call(*this, &row, location.section);
+  bool selectable =
+      row.item() == nullptr || row.item()->selectionParticipation() ==
+                                   SelectionParticipation::kSelectable;
+  bool managed = selection_policy_.mode != SelectionMode::kNone;
+  int section_index = findSection(location.section);
+  if (section_index >= 0 && sections_[section_index].dynamic) {
+    auto& model = static_cast<DynamicListBase*>(location.section)->model();
+    selectable = selectable && model.rowState(location.index).participation ==
+                                   SelectionParticipation::kSelectable;
+    managed = managed || model.ownsSelection();
+    if (selectable && model.ownsSelection()) {
+      model.setSelected(location.index, SelectionState::kSelected);
+      // Model notification may reset/clear the section or destroy the list.
+      if (call.row == nullptr) return true;
+    }
+  }
+  if (selectable && selection_policy_.mode == SelectionMode::kSingle &&
       selection_policy_.selection_follows_press) {
     replaceSelection(location);
+  } else if (selectable && selection_policy_.mode == SelectionMode::kMultiple &&
+             selection_policy_.selection_follows_press && section_index >= 0) {
+    if (sections_[section_index].dynamic) {
+      auto& section = *static_cast<DynamicListBase*>(location.section);
+      setSelected(section, location.index,
+                  section.model().rowState(location.index).selected
+                      ? SelectionState::kDeselected
+                      : SelectionState::kSelected);
+    } else {
+      setSelected(row, !sections_[section_index].selected);
+    }
+  }
+  if (call.row != nullptr && selectable && managed) {
+    // A control can change itself before routing here, even with follows-press
+    // disabled. Always restore authoritative state before its action runs.
+    resolveContexts();
   }
   if (call.row != nullptr && call.row->item() != nullptr) {
-    call.row->item()->invoke();
+    ListItem* item = call.row->item();
+    if (selectable && managed && item->selectionControl() != nullptr) {
+      item->invokeSelection();
+    } else {
+      item->invoke();
+    }
   }
   if (call.row != nullptr) call.row->Widget::onClicked();
   return true;

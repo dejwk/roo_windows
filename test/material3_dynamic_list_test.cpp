@@ -114,6 +114,328 @@ ListSelectionPolicy SingleSelection() {
   return policy;
 }
 
+using RadioRow = ListRow<RadioListItem>;
+using CheckRow = ListRow<CheckboxListItem>;
+
+class SingleModel : public DynamicSingleSelectionListModel<RadioRow> {
+ public:
+  int count = 10000;
+  std::vector<std::pair<int, SelectionState>> changes;
+  std::function<void()> changed;
+
+  int elementCount() const override { return count; }
+  void prepare(RadioRow& row) const override {
+    row.item().setHeadline("Device");
+  }
+  void bind(int, RadioRow& row) const override {
+    row.item().setHeadline("Device");
+  }
+  void unbind(RadioRow& row) const override { row.item().setHeadline({}); }
+  DynamicListSectionState sectionState() const override {
+    return {true, DynamicListFocusTarget::kDescendant};
+  }
+
+ protected:
+  void onSelectionChanged(int index, SelectionState state) override {
+    changes.emplace_back(index, state);
+    if (changed) changed();
+  }
+};
+
+template <typename Item>
+class ChoiceModel : public DynamicListModel<ListRow<Item>> {
+ public:
+  bool selected[3] = {};
+  std::vector<std::pair<int, SelectionState>> changes;
+  std::function<void(int, SelectionState)> changed;
+
+  int elementCount() const override { return 3; }
+  void prepare(ListRow<Item>& row) const override {
+    row.item().setHeadline("Choice");
+  }
+  void bind(int, ListRow<Item>& row) const override {
+    row.item().setHeadline("Choice");
+  }
+  DynamicListRowState rowState(int index) const override {
+    return {selected[index],
+            {},
+            index == 2 ? SelectionParticipation::kAction
+                       : SelectionParticipation::kSelectable};
+  }
+  void onSelectionChanged(int index, SelectionState state) override {
+    selected[index] = state == SelectionState::kSelected;
+    changes.emplace_back(index, state);
+    if (changed) changed(index, state);
+  }
+};
+
+template <typename Item>
+class ChoiceSection : public DynamicList<ListRow<Item>> {
+ public:
+  using DynamicList<ListRow<Item>>::DynamicList;
+  ListRow<Item>* row(int index) {
+    return static_cast<ListRow<Item>*>(this->materializedRow(index));
+  }
+};
+
+// Verifies helper-owned selection synchronizes row/radio activation,
+// programmatic changes, and offscreen binding without application callback
+// wiring or scans.
+TEST_F(DynamicListTest, ModelOwnedSingleSelection) {
+  SingleModel model;
+  ChoiceSection<RadioListItem> section(context(), model);
+  List list(context());
+  list.add(section);
+  SimpleScrollablePanel scroll(context(), list);
+  Mount mount(app_, scroll);
+  ASSERT_TRUE(refresh());
+  section.row(0)->onClicked();
+  EXPECT_EQ(model.selectedIndex(), 0);
+  EXPECT_TRUE(section.row(0)->item().isSelected());
+  section.row(1)->item().radioButton().onClicked();
+  EXPECT_EQ(model.selectedIndex(), 1);
+  EXPECT_FALSE(section.row(0)->item().isSelected());
+  EXPECT_TRUE(section.row(1)->visualContext().selected);
+  ASSERT_EQ(model.changes.size(), 3u);
+  EXPECT_EQ(model.changes[1], std::make_pair(0, SelectionState::kDeselected));
+  EXPECT_EQ(model.changes[2], std::make_pair(1, SelectionState::kSelected));
+  model.select(1);
+  EXPECT_EQ(model.changes.size(), 3u);
+  model.select(0, SelectionState::kDeselected);
+  EXPECT_EQ(model.selectedIndex(), 1);
+  EXPECT_FALSE(model.select(-1));
+  EXPECT_FALSE(model.select(10000));
+  ASSERT_TRUE(model.select(9000));
+  EXPECT_FALSE(section.row(1)->item().isSelected());
+  scroll.scrollTo(0, -9000 * 56);
+  ASSERT_TRUE(refresh());
+  ASSERT_NE(section.row(9000), nullptr);
+  EXPECT_TRUE(section.row(9000)->item().isSelected());
+  model.clearSelection();
+  EXPECT_EQ(model.selectedIndex(), -1);
+  EXPECT_FALSE(section.row(9000)->item().isSelected());
+}
+
+// Verifies independent groups and static action participation, including normal
+// invocation without stealing selection and append reset without restoration.
+TEST_F(DynamicListTest, IndependentGroupsAndAppend) {
+  SingleModel first_model;
+  first_model.count = 2;
+  SingleModel second_model;
+  second_model.count = 2;
+  ChoiceSection<RadioListItem> first(context(), first_model);
+  ChoiceSection<RadioListItem> second(context(), second_model);
+  Row action(context(), "Add");
+  int invokes = 0;
+  action.item().setSelectionParticipation(SelectionParticipation::kAction);
+  action.item().setOnInvoked([&]() { ++invokes; });
+  List list(context());
+  list.add(action);
+  list.add(first);
+  list.add(second);
+  SimpleScrollablePanel scroll(context(), list);
+  Mount mount(app_, scroll);
+  ASSERT_TRUE(refresh());
+  first_model.select(0);
+  second_model.select(1);
+  action.onClicked();
+  EXPECT_EQ(invokes, 1);
+  EXPECT_EQ(first_model.selectedIndex(), 0);
+  EXPECT_EQ(second_model.selectedIndex(), 1);
+  first.beginModelReset();
+  ++first_model.count;
+  first.endModelReset();
+  ASSERT_TRUE(refresh());
+  EXPECT_EQ(first_model.selectedIndex(), 0);
+  EXPECT_TRUE(first.row(0)->item().isSelected());
+  first.beginModelReset();
+  first_model.clearSelection();
+  first_model.count = 0;
+  first.endModelReset();
+  EXPECT_EQ(first_model.selectedIndex(), -1);
+}
+
+// Verifies parent-wide single selection emits enum transitions for old/new
+// rows, while static and dynamic action rows cannot acquire selection.
+TEST_F(DynamicListTest, ParentSelectionNotificationsAndActions) {
+  ChoiceModel<RadioListItem> model;
+  ChoiceSection<RadioListItem> section(context(), model);
+  Row action(context(), "Action");
+  action.item().setSelectionParticipation(SelectionParticipation::kAction);
+  int invokes = 0;
+  action.item().setOnInvoked([&]() { ++invokes; });
+  List list(context());
+  list.setSelectionPolicy(SingleSelection());
+  list.add(action);
+  list.add(section);
+  SimpleScrollablePanel scroll(context(), list);
+  Mount mount(app_, scroll);
+  ASSERT_TRUE(refresh());
+  ASSERT_TRUE(list.select(section, 0));
+  section.row(1)->item().radioButton().onClicked();
+  ASSERT_EQ(model.changes.size(), 3u);
+  EXPECT_EQ(model.changes[1], std::make_pair(0, SelectionState::kDeselected));
+  EXPECT_EQ(model.changes[2], std::make_pair(1, SelectionState::kSelected));
+  EXPECT_FALSE(section.row(0)->item().isSelected());
+  EXPECT_TRUE(section.row(1)->item().isSelected());
+  action.onClicked();
+  EXPECT_EQ(invokes, 1);
+  EXPECT_EQ(list.selection().index, 1);
+  EXPECT_FALSE(list.select(action));
+  EXPECT_FALSE(list.select(section, 2));
+  section.row(2)->onClicked();
+  EXPECT_EQ(list.selection().index, 1);
+  list.clearSelection();
+  EXPECT_EQ(model.changes.back(),
+            std::make_pair(1, SelectionState::kDeselected));
+}
+
+// Verifies multiple selection updates model flags and checkbox state exactly
+// once for row, accessory, and explicit operations, preserving other choices.
+TEST_F(DynamicListTest, MultipleSelectionCallbacksAndControls) {
+  ChoiceModel<CheckboxListItem> model;
+  ChoiceSection<CheckboxListItem> section(context(), model);
+  List list(context());
+  ListSelectionPolicy policy;
+  policy.mode = SelectionMode::kMultiple;
+  list.setSelectionPolicy(policy);
+  list.add(section);
+  SimpleScrollablePanel scroll(context(), list);
+  Mount mount(app_, scroll);
+  ASSERT_TRUE(refresh());
+  section.row(0)->onClicked();
+  EXPECT_TRUE(model.selected[0]);
+  EXPECT_TRUE(section.row(0)->item().isChecked());
+  section.row(1)->item().checkbox().onClicked();
+  EXPECT_TRUE(model.selected[0]);
+  EXPECT_TRUE(model.selected[1]);
+  EXPECT_TRUE(section.row(1)->item().isChecked());
+  section.row(0)->item().checkbox().onClicked();
+  EXPECT_FALSE(model.selected[0]);
+  EXPECT_FALSE(section.row(0)->item().isChecked());
+  EXPECT_EQ(model.changes.size(), 3u);
+  list.setSelected(section, 1, SelectionState::kDeselected);
+  EXPECT_FALSE(section.row(1)->item().isChecked());
+  EXPECT_FALSE(list.setSelected(section, 2, SelectionState::kSelected));
+  policy.mode = SelectionMode::kNone;
+  list.setSelectionPolicy(policy);
+  section.row(0)->item().checkbox().onClicked();
+  EXPECT_TRUE(section.row(0)->item().isChecked());
+  EXPECT_FALSE(model.selected[0]);
+  EXPECT_EQ(model.changes.size(), 4u);
+}
+
+// Verifies follows-press opt-out and rejected requests restore a control's
+// authoritative value before delivering its action, without extra
+// notifications.
+TEST_F(DynamicListTest, SelectionControlOptOutAndRejection) {
+  ChoiceModel<CheckboxListItem> model;
+  ChoiceSection<CheckboxListItem> section(context(), model);
+  List list(context());
+  ListSelectionPolicy policy;
+  policy.mode = SelectionMode::kMultiple;
+  policy.selection_follows_press = false;
+  list.setSelectionPolicy(policy);
+  list.add(section);
+  SimpleScrollablePanel scroll(context(), list);
+  Mount mount(app_, scroll);
+  ASSERT_TRUE(refresh());
+  section.row(0)->item().checkbox().onClicked();
+  EXPECT_FALSE(section.row(0)->item().isChecked());
+  EXPECT_TRUE(model.changes.empty());
+  policy.selection_follows_press = true;
+  list.setSelectionPolicy(policy);
+  model.changed = [&](int index, SelectionState) {
+    model.selected[index] = false;
+  };
+  section.row(0)->onClicked();
+  EXPECT_FALSE(section.row(0)->item().isChecked());
+  EXPECT_EQ(model.changes.size(), 1u);
+}
+
+// Verifies nested single-selection changes supersede a pending selected event,
+// and reset sends deselection while old model data still exists.
+TEST_F(DynamicListTest, ReentrantSelectionNotifications) {
+  ChoiceModel<RadioListItem> model;
+  ChoiceSection<RadioListItem> section(context(), model);
+  List list(context());
+  list.setSelectionPolicy(SingleSelection());
+  list.add(section);
+  SimpleScrollablePanel scroll(context(), list);
+  Mount mount(app_, scroll);
+  ASSERT_TRUE(refresh());
+  list.select(section, 0);
+  model.changed = [&](int index, SelectionState state) {
+    if (index == 0 && state == SelectionState::kDeselected)
+      list.select(section, 0);
+  };
+  list.select(section, 1);
+  EXPECT_EQ(list.selection().index, 0);
+  EXPECT_EQ(model.changes.back(), std::make_pair(0, SelectionState::kSelected));
+  model.changed = {};
+  section.beginModelReset();
+  EXPECT_EQ(model.changes.back(),
+            std::make_pair(0, SelectionState::kDeselected));
+  section.endModelReset();
+}
+
+// Verifies model callbacks can destroy an adopted section, canceling pending
+// invocation and later selection notifications without accessing deleted rows.
+TEST_F(DynamicListTest, SelectionCallbackCanDestroySection) {
+  ChoiceModel<RadioListItem> model;
+  List list(context());
+  list.setSelectionPolicy(SingleSelection());
+  auto section =
+      std::make_unique<ChoiceSection<RadioListItem>>(context(), model);
+  auto* borrowed = section.get();
+  list.add(std::move(section));
+  SimpleScrollablePanel scroll(context(), list);
+  Mount mount(app_, scroll);
+  ASSERT_TRUE(refresh());
+  list.select(*borrowed, 0);
+  model.changed = [&](int index, SelectionState state) {
+    if (index == 0 && state == SelectionState::kDeselected) list.clear();
+  };
+  borrowed->row(1)->onClicked();
+  EXPECT_EQ(list.selection().section, nullptr);
+  // The pending selected notification for the destroyed target is canceled.
+  for (const auto& change : model.changes) {
+    EXPECT_NE(change, std::make_pair(1, SelectionState::kSelected));
+  }
+}
+
+// Verifies helper notifications may clear the view without retaining a row or
+// calling its action after detachment; the model remains usable independently.
+TEST_F(DynamicListTest, HelperCallbackCanClearView) {
+  SingleModel model;
+  List list(context());
+  auto section =
+      std::make_unique<ChoiceSection<RadioListItem>>(context(), model);
+  auto* borrowed = section.get();
+  list.add(std::move(section));
+  SimpleScrollablePanel scroll(context(), list);
+  Mount mount(app_, scroll);
+  ASSERT_TRUE(refresh());
+  model.changed = [&]() { list.clear(); };
+  borrowed->row(0)->item().radioButton().onClicked();
+  EXPECT_EQ(model.selectedIndex(), 0);
+  model.changed = {};
+  EXPECT_TRUE(model.select(5));
+}
+
+// Verifies incompatible ownership and accidental sharing fail explicitly.
+TEST_F(DynamicListTest, SelectionOwnershipChecks) {
+  SingleModel model;
+  ChoiceSection<RadioListItem> section(context(), model);
+  List list(context());
+  list.add(section);
+  EXPECT_DEATH(list.setSelectionPolicy(SingleSelection()), "");
+  EXPECT_DEATH((ChoiceSection<RadioListItem>(context(), model)), "");
+  model.changed = [&]() { model.clearSelection(); };
+  EXPECT_DEATH(model.select(0), "");
+  model.changed = {};
+}
+
 // Verifies global positions and geometry skip empty sections and retain exactly
 // one band at each seam, including when only a dynamic row remains.
 TEST_F(DynamicListTest, MixedSectionsFlattenAndCollapse) {
