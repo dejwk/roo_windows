@@ -1,3 +1,4 @@
+---
 name: "Embedded C++ Code Authoring"
 description: "Use when editing embedded C++ library code, public APIs, tests, or validation targets in this repository. Shared baseline across roo libraries."
 applyTo:
@@ -57,8 +58,6 @@ policy on top of this baseline.
 - Avoid `auto` unless the type is obvious from the initializer context, such
   as `std::make_unique<...>()`, or the spelled-out type would be excessively
   complex.
-- Name local variables of type `Status` `status`, not `error`. Reserve `error`
-  for API fields or parameters whose contract specifically names an error.
 - Do not depend on implicit conversions from integers, enums, or pointers to
   `bool`. Compare integers with zero, scoped enums with named enumerators, and
   pointers with `nullptr`; use direct conditions only for actual `bool` values.
@@ -68,8 +67,7 @@ policy on top of this baseline.
 - Use `///` for Doxygen comments; do not use block-form Doxygen comments.
 - All public classes and public methods should have Doxygen comments at the
   declaration site.
-- In addition to Google C++ Style, always leave an empty line between
-  declarations or implementations. The
+- Always leave an empty line between declarations or implementations. The
   only exception is a group of declarations or definitions that each fit
   entirely on a single line, including any comments.
 - Always leave one empty separator line between adjacent `struct` or `class`
@@ -80,13 +78,15 @@ policy on top of this baseline.
 - Declare one variable or data member per declaration statement. Do not combine
   same-typed names with commas; separate declarations make initialization,
   ownership, and later edits unambiguous.
-- Doxygen comments should say what the declared class, function, or method
-  does. Do not document only auxiliary properties such as ownership,
-  inheritance, or scheduling context; include those details after the
-  behavioral summary when they matter.
-- Document every meaningful parameter with `@param name`, using the parameter
-  name from the declaration. Document return values, ownership, lifetime,
-  failure behavior, and scheduling context when they affect correct use.
+- Start each Doxygen comment with purpose, then behavior: why the API exists
+  and what it does. A single concise summary may cover both. Put ownership,
+  lifetime, threading, allocation, and other auxiliary properties afterward.
+- Constructor summaries should say what they create and how they use the
+  supplied parameters, referencing those parameters with `@p`.
+- Make public API comments useful to a human caller: explain meaningful
+  parameters, outcomes, asynchronous completion, ownership/lifetime, and
+  relevant failure behavior and scheduling context. Do not trade clarity for
+  a terse summary; keep detail proportional to the complexity of the contract.
 - For pure-virtual and otherwise contract-defining declarations, describe the
   behavior that implementations must provide.
 - Every code change must ship with focused unit tests.
@@ -132,7 +132,7 @@ policy on top of this baseline.
 ## Checklist
 
 - Public API declarations have `///` Doxygen comments.
-- Doxygen comments describe behavior and use `@param` markers for meaningful
+- Doxygen comments explain purpose and behavior, and clarify meaningful
   parameters.
 - Namespace-level functions and static methods use `CapitalizedNames()` unless
   their spelling is fixed by the language or framework.
@@ -152,7 +152,6 @@ policy on top of this baseline.
 - Complex algorithms explain their main strategy and important branches.
 - Non-trivial helper functions and methods are documented.
 - The change does not add avoidable per-instance RAM cost.
-- Local `Status` variables are named `status`.
 - Boolean conditions do not implicitly convert integers, enums, or pointers.
 - If the change implements a design-doc stage, the response includes a
   proposed commit message with a standalone summary sentence followed by a
