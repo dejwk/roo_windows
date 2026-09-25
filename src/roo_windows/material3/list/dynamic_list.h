@@ -59,6 +59,8 @@ class DynamicListModel : private internal::DynamicModel {
   virtual int elementCount() const override = 0;
 
   /// Configures fixed slots and representative prototype content once per row.
+  /// Prepared content must outlive the row, including its unbound prototype;
+  /// do not retain replaceable model backing storage during preparation.
   virtual void prepare(Row& row) const {}
 
   /// Fully replaces model-dependent content without changing prepared slots.
@@ -105,7 +107,16 @@ class DynamicListBase : public ListLayout {
   /// Publishes new data and ends reset; nested/unmatched resets fail CHECK.
   void endModelReset();
 
+  /// Resolves gaps against the owning list's surface, including custom fills.
   Color background() const override;
+
+  /// Routes touches only inside actual row surfaces; gaps remain
+  /// noninteractive.
+  bool fillTouchTargetPath(XDim x, YDim y, std::vector<Widget*>& path) override;
+
+  /// Keeps sloppy touch expansion from crossing a reserved separator band.
+  bool fillSloppyTouchTargetPath(XDim x, YDim y,
+                                 std::vector<Widget*>& path) override;
 
  protected:
   DynamicListBase(ApplicationContext& context, internal::DynamicModel& model,
@@ -136,7 +147,6 @@ class DynamicListBase : public ListLayout {
   int logical_start_ = 0;
   int section_index_ = 0;
   YDim gap_ = 0;
-  uint32_t revision_ = 0;
   uint8_t flags_ = 0;
 };
 

@@ -1,11 +1,14 @@
 #include <chrono>
 #include <functional>
+#include <iostream>
 #include <string>
 #include <vector>
 
+#include "golden_image.h"
 #include "gtest/gtest.h"
 #include "roo_windows/containers/scrollable_panel.h"
 #include "roo_windows/material3/list/dynamic_list.h"
+#include "roo_windows/material3/theme.h"
 #include "roo_windows_render_test_support.h"
 
 namespace roo_windows {
@@ -19,6 +22,7 @@ class Model : public DynamicListModel<Row> {
   int count = 20;
   bool enabled = true;
   bool selected = false;
+  DividerInsetHint hint = {16, 8};
   DynamicListFocusTarget focus = DynamicListFocusTarget::kRowSurface;
   mutable int reads = 0;
   mutable int binds = 0;
@@ -53,7 +57,7 @@ class Model : public DynamicListModel<Row> {
     EXPECT_GE(index, 0);
     EXPECT_LT(index, count);
     ++reads;
-    return {selected, {16, 8}};
+    return {selected, hint};
   }
   DynamicListSectionState sectionState() const override {
     ++reads;
@@ -80,6 +84,15 @@ class ObservingList : public List {
     // Copying is test-only; callbacks may replace this test hook reentrantly.
     auto callback = changed;
     if (callback) callback(location);
+  }
+};
+
+class FullWidthList : public List {
+ public:
+  using List::List;
+  PreferredSize getPreferredSize() const override {
+    return {PreferredSize::MatchParentWidth(),
+            PreferredSize::WrapContentHeight()};
   }
 };
 
@@ -459,6 +472,364 @@ TEST_F(DynamicListTest, InvocationSelectionAndOptOut) {
   section.row(2)->onClicked();
   EXPECT_EQ(model.invokes, 2);
   EXPECT_EQ(list.selection().index, 1);
+}
+
+// Verifies unselected mixed sections render exactly like an eager list across
+// styles, variants, and divider policies, including both dynamic/static seams.
+TEST_F(DynamicListTest, MixedPixelsMatchEagerReference) {
+  for (ListVariant variant :
+       {ListVariant::kBaseline, ListVariant::kExpressive}) {
+    for (ListStyle style : {ListStyle::kStandard, ListStyle::kSegmented}) {
+      for (DividerMode mode :
+           {DividerMode::kNone, DividerMode::kFullWidth, DividerMode::kInset}) {
+        Model model;
+        model.count = 2;
+        model.hint = {};
+        Section section(context(), model);
+        Row first(context(), "Device");
+        Row last(context(), "Device");
+        FullWidthList mixed(context());
+        mixed.setVariant(variant);
+        mixed.setStyle(style);
+        ListDividerPolicy policy;
+        policy.mode = mode;
+        policy.start_inset = 12;
+        policy.end_inset = 8;
+        mixed.setDividerPolicy(policy);
+        mixed.add(first);
+        mixed.add(section);
+        mixed.add(last);
+        SimpleScrollablePanel scroll(context(), mixed);
+        std::vector<roo::byte> reference;
+        {
+          Mount mount(app_, scroll);
+          ASSERT_TRUE(refresh());
+          reference.assign(raster_, raster_ + sizeof(raster_));
+        }
+        FullWidthList eager(context());
+        eager.setVariant(variant);
+        eager.setStyle(style);
+        eager.setDividerPolicy(policy);
+        for (int i = 0; i < 4; ++i) {
+          eager.add(std::make_unique<Row>(context(), "Device"));
+        }
+        SimpleScrollablePanel eager_scroll(context(), eager);
+        Mount mount(app_, eager_scroll);
+        ASSERT_TRUE(refresh());
+        int mismatch_count = 0;
+        int first_x = -1;
+        int first_y = -1;
+        for (size_t byte = 0; byte < reference.size(); ++byte) {
+          if (reference[byte] == raster_[byte]) continue;
+          if (first_x < 0) {
+            first_x = (byte / 2) % kWidth;
+            first_y = (byte / 2) / kWidth;
+          }
+          ++mismatch_count;
+        }
+        EXPECT_EQ(mismatch_count, 0)
+            << "variant=" << static_cast<int>(variant)
+            << " style=" << static_cast<int>(style)
+            << " divider=" << static_cast<int>(mode) << " first=" << first_x
+            << "," << first_y << " mixed_height=" << mixed.height()
+            << " eager_height=" << eager.height()
+            << " section_height=" << section.height()
+            << " row_height=" << first.height();
+      }
+    }
+  }
+}
+
+// Verifies uniform selected geometry and partial-viewport dividers against
+// persistent golden images; mixed seams have no enclosing section surface.
+TEST_F(DynamicListTest, MixedGoldenStates) {
+  Model model;
+  model.count = 8;
+  Section section(context(), model);
+  Row first(context(), "Add device");
+  Row last(context(), "Advanced");
+  FullWidthList list(context());
+  list.setStyle(ListStyle::kSegmented);
+  ListDividerPolicy dividers;
+  dividers.mode = DividerMode::kInset;
+  list.setDividerPolicy(dividers);
+  list.add(first);
+  list.add(section);
+  list.add(last);
+  SimpleScrollablePanel scroll(context(), list);
+  Mount mount(app_, scroll);
+  ASSERT_TRUE(refresh());
+  auto capture = [&]() {
+    return test::CaptureRgb(offscreen_.raster(), 0, 0, kWidth, kHeight);
+  };
+  EXPECT_TRUE(test::CompareOrUpdateGolden(
+      capture(), "test/goldens/material3_dynamic_list/mixed.ppm",
+      "material3_dynamic_list_mixed"));
+  ListSelectionPolicy policy;
+  policy.mode = SelectionMode::kMultiple;
+  list.setSelectionPolicy(policy);
+  model.selected = true;
+  section.modelChanged();
+  ASSERT_TRUE(refresh());
+  EXPECT_TRUE(test::CompareOrUpdateGolden(
+      capture(), "test/goldens/material3_dynamic_list/selected.ppm",
+      "material3_dynamic_list_selected"));
+  model.selected = false;
+  section.modelChanged();
+  scroll.scrollTo(0, -112);
+  ASSERT_TRUE(refresh());
+  EXPECT_TRUE(test::CompareOrUpdateGolden(
+      capture(), "test/goldens/material3_dynamic_list/offscreen.ppm",
+      "material3_dynamic_list_offscreen"));
+}
+
+// Verifies retained row storage and metadata/bind work are independent of model
+// length in every selection mode, and reports host viewport-update timings.
+TEST_F(DynamicListTest, ResourceBoundsAcrossModelSizes) {
+  for (SelectionMode mode : {SelectionMode::kNone, SelectionMode::kSingle,
+                             SelectionMode::kMultiple}) {
+    size_t capacity = 0;
+    int expected_reads = -1;
+    int expected_binds = -1;
+    for (int count : {100, 10000}) {
+      Model model;
+      model.count = count;
+      Section section(context(), model);
+      List list(context());
+      list.add(section);
+      ListSelectionPolicy policy;
+      policy.mode = mode;
+      list.setSelectionPolicy(policy);
+      SimpleScrollablePanel scroll(context(), list);
+      Mount mount(app_, scroll);
+      ASSERT_TRUE(refresh());
+      if (mode == SelectionMode::kSingle) list.select(section, 50);
+      if (capacity != 0) {
+        EXPECT_EQ(section.poolCapacity(), capacity);
+      }
+      capacity = section.poolCapacity();
+      EXPECT_LE(capacity, 8u);
+      int prepares = model.prepares;
+      model.reads = 0;
+      model.binds = 0;
+      auto start = std::chrono::steady_clock::now();
+      for (int i = 1; i <= 20; ++i) {
+        scroll.scrollTo(0, -i * 56);
+        ASSERT_TRUE(refresh());
+      }
+      auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(
+                         std::chrono::steady_clock::now() - start)
+                         .count();
+      EXPECT_EQ(model.prepares, prepares);
+      EXPECT_LT(model.reads, 2000);
+      EXPECT_LT(model.binds, 200);
+      if (expected_reads >= 0) {
+        EXPECT_EQ(model.reads, expected_reads);
+      }
+      if (expected_binds >= 0) {
+        EXPECT_EQ(model.binds, expected_binds);
+      }
+      expected_reads = model.reads;
+      expected_binds = model.binds;
+      std::cout << "dynamic-list mode=" << static_cast<int>(mode)
+                << " count=" << count << " pool=" << capacity
+                << " prepares=" << prepares << " reads=" << model.reads
+                << " binds=" << model.binds << " 20-updates-us=" << elapsed
+                << '\n';
+    }
+  }
+}
+
+// Verifies a pending touch animation is canceled before a pooled row is
+// rebound.
+TEST_F(DynamicListTest, RecyclingCancelsPendingTouch) {
+  Model model;
+  model.count = 100;
+  Section section(context(), model);
+  List list(context());
+  list.add(section);
+  SimpleScrollablePanel scroll(context(), list);
+  Mount mount(app_, scroll);
+  ASSERT_TRUE(refresh());
+  Row* row = section.row(0);
+  row->onShowPress(10, 10);
+  EXPECT_TRUE(row->isPressed());
+  scroll.scrollTo(0, -2000);
+  ASSERT_TRUE(refresh());
+  EXPECT_FALSE(row->isPressed());
+  EXPECT_FALSE(row->isClicking());
+  EXPECT_EQ(app_.root().click_animation().target(), nullptr);
+  EXPECT_EQ(model.invokes, 0);
+}
+
+// Verifies an interrupted paint resumes existing bindings, then a reset starts
+// a new revision without retaining views into freed model storage.
+TEST_F(DynamicListTest, InterruptedPaintingDoesNotRebind) {
+  class SlowRow : public Row {
+   public:
+    explicit SlowRow(ApplicationContext& context) : Row(context) {}
+    mutable bool slow = false;
+
+   protected:
+    bool retainsTextSlots() const override { return true; }
+    void paint(PaintContext& context) const override {
+      Row::paint(context);
+      if (slow) delay(20);
+    }
+  };
+  Model model;
+  DynamicList<Row> section(
+      context(), model, [&]() { return std::make_unique<SlowRow>(context()); });
+  List list(context());
+  list.add(section);
+  SimpleScrollablePanel scroll(context(), list);
+  Mount mount(app_, scroll);
+  ASSERT_TRUE(refresh());
+  for (Widget* child : section.children())
+    static_cast<SlowRow*>(child)->slow = true;
+  section.invalidateInterior();
+  EXPECT_FALSE(refresh(roo_time::Uptime::Now() + roo_time::Millis(5)));
+  int binds = model.binds;
+  for (Widget* child : section.children())
+    static_cast<SlowRow*>(child)->slow = false;
+  ASSERT_TRUE(refresh());
+  EXPECT_EQ(model.binds, binds);
+  section.beginModelReset();
+  model.text.assign(4096, 'X');
+  model.text = "New storage";
+  model.text.shrink_to_fit();
+  section.endModelReset();
+  ASSERT_TRUE(refresh());
+}
+
+// Verifies both parent-owned and internal separator bands stop sloppy touch
+// expansion while actual row surfaces still route to their bound widgets.
+TEST_F(DynamicListTest, SeparatorBandsNeverInvokeNeighborRows) {
+  Model model;
+  model.count = 2;
+  Section section(context(), model);
+  Row first(context(), "First");
+  first.item().setOnInvoked([]() {});
+  FullWidthList list(context());
+  list.setStyle(ListStyle::kSegmented);
+  list.add(first);
+  list.add(section);
+  SimpleScrollablePanel scroll(context(), list);
+  Mount mount(app_, scroll);
+  ASSERT_TRUE(refresh());
+  std::vector<Widget*> path;
+  ASSERT_TRUE(list.fillTouchTargetPath(20, first.height(), path));
+  EXPECT_EQ(path.back(), &list);
+  path.clear();
+  ASSERT_TRUE(list.fillSloppyTouchTargetPath(20, first.height(), path));
+  EXPECT_EQ(path.back(), &list);
+  path.clear();
+  YDim internal_gap = section.offsetTop() + section.row(0)->height();
+  ASSERT_TRUE(list.fillTouchTargetPath(20, internal_gap, path));
+  EXPECT_EQ(path.back(), &section);
+  path.clear();
+  ASSERT_TRUE(list.fillTouchTargetPath(200, section.offsetTop() + 20, path));
+  EXPECT_EQ(path.back(), section.row(0));
+}
+
+// Verifies multiple nonempty collections share global corners and collapse
+// their seam when the first collection becomes empty.
+TEST_F(DynamicListTest, MultipleCollectionsShareGlobalEnds) {
+  Model first_model;
+  first_model.count = 2;
+  Model last_model;
+  last_model.count = 1;
+  Section first(context(), first_model);
+  Section last(context(), last_model);
+  FullWidthList list(context());
+  list.setStyle(ListStyle::kSegmented);
+  list.add(first);
+  list.add(last);
+  SimpleScrollablePanel scroll(context(), list);
+  Mount mount(app_, scroll);
+  ASSERT_TRUE(refresh());
+  EXPECT_EQ(first.row(0)->visualContext().position, ListItemPosition::kFirst);
+  EXPECT_EQ(first.row(1)->visualContext().position, ListItemPosition::kMiddle);
+  EXPECT_EQ(last.row(0)->visualContext().position, ListItemPosition::kLast);
+  EXPECT_EQ(last.offsetTop(), first.height() + Scaled(2));
+  first_model.count = 0;
+  first.modelChanged();
+  ASSERT_TRUE(refresh());
+  EXPECT_EQ(last.offsetTop(), 0);
+  EXPECT_EQ(last.row(0)->visualContext().position, ListItemPosition::kSingle);
+}
+
+// Verifies width and policy changes recompute row bounds and gaps without
+// allocating new rows or losing the selected logical location.
+TEST_F(DynamicListTest, WidthAndPolicyChangesReusePreparedRows) {
+  class SizedList : public List {
+   public:
+    using List::List;
+    XDim desired_width = 240;
+    PreferredSize getPreferredSize() const override {
+      return {PreferredSize::ExactWidth(desired_width),
+              PreferredSize::WrapContentHeight()};
+    }
+  } list(context());
+  Model model;
+  Section section(context(), model);
+  list.add(section);
+  list.setSelectionPolicy(SingleSelection());
+  SimpleScrollablePanel scroll(context(), list);
+  Mount mount(app_, scroll);
+  ASSERT_TRUE(refresh());
+  list.select(section, 2);
+  int prepares = model.prepares;
+  list.desired_width = 160;
+  list.setStyle(ListStyle::kSegmented);
+  list.requestLayout();
+  ASSERT_TRUE(refresh());
+  EXPECT_EQ(section.width(), 160);
+  EXPECT_EQ(section.row(0)->width(), 160);
+  EXPECT_EQ(section.row(1)->offsetTop(), section.row(0)->height() + Scaled(2));
+  EXPECT_EQ(list.selection().index, 2);
+  EXPECT_EQ(model.prepares, prepares);
+  // List is declared before its borrowed section in this test, so detach now.
+  list.clear();
+}
+
+// Verifies the current theme and a specialized parent background reach dynamic
+// rows and their gap surfaces after invalidation, without replacing the pool.
+TEST(DynamicListTheme, UsesUpdatedThemeAndParentBackground) {
+  roo_scheduler::Scheduler scheduler;
+  Material3Theme material = DefaultTheme().material3Theme();
+  Theme theme = DefaultTheme();
+  theme.material3_theme = &material;
+  Environment environment(scheduler, theme);
+  roo::byte pixels[240 * 320 * 2] = {};
+  roo_display::OffscreenDevice<roo_display::Argb4444> device(
+      240, 320, pixels, roo_display::Argb4444());
+  roo_display::Display display(device);
+  Application app(&environment, display);
+  Model model;
+  Section section(app.context(), model);
+  class ColoredList : public FullWidthList {
+   public:
+    using FullWidthList::FullWidthList;
+    Color background() const override { return roo_display::color::Green; }
+  } list(app.context());
+  list.setStyle(ListStyle::kSegmented);
+  list.add(section);
+  SimpleScrollablePanel scroll(app.context(), list);
+  Mount mount(app, scroll);
+  ASSERT_TRUE(app.refresh());
+  int prepares = model.prepares;
+  material.color.surfaceContainer = roo_display::color::Red;
+  list.requestLayout();
+  list.invalidateInterior();
+  ASSERT_TRUE(app.refresh());
+  EXPECT_EQ(section.row(0)->background(), roo_display::color::Red);
+  EXPECT_EQ(section.background(), roo_display::color::Green);
+  EXPECT_EQ(model.prepares, prepares);
+  EXPECT_TRUE(test::CompareOrUpdateGolden(
+      test::CaptureRgb(device.raster(), 0, 0, 240, 320),
+      "test/goldens/material3_dynamic_list/theme_changed.ppm",
+      "material3_dynamic_list_theme_changed"));
 }
 
 }  // namespace

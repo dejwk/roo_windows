@@ -70,7 +70,6 @@ void DynamicListBase::beginModelReset() {
   CHECK(!cleaning());
   if (owner_ != nullptr) owner_->checkMutation();
   flags_ |= 3;
-  ++revision_;
   if (owner_ != nullptr) owner_->invalidateInvocations(this);
   releaseRows();
   setElementCount(0);
@@ -89,13 +88,13 @@ void DynamicListBase::endModelReset() {
 }
 
 void DynamicListBase::onModelChanged(int old_count) {
-  ++revision_;
   DynamicListSectionState state = model().sectionState();
   if (!state.enabled || state.focus_target == DynamicListFocusTarget::kNone) {
     focusManager().onSubtreeDetaching(*this);
   }
-  if (owner_ != nullptr)
+  if (owner_ != nullptr) {
     owner_->sectionChanged(*this, old_count != elementCount());
+  }
 }
 
 YDim DynamicListBase::rowStride() const { return rowHeight() + gap_; }
@@ -160,6 +159,22 @@ bool DynamicListBase::invokeChild(Widget& child) {
   int index = indexOf(child);
   if (owner_ == nullptr || index < 0 || resetting()) return false;
   return owner_->invokeRow({this, index}, static_cast<ListEntry&>(child));
+}
+
+bool DynamicListBase::fillTouchTargetPath(XDim x, YDim y,
+                                          std::vector<Widget*>& path) {
+  if (!Widget::fillTouchTargetPath(x, y, path)) return false;
+  if (resetting() || rowStride() <= 0 || y < 0) return true;
+  int index = y / rowStride();
+  if (index >= elementCount() || !rowBounds(index).contains(x, y)) return true;
+  Widget* row = materializedRow(index);
+  if (row != nullptr) row->fillTouchTargetPath(x, y - row->offsetTop(), path);
+  return true;
+}
+
+bool DynamicListBase::fillSloppyTouchTargetPath(XDim x, YDim y,
+                                                std::vector<Widget*>& path) {
+  return fillTouchTargetPath(x, y, path);
 }
 
 Color DynamicListBase::background() const {

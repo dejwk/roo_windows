@@ -904,7 +904,16 @@ class List : public Container {
   /// Sets a member static row's multiple-selection flag; false in other modes.
   bool setSelected(ListEntry& entry, bool selected);
 
+  /// Routes an accepted static-row action through selection and lifetime
+  /// guards.
   bool invokeChild(Widget& child) override;
+
+  /// Keeps touches in parent-owned separator bands out of neighboring rows.
+  bool fillTouchTargetPath(XDim x, YDim y, std::vector<Widget*>& path) override;
+
+  /// Does not expand child hit areas into list separator bands.
+  bool fillSloppyTouchTargetPath(XDim x, YDim y,
+                                 std::vector<Widget*>& path) override;
 
   /// Clears all row entries from the list.
   void clear();

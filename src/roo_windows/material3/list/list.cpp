@@ -1719,10 +1719,12 @@ ListEntryVisualContext List::rowContext(int section_index, int index) const {
   } else {
     int next = section_index + 1;
     while (next < static_cast<int>(sections_.size()) &&
-           sectionCount(sections_[next]) == 0)
+           sectionCount(sections_[next]) == 0) {
       ++next;
-    if (next < static_cast<int>(sections_.size()))
+    }
+    if (next < static_cast<int>(sections_.size())) {
       next_selected = selected(sections_[next], 0);
+    }
   }
   result.show_divider = ShouldShowDivider(
       divider_policy_, logical, logical_count_, result.selected, next_selected);
@@ -1759,8 +1761,9 @@ int List::uniformGap() const {
 }
 
 YDim List::interSectionGap(int previous, int next) const {
-  if (sections_[previous].dynamic || sections_[next].dynamic)
+  if (sections_[previous].dynamic || sections_[next].dynamic) {
     return uniformGap();
+  }
   return internal::ResolveGap(
       style_, divider_policy_.mode,
       static_cast<const ListEntry*>(sections_[previous].widget)
@@ -1802,8 +1805,9 @@ void List::resolveContexts() {
       context.divider_end_inset = divider_policy_.end_inset;
       int next = i + 1;
       while (count != 0 && next < static_cast<int>(sections_.size()) &&
-             sectionCount(sections_[next]) == 0)
+             sectionCount(sections_[next]) == 0) {
         ++next;
+      }
       bool next_selected = count != 0 &&
                            next < static_cast<int>(sections_.size()) &&
                            selected(sections_[next], 0);
@@ -1857,8 +1861,9 @@ void List::clear() {
   while (!sections_.empty()) {
     Section section = sections_.back();
     sections_.pop_back();
-    if (section.dynamic)
+    if (section.dynamic) {
       static_cast<DynamicListBase*>(section.widget)->owner_ = nullptr;
+    }
     detachChild(section.widget);
   }
   logical_count_ = 0;
@@ -1869,8 +1874,9 @@ void List::clear() {
 
 bool List::replaceSelection(ListRowLocation location) {
   if (selection_.section == location.section &&
-      selection_.index == location.index)
+      selection_.index == location.index) {
     return true;
+  }
   ListRowLocation previous_selection = selection_;
   selection_ = location;
   resolveContexts();
@@ -1884,8 +1890,9 @@ bool List::replaceSelection(ListRowLocation location) {
       Widget* after = sections_[i].widget;
       if (previous_selection.section == before ||
           previous_selection.section == after || location.section == before ||
-          location.section == after)
+          location.section == after) {
         requestLayout();
+      }
     }
     previous = i;
   }
@@ -1896,8 +1903,9 @@ bool List::replaceSelection(ListRowLocation location) {
 bool List::select(ListEntry& entry) {
   checkMutation();
   if (clearing_ || selection_policy_.mode != SelectionMode::kSingle ||
-      findSection(&entry) < 0 || entry.isGone())
+      findSection(&entry) < 0 || entry.isGone()) {
     return false;
+  }
   return replaceSelection({&entry, 0});
 }
 
@@ -1905,8 +1913,9 @@ bool List::select(DynamicListBase& section, int index) {
   checkMutation();
   if (clearing_ || selection_policy_.mode != SelectionMode::kSingle ||
       section.owner_ != this || section.resetting() || section.isGone() ||
-      index < 0 || index >= section.elementCount())
+      index < 0 || index >= section.elementCount()) {
     return false;
+  }
   return replaceSelection({&section, index});
 }
 
@@ -1919,8 +1928,9 @@ bool List::setSelected(ListEntry& entry, bool selected) {
   checkMutation();
   int index = findSection(&entry);
   if (clearing_ || index < 0 ||
-      selection_policy_.mode != SelectionMode::kMultiple)
+      selection_policy_.mode != SelectionMode::kMultiple) {
     return false;
+  }
   if (sections_[index].selected == selected) return true;
   sections_[index].selected = selected;
   onStructureOrPolicyChanged();
@@ -1969,6 +1979,25 @@ void List::sectionChanged(DynamicListBase& section, bool layout) {
   }
 }
 
+bool List::fillTouchTargetPath(XDim x, YDim y, std::vector<Widget*>& path) {
+  if (!Widget::fillTouchTargetPath(x, y, path)) return false;
+  for (const Section& section : sections_) {
+    Widget& child = *section.widget;
+    if (sectionCount(section) == 0 || !child.parent_bounds().contains(x, y)) {
+      continue;
+    }
+    child.fillTouchTargetPath(x - child.offsetLeft(), y - child.offsetTop(),
+                              path);
+    break;
+  }
+  return true;
+}
+
+bool List::fillSloppyTouchTargetPath(XDim x, YDim y,
+                                     std::vector<Widget*>& path) {
+  return fillTouchTargetPath(x, y, path);
+}
+
 bool List::invokeChild(Widget& child) {
   int index = findSection(&child);
   if (index < 0 || sections_[index].dynamic) return false;
@@ -1991,8 +2020,9 @@ bool List::invokeRow(ListRowLocation location, ListEntry& row) {
       selection_policy_.selection_follows_press) {
     replaceSelection(location);
   }
-  if (call.row != nullptr && call.row->item() != nullptr)
+  if (call.row != nullptr && call.row->item() != nullptr) {
     call.row->item()->invoke();
+  }
   if (call.row != nullptr) call.row->Widget::onClicked();
   return true;
 }
@@ -2026,9 +2056,10 @@ void List::paint(PaintContext& context) const {
     int previous = -1;
     for (int i = 0; i < static_cast<int>(sections_.size()); ++i) {
       if (sectionCount(sections_[i]) == 0) continue;
-      if (previous >= 0)
+      if (previous >= 0) {
         paintBand(context, previous, sectionCount(sections_[previous]) - 1,
                   interSectionGap(previous, i));
+      }
       previous = i;
     }
   }
@@ -2061,8 +2092,9 @@ Dimensions List::onMeasure(WidthSpec width, HeightSpec height) {
     previous = i;
   }
   Dimensions measured(resolved_width, height.resolveSize(total));
-  if (selection_.section != nullptr && selection_.section->isGone())
+  if (selection_.section != nullptr && selection_.section->isGone()) {
     clearSelection();
+  }
   return measured;
 }
 
@@ -2095,8 +2127,9 @@ namespace {
 // Finds a real eligible target; descendants are visited only within one row.
 Widget* RowFocusTarget(Widget& row, bool backwards, bool include_row) {
   if (!row.isVisible() || !row.isEnabled()) return nullptr;
-  if (!backwards && include_row && row.isFocusable() && !row.bounds().empty())
+  if (!backwards && include_row && row.isFocusable() && !row.bounds().empty()) {
     return &row;
+  }
   for (int n = 0; n < row.focusChildCount(); ++n) {
     int index = backwards ? row.focusChildCount() - n - 1 : n;
     Widget* child = row.focusChildAt(index);
@@ -2113,8 +2146,9 @@ Widget* RowFocusTarget(Widget& row, bool backwards, bool include_row) {
 
 bool List::onKeyEvent(const KeyEvent& event) {
   if ((event.phase != KeyPhase::kDown && event.phase != KeyPhase::kRepeat) ||
-      (event.code != KeyCode::kUp && event.code != KeyCode::kDown))
+      (event.code != KeyCode::kUp && event.code != KeyCode::kDown)) {
     return false;
+  }
   for (Widget* ancestor = this; ancestor != nullptr;
        ancestor = ancestor->parent()) {
     if (!ancestor->isVisible() || !ancestor->isEnabled()) return false;
@@ -2122,8 +2156,9 @@ bool List::onKeyEvent(const KeyEvent& event) {
   Widget* focused = focusManager().focused();
   if (focused == nullptr) return false;
   Widget* direct = focused;
-  while (direct->parent() != nullptr && direct->parent() != this)
+  while (direct->parent() != nullptr && direct->parent() != this) {
     direct = direct->parent();
+  }
   int section = findSection(direct);
   if (section < 0) return false;
   bool backwards = event.code == KeyCode::kUp;

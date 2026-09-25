@@ -1157,7 +1157,15 @@ cc_test(
 
 cc_test(
     name = "material3_dynamic_list_test",
-    srcs = ["test/material3_dynamic_list_test.cpp", "test/roo_windows_render_test_support.h"],
+    srcs = [
+        "test/material3_dynamic_list_test.cpp",
+        "test/roo_windows_render_test_support.h",
+    ],
+    data = glob(["test/goldens/**/*.ppm"], allow_empty = True),
     linkstatic = 1,
-    deps = [":roo_windows", "@roo_testing//:arduino_gtest_main"],
+    deps = [
+        ":roo_windows",
+        ":test_golden_utils",
+        "@roo_testing//:arduino_gtest_main",
+    ],
 )

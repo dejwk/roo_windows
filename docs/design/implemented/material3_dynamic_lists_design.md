@@ -6,10 +6,16 @@ Allow a Material 3 list to mix ordinary rows and virtualized collections while
 presenting one continuous list with consistent row shapes, spacing, dividers,
 selection, and input behavior.
 
+## Implementation status
+
+All four phases are implemented. Validation results below record host tests,
+emulator build coverage, and the ESP32-C3 ABI audit. Physical-device interaction
+has not been validated in this change.
+
 ## Motivation
 
 A settings page can contain a fixed “Add device” row, a changing collection of
-devices, and a fixed “Advanced” row. Today `material3::List` accepts only
+devices, and a fixed “Advanced” row. Before this change, `material3::List` accepted only
 `ListEntry` children. Putting a `ListLayout` beside that list creates independent
 visual groups; wrapping the entire dynamic collection in one `ListEntry` gives
 the collection one row surface. Neither produces the same appearance as adding
@@ -25,17 +31,17 @@ content (`ListItem`), a Material row surface (`ListEntry`), and sequencing
 (`List`). `ListRow<Item>` owns one item inline and binds it to its row.
 `ListItem` already supports custom leading, trailing, and body widgets.
 
-The current [List implementation](../../../src/roo_windows/material3/list/list.cpp)
+The original [List implementation](../../../src/roo_windows/material3/list/list.cpp)
 resolves first/middle/last/single positions across non-gone direct rows, measures
 variable row heights, and owns the separator bands. Selected states can affect
-both row shape and gap geometry. Its selection snapshot is currently captured
-on insertion; it is not an authoritative model of application selection.
+both row shape and gap geometry. Its original selection snapshot was captured
+on insertion; this design replaces it with authoritative logical selection.
 
 [ListLayout](../../../src/roo_windows/containers/list_layout.h) borrows a
 `ListModel` and owns a prototype plus a pool of recycled widgets. The model
 binds each recycled widget to an index. The prototype determines a uniform row
 height, and the ancestor viewport determines which rows are materialized.
-Currently recycling happens in `paintChildren()`. The pool retains its peak
+Originally recycling happened in `paintChildren()`. The pool retains its peak
 capacity. `ListLayout` provides no Material list context or separator policy.
 
 [SimpleScrollablePanel](../../../src/roo_windows/containers/scrollable_panel.h)
@@ -169,8 +175,10 @@ use `ListEntry::clearItem()`. The next `bind()` fully initializes model-dependen
 state before `refreshFromItem()` runs. `prepare()` remains once per allocation.
 
 No framework item-ID registry is introduced. Indices are valid for one model
-revision; application actions capture a domain ID from the currently bound
-data when invoked. After structural reset, pending gestures and logical focus
+revision. A synchronous action may report its bound index; reset cancels old
+interactions and releases their callbacks before indices change. Application
+work that outlives a binding uses a domain ID instead. The append-only example
+restores its known selected index directly, without searching the model. After structural reset, pending gestures and logical focus
 are canceled. This avoids claiming that index 7 still identifies the same
 device after a reorder.
 
@@ -488,8 +496,8 @@ or ordinary row gains a data member. New virtual hooks add code/vtable entries.
 
 Budget up to 20 B of parent scalar state (logical count, an 8 B single-selection
 location, a pointer to the active invocation guard, and clear/destruction flags),
-and 24 B of adapter state per dynamic section (owner pointer, logical prefix,
-section-vector index, gap, revision, flags). Row height and extent calculation
+and 20 B of adapter state per dynamic section (owner pointer, logical prefix,
+section-vector index, gap, flags). Row height and extent calculation
 reuse the recycler. Logical focus is derived from the focus manager's real
 focused subtree and the active range, avoiding a second focus record that could
 outlive visibility changes.
@@ -571,7 +579,6 @@ class DynamicListBase : public ListLayout {
   int logical_start_ = 0;
   int section_index_ = 0;
   YDim gap_ = 0;
-  uint32_t revision_ = 0;
   uint8_t flags_ = 0;
   // Overrides the protected recycler geometry/binding/notification hooks.
 };
@@ -768,6 +775,57 @@ build. Input tests exercise keyboard materialization and touch recycling with
 slot controls; lifetime tests use adopted and borrowed rows and ASan where
 available. Allocation and metadata-call counters establish the resource claims.
 The phased validations above define the individual cases and exit criteria.
+
+## Validation results (2026-09-25)
+
+All 20 tests in `//:material3_dynamic_list_test` pass, including 12 exact
+framebuffer comparisons with eager lists and four reviewed goldens (mixed,
+selected, offscreen, and changed theme/background). Tests cover reset/reentrant
+cleanup, adopted destruction, borrowed detachment, touch cancellation, separator
+hit testing, distant keyboard materialization, descendant controls, interrupted
+painting, width changes, and multiple collections.
+
+The dynamic-list, static-list, and generic recycler targets also pass under
+ASan. Compatibility targets `material3_menu_row_test`, `material3_menu_test`,
+and `click_animation_test` pass. The revised
+`//examples/material3/lists/dynamic_devices:dynamic_devices` emulator target
+builds successfully and starts under the emulator without an error during an
+eight-second smoke run. Interactive touch/key walkthroughs and physical-device
+checks remain manual.
+
+The resource test performs 20 one-row viewport updates after warmup. Both model
+sizes retain seven pooled rows plus one prototype; preparation and binding
+counts are independent of model size. Times below are host measurements, not
+MCU performance guarantees.
+
+| Selection mode | Model rows | Prepared rows | Metadata reads | Binds | Elapsed (µs) |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| None | 100 | 8 | 40 | 20 | 10468 |
+| None | 10000 | 8 | 40 | 20 | 10711 |
+| Single | 100 | 8 | 40 | 20 | 11396 |
+| Single | 10000 | 8 | 40 | 20 | 10721 |
+| Multiple | 100 | 8 | 80 | 20 | 10780 |
+| Multiple | 10000 | 8 | 80 | 20 | 11049 |
+
+`benchmarks/material3_dynamic_list_size_probe.sh`, run with the installed
+`riscv32-esp-elf-g++` and `riscv32-esp-elf-nm`, measures these ESP32-C3 ABI sizes
+with exceptions and RTTI disabled:
+
+| Type | Bytes |
+| --- | ---: |
+| `Widget` | 24 |
+| `Container` | 44 |
+| `ListLayout` | 124 |
+| `List` | 88 |
+| `ListEntry` | 88 |
+| `ListItem` | 4 |
+| `DynamicListBase` | 144 |
+| `DynamicList<>` | 144 |
+| `ListRow<HeadlineListItem>` | 104 |
+
+The adapter adds 20 bytes over `ListLayout`; the typed facade adds no state.
+No fields were added to `Widget`, `Container`, `ListEntry`, or `ListItem` for
+this feature. Pools retain peak capacity per section, as specified above.
 
 ## Caveats
 
