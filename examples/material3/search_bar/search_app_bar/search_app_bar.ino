@@ -76,6 +76,7 @@ void initDisplay() {
 
 #include "roo_windows/containers/flex_layout.h"
 #include "roo_windows/material3/app_bar/app_bar.h"
+#include "roo_windows/material3/button/navigation.h"
 #include "roo_windows/material3/typography.h"
 #include "roo_windows/widgets/icon.h"
 #include "roo_windows/widgets/text_label.h"
@@ -93,7 +94,7 @@ class LogSearch : public FlexLayout {
   explicit LogSearch(ApplicationContext& context)
       : FlexLayout(context, FlexDirection::kColumn),
         search_app_bar_(context),
-        back_(context, ic_outlined_24_navigation_arrow_back()),
+        back_(context),
         scope_(context, ic_outlined_24_action_search()),
         more_(context, ic_outlined_24_navigation_more_vert()),
         content_(context, FlexDirection::kColumn),
@@ -110,8 +111,6 @@ class LogSearch : public FlexLayout {
 
     search_app_bar_.setOnInteractiveChange(
         [this]() { feedback_.setText("Event search opened"); });
-    back_.setOnInteractiveChange(
-        [this]() { feedback_.setText("Back to diagnostics"); });
     scope_.setOnInteractiveChange(
         [this]() { feedback_.setText("Search limited to warnings"); });
     more_.setOnInteractiveChange(
@@ -127,9 +126,15 @@ class LogSearch : public FlexLayout {
     add(content_, {.flex_grow = 1});
   }
 
+  // The task handles Back here because this standalone demo has one screen.
+  BackResult onBackRequested(BackSource) {
+    feedback_.setText("Back to diagnostics");
+    return BackResult::kHandled;
+  }
+
  private:
   material3::SearchAppBar search_app_bar_;
-  ActionIcon back_;
+  material3::BackButton back_;
   ActionIcon scope_;
   ActionIcon more_;
   FlexLayout content_;
@@ -147,6 +152,9 @@ Task& task = app.addTaskFullScreen(log_search);
 
 void setup() {
   initDisplay();
+  // BackButton and hardware Back share the same semantic request handler.
+  task.setBackCallback(
+      [](BackSource source) { return log_search.onBackRequested(source); });
   app.start();
   scheduler.run();
 }

@@ -17,9 +17,11 @@ class NavigationButton : public IconButton {
 /// Creates a navigation button that issues semantic 'back' events.
 class BackButton : public NavigationButton {
  public:
+  /// Creates a back button using @p context for its theme and scheduling.
   explicit BackButton(ApplicationContext& context);
 
-  /// @brief  Delivers a semantic 'back' event to the nearest navigation host.
+  /// Notifies click listeners, then sends Back through the containing task.
+  /// Uses the navigation-button source; detached buttons only notify listeners.
   void onClicked() override;
 };
 

@@ -75,6 +75,7 @@ void initDisplay() {
 
 #include "roo_windows/containers/flex_layout.h"
 #include "roo_windows/material3/app_bar/app_bar.h"
+#include "roo_windows/material3/button/navigation.h"
 #include "roo_windows/material3/typography.h"
 #include "roo_windows/widgets/icon.h"
 #include "roo_windows/widgets/text_label.h"
@@ -92,7 +93,7 @@ class HeatingDetails : public FlexLayout {
   explicit HeatingDetails(ApplicationContext& context)
       : FlexLayout(context, FlexDirection::kColumn),
         app_bar_(context, material3::AppBarVariant::kMediumFlexible),
-        back_(context, ic_outlined_24_navigation_arrow_back()),
+        back_(context),
         more_(context, ic_outlined_24_navigation_more_vert()),
         content_(context, FlexDirection::kColumn),
         status_(context, "Collector 41.8 °C",
@@ -107,8 +108,6 @@ class HeatingDetails : public FlexLayout {
     app_bar_.setLeading(back_);
     app_bar_.setTrailing(0, more_);
 
-    back_.setOnInteractiveChange(
-        [this]() { feedback_.setText("Back to pool overview"); });
     more_.setOnInteractiveChange(
         [this]() { feedback_.setText("More equipment actions requested"); });
 
@@ -121,9 +120,15 @@ class HeatingDetails : public FlexLayout {
     add(content_, {.flex_grow = 1});
   }
 
+  // The task handles Back here because this standalone demo has one screen.
+  BackResult onBackRequested(BackSource) {
+    feedback_.setText("Back to pool overview");
+    return BackResult::kHandled;
+  }
+
  private:
   material3::AppBar app_bar_;
-  ActionIcon back_;
+  material3::BackButton back_;
   ActionIcon more_;
   FlexLayout content_;
   TextLabel status_;
@@ -140,6 +145,10 @@ Task& task = app.addTaskFullScreen(heating_details);
 
 void setup() {
   initDisplay();
+  // BackButton and hardware Back share the same semantic request handler.
+  task.setBackCallback([](BackSource source) {
+    return heating_details.onBackRequested(source);
+  });
   app.start();
   scheduler.run();
 }

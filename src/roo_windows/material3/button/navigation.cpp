@@ -16,11 +16,12 @@ NavigationButton::NavigationButton(ApplicationContext& context,
 
 BackButton::BackButton(ApplicationContext& context)
     : NavigationButton(context,
-                       SCALED_ROO_ICON(outlined, navigation_arrow_back)) {};
+                       SCALED_ROO_ICON(outlined, navigation_arrow_back)) {}
 
 void BackButton::onClicked() {
+  NavigationButton::onClicked();
   Task* task = getTask();
-  if (task != nullptr) task->requestBack();
+  if (task != nullptr) task->requestBack(BackSource::kNavigationButton);
 }
 
 NavigationButton NavigationButtonArrowBack(ApplicationContext& context) {
