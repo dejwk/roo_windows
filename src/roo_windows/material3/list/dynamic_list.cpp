@@ -175,6 +175,9 @@ void DynamicListBase::refreshContexts() {
     syncSelection(row, index);
     ListEntryVisualContext visual = owner_->rowContext(section_index_, index);
     visual.focused = row.isFocused();
+    // Selection only affects a divider when it hides or restores the separator
+    // between two selected neighbors. Ordinary single-selection changes leave
+    // these gap surfaces untouched.
     if (row.visualContext().show_divider != visual.show_divider) {
       owner_->invalidateDividerAfter(section_index_, index);
     }
