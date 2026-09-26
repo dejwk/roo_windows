@@ -130,6 +130,21 @@ class LayoutScaffold : public Container {
   /// Sets physical caller-supplied safety insets, clamping negative edges.
   void setSafetyInsets(Insets insets);
 
+  /// Sets padding around all slots, inside safety insets. Changes request
+  /// repaint and layout. Defaults to zero.
+  void setPadding(Padding padding);
+
+  /// Sets both axes to the same theme-scaled padding token.
+  void setPadding(PaddingSize size) { setPadding(Padding(size)); }
+
+  /// Sets horizontal and vertical padding using theme-scaled tokens.
+  void setPadding(PaddingSize horizontal, PaddingSize vertical) {
+    setPadding(Padding(horizontal, vertical));
+  }
+
+  /// Returns the stored padding in pixels.
+  Padding getPadding() const override { return padding_; }
+
   /// Replaces the top-bar slot and its breakpoint participation rule.
   void setTopBar(WidgetRef widget,
                  BreakpointRange visibility = BreakpointRange());
@@ -180,16 +195,17 @@ class LayoutScaffold : public Container {
   /// Returns the resolved body band, or an empty rectangle before layout.
   Rect bodyBounds() const { return metrics_.safe_bounds; }
 
-  /// Returns the physical chrome and safety insets around `bodyBounds()`.
+  /// Returns the physical chrome, safety, and padding insets around
+  /// `bodyBounds()`.
   Insets contentInsets() const { return content_insets_; }
 
   /// Returns the active bottom-bar rectangle, or an empty rectangle.
   Rect bottomBarBounds() const { return bottom_bar_bounds_; }
 
-  /// Owns the Material page-background surface.
+  /// Uses the Material surface color for the page background.
   roo_display::Color background() const override;
 
-  /// Owns the Material page-background color role.
+  /// Identifies the page background as a Material surface.
   ::roo_windows::material3::ColorToken containerRole() const override;
 
  protected:
@@ -201,6 +217,9 @@ class LayoutScaffold : public Container {
   Widget& getChild(int index) override;
 
  private:
+  /// Resolves the space for slots after safety insets and widget padding.
+  Rect childBounds(const Rect& rect) const;
+
   static Insets ClampInsets(Insets insets);
   static Rect ApplyInsets(const Rect& rect, Insets insets);
   static Rect EmptyRect();
@@ -228,13 +247,15 @@ class LayoutScaffold : public Container {
   int16_t bottom_bar_height_;
   int16_t leading_rail_width_;
   int16_t trailing_rail_width_;
+  Padding padding_;
   uint8_t direction_ : 1;
 };
 
 static_assert(sizeof(LayoutScaffold) <=
                   sizeof(Container) + 6 * sizeof(void*) +
                       4 * sizeof(BreakpointRange) + 2 * sizeof(Insets) +
-                      sizeof(LayoutMetrics) + sizeof(Rect) + 16,
+                      sizeof(Padding) + sizeof(LayoutMetrics) + sizeof(Rect) +
+                      16,
               "LayoutScaffold must retain its fixed-slot RAM budget");
 
 /// Logical identity for a page-body pane.

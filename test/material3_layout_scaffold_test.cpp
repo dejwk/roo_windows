@@ -31,10 +31,13 @@ class ProbeWidget : public BasicWidget {
 
   bool isFocusable() const override { return true; }
 
+  Dimensions measured = Dimensions(0, 0);
+
  protected:
   Dimensions onMeasure(WidthSpec width, HeightSpec height) override {
-    return Dimensions(width.resolveSize(natural_width_),
-                      height.resolveSize(natural_height_));
+    measured = Dimensions(width.resolveSize(natural_width_),
+                          height.resolveSize(natural_height_));
+    return measured;
   }
 
  private:
@@ -174,6 +177,116 @@ TEST(Material3LayoutScaffold, PlacesChromeAndPublishesBodyGeometry) {
   EXPECT_EQ(bottom.parent_bounds(), scaffold.bottomBarBounds());
   EXPECT_EQ(LayoutBreakpoint::kCompact, scaffold.metrics().breakpoint);
   EXPECT_EQ(Rect(25, 13, 162, 83), scaffold.metrics().safe_bounds);
+}
+
+// Verifies zero defaults, changes after layout, unchanged-value no-ops,
+// and both token overloads through the public padding API.
+TEST(Material3LayoutScaffold, UpdatesStoredPaddingAndRequestsLayout) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
+  ProbeWidget body(context, 1, 1);
+  TestLayoutScaffold scaffold(context);
+  scaffold.setBody(body);
+  EXPECT_EQ(Padding(0), scaffold.getPadding());
+  Layout(scaffold, 200, 100);
+  EXPECT_EQ(Rect(0, 0, 199, 99), body.parent_bounds());
+  EXPECT_FALSE(scaffold.isLayoutRequested());
+
+  scaffold.setPadding(Padding(8, 6));
+  EXPECT_TRUE(scaffold.isLayoutRequested());
+  EXPECT_EQ(Padding(8, 6), scaffold.getPadding());
+  Layout(scaffold, 200, 100);
+  EXPECT_EQ(Rect(8, 6, 191, 93), body.parent_bounds());
+  EXPECT_EQ(184, body.measured.width());
+  EXPECT_EQ(88, body.measured.height());
+
+  scaffold.setPadding(Padding(8, 6));
+  EXPECT_FALSE(scaffold.isLayoutRequested());
+  scaffold.setPadding(PaddingSize::kSmall);
+  EXPECT_EQ(Padding(PaddingSize::kSmall), scaffold.getPadding());
+  scaffold.setPadding(PaddingSize::kLarge, PaddingSize::kTiny);
+  EXPECT_EQ(Padding(PaddingSize::kLarge, PaddingSize::kTiny),
+            scaffold.getPadding());
+
+  scaffold.setPadding(PaddingSize::kNone);
+  Layout(scaffold, 200, 100);
+  EXPECT_EQ(Rect(0, 0, 199, 99), body.parent_bounds());
+}
+
+// Verifies padding and safety insets combine for every slot in both passes,
+// including published geometry and mirrored rails.
+TEST(Material3LayoutScaffold, AppliesPaddingToMeasurementAndLayout) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
+  ProbeWidget top(context, 1, 10);
+  ProbeWidget bottom(context, 1, 12);
+  ProbeWidget leading(context, 20, 1);
+  ProbeWidget trailing(context, 30, 1);
+  ProbeWidget body(context, 1, 1);
+  TestLayoutScaffold scaffold(context);
+  scaffold.setPadding(Padding(8, 6));
+  scaffold.setSafetyInsets(Insets(5, 3, 7, 4));
+  scaffold.setTopBar(top);
+  scaffold.setBottomBar(bottom);
+  scaffold.setLeadingRail(leading, BreakpointRange());
+  scaffold.setTrailingRail(trailing, BreakpointRange());
+  scaffold.setBody(body);
+
+  Layout(scaffold, 200, 100);
+
+  EXPECT_EQ(Rect(13, 9, 184, 18), top.parent_bounds());
+  EXPECT_EQ(Rect(13, 78, 184, 89), bottom.parent_bounds());
+  EXPECT_EQ(Rect(13, 19, 32, 77), leading.parent_bounds());
+  EXPECT_EQ(Rect(155, 19, 184, 77), trailing.parent_bounds());
+  EXPECT_EQ(Rect(33, 19, 154, 77), body.parent_bounds());
+  EXPECT_EQ(172, top.measured.width());
+  EXPECT_EQ(172, bottom.measured.width());
+  EXPECT_EQ(59, leading.measured.height());
+  EXPECT_EQ(59, trailing.measured.height());
+  EXPECT_EQ(122, body.measured.width());
+  EXPECT_EQ(59, body.measured.height());
+  EXPECT_EQ(body.parent_bounds(), scaffold.bodyBounds());
+  EXPECT_EQ(bottom.parent_bounds(), scaffold.bottomBarBounds());
+  EXPECT_EQ(Insets(33, 19, 45, 22), scaffold.contentInsets());
+
+  scaffold.setLayoutDirection(LayoutDirection::kRightToLeft);
+  Layout(scaffold, 200, 100);
+  EXPECT_EQ(Rect(165, 19, 184, 77), leading.parent_bounds());
+  EXPECT_EQ(Rect(13, 19, 42, 77), trailing.parent_bounds());
+  EXPECT_EQ(Rect(43, 19, 164, 77), body.parent_bounds());
+  EXPECT_EQ(Insets(43, 19, 35, 22), scaffold.contentInsets());
+}
+
+// Verifies excessive padding clears previously laid-out slots and metrics,
+// and that the scaffold recovers when space becomes available again.
+TEST(Material3LayoutScaffold, ClearsSlotsWhenPaddingConsumesAvailableSpace) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
+  ProbeWidget top(context, 1, 10);
+  ProbeWidget body(context, 1, 1);
+  TestLayoutScaffold scaffold(context);
+  scaffold.setPadding(Padding(10, 8));
+  scaffold.setTopBar(top);
+  scaffold.setBody(body);
+  Layout(scaffold, 100, 60);
+  ASSERT_FALSE(body.parent_bounds().empty());
+
+  Layout(scaffold, 20, 60);
+  EXPECT_TRUE(top.parent_bounds().empty());
+  EXPECT_TRUE(body.parent_bounds().empty());
+  EXPECT_TRUE(scaffold.bodyBounds().empty());
+  EXPECT_TRUE(scaffold.bottomBarBounds().empty());
+  EXPECT_EQ(Insets::Zero(), scaffold.contentInsets());
+
+  Layout(scaffold, 100, 16);
+  EXPECT_TRUE(top.parent_bounds().empty());
+  EXPECT_TRUE(body.parent_bounds().empty());
+
+  Layout(scaffold, 100, 60);
+  EXPECT_EQ(Rect(10, 18, 89, 51), body.parent_bounds());
 }
 
 // Verifies a scaffold retains the outer breakpoint for ruler tokens after its

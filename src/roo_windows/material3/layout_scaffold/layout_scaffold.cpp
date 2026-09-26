@@ -190,6 +190,7 @@ LayoutScaffold::LayoutScaffold(ApplicationContext& context)
       bottom_bar_height_(0),
       leading_rail_width_(0),
       trailing_rail_width_(0),
+      padding_(0),
       direction_(static_cast<uint8_t>(LayoutDirection::kLeftToRight)) {}
 
 LayoutScaffold::~LayoutScaffold() {
@@ -230,6 +231,13 @@ void LayoutScaffold::setSafetyInsets(Insets insets) {
   const Insets clamped = ClampInsets(insets);
   if (safety_insets_ == clamped) return;
   safety_insets_ = clamped;
+  requestLayout();
+}
+
+void LayoutScaffold::setPadding(Padding padding) {
+  if (padding_ == padding) return;
+  padding_ = padding;
+  invalidateInterior();
   requestLayout();
 }
 
@@ -289,11 +297,11 @@ void LayoutScaffold::setBody(WidgetRef widget) {
 }
 
 roo_display::Color LayoutScaffold::background() const {
-  return theme().material3Theme().color.background;
+  return theme().material3Theme().color.surface;
 }
 
 ::roo_windows::material3::ColorToken LayoutScaffold::containerRole() const {
-  return ColorToken::kBackground;
+  return ColorToken::kSurface;
 }
 
 PreferredSize LayoutScaffold::getPreferredSize() const {
@@ -312,7 +320,7 @@ Dimensions LayoutScaffold::onMeasure(WidthSpec width, HeightSpec height) {
   bottom_bar_height_ = 0;
   leading_rail_width_ = 0;
   trailing_rail_width_ = 0;
-  const Rect safe = ApplyInsets(outer, safety_insets_);
+  const Rect safe = childBounds(outer);
   if (safe.empty()) return Dimensions(measured_width, measured_height);
 
   if (top_bar_ != nullptr && top_bar_->isVisible()) {
@@ -358,9 +366,9 @@ Dimensions LayoutScaffold::onMeasure(WidthSpec width, HeightSpec height) {
 void LayoutScaffold::onLayout(bool changed, const Rect& rect) {
   const LayoutBreakpoint breakpoint = policy_->resolveWidthPx(rect.width());
   updateChromeVisibility(breakpoint);
-  const Rect safe = ApplyInsets(rect, safety_insets_);
+  const Rect safe = childBounds(rect);
   if (safe.empty()) {
-    // A collapsed safety area must actively remove every child from layout;
+    // A collapsed content area must actively remove every child from layout;
     // keeping stale chrome bounds would leave invalid published geometry.
     layoutSlot(top_bar_, EmptyRect());
     layoutSlot(bottom_bar_, EmptyRect());
@@ -468,6 +476,13 @@ Rect LayoutScaffold::ApplyInsets(const Rect& rect, Insets insets) {
   if (width <= 0 || height <= 0) return EmptyRect();
   return Rect(rect.xMin() + insets.left(), rect.yMin() + insets.top(),
               rect.xMax() - insets.right(), rect.yMax() - insets.bottom());
+}
+
+Rect LayoutScaffold::childBounds(const Rect& rect) const {
+  const Padding padding = getPadding();
+  return ApplyInsets(
+      ApplyInsets(rect, safety_insets_),
+      Insets(padding.left(), padding.top(), padding.right(), padding.bottom()));
 }
 
 Rect LayoutScaffold::EmptyRect() {
