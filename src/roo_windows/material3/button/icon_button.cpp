@@ -152,7 +152,8 @@ IconButton::IconButton(ApplicationContext& context, const MonoIcon& icon,
       style_(static_cast<uint8_t>(style)),
       size_(static_cast<uint8_t>(ButtonSize::kSmall)),
       shape_(static_cast<uint8_t>(ButtonShape::kRound)),
-      width_mode_(static_cast<uint8_t>(IconButtonWidth::kUniform)) {}
+      width_mode_(static_cast<uint8_t>(IconButtonWidth::kUniform)),
+      shape_morph_(static_cast<uint8_t>(ButtonShapeMorph::kDefault)) {}
 
 void IconButton::setStyle(IconButtonStyle style) {
   uint8_t encoded = static_cast<uint8_t>(style);
@@ -167,6 +168,13 @@ void IconButton::setSize(ButtonSize size) {
   size_ = encoded;
   invalidateInterior();
   requestLayout();
+}
+
+void IconButton::setShapeMorph(ButtonShapeMorph shape_morph) {
+  uint8_t encoded = static_cast<uint8_t>(shape_morph);
+  if (shape_morph_ == encoded) return;
+  shape_morph_ = encoded;
+  invalidateInterior();
 }
 
 void IconButton::setShape(ButtonShape shape) {
@@ -223,6 +231,9 @@ BorderStyle IconButton::getBorderStyle() const {
                             ? SmallNumber(Scaled(kOutlineWidthDp))
                             : SmallNumber(0);
   uint8_t resting = RestingCornerRadius(*this);
+  if (shapeMorph() == ButtonShapeMorph::kDisabled) {
+    return BorderStyle(resting, outline);
+  }
   const ClickAnimation* animation = getClickAnimation();
   if (animation != nullptr) {
     float progress =

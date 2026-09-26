@@ -258,6 +258,9 @@ BorderStyle ToggleIconButton::getBorderStyle() const {
   SmallNumber outline = style() == IconButtonStyle::kOutlined && !isSelected()
                             ? SmallNumber(Scaled(kOutlineWidthDp))
                             : SmallNumber(0);
+  if (shapeMorph() == ButtonShapeMorph::kDisabled) {
+    return BorderStyle(selectionRadius(), outline);
+  }
   const ClickAnimation* animation = getClickAnimation();
   if (animation != nullptr) {
     float progress =
@@ -364,8 +367,11 @@ void ToggleIconButton::onPresentationChanged(const PresentationChange& change) {
 
 void ToggleIconButton::setSelectedFromPressed(bool selected) {
   if (selected == isSelected()) return;
+  uint8_t from_radius = shapeMorph() == ButtonShapeMorph::kDisabled
+                            ? selectionRadius()
+                            : PressedRadius(*this);
   Widget::setSelected(selected);
-  startSelectionAnimation(PressedRadius(*this));
+  startSelectionAnimation(from_radius);
 }
 
 }  // namespace material3

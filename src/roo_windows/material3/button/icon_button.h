@@ -53,6 +53,14 @@ class IconButton : public BasicSurfaceWidget {
   /// Changes the resting corner family and invalidates the surface.
   void setShape(ButtonShape shape);
 
+  /// Returns the configured shape-morph mode.
+  ButtonShapeMorph shapeMorph() const { return (ButtonShapeMorph)shape_morph_; }
+
+  /// Controls press shape morphing and requests repaint when changed.
+  /// kDefault currently behaves as kEnabled; kDisabled keeps the resting shape.
+  /// Toggle buttons retain their selection shape transition in every mode.
+  void setShapeMorph(ButtonShapeMorph shape_morph);
+
   /// Returns the active horizontal width token.
   IconButtonWidth widthMode() const { return (IconButtonWidth)width_mode_; }
 
@@ -108,6 +116,7 @@ class IconButton : public BasicSurfaceWidget {
   uint8_t size_ : 3;
   uint8_t shape_ : 1;
   uint8_t width_mode_ : 2;
+  uint8_t shape_morph_ : 2;
 };
 
 }  // namespace material3

@@ -33,9 +33,9 @@ class ToggleIconButtonAnimationTest
     auto button = std::make_unique<TestToggleIconButton>(
         context(), ic_outlined_24_action_done());
     TestToggleIconButton* result = button.get();
-    app_.add(std::move(button),
-             roo_display::Box(Scaled(8), Scaled(8), Scaled(48) - 1,
-                              Scaled(48) - 1));
+    app_.add(
+        std::move(button),
+        roo_display::Box(Scaled(8), Scaled(8), Scaled(48) - 1, Scaled(48) - 1));
     return result;
   }
 };
@@ -304,6 +304,32 @@ TEST(Material3ToggleIconButton, StableIconSlotAndStorageBudget) {
   constexpr size_t kRawBudget = sizeof(IconButton) + sizeof(void*) + 4;
   constexpr size_t kAlignmentSlack = alignof(ToggleIconButton) - 1;
   EXPECT_LE(sizeof(ToggleIconButton), kRawBudget + kAlignmentSlack);
+}
+
+// Verifies that disabled press morphing preserves animated selection feedback.
+TEST_F(ToggleIconButtonAnimationTest,
+       DisabledPressMorphPreservesSelectionShape) {
+  TestToggleIconButton* button = AddButton();
+  ASSERT_TRUE(refresh());
+  button->setShapeMorph(ButtonShapeMorph::kDisabled);
+  button->setPressed(true);
+  EXPECT_EQ(0xFF, button->getBorderStyle().top_left_corner_radius());
+  button->onClicked();
+  EXPECT_TRUE(button->isSelected());
+  EXPECT_TRUE(button->selectionAnimationActive());
+  EXPECT_EQ(0xFF, button->getBorderStyle().top_left_corner_radius());
+  button->setPressed(false);
+  button->setVisibility(Visibility::kInvisible);
+  ASSERT_TRUE(refresh());
+  EXPECT_EQ(Scaled(12), button->getBorderStyle().top_left_corner_radius());
+  button->setPressed(true);
+  EXPECT_EQ(Scaled(12), button->getBorderStyle().top_left_corner_radius());
+  button->setShapeMorph(ButtonShapeMorph::kEnabled);
+  EXPECT_EQ(Scaled(8), button->getBorderStyle().top_left_corner_radius());
+  button->setShapeMorph(ButtonShapeMorph::kDisabled);
+  button->setPressed(false);
+  button->setSelected(false);
+  EXPECT_EQ(0xFF, button->getBorderStyle().top_left_corner_radius());
 }
 
 }  // namespace

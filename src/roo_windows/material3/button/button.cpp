@@ -231,8 +231,8 @@ Button::Button(ApplicationContext& context, roo::string_view label,
       variant_(static_cast<uint8_t>(variant)),
       size_(static_cast<uint8_t>(ButtonSize::kSmall)),
       shape_(static_cast<uint8_t>(ButtonShape::kRound)),
-      small_button_padding_(
-          static_cast<uint8_t>(SmallButtonPadding::kReduced)) {}
+      small_button_padding_(static_cast<uint8_t>(SmallButtonPadding::kReduced)),
+      shape_morph_(static_cast<uint8_t>(ButtonShapeMorph::kDefault)) {}
 
 void Button::setSize(ButtonSize size) {
   uint8_t encoded = static_cast<uint8_t>(size);
@@ -240,6 +240,13 @@ void Button::setSize(ButtonSize size) {
   size_ = encoded;
   invalidateInterior();
   requestLayout();
+}
+
+void Button::setShapeMorph(ButtonShapeMorph shape_morph) {
+  uint8_t encoded = static_cast<uint8_t>(shape_morph);
+  if (shape_morph_ == encoded) return;
+  shape_morph_ = encoded;
+  invalidateInterior();
 }
 
 void Button::setShape(ButtonShape shape) {
@@ -316,7 +323,8 @@ BorderStyle Button::getBorderStyle() const {
                             ? SmallNumber(Scaled(kOutlineWidth))
                             : SmallNumber(0);
   const ClickAnimation* anim = getClickAnimation();
-  if (anim == nullptr && !isPressed()) {
+  if (shapeMorph() == ButtonShapeMorph::kDisabled ||
+      (anim == nullptr && !isPressed())) {
     if (shape() == ButtonShape::kRound) {
       return BorderStyle(kFullCornerRadius, outline);
     }

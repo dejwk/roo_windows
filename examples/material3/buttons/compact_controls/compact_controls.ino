@@ -133,6 +133,8 @@ class CompactControls : public FlexLayout {
 
     prime_.setSize(material3::ButtonSize::kExtraSmall);
     backwash_.setSize(material3::ButtonSize::kSmall);
+    // Keep this action's resting shape while retaining click feedback.
+    backwash_.setShapeMorph(material3::ButtonShapeMorph::kDisabled);
     backwash_.setSmallButtonPadding(material3::SmallButtonPadding::kReduced);
     prime_.setIcon(&ic_outlined_24_action_cached());
     backwash_.setIcon(&ic_outlined_24_action_build());

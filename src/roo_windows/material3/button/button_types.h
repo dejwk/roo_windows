@@ -23,5 +23,13 @@ enum class ButtonShape : uint8_t {
   kSquare,
 };
 
+/// Controls press-driven shape changes for Material 3 buttons.
+/// kDefault currently enables shape morphing.
+enum class ButtonShapeMorph : uint8_t {
+  kDefault,
+  kDisabled,
+  kEnabled,
+};
+
 }  // namespace material3
 }  // namespace roo_windows

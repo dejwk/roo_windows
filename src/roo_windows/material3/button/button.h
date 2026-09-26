@@ -79,6 +79,13 @@ class Button : public BasicSurfaceWidget {
   /// Selects the resting corner family used by the button.
   void setShape(ButtonShape shape);
 
+  /// Returns the configured shape-morph mode.
+  ButtonShapeMorph shapeMorph() const { return (ButtonShapeMorph)shape_morph_; }
+
+  /// Controls press shape morphing and requests repaint when changed.
+  /// kDefault currently behaves as kEnabled; kDisabled keeps the resting shape.
+  void setShapeMorph(ButtonShapeMorph shape_morph);
+
   /// Returns the small-button padding mode currently configured.
   SmallButtonPadding smallButtonPadding() const {
     return (SmallButtonPadding)small_button_padding_;
@@ -129,8 +136,8 @@ class Button : public BasicSurfaceWidget {
 
   /// Returns the current border radius and outline width.
   ///
-  /// While the button's click animation is active, the corner radius animates
-  /// toward the Material 3 pressed shape.
+  /// When shape morphing is enabled and the click animation is active,
+  /// the corner radius animates toward the Material 3 pressed shape.
   BorderStyle getBorderStyle() const override;
 
   /// Returns the resting elevation advertised to the surface framework.
@@ -165,6 +172,7 @@ class Button : public BasicSurfaceWidget {
   uint8_t size_ : 3;
   uint8_t shape_ : 1;
   uint8_t small_button_padding_ : 1;
+  uint8_t shape_morph_ : 2;
 };
 
 }  // namespace material3

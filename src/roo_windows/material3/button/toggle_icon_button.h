@@ -12,7 +12,8 @@ namespace material3 {
 /// The unselected icon is required and borrowed. The optional selected icon is
 /// also borrowed; when omitted, the unselected icon is recolored for both
 /// states. Selection uses Widget's shared selected bit and is changed before
-/// an interactive-change callback is delivered.
+/// an interactive-change callback is delivered. Disabling press shape morphing
+/// preserves the selection shape transition.
 class ToggleIconButton : public IconButton {
  public:
   /// Creates a toggle that borrows an unselected icon and optional selected

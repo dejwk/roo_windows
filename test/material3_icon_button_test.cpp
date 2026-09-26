@@ -4,6 +4,7 @@
 #include "roo_icons/outlined/24/action.h"
 #include "roo_scheduler.h"
 #include "roo_windows/core/application.h"
+#include "roo_windows/core/click_animation.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/material3/button/icon_button.h"
 
@@ -187,6 +188,58 @@ TEST(Material3IconButton, IsClickableAndFitsItsStorageBudget) {
   constexpr size_t kRawBudget = sizeof(BasicSurfaceWidget) + sizeof(void*) + 4;
   constexpr size_t kAlignmentSlack = alignof(IconButton) - 1;
   EXPECT_LE(sizeof(IconButton), kRawBudget + kAlignmentSlack);
+}
+
+// Verifies that every mode works for both shapes, including changes while
+// pressed.
+TEST(Material3IconButton, ShapeMorphControlsPressedGeometry) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
+  IconButton button(context, ic_outlined_24_action_done(),
+                    IconButtonStyle::kOutlined);
+  EXPECT_EQ(ButtonShapeMorph::kDefault, button.shapeMorph());
+  for (ButtonShape shape : {ButtonShape::kRound, ButtonShape::kSquare}) {
+    button.setPressed(false);
+    button.setShape(shape);
+    uint8_t resting = button.getBorderStyle().top_left_corner_radius();
+    button.setPressed(true);
+    for (ButtonShapeMorph mode :
+         {ButtonShapeMorph::kDefault, ButtonShapeMorph::kDisabled,
+          ButtonShapeMorph::kEnabled}) {
+      button.setShapeMorph(mode);
+      EXPECT_EQ(mode, button.shapeMorph());
+      EXPECT_EQ(mode == ButtonShapeMorph::kDisabled ? resting : Scaled(8),
+                button.getBorderStyle().top_left_corner_radius());
+      EXPECT_EQ(Scaled(1), button.getBorderStyle().outline_width().floor());
+    }
+  }
+}
+
+// Verifies that disabling morphing overrides a running click without stopping
+// it.
+TEST_F(Material3IconButtonRenderTest, ShapeMorphCanChangeDuringClickAnimation) {
+  auto button = std::make_unique<IconButton>(
+      context(), ic_outlined_24_action_done(), IconButtonStyle::kOutlined);
+  IconButton* button_ptr = button.get();
+  button_ptr->setShape(ButtonShape::kSquare);
+  app_.add(std::move(button), roo_display::Box(20, 20, 59, 59));
+  ASSERT_TRUE(refresh());
+  button_ptr->onShowPress(20, 20);
+  delay(kPressAnimationMillis / 4 + 20);
+  app_.root().refreshClickAnimation();
+  EXPECT_EQ(Scaled(8), button_ptr->getBorderStyle().top_left_corner_radius());
+  button_ptr->setShapeMorph(ButtonShapeMorph::kDisabled);
+  EXPECT_EQ(Scaled(12), button_ptr->getBorderStyle().top_left_corner_radius());
+  EXPECT_NE(nullptr, button_ptr->getClickAnimation());
+  EXPECT_TRUE(button_ptr->isInvalidated());
+  button_ptr->setShapeMorph(ButtonShapeMorph::kEnabled);
+  EXPECT_EQ(Scaled(8), button_ptr->getBorderStyle().top_left_corner_radius());
+  button_ptr->setShapeMorph(ButtonShapeMorph::kDisabled);
+  button_ptr->setShape(ButtonShape::kRound);
+  EXPECT_EQ(0xFF, button_ptr->getBorderStyle().top_left_corner_radius());
+  button_ptr->setShapeMorph(ButtonShapeMorph::kDefault);
+  EXPECT_EQ(Scaled(8), button_ptr->getBorderStyle().top_left_corner_radius());
 }
 
 }  // namespace

@@ -396,8 +396,7 @@ TEST_F(Material3ButtonClickAnimationTest,
   app_.add(std::move(button), roo_display::Box(20, 20, 139, 59));
   ASSERT_TRUE(refresh());
 
-  button_ptr->onSingleTapUp(button_ptr->width() / 2,
-                            button_ptr->height() / 2);
+  button_ptr->onSingleTapUp(button_ptr->width() / 2, button_ptr->height() / 2);
   ASSERT_TRUE(button_ptr->isClicking());
   ASSERT_TRUE(refresh());
 
@@ -431,6 +430,58 @@ TEST_F(Material3ButtonClickAnimationTest,
   delay(kPressAnimationMillis / 4);
   ASSERT_TRUE(refresh());
   EXPECT_EQ(expected_backdrop, pixelAt(21, 21));
+}
+
+// Verifies that every mode works for both shapes, including changes while
+// pressed.
+TEST(Material3Button, ShapeMorphControlsPressedGeometry) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
+  Button button(context, "Save", ButtonVariant::kOutlined);
+  EXPECT_EQ(ButtonShapeMorph::kDefault, button.shapeMorph());
+  for (ButtonShape shape : {ButtonShape::kRound, ButtonShape::kSquare}) {
+    button.setPressed(false);
+    button.setShape(shape);
+    uint8_t resting = button.getBorderStyle().top_left_corner_radius();
+    button.setPressed(true);
+    for (ButtonShapeMorph mode :
+         {ButtonShapeMorph::kDefault, ButtonShapeMorph::kDisabled,
+          ButtonShapeMorph::kEnabled}) {
+      button.setShapeMorph(mode);
+      EXPECT_EQ(mode, button.shapeMorph());
+      EXPECT_EQ(mode == ButtonShapeMorph::kDisabled ? resting : Scaled(8),
+                button.getBorderStyle().top_left_corner_radius());
+      EXPECT_EQ(Scaled(1), button.getBorderStyle().outline_width().floor());
+    }
+  }
+}
+
+// Verifies that disabling morphing overrides a running click without stopping
+// it.
+TEST_F(Material3ButtonClickAnimationTest,
+       ShapeMorphCanChangeDuringClickAnimation) {
+  auto button =
+      std::make_unique<Button>(context(), "Save", ButtonVariant::kOutlined);
+  Button* button_ptr = button.get();
+  button_ptr->setShape(ButtonShape::kSquare);
+  app_.add(std::move(button), roo_display::Box(20, 20, 59, 59));
+  ASSERT_TRUE(refresh());
+  button_ptr->onShowPress(20, 20);
+  delay(kPressAnimationMillis / 4 + 20);
+  app_.root().refreshClickAnimation();
+  EXPECT_EQ(Scaled(8), button_ptr->getBorderStyle().top_left_corner_radius());
+  button_ptr->setShapeMorph(ButtonShapeMorph::kDisabled);
+  EXPECT_EQ(Scaled(12), button_ptr->getBorderStyle().top_left_corner_radius());
+  EXPECT_NE(nullptr, button_ptr->getClickAnimation());
+  EXPECT_TRUE(button_ptr->isInvalidated());
+  button_ptr->setShapeMorph(ButtonShapeMorph::kEnabled);
+  EXPECT_EQ(Scaled(8), button_ptr->getBorderStyle().top_left_corner_radius());
+  button_ptr->setShapeMorph(ButtonShapeMorph::kDisabled);
+  button_ptr->setShape(ButtonShape::kRound);
+  EXPECT_EQ(0xFF, button_ptr->getBorderStyle().top_left_corner_radius());
+  button_ptr->setShapeMorph(ButtonShapeMorph::kDefault);
+  EXPECT_EQ(Scaled(8), button_ptr->getBorderStyle().top_left_corner_radius());
 }
 
 }  // namespace
