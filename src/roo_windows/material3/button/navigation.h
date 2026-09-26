@@ -12,6 +12,10 @@ class NavigationButton : public IconButton {
  public:
   /// Creates a navigation button that borrows @p icon, which must outlive it.
   explicit NavigationButton(ApplicationContext& context, const MonoIcon& icon);
+
+  ClickActivationPolicy getClickActivationPolicy() const override {
+    return ClickActivationPolicy::kAfterForcedFinalFrame;
+  }
 };
 
 /// Creates a navigation button that issues semantic 'back' events.

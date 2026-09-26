@@ -882,6 +882,53 @@ TEST(Material3List, ExpandablePanelClipsChildLayoutToVisibleHeight) {
   EXPECT_EQ(first.height(), panel.getChild(0).height());
 }
 
+// Verifies quick navigation taps defer invocation until the forced final
+// frame completes, including actions that hide their own row.
+TEST_F(Material3ListRenderTest, NavigationRowWaitsForFinalFrameBeforeHiding) {
+  auto row = std::make_unique<ListRow<NavigationListItem>>(
+      context(), ic_filled_24_device_wifi_tethering(), "Open");
+  auto* row_ptr = row.get();
+  int invocations = 0;
+  row_ptr->item().setOnInvoked([&]() {
+    ++invocations;
+    row_ptr->setVisibility(Visibility::kGone);
+  });
+  app_.add(WidgetRef(std::move(row)), roo_display::Box(0, 0, 179, 55));
+  ASSERT_TRUE(refresh());
+
+  row_ptr->onSingleTapUp(10, 10);
+  EXPECT_EQ(0, invocations);
+  ASSERT_TRUE(refresh());
+  EXPECT_EQ(1, invocations);
+  ASSERT_TRUE(refresh());
+  EXPECT_EQ(1, invocations);
+}
+
+// Verifies selection rows retain immediate state changes through their item
+// policies while navigation rows wait for the final frame.
+TEST_F(Material3ListRenderTest, SelectionRowsStillApplyQuickTapsImmediately) {
+  auto verify = [this](auto row, auto selected) {
+    auto* row_ptr = row.get();
+    int invocations = 0;
+    row_ptr->item().setOnInvoked([&]() { ++invocations; });
+    app_.add(WidgetRef(std::move(row)), roo_display::Box(0, 0, 179, 55));
+    ASSERT_TRUE(refresh());
+    EXPECT_FALSE(selected(row_ptr->item()));
+    row_ptr->onSingleTapUp(10, 10);
+    EXPECT_TRUE(selected(row_ptr->item()));
+    EXPECT_EQ(1, invocations);
+    row_ptr->setVisibility(Visibility::kGone);
+    ASSERT_TRUE(refresh());
+    EXPECT_EQ(1, invocations);
+  };
+  verify(std::make_unique<ListRow<CheckboxListItem>>(context(), "Check"),
+         [](const CheckboxListItem& item) { return item.isChecked(); });
+  verify(std::make_unique<ListRow<RadioListItem>>(context(), "Select"),
+         [](const RadioListItem& item) { return item.isSelected(); });
+  verify(std::make_unique<ListRow<SwitchListItem>>(context(), "Enable"),
+         [](const SwitchListItem& item) { return item.isOn(); });
+}
+
 // Verifies that expandable-row usage keeps expansion state in item-owned body
 // content while ListEntry remains a reusable row surface.
 TEST_F(Material3ListRenderTest,

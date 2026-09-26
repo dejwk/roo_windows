@@ -235,6 +235,11 @@ class ListItem {
     return SelectionParticipation::kSelectable;
   }
 
+  /// Keeps row feedback running while an ordinary item acts immediately.
+  virtual ClickActivationPolicy getClickActivationPolicy() const {
+    return ClickActivationPolicy::kImmediateContinueAnimation;
+  }
+
   /// Returns whether this item participates in row invocation.
   virtual bool isInvokable() const { return false; }
 
@@ -653,6 +658,11 @@ class InvokableListItemBase : public HeadlineSupportingListItemBase {
 /// affordance.
 class NavigationListItem : public InvokableListItemBase {
  public:
+  /// Presents the final feedback frame before invoking navigation.
+  ClickActivationPolicy getClickActivationPolicy() const override {
+    return ClickActivationPolicy::kAfterForcedFinalFrame;
+  }
+
   NavigationListItem(ApplicationContext& context,
                      const roo_display::Pictogram& pictogram,
                      roo::string_view headline = {},
@@ -915,6 +925,11 @@ class ListRow : public ListEntry {
   }
 
   ~ListRow() override { clearItem(); }
+
+  /// Uses the owned item's feedback and invocation timing.
+  ClickActivationPolicy getClickActivationPolicy() const override {
+    return item_.getClickActivationPolicy();
+  }
 
   /// Returns the row-owned item.
   Item& item() { return item_; }
