@@ -974,7 +974,7 @@ the interim behavior should be explicit:
 ## Implementation Plan
 
 Authoring references:
-[embedded-cpp-code-authoring instruction](../../../.github/instructions/embedded-cpp-code-authoring.instructions.md)
+[general C++ authoring instruction](../../../.github/instructions/general-cpp-code-authoring-instructions.md)
 [roo-windows-widget-authoring instruction](../../../.github/instructions/roo-windows-widget-authoring.instructions.md)
 
 ### Execution Order

@@ -90,7 +90,7 @@ multi-file experiments that do not belong in the checked-in examples.
   to internal implementation phases, migrations, or repository history unless
   that history is the explicit subject of a `legacy_` example.
 - Follow the repository's
-  [embedded C++ authoring guidance](embedded-cpp-code-authoring.instructions.md)
+  [embedded C++ authoring guidance](general-cpp-code-authoring-instructions.md)
   for formatting and general code style, while applying the more explanatory
   commenting standard above to examples.
 
@@ -106,4 +106,3 @@ multi-file experiments that do not belong in the checked-in examples.
   customization points.
 - The sketch's hierarchical `bazel run` target starts under the emulator.
 - Automated Bazel build coverage includes the sketch's emulator path.
-- The sketch is formatted with `clang-format`.

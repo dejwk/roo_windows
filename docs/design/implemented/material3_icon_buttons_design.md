@@ -508,7 +508,7 @@ same commit.
 ## Implementation Plan
 
 Implementation should follow the repo-local
-[embedded C++ code authoring guidance](../../../.github/instructions/embedded-cpp-code-authoring.instructions.md)
+[embedded C++ code authoring guidance](../../../.github/instructions/general-cpp-code-authoring-instructions.md)
 and
 [widget authoring guidance](../../../.github/instructions/roo-windows-widget-authoring.instructions.md).
 

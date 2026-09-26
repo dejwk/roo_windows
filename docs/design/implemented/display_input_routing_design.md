@@ -259,7 +259,7 @@ class KeySource {
 ## Delivered implementation
 
 Implementation follows the
-[embedded C++ guidance](../../../.github/instructions/embedded-cpp-code-authoring.instructions.md).
+[embedded C++ guidance](../../../.github/instructions/general-cpp-code-authoring-instructions.md).
 The coalescing ticker from event-driven input Phase 1 landed first.
 
 ### Completed: route and wake physical key sources

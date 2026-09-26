@@ -288,7 +288,7 @@ and methods receive final Doxygen contracts without “temporary,” “legacy,�
 ## Implementation Plan
 
 Implementation follows the
-[embedded C++ guidance](../../../.github/instructions/embedded-cpp-code-authoring.instructions.md).
+[embedded C++ guidance](../../../.github/instructions/general-cpp-code-authoring-instructions.md).
 
 ### Phase 8: complete migration and cost audit
 

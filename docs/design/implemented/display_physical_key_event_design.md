@@ -131,7 +131,7 @@ dispatch receives no binding or source object.
 ## Implementation Plan
 
 Implementation follows the
-[embedded C++ guidance](../../../.github/instructions/embedded-cpp-code-authoring.instructions.md).
+[embedded C++ guidance](../../../.github/instructions/general-cpp-code-authoring-instructions.md).
 
 ### Completed: preserve and dispatch physical identity
 

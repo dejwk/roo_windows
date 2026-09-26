@@ -739,7 +739,7 @@ API notes:
 ## Implementation Plan
 
 Authoring reference:
-[embedded-cpp-code-authoring.instructions.md](../../../.github/instructions/embedded-cpp-code-authoring.instructions.md)
+[general-cpp-code-authoring-instructions.md](../../../.github/instructions/general-cpp-code-authoring-instructions.md)
 and
 [roo-windows-widget-authoring.instructions.md](../../../.github/instructions/roo-windows-widget-authoring.instructions.md).
 

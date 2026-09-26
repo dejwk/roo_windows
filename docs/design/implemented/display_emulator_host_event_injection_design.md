@@ -238,7 +238,7 @@ no `std::function`, event payload, or owning pointer.
 ## Implementation Plan
 
 Implementation follows the
-[embedded C++ code-authoring guidance](../../../.github/instructions/embedded-cpp-code-authoring.instructions.md).
+[embedded C++ code-authoring guidance](../../../.github/instructions/general-cpp-code-authoring-instructions.md).
 
 ### Completed Phase 1: add the roo_testing host event gateway
 

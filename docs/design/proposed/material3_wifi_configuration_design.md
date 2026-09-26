@@ -958,7 +958,7 @@ successful save.
 
 Authoring references:
 
-- `roo_windows_wifi`: [embedded C++](../../../../roo_windows_wifi/.github/instructions/embedded-cpp-code-authoring.instructions.md),
+- `roo_windows_wifi`: [embedded C++](../../../../roo_windows_wifi/.github/instructions/general-cpp-code-authoring-instructions.md),
   [widgets](../../../../roo_windows_wifi/.github/instructions/roo-windows-widget-authoring.instructions.md),
   and [examples](../../../../roo_windows_wifi/.github/instructions/embedded-example-authoring.instructions.md).
 

@@ -430,7 +430,7 @@ surface.
 ## Implementation Plan
 
 Implementation follows the repo's
-[embedded C++ guidance](../../../.github/instructions/embedded-cpp-code-authoring.instructions.md)
+[embedded C++ guidance](../../../.github/instructions/general-cpp-code-authoring-instructions.md)
 and
 [widget guidance](../../../.github/instructions/roo-windows-widget-authoring.instructions.md).
 

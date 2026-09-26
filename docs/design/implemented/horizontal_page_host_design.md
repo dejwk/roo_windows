@@ -582,7 +582,7 @@ implemented, the interim behavior should be explicit:
 Status: all five phases are implemented.
 
 Authoring references:
-[embedded-cpp-code-authoring instruction](../../../.github/instructions/embedded-cpp-code-authoring.instructions.md)
+[general C++ authoring instruction](../../../.github/instructions/general-cpp-code-authoring-instructions.md)
 [roo-windows-widget-authoring instruction](../../../.github/instructions/roo-windows-widget-authoring.instructions.md)
 
 ### Phase 1: Core Host And Viewport Layout

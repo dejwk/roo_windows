@@ -812,7 +812,7 @@ keyboard-first core lands.
 ## Implementation Plan
 
 Authoring references: follow the
-[embedded C++ code authoring instruction](../../../.github/instructions/embedded-cpp-code-authoring.instructions.md)
+[embedded C++ code authoring instruction](../../../.github/instructions/general-cpp-code-authoring-instructions.md)
 and the
 [roo_windows widget authoring instruction](../../../.github/instructions/roo-windows-widget-authoring.instructions.md).
 

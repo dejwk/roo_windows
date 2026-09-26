@@ -320,7 +320,7 @@ changes run on the application's UI/scheduler thread, like other widgets.
 
 ## Implementation Plan
 
-Follow [embedded C++](../../../.github/instructions/embedded-cpp-code-authoring.instructions.md)
+Follow [embedded C++](../../../.github/instructions/general-cpp-code-authoring-instructions.md)
 and [widget authoring](../../../.github/instructions/roo-windows-widget-authoring.instructions.md).
 Implement the two framework dependencies first. Each component phase is one
 commit including its tests and example/documentation slice.

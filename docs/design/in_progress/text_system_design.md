@@ -276,7 +276,7 @@ is implemented and tested.
 ## Implementation Plan
 
 Authoring reference: follow the
-[embedded C++ guidance](../../../.github/instructions/embedded-cpp-code-authoring.instructions.md)
+[embedded C++ guidance](../../../.github/instructions/general-cpp-code-authoring-instructions.md)
 and [widget guidance](../../../.github/instructions/roo-windows-widget-authoring.instructions.md).
 
 ### Phase 1: Extract and measure the shared layouter

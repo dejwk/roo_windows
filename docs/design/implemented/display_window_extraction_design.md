@@ -393,7 +393,7 @@ detector contain references to its display and root subobjects.
 ## Implementation Plan
 
 Implementation follows the
-[embedded C++ guidance](../../../.github/instructions/embedded-cpp-code-authoring.instructions.md).
+[embedded C++ guidance](../../../.github/instructions/general-cpp-code-authoring-instructions.md).
 
 ### Phase 2: extract the one-to-one display runtime
 

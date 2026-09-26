@@ -259,7 +259,7 @@ owns the future shared-scheduler application callback.
 ## Implementation Plan
 
 Implementation follows the
-[embedded C++ guidance](../../../.github/instructions/embedded-cpp-code-authoring.instructions.md).
+[embedded C++ guidance](../../../.github/instructions/general-cpp-code-authoring-instructions.md).
 
 ### Phase 1: add runtime characterization and capture the baseline
 

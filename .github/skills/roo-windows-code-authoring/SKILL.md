@@ -1,6 +1,6 @@
 ---
 name: roo-windows-code-authoring
-description: 'roo_windows-specific addendum for code authoring and validation. Use with the local embedded-cpp-code-authoring instruction when editing public APIs, adding tests, documenting behavior, running Bazel tests, or checking example-sketch builds.'
+description: 'roo_windows-specific addendum for code authoring and validation. Use with the local general C++ authoring instruction when editing public APIs, adding tests, documenting behavior, running Bazel tests, or checking example-sketch builds.'
 argument-hint: 'Describe the code change you are making and what you need to validate.'
 user-invocable: true
 ---
@@ -8,7 +8,7 @@ user-invocable: true
 # roo_windows Code Authoring
 
 Use this skill for `roo_windows`-specific guidance on top of the local
-[embedded-cpp-code-authoring instruction](../../instructions/embedded-cpp-code-authoring.instructions.md).
+[general C++ authoring instruction](../../instructions/general-cpp-code-authoring-instructions.md).
 
 Related instructions:
 [roo-windows-widget-authoring instruction](../../instructions/roo-windows-widget-authoring.instructions.md)
@@ -26,22 +26,13 @@ Related instructions:
 - `roo_windows` is often used from a parent workspace under `lib/roo_windows`.
   Run tests from there, for example:
   `(cd lib/roo_windows; bazel test //:overlay_test)`
-- Prefer the narrowest relevant Bazel target first, then widen only if needed.
 - To verify that an example sketch compiles under emulation, build its
   hierarchical target from the main workspace, for example:
   `(cd lib/roo_windows; bazel build //examples/simple/navigation:navigation)`
 - Use `roo_windows/emulation` only as a scratch workspace for local or
   multi-file experiments.
 
-## Formatting
-
-- Before handing code over for review or submitting it, run `clang-format` on
-  every changed C++ source and header file.
-
 ## Checklist
 
 - Widget-related changes also follow the widget authoring instruction when relevant.
-- Validation uses the narrowest relevant Bazel target first.
 - Example-sketch compile coverage uses its main-workspace hierarchical target.
-- `clang-format` has been run on every changed C++ source and header file
-  before review or submission.

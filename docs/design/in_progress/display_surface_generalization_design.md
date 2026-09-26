@@ -942,7 +942,7 @@ Checked contract behavior is:
 Each phase below is intended to be one reviewable commit and follows the
 [embedded design-document guidance](../../../.github/instructions/embedded-design-doc-authoring.instructions.md)
 and
-[embedded C++ guidance](../../../.github/instructions/embedded-cpp-code-authoring.instructions.md).
+[embedded C++ guidance](../../../.github/instructions/general-cpp-code-authoring-instructions.md).
 
 ### Completed Phase 1: characterize the pre-refactor runtime
 

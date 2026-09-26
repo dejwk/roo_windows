@@ -785,7 +785,7 @@ display-coverage, and legacy pins keep their existing paths.
 ## Implementation Plan
 
 Authoring reference: follow the
-[embedded C++ code-authoring instructions](../../../.github/instructions/embedded-cpp-code-authoring.instructions.md)
+[embedded C++ code-authoring instructions](../../../.github/instructions/general-cpp-code-authoring-instructions.md)
 and [roo_windows widget-authoring instructions](../../../.github/instructions/roo-windows-widget-authoring.instructions.md).
 
 ### Phase 1: Contract and Single-Slot Primitive (Implemented)

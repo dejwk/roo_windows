@@ -609,7 +609,7 @@ Using the font's intrinsic `linegap()` preserves its natural `linespace()`.
 ## Implementation Plan
 
 Implementation follows the
-[`roo_windows` embedded C++ authoring guidance](../../../.github/instructions/embedded-cpp-code-authoring.instructions.md)
+[`roo_windows` embedded C++ authoring guidance](../../../.github/instructions/general-cpp-code-authoring-instructions.md)
 and the
 [`roo_windows` widget authoring guidance](../../../.github/instructions/roo-windows-widget-authoring.instructions.md).
 

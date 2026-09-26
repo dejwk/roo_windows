@@ -1086,7 +1086,7 @@ presentation.
 ## Implementation Plan
 
 Authoring references:
-[embedded C++](../../../.github/instructions/embedded-cpp-code-authoring.instructions.md),
+[embedded C++](../../../.github/instructions/general-cpp-code-authoring-instructions.md),
 [widget authoring](../../../.github/instructions/roo-windows-widget-authoring.instructions.md),
 and [example authoring](../../../.github/instructions/embedded-example-authoring.instructions.md).
 

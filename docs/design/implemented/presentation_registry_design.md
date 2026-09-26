@@ -276,7 +276,7 @@ No partial observation API lands before the lifecycle path works end to end.
 
 ## Implementation Plan
 
-Follow [embedded C++](../../../.github/instructions/embedded-cpp-code-authoring.instructions.md)
+Follow [embedded C++](../../../.github/instructions/general-cpp-code-authoring-instructions.md)
 and [widget authoring](../../../.github/instructions/roo-windows-widget-authoring.instructions.md).
 Each phase is one commit, including its documentation and focused tests.
 

@@ -246,7 +246,7 @@ or `activityCount()` API.
 ## Implementation Plan
 
 Authoring reference: follow the
-[embedded C++ code-authoring instructions](../../../.github/instructions/embedded-cpp-code-authoring.instructions.md)
+[embedded C++ code-authoring instructions](../../../.github/instructions/general-cpp-code-authoring-instructions.md)
 and
 [Roo Windows widget-authoring instructions](../../../.github/instructions/roo-windows-widget-authoring.instructions.md).
 

@@ -632,7 +632,7 @@ introduces it. No public entry point has an unimplemented interim state.
 ## Implementation Plan
 
 Implementation follows the
-[embedded C++ code-authoring guidance](../../../.github/instructions/embedded-cpp-code-authoring.instructions.md)
+[embedded C++ code-authoring guidance](../../../.github/instructions/general-cpp-code-authoring-instructions.md)
 and the
 [Roo Windows widget-authoring guidance](../../../.github/instructions/roo-windows-widget-authoring.instructions.md).
 Each phase is one commit and retains the 20 ms application fallback until

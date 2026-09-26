@@ -677,7 +677,7 @@ offsets and a format legend for debugging; the binary bytes remain unchanged.
 
 ## Implementation Plan
 
-Authoring reference: [embedded C++ code guidance](../../../.github/instructions/embedded-cpp-code-authoring.instructions.md)
+Authoring reference: [embedded C++ code guidance](../../../.github/instructions/general-cpp-code-authoring-instructions.md)
 and [widget guidance](../../../.github/instructions/roo-windows-widget-authoring.instructions.md).
 Each phase is one commit, including its focused tests and documentation/example
 changes.

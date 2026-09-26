@@ -653,7 +653,7 @@ hook; Phase 2 adds `OVERLAY_CUSTOM` and its navigation consumer together.
 Implementation follows the
 [`roo_windows` code-authoring guidance](../../../.github/skills/roo-windows-code-authoring/SKILL.md),
 the shared
-[`embedded C++ guidance`](../../../.github/instructions/embedded-cpp-code-authoring.instructions.md),
+[`embedded C++ guidance`](../../../.github/instructions/general-cpp-code-authoring-instructions.md),
 and the
 [`roo_windows` widget-authoring guidance](../../../.github/instructions/roo-windows-widget-authoring.instructions.md).
 

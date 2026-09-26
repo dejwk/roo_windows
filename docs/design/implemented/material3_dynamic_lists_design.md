@@ -732,7 +732,7 @@ generic defaults; the public feature is published in Phase 3 below.
 ## Implementation Plan
 
 Follow the [code-authoring skill](../../../.github/skills/roo-windows-code-authoring/SKILL.md),
-[embedded C++ guidance](../../../.github/instructions/embedded-cpp-code-authoring.instructions.md),
+[embedded C++ guidance](../../../.github/instructions/general-cpp-code-authoring-instructions.md),
 and [widget guidance](../../../.github/instructions/roo-windows-widget-authoring.instructions.md).
 
 ### Phase 1: Extract shared sequencing and separator calculations

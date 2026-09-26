@@ -520,7 +520,7 @@ elapsed-time calculations.
 
 ## Implementation Plan
 
-Follow [embedded C++](../../../.github/instructions/embedded-cpp-code-authoring.instructions.md)
+Follow [embedded C++](../../../.github/instructions/general-cpp-code-authoring-instructions.md)
 and [widget authoring](../../../.github/instructions/roo-windows-widget-authoring.instructions.md).
 Each phase is one commit with its tests and examples/docs. Presentation is needed
 for consumers that subscribe, not for the registry or its pure timing tests.

@@ -25,7 +25,7 @@ for the full collection.
 The refactoring follows the
 [example-authoring guidance](../.github/instructions/embedded-example-authoring.instructions.md)
 and the
-[embedded C++ authoring guidance](../.github/instructions/embedded-cpp-code-authoring.instructions.md).
+[embedded C++ authoring guidance](../.github/instructions/general-cpp-code-authoring-instructions.md).
 
 ## Requirements
 

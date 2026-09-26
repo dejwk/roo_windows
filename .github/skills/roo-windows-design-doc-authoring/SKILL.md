@@ -8,14 +8,15 @@ user-invocable: true
 # roo_windows Design Doc Authoring
 
 Use this skill when writing or revising design docs under `roo_windows/docs`.
-Apply the local
+Apply the [general design instructions](../../instructions/general-design-authoring-instructions.md)
+and the local
 [embedded-design-doc-authoring instruction](../../instructions/embedded-design-doc-authoring.instructions.md)
 first, then use the repo-specific guidance below.
 
 Primary references:
 [roo-windows-widget-authoring instruction](../../instructions/roo-windows-widget-authoring.instructions.md)
-[docs/material3_buttons_design.md](../../../docs/material3_buttons_design.md)
-[docs/material3_lists_design.md](../../../docs/material3_lists_design.md)
+[docs/design/implemented/material3_buttons_design.md](../../../docs/design/implemented/material3_buttons_design.md)
+[docs/design/implemented/material3_lists_design.md](../../../docs/design/implemented/material3_lists_design.md)
 
 ## roo_windows-Specific Rules
 

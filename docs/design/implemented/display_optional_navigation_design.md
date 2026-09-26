@@ -529,7 +529,7 @@ declaration and contains only history and transition coordination.
 ## Implementation Plan
 
 Implementation follows the
-[embedded C++ guidance](../../../.github/instructions/embedded-cpp-code-authoring.instructions.md)
+[embedded C++ guidance](../../../.github/instructions/general-cpp-code-authoring-instructions.md)
 and the
 [widget-authoring guidance](../../../.github/instructions/roo-windows-widget-authoring.instructions.md).
 
