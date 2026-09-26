@@ -258,24 +258,50 @@ TEST(Material3AppBar, TitleVariantsUseFixedShellHeightsAndSubtitleRules) {
                 .height());
 }
 
-// Leading and trailing actions reserve fixed 48dp slots plus the prescribed
-// title/action gap. The composed title gets the remaining lane.
+// Verifies the title has 4dp gaps to action slots, while trailing slots
+// remain adjacent and the outer padding stays 4dp for every slot combination.
 TEST(Material3AppBar, TitleLaneReservesLeadingAndTrailingActionSlots) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
-  TestAppBar app_bar(context);
-  ProbeWidget leading(context), trailing(context);
-  app_bar.setTitle("Inbox");
-  app_bar.setLeading(leading);
-  app_bar.setTrailing(0, trailing);
-  app_bar.measure(WidthSpec::Exactly(320), HeightSpec::Unspecified(0));
-  app_bar.layout(Rect(0, 0, 319, Scaled(64) - 1));
+  for (AppBarTitleAlignment alignment :
+       {AppBarTitleAlignment::kLeading, AppBarTitleAlignment::kCentered}) {
+    for (int mask = 0; mask < 8; ++mask) {
+      SCOPED_TRACE(mask);
+      ProbeWidget leading(context);
+      ProbeWidget first(context);
+      ProbeWidget second(context);
+      TestAppBar app_bar(context);
+      app_bar.setTitle("Inbox");
+      app_bar.setTitleAlignment(alignment);
+      if ((mask & 1) != 0) app_bar.setLeading(leading);
+      if ((mask & 2) != 0) app_bar.setTrailing(0, first);
+      if ((mask & 4) != 0) app_bar.setTrailing(1, second);
+      app_bar.measure(WidthSpec::Exactly(320), HeightSpec::Unspecified(0));
+      app_bar.layout(Rect(0, 0, 319, Scaled(64) - 1));
 
-  EXPECT_EQ(Scaled(4), leading.offsetLeft());
-  EXPECT_EQ(Scaled(48), leading.width());
-  EXPECT_EQ(320 - Scaled(4) - Scaled(48), trailing.offsetLeft());
-  EXPECT_LT(app_bar.childAt(0).width(), 320 - 2 * Scaled(4));
+      int16_t title_left = Scaled(16);
+      if ((mask & 1) != 0) {
+        EXPECT_EQ(Scaled(4), leading.offsetLeft());
+        EXPECT_EQ(Scaled(48), leading.width());
+        title_left = leading.offsetLeft() + leading.width() + Scaled(4);
+      }
+      int16_t title_right = 320 - Scaled(4);
+      if ((mask & 4) != 0) {
+        title_right -= Scaled(48);
+        EXPECT_EQ(title_right, second.offsetLeft());
+        EXPECT_EQ(Scaled(48), second.width());
+      }
+      if ((mask & 2) != 0) {
+        title_right -= Scaled(48);
+        EXPECT_EQ(title_right, first.offsetLeft());
+        EXPECT_EQ(Scaled(48), first.width());
+      }
+      if ((mask & 6) != 0) title_right -= Scaled(4);
+      EXPECT_EQ(title_left, app_bar.childAt(0).offsetLeft());
+      EXPECT_EQ(title_right - title_left, app_bar.childAt(0).width());
+    }
+  }
 }
 
 // Material's expanded medium and large bars use a control row followed by a

@@ -303,15 +303,16 @@ void AppBar::onLayout(bool changed, const Rect& rect) {
   }
 
   // A single-row title starts at the 16dp title inset without navigation, or
-  // immediately after its 48dp navigation slot. Flexible titles use the
+  // 4dp after its 48dp navigation slot. Flexible titles use the
   // second row and therefore do not reserve navigation/action width.
-  if (single_row && leading_ == nullptr) {
-    left = std::min<int16_t>(title_inset, right);
-  }
   if (!single_row) {
     left = std::min<int16_t>(title_inset, width);
     right = std::max<int16_t>(left, width - title_inset);
   } else {
+    const int16_t gap = Scaled(internal::kAppBarTitleActionGapDp);
+    left = std::min<int16_t>(leading_ == nullptr ? title_inset : left + gap,
+                             right);
+    if (ChildCount(trailing_) != 0) right -= gap;
     right = std::max<int16_t>(left, right);
   }
 

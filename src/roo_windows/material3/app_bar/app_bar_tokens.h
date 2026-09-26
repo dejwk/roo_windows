@@ -35,9 +35,11 @@ inline constexpr SearchEntryTokens kEmbeddedSearchEntryTokens = {56, 12, 4,
                                                                  720};
 
 inline constexpr int16_t kActionTapTargetDp = 48;
-// Compose Material 3 pads the outer control strip by 4dp. The 16dp title
-// inset applies only when a flexible bar has no navigation control.
+// The control strip has 4dp outer padding. Single-row titles have a 4dp
+// gap to adjacent action slots. The 16dp title inset applies without a
+// navigation control and to the separate title row of flexible bars.
 inline constexpr int16_t kAppBarEdgeInsetDp = 4;
 inline constexpr int16_t kAppBarTitleInsetDp = 16;
+inline constexpr int16_t kAppBarTitleActionGapDp = 4;
 
 }  // namespace roo_windows::material3::internal
