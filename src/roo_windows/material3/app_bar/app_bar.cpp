@@ -250,12 +250,12 @@ Dimensions AppBar::onMeasure(WidthSpec width, HeightSpec height) {
   // this preserves the normal child layout-request lifecycle.
   if (leading_ != nullptr) {
     leading_->measure(WidthSpec::AtMost(row_height),
-                      HeightSpec::Exactly(row_height));
+                      HeightSpec::AtMost(row_height));
   }
   for (Widget* slot : trailing_) {
     if (slot != nullptr) {
       slot->measure(WidthSpec::AtMost(row_height),
-                    HeightSpec::Exactly(row_height));
+                    HeightSpec::AtMost(row_height));
     }
   }
   title_widget_.measure(
@@ -286,8 +286,13 @@ void AppBar::onLayout(bool changed, const Rect& rect) {
       single_row ? std::max<int16_t>(0, (height - action_size) / 2) : edge;
   auto layout_action = [action_size, action_y](Widget* child, int16_t x) {
     if (child == nullptr) return;
-    child->layout(
-        Rect(x, action_y, x + action_size - 1, action_y + action_size - 1));
+    // Keep the action slot fixed while allowing a smaller visual surface.
+    Dimensions measured = child->measure(WidthSpec::AtMost(action_size),
+                                         HeightSpec::AtMost(action_size));
+    const int16_t left = x + (action_size - measured.width()) / 2;
+    const int16_t top = action_y + (action_size - measured.height()) / 2;
+    child->layout(Rect(left, top, left + measured.width() - 1,
+                       top + measured.height() - 1));
   };
   if (leading_ != nullptr) {
     const int16_t slot = std::min<int16_t>(action_size, right - left);

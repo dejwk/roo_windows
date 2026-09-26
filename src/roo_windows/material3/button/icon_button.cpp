@@ -257,6 +257,14 @@ void IconButton::paint(PaintContext& ctx) const {
   ctx.drawTiled(painted_icon, bounds(), kCenter | kMiddle, isInvalidated());
 }
 
+Dimensions IconButton::onMeasure(WidthSpec width, HeightSpec height) {
+  Dimensions slot = getSuggestedMinimumDimensions();
+  Padding padding = getPadding();
+  return Dimensions(
+      width.resolveSize(slot.width() + padding.left() + padding.right()),
+      height.resolveSize(slot.height() + padding.top() + padding.bottom()));
+}
+
 Dimensions IconButton::getSuggestedMinimumDimensions() const {
   return IconSlotDimensions(*this);
 }

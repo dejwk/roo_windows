@@ -2,11 +2,13 @@
 #include <vector>
 
 #include "gtest/gtest.h"
+#include "roo_icons/outlined/24/navigation.h"
 #include "roo_scheduler.h"
 #include "roo_windows/core/basic_widget.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/material3/app_bar/app_bar.h"
 #include "roo_windows/material3/app_bar/app_bar_tokens.h"
+#include "roo_windows/material3/button/icon_button.h"
 
 namespace roo_windows::material3 {
 namespace {
@@ -41,6 +43,14 @@ class ProbeWidget : public BasicWidget {
   using BasicWidget::BasicWidget;
   Dimensions getSuggestedMinimumDimensions() const override {
     return Dimensions(1, 1);
+  }
+};
+
+class FullSlotProbeWidget : public ProbeWidget {
+ public:
+  using ProbeWidget::ProbeWidget;
+  Dimensions getSuggestedMinimumDimensions() const override {
+    return Dimensions(Scaled(48), Scaled(48));
   }
 };
 
@@ -268,9 +278,9 @@ TEST(Material3AppBar, TitleLaneReservesLeadingAndTrailingActionSlots) {
        {AppBarTitleAlignment::kLeading, AppBarTitleAlignment::kCentered}) {
     for (int mask = 0; mask < 8; ++mask) {
       SCOPED_TRACE(mask);
-      ProbeWidget leading(context);
-      ProbeWidget first(context);
-      ProbeWidget second(context);
+      FullSlotProbeWidget leading(context);
+      FullSlotProbeWidget first(context);
+      FullSlotProbeWidget second(context);
       TestAppBar app_bar(context);
       app_bar.setTitle("Inbox");
       app_bar.setTitleAlignment(alignment);
@@ -311,7 +321,8 @@ TEST(Material3AppBar, FlexibleVariantsPlaceControlsAboveTitleStack) {
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   TestAppBar app_bar(context, AppBarVariant::kMediumFlexible);
-  ProbeWidget leading(context), trailing(context);
+  FullSlotProbeWidget leading(context);
+  FullSlotProbeWidget trailing(context);
   app_bar.setTitle("Recent");
   app_bar.setLeading(leading);
   app_bar.setTrailing(0, trailing);
@@ -329,6 +340,61 @@ TEST(Material3AppBar, FlexibleVariantsPlaceControlsAboveTitleStack) {
   EXPECT_EQ(Scaled(4), leading.offsetTop());
   EXPECT_EQ(Scaled(16), app_bar.childAt(0).offsetLeft());
   EXPECT_GE(app_bar.childAt(0).offsetTop(), Scaled(48) + 2 * Scaled(4));
+}
+
+// Verifies smaller action surfaces stay centered without moving the title or
+// losing the expanded touch target at the edges of their reserved slots.
+TEST(Material3AppBar, CentersSmallActionsAndPreservesSlotTouchTargets) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
+  for (AppBarVariant variant :
+       {AppBarVariant::kSmall, AppBarVariant::kMediumFlexible,
+        AppBarVariant::kLargeFlexible}) {
+    IconButton back(context, ic_outlined_24_navigation_arrow_back(),
+                    IconButtonStyle::kStandard);
+    IconButton trailing(context, ic_outlined_24_navigation_more_vert(),
+                        IconButtonStyle::kStandard);
+    TestAppBar bar(context, variant);
+    bar.setTitle("Inbox");
+    bar.setLeading(back);
+    bar.setTrailing(0, trailing);
+    for (ButtonSize size : {ButtonSize::kExtraSmall, ButtonSize::kSmall,
+                            ButtonSize::kExtraLarge}) {
+      back.setSize(size);
+      trailing.setSize(size);
+      const int16_t action_size = Scaled(size == ButtonSize::kExtraSmall ? 32
+                                         : size == ButtonSize::kSmall    ? 40
+                                                                         : 48);
+      Dimensions measured =
+          bar.measure(WidthSpec::Exactly(320), HeightSpec::Unspecified(0));
+      bar.layout(Rect(0, 0, 319, measured.height() - 1));
+      const int16_t slot_y = Scaled(variant == AppBarVariant::kSmall ? 8 : 4);
+      const int16_t inset = (Scaled(48) - action_size) / 2;
+      EXPECT_EQ(action_size, back.width());
+      EXPECT_EQ(action_size, back.height());
+      EXPECT_EQ(Scaled(4) + inset, back.offsetLeft());
+      EXPECT_EQ(slot_y + inset, back.offsetTop());
+      EXPECT_EQ(action_size, trailing.width());
+      EXPECT_EQ(action_size, trailing.height());
+      EXPECT_EQ(320 - Scaled(52) + inset, trailing.offsetLeft());
+      EXPECT_EQ(slot_y + inset, trailing.offsetTop());
+      EXPECT_EQ(Scaled(variant == AppBarVariant::kSmall ? 56 : 16),
+                bar.childAt(0).offsetLeft());
+      for (Widget* action :
+           {static_cast<Widget*>(&back), static_cast<Widget*>(&trailing)}) {
+        const int16_t slot_x = action->offsetLeft() - inset;
+        for (int16_t x : {slot_x, int16_t(slot_x + Scaled(48) - 1)}) {
+          for (int16_t y : {slot_y, int16_t(slot_y + Scaled(48) - 1)}) {
+            std::vector<Widget*> path;
+            ASSERT_TRUE(bar.fillTouchTargetPath(x, y, path));
+            ASSERT_FALSE(path.empty());
+            EXPECT_EQ(action, path.back());
+          }
+        }
+      }
+    }
+  }
 }
 
 TEST(Material3AppBar, SmallTitleUsesTheStandardInsetWithoutNavigation) {

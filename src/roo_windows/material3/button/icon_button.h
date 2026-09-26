@@ -104,6 +104,9 @@ class IconButton : public BasicSurfaceWidget {
   Dimensions getSuggestedMinimumDimensions() const override;
 
  protected:
+  /// Measures the icon and padding within the parent constraints.
+  Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
+
   /// Invalidates shape geometry when pressed state changes.
   void notifyStateChanged(uint16_t state_diff) override;
 
