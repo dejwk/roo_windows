@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "roo_windows/containers/scrollable_panel.h"
+#include "roo_windows/material3/container.h"
 #include "roo_windows/material3/menu/menu.h"
 #include "roo_windows/material3/menu/menu_tokens.h"
 
@@ -62,7 +63,7 @@ class MenuGroupStack final : public Container {
 };
 
 /// Surface and persistent scrolling viewport for one menu level.
-class MenuPanel final : public Container {
+class MenuPanel final : public Material3Container {
  public:
   explicit MenuPanel(ApplicationContext& context);
   ~MenuPanel() override;
@@ -79,7 +80,6 @@ class MenuPanel final : public Container {
   /// Returns the separator actually used after scrolling coercion.
   MenuSeparatorMode effectiveSeparatorMode() const;
 
-  Color background() const override;
   ColorToken containerRole() const override;
   BorderStyle getBorderStyle() const override;
   uint8_t getElevation() const override;

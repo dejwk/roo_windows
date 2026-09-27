@@ -16,7 +16,7 @@ class SurfaceWidget : public Widget {
   virtual Color background() const { return roo_display::color::Transparent; }
 
   /// Returns the semantic container role owned by this surface widget. This
-  /// is the surface-facing public accessor. Returning kUndefined means that
+  /// is the surface-facing public accessor. Returning kNone means that
   /// this surface does not introduce a new role and instead inherits the
   /// effective role from its ancestors.
   virtual ::roo_windows::material3::ColorToken containerRole() const {

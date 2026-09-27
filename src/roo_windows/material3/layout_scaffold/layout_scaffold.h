@@ -11,6 +11,7 @@
 #include "roo_windows/core/insets.h"
 #include "roo_windows/core/layout_direction.h"
 #include "roo_windows/core/rect.h"
+#include "roo_windows/material3/container.h"
 
 namespace roo_windows::material3 {
 
@@ -109,7 +110,7 @@ class LayoutBreakpointPolicy {
 };
 
 /// Fixed-slot Material 3 application shell for top-level page chrome.
-class LayoutScaffold : public Container {
+class LayoutScaffold : public Material3Container {
  public:
   /// Creates an empty match-parent scaffold using the default policy.
   explicit LayoutScaffold(ApplicationContext& context);
@@ -201,9 +202,6 @@ class LayoutScaffold : public Container {
 
   /// Returns the active bottom-bar rectangle, or an empty rectangle.
   Rect bottomBarBounds() const { return bottom_bar_bounds_; }
-
-  /// Uses the Material surface color for the page background.
-  roo_display::Color background() const override;
 
   /// Identifies the page background as a Material surface.
   ::roo_windows::material3::ColorToken containerRole() const override;

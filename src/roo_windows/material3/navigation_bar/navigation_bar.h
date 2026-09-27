@@ -8,6 +8,7 @@
 #include "roo_backport/string_view.h"
 #include "roo_windows/core/container.h"
 #include "roo_windows/material3/badge/badge.h"
+#include "roo_windows/material3/container.h"
 #include "roo_windows/material3/navigation_destination/navigation_destination.h"
 #include "roo_windows/material3/theme.h"
 #include "roo_windows/widgets/icon.h"
@@ -95,7 +96,7 @@ class BadgedNavigationBarDestination : public NavigationBarDestination {
 };
 
 /// Material 3 bottom navigation container with up to five destinations.
-class NavigationBar : public Container {
+class NavigationBar : public Material3Container {
  public:
   /// Maximum number of destinations supported by one navigation bar.
   static constexpr uint8_t kMaxDestinations = 5;
@@ -133,12 +134,6 @@ class NavigationBar : public Container {
 
   /// Resolves the navigation bar's Material surface token.
   ::roo_windows::material3::ColorToken containerRole() const override;
-
-  /// Returns the Material 3 surface color owned by the bar container.
-  Color background() const override;
-
-  /// Paints the bar-owned surface once the container implementation lands.
-  void paint(PaintContext& ctx) const override;
 
  protected:
   /// Returns the number of destination children.

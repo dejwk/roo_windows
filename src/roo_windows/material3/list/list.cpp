@@ -731,7 +731,7 @@ Widget& ExpandablePanel::getChild(int idx) {
 }
 
 ListEntry::ListEntry(ApplicationContext& context)
-    : Container(context),
+    : Material3Container(context),
       item_(nullptr),
       leading_child_(nullptr),
       overline_text_(nullptr),
@@ -974,26 +974,13 @@ const ListEntryVisualContext& ListEntry::visualContext() const {
     return ::roo_windows::material3::ColorToken::kSecondaryContainer;
   }
   if (visual_context_.style == ListStyle::kSegmented) {
-    return ::roo_windows::material3::ColorToken::kSurfaceContainer;
-  }
-  return ::roo_windows::material3::ColorToken::kSurface;
-}
-
-Color ListEntry::background() const {
-  const ColorScheme& colors = theme().material3Theme().color;
-
-  if (visual_context_.selected &&
-      visual_context_.variant == ListVariant::kExpressive) {
-    return colors.secondaryContainer;
-  }
-  if (visual_context_.style == ListStyle::kSegmented) {
     // Standard lists intentionally stay flat on the surrounding surface.
     // Segmented rows, however, need a distinct tonal container: unlike
     // surfaceContainerLow, this level remains visibly separate after RGB565
     // quantization while preserving the Material 3 surface hierarchy.
-    return colors.surfaceContainer;
+    return ::roo_windows::material3::ColorToken::kSurfaceContainer;
   }
-  return colors.surface;
+  return ::roo_windows::material3::ColorToken::kSurface;
 }
 
 BorderStyle ListEntry::getBorderStyle() const {

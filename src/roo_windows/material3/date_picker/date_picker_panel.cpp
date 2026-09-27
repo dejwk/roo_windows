@@ -388,7 +388,7 @@ DatePickerPanel::Input::Input(ApplicationContext& context,
 
 DatePickerPanel::DatePickerPanel(ApplicationContext& context,
                                  DatePickerSession& session)
-    : Container(context),
+    : Material3Container(context),
       session_(session),
       header_(context, *this),
       body_(context, *this),
@@ -423,15 +423,9 @@ ColorToken DatePickerPanel::containerRole() const {
   return ColorToken::kSurfaceContainerHigh;
 }
 
-Color DatePickerPanel::background() const {
-  return theme().material3Theme().color.surfaceContainerHigh;
-}
-
 BorderStyle DatePickerPanel::getBorderStyle() const {
   return BorderStyle(full_screen_ ? 0 : Scaled(28), 0);
 }
-
-void DatePickerPanel::paint(PaintContext& ctx) const { ctx.clear(); }
 
 Dimensions DatePickerPanel::getSuggestedMinimumDimensions() const {
   return Dimensions(7 * kCell + 2 * kInset,

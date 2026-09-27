@@ -10,6 +10,7 @@
 #include "roo_windows/core/layout_direction.h"
 #include "roo_windows/core/transient_surface_host.h"
 #include "roo_windows/material3/button/button.h"
+#include "roo_windows/material3/container.h"
 #include "roo_windows/material3/dialog/dialog_types.h"
 #include "roo_windows/widgets/divider.h"
 #include "roo_windows/widgets/text_block.h"
@@ -36,15 +37,12 @@ class DialogActionDelegate {
 /// The body remains attached when a presentation is dismissed, preserving
 /// caller state across reopen. Derived destructors must call
 /// `prepareForDerivedDestruction()` before inline body or chrome storage dies.
-class DialogScaffold : public Container {
+class DialogScaffold : public Material3Container {
  public:
   ~DialogScaffold() override;
 
   /// Publishes the Material 3 surface-container-high semantic role.
   ColorToken containerRole() const override;
-
-  /// Resolves the scaffold fill from the active Material 3 theme.
-  Color background() const override;
 
   /// Returns a 28dp basic shape or a rectangular full-screen shape.
   BorderStyle getBorderStyle() const override;

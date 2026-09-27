@@ -176,7 +176,7 @@ LayoutMetrics LayoutBreakpointPolicy::resolveMetricsForBreakpoint(
 }
 
 LayoutScaffold::LayoutScaffold(ApplicationContext& context)
-    : Container(context),
+    : Material3Container(context),
       top_bar_(nullptr),
       bottom_bar_(nullptr),
       leading_rail_(nullptr),
@@ -294,10 +294,6 @@ void LayoutScaffold::clearTrailingRail() {
 
 void LayoutScaffold::setBody(WidgetRef widget) {
   replaceSlot(body_, std::move(widget));
-}
-
-roo_display::Color LayoutScaffold::background() const {
-  return theme().material3Theme().color.surfaceContainerLowest;
 }
 
 ::roo_windows::material3::ColorToken LayoutScaffold::containerRole() const {

@@ -250,7 +250,7 @@ void MenuGroupStack::paint(PaintContext& ctx) const {
 }
 
 MenuPanel::MenuPanel(ApplicationContext& context)
-    : Container(context),
+    : Material3Container(context),
       groups_(context),
       viewport_(context, WidgetRef(groups_)),
       policy_() {
@@ -297,10 +297,6 @@ bool MenuPanel::isScrolling() const { return scrolling_; }
 
 MenuSeparatorMode MenuPanel::effectiveSeparatorMode() const {
   return groups_.separatorMode();
-}
-
-Color MenuPanel::background() const {
-  return theme().material3Theme().color.resolve(tokens().panel_container);
 }
 
 ColorToken MenuPanel::containerRole() const { return tokens().panel_container; }

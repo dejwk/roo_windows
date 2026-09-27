@@ -12,6 +12,7 @@
 #include "roo_windows/core/container.h"
 #include "roo_windows/core/widget_ref.h"
 #include "roo_windows/material3/checkbox/checkbox.h"
+#include "roo_windows/material3/container.h"
 #include "roo_windows/material3/radio_button/radio_button.h"
 #include "roo_windows/material3/switch/switch.h"
 #include "roo_windows/widgets/icon.h"
@@ -319,7 +320,7 @@ class ExpandablePanel : public Container {
 };
 
 /// Material 3 row surface that binds one stable `ListItem` at a time.
-class ListEntry : public Container {
+class ListEntry : public Material3Container {
  public:
   /// Creates an empty Material 3 list row surface.
   explicit ListEntry(ApplicationContext& context);
@@ -364,9 +365,6 @@ class ListEntry : public Container {
 
   /// Returns the row's Material 3 container color role.
   ::roo_windows::material3::ColorToken containerRole() const override;
-
-  /// Returns the resolved fill for this row's visual treatment.
-  Color background() const override;
 
   /// Returns the current Material 3 row shape.
   BorderStyle getBorderStyle() const override;

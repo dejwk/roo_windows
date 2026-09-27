@@ -250,7 +250,7 @@ void BadgedNavigationBarDestination::relayoutBadge() {
 }
 
 NavigationBar::NavigationBar(ApplicationContext& context)
-    : Container(context),
+    : Material3Container(context),
       destinations_(),
       selected_index_(-1),
       layout_(static_cast<uint8_t>(NavigationBarLayout::kVertical)) {}
@@ -323,12 +323,6 @@ void NavigationBar::clear() {
 ::roo_windows::material3::ColorToken NavigationBar::containerRole() const {
   return ColorToken::kSurface;
 }
-
-Color NavigationBar::background() const {
-  return theme().material3Theme().color.surface;
-}
-
-void NavigationBar::paint(PaintContext& ctx) const { ctx.clear(); }
 
 int NavigationBar::getChildrenCount() const { return destinationCount(); }
 

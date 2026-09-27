@@ -4,6 +4,7 @@
 #include "roo_windows/core/basic_widget.h"
 #include "roo_windows/core/transient_surface_host.h"
 #include "roo_windows/material3/button/button.h"
+#include "roo_windows/material3/container.h"
 #include "roo_windows/material3/date_picker/date_picker.h"
 #include "roo_windows/material3/text_field/text_field.h"
 
@@ -127,16 +128,13 @@ class DatePickerViewport final : public SimpleScrollablePanel {
 };
 
 /// Surface with pinned chrome and one scrollable, owner-painted body.
-class DatePickerPanel final : public Container {
+class DatePickerPanel final : public Material3Container {
  public:
   /// Constructs fixed chrome and arithmetic body; numeric input stays lazy.
   DatePickerPanel(ApplicationContext& context, DatePickerSession& session);
 
   /// Detaches borrowed children before their member storage is destroyed.
   ~DatePickerPanel() override;
-
-  /// Resolves the enclosing picker surface color.
-  Color background() const override;
 
   /// Uses the Material 3 high surface-container role.
   ColorToken containerRole() const override;
@@ -149,9 +147,6 @@ class DatePickerPanel final : public Container {
 
   /// Focuses the active calendar body or numeric input on admission.
   Widget* preferredFocusChild() override;
-
-  /// Paints final foreground and background through the shared clipper.
-  void paint(PaintContext& ctx) const override;
 
   /// Returns fixed target geometry without measuring children.
   Dimensions getSuggestedMinimumDimensions() const override;

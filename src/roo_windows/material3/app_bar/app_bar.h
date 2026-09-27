@@ -9,6 +9,7 @@
 #include "roo_windows/core/widget.h"
 #include "roo_windows/core/widget_ref.h"
 #include "roo_windows/material3/app_bar/app_bar_tokens.h"
+#include "roo_windows/material3/container.h"
 #include "roo_windows/widgets/icon.h"
 
 namespace roo_windows::material3 {
@@ -56,7 +57,7 @@ class AppBarText final : public Widget {
 }  // namespace internal
 
 /// Material 3 title-based top-app-bar family.
-class AppBar : public Container {
+class AppBar : public Material3Container {
  public:
   /// Creates an app bar with the selected title-based variant.
   explicit AppBar(ApplicationContext& context,
@@ -83,6 +84,9 @@ class AppBar : public Container {
   /// Returns the configured surface state.
   AppBarSurfaceState surfaceState() const { return surface_state_; }
 
+  /// Returns the surface role for the current flat or scrolled state.
+  ColorToken containerRole() const override;
+
   /// Replaces the non-owning title text view.
   void setTitle(roo::string_view title);
 
@@ -102,7 +106,6 @@ class AppBar : public Container {
   void setTrailing(uint8_t index, WidgetRef widget);
 
  protected:
-  Color background() const override;
   int getChildrenCount() const override;
   const Widget& getChild(int idx) const override;
   Widget& getChild(int idx) override;
@@ -125,7 +128,7 @@ class AppBar : public Container {
 };
 
 /// Phase-1 declaration of the standalone Material 3 search-entry surface.
-class SearchBar : public Container {
+class SearchBar : public Material3Container {
  public:
   /// Creates a standalone Material 3 search entry surface.
   explicit SearchBar(ApplicationContext& context);
@@ -148,9 +151,8 @@ class SearchBar : public Container {
   /// Search entry surfaces are intrinsically clickable.
   bool isClickable() const override { return true; }
 
-  /// Resolves the standalone contained-search surface token.
-  Color background() const override;
-  ::roo_windows::material3::ColorToken containerRole() const override;
+  /// Returns the standalone contained-search surface role.
+  ColorToken containerRole() const override;
   BorderStyle getBorderStyle() const override;
 
   bool fillTouchTargetPath(XDim x, YDim y, std::vector<Widget*>& path) override;
@@ -178,7 +180,7 @@ class SearchBar : public Container {
 };
 
 /// Phase-1 declaration of the full-width Material 3 search app bar.
-class SearchAppBar : public Container {
+class SearchAppBar : public Material3Container {
  public:
   /// Creates a full-width Material 3 search app bar.
   explicit SearchAppBar(ApplicationContext& context);
@@ -191,6 +193,9 @@ class SearchAppBar : public Container {
 
   /// Returns the configured outer app-bar surface state.
   AppBarSurfaceState surfaceState() const { return surface_state_; }
+
+  /// Returns the surface role for the current flat or scrolled state.
+  ColorToken containerRole() const override;
 
   /// Replaces the non-owning text displayed by the embedded search entry.
   void setDisplayText(roo::string_view text);
@@ -213,8 +218,6 @@ class SearchAppBar : public Container {
   bool fillSloppyTouchTargetPath(XDim x, YDim y,
                                  std::vector<Widget*>& path) override;
 
-  Color background() const override;
-
  protected:
   int getChildrenCount() const override;
   const Widget& getChild(int idx) const override;
@@ -227,7 +230,6 @@ class SearchAppBar : public Container {
         : SearchBar(context), surface_state_(AppBarSurfaceState::kFlat) {}
 
     void setSurfaceState(AppBarSurfaceState state);
-    Color background() const override;
     ::roo_windows::material3::ColorToken containerRole() const override;
 
    protected:

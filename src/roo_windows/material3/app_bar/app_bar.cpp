@@ -81,7 +81,7 @@ void internal::AppBarText::paint(PaintContext& ctx) const {
 }
 
 AppBar::AppBar(ApplicationContext& context, AppBarVariant variant)
-    : Container(context),
+    : Material3Container(context),
       title_widget_(context),
       subtitle_widget_(context),
       leading_(nullptr),
@@ -235,10 +235,10 @@ Widget& AppBar::getChild(int idx) {
   return *leading_;
 }
 
-Color AppBar::background() const {
-  const auto& colors = theme().material3Theme().color;
-  return surface_state_ == AppBarSurfaceState::kFlat ? colors.surface
-                                                     : colors.surfaceContainer;
+ColorToken AppBar::containerRole() const {
+  return surface_state_ == AppBarSurfaceState::kFlat
+             ? ColorToken::kSurface
+             : ColorToken::kSurfaceContainer;
 }
 
 Dimensions AppBar::onMeasure(WidthSpec width, HeightSpec height) {
@@ -356,7 +356,7 @@ void AppBar::onLayout(bool changed, const Rect& rect) {
 }
 
 SearchBar::SearchBar(ApplicationContext& context)
-    : Container(context),
+    : Material3Container(context),
       display_text_widget_(context),
       passive_search_icon_(context, ic_outlined_24_action_search()),
       leading_(nullptr),
@@ -384,10 +384,6 @@ void SearchBar::setDisplayText(roo::string_view text) {
     invalidateInterior();
     requestLayout();
   }
-}
-
-Color SearchBar::background() const {
-  return theme().material3Theme().color.surfaceContainerHigh;
 }
 
 ::roo_windows::material3::ColorToken SearchBar::containerRole() const {
@@ -551,7 +547,7 @@ void SearchBar::onLayout(bool changed, const Rect& rect) {
 }
 
 SearchAppBar::SearchAppBar(ApplicationContext& context)
-    : Container(context),
+    : Material3Container(context),
       search_entry_(context),
       leading_(nullptr),
       trailing_{nullptr, nullptr},
@@ -630,10 +626,10 @@ Widget& SearchAppBar::getChild(int idx) {
   return *leading_;
 }
 
-Color SearchAppBar::background() const {
-  const auto& colors = theme().material3Theme().color;
-  return surface_state_ == AppBarSurfaceState::kFlat ? colors.surface
-                                                     : colors.surfaceContainer;
+ColorToken SearchAppBar::containerRole() const {
+  return surface_state_ == AppBarSurfaceState::kFlat
+             ? ColorToken::kSurface
+             : ColorToken::kSurfaceContainer;
 }
 
 void SearchAppBar::EmbeddedSearchBar::setSurfaceState(
@@ -641,13 +637,6 @@ void SearchAppBar::EmbeddedSearchBar::setSurfaceState(
   if (surface_state_ == state) return;
   surface_state_ = state;
   invalidateInterior();
-}
-
-Color SearchAppBar::EmbeddedSearchBar::background() const {
-  const auto& colors = theme().material3Theme().color;
-  return surface_state_ == AppBarSurfaceState::kFlat
-             ? colors.surfaceContainer
-             : colors.surfaceContainerHighest;
 }
 
 ::roo_windows::material3::ColorToken

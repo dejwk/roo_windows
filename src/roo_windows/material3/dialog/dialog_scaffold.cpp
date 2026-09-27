@@ -96,7 +96,7 @@ class BasicDialogPreparation final
 
 DialogScaffold::DialogScaffold(ApplicationContext& context, WidgetRef body,
                                DialogScaffoldVariant variant)
-    : Container(context),
+    : Material3Container(context),
       variant_(variant),
       title_(context, "",
              variant == DialogScaffoldVariant::kFullScreen
@@ -128,10 +128,6 @@ DialogScaffold::~DialogScaffold() {
 
 ColorToken DialogScaffold::containerRole() const {
   return ColorToken::kSurfaceContainerHigh;
-}
-
-Color DialogScaffold::background() const {
-  return theme().material3Theme().color.surfaceContainerHigh;
 }
 
 BorderStyle DialogScaffold::getBorderStyle() const {

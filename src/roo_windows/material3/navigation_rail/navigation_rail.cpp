@@ -237,7 +237,7 @@ void NavigationRailDestination::activateFromOwner() {
 }
 
 NavigationRail::NavigationRail(ApplicationContext& context)
-    : Container(context),
+    : Material3Container(context),
       header_(nullptr),
       destinations_(),
       selected_index_(-1),
@@ -360,12 +360,6 @@ void NavigationRail::clear() {
 ::roo_windows::material3::ColorToken NavigationRail::containerRole() const {
   return ColorToken::kSurface;
 }
-
-Color NavigationRail::background() const {
-  return theme().material3Theme().color.surface;
-}
-
-void NavigationRail::paint(PaintContext& ctx) const { ctx.clear(); }
 
 int NavigationRail::getChildrenCount() const {
   return destinationCount() + (header_ != nullptr ? 1 : 0);

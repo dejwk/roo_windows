@@ -60,6 +60,56 @@ class ClickableProbeWidget : public ProbeWidget {
   bool isClickable() const override { return true; }
 };
 
+// Verifies surface-state changes keep the fill and descendant interaction roles
+// consistent while the embedded search entry retains its distinct surface.
+TEST(Material3AppBar, SurfaceRolesFollowFlatAndScrolledStates) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
+  TestAppBar app_bar(context);
+  app_bar.setTitle("Title");
+  TestSearchAppBar search_app_bar(context);
+  SearchBar standalone_search(context);
+  const ColorScheme& colors = env.theme().material3Theme().color;
+  const SurfaceWidget& embedded_search =
+      static_cast<const SurfaceWidget&>(search_app_bar.childAt(0));
+
+  EXPECT_EQ(ColorToken::kSurface, app_bar.containerRole());
+  EXPECT_EQ(colors.surface, app_bar.background());
+  EXPECT_EQ(ColorToken::kSurface,
+            app_bar.childAt(0).effectiveOverlayColorRole());
+  EXPECT_EQ(ColorToken::kSurface, search_app_bar.containerRole());
+  EXPECT_EQ(colors.surface, search_app_bar.background());
+  EXPECT_EQ(ColorToken::kSurfaceContainer, embedded_search.containerRole());
+  EXPECT_EQ(colors.surfaceContainer, embedded_search.background());
+  EXPECT_EQ(ColorToken::kSurfaceContainerHigh,
+            standalone_search.containerRole());
+  EXPECT_EQ(colors.surfaceContainerHigh, standalone_search.background());
+
+  app_bar.setSurfaceState(AppBarSurfaceState::kScrolled);
+  search_app_bar.setSurfaceState(AppBarSurfaceState::kScrolled);
+  EXPECT_EQ(ColorToken::kSurfaceContainer, app_bar.containerRole());
+  EXPECT_EQ(colors.surfaceContainer, app_bar.background());
+  EXPECT_EQ(ColorToken::kSurfaceContainer,
+            app_bar.childAt(0).effectiveOverlayColorRole());
+  EXPECT_EQ(ColorToken::kSurfaceContainer, search_app_bar.containerRole());
+  EXPECT_EQ(colors.surfaceContainer, search_app_bar.background());
+  EXPECT_EQ(ColorToken::kSurfaceContainerHighest,
+            embedded_search.containerRole());
+  EXPECT_EQ(ColorToken::kSurfaceContainerHighest,
+            embedded_search.effectiveOverlayColorRole());
+  EXPECT_EQ(colors.surfaceContainerHighest, embedded_search.background());
+
+  app_bar.setSurfaceState(AppBarSurfaceState::kFlat);
+  search_app_bar.setSurfaceState(AppBarSurfaceState::kFlat);
+  EXPECT_EQ(ColorToken::kSurface, app_bar.containerRole());
+  EXPECT_EQ(colors.surface, app_bar.background());
+  EXPECT_EQ(ColorToken::kSurface, search_app_bar.containerRole());
+  EXPECT_EQ(colors.surface, search_app_bar.background());
+  EXPECT_EQ(ColorToken::kSurfaceContainer, embedded_search.containerRole());
+  EXPECT_EQ(colors.surfaceContainer, embedded_search.background());
+}
+
 // Verifies the Phase-1 defaults preserve the proposed public surface.
 TEST(Material3AppBar, DefaultsMatchThePhaseOneSurface) {
   roo_scheduler::Scheduler scheduler;

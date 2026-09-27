@@ -9,6 +9,7 @@
 #include "roo_windows/core/container.h"
 #include "roo_windows/core/layout_direction.h"
 #include "roo_windows/material3/badge/badge.h"
+#include "roo_windows/material3/container.h"
 #include "roo_windows/material3/navigation_destination/navigation_destination.h"
 #include "roo_windows/material3/theme.h"
 #include "roo_windows/widgets/icon.h"
@@ -109,7 +110,7 @@ class BadgedNavigationRailDestination : public NavigationRailDestination {
 };
 
 /// Material 3 persistent navigation-rail container with up to seven routes.
-class NavigationRail : public Container {
+class NavigationRail : public Material3Container {
  public:
   /// Maximum number of destinations supported by one navigation rail.
   static constexpr uint8_t kMaxDestinations = 7;
@@ -164,8 +165,6 @@ class NavigationRail : public Container {
   void clear();
 
   ColorToken containerRole() const override;
-  Color background() const override;
-  void paint(PaintContext& ctx) const override;
 
  protected:
   int getChildrenCount() const override;
