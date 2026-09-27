@@ -299,7 +299,15 @@ MenuSeparatorMode MenuPanel::effectiveSeparatorMode() const {
   return groups_.separatorMode();
 }
 
-ColorToken MenuPanel::containerRole() const { return tokens().panel_container; }
+ColorToken MenuPanel::containerRole() const {
+  const MenuTheme& menu = theme().material3Theme().components.menu;
+  if (policy_.variant == ListVariant::kBaseline) {
+    return menu.baselineContainer;
+  }
+  return policy_.color_style == MenuColorStyle::kVibrant
+             ? ColorToken::kTertiaryContainer
+             : menu.expressiveContainer;
+}
 
 BorderStyle MenuPanel::getBorderStyle() const {
   uint8_t radius = Scaled(tokens().panel_corner_radius_dp);

@@ -63,6 +63,18 @@ struct TabsTheme {
   ColorToken secondaryContainer = ColorToken::kSurface;
 };
 
+/// Selects unselected standard and segmented list-row surfaces.
+struct ListTheme {
+  ColorToken standardContainer = ColorToken::kSurface;
+  ColorToken segmentedContainer = ColorToken::kSurface;
+};
+
+/// Selects baseline and standard expressive menu resting surfaces.
+struct MenuTheme {
+  ColorToken baselineContainer = ColorToken::kSurfaceContainer;
+  ColorToken expressiveContainer = ColorToken::kSurfaceContainerLow;
+};
+
 /// Collects application-wide Material component surface defaults.
 ///
 /// Assign one of the neutral roles (`kSurface` or a
@@ -89,13 +101,15 @@ struct ComponentTheme {
   NavigationBarTheme navigationBar;
   NavigationRailTheme navigationRail;
   TabsTheme tabs;
+  ListTheme list;
+  MenuTheme menu;
 };
 
 static_assert(sizeof(CardTheme) == 3,
               "Card surface defaults must occupy three compact tokens.");
 static_assert(alignof(CardTheme) == 1,
               "Card surface defaults must not introduce padding.");
-static_assert(sizeof(ComponentTheme) == 19,
+static_assert(sizeof(ComponentTheme) == 23,
               "Component theme must contain only implemented surface slots.");
 static_assert(alignof(ComponentTheme) == 1,
               "Component theme must not introduce padding.");

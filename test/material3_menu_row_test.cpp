@@ -4,6 +4,7 @@
 #include "roo_icons/filled/24/navigation.h"
 #include "roo_scheduler.h"
 #include "roo_windows/core/application_context.h"
+#include "roo_windows/core/environment.h"
 #include "roo_windows/core/theme.h"
 #include "roo_windows/material3/menu/menu.h"
 #include "roo_windows/material3/menu/menu_tokens.h"
@@ -22,7 +23,7 @@ TEST(Material3MenuRow, TokenTablesCoverAllVisualFamilies) {
   EXPECT_EQ(112, internal::kBaselineMenuTokens.min_width_dp);
   EXPECT_EQ(280, internal::kExpressiveStandardMenuTokens.max_width_dp);
   EXPECT_EQ(20, internal::kExpressiveVibrantMenuTokens.icon_size_dp);
-  EXPECT_EQ(ColorToken::kSurfaceContainer,
+  EXPECT_EQ(ColorToken::kSurfaceContainerLow,
             internal::kExpressiveStandardMenuTokens.panel_container);
   EXPECT_EQ(ColorToken::kTertiaryContainer,
             internal::kExpressiveVibrantMenuTokens.panel_container);
@@ -31,6 +32,32 @@ TEST(Material3MenuRow, TokenTablesCoverAllVisualFamilies) {
   EXPECT_EQ(0, internal::kBaselineMenuTokens.content_padding_dp);
   EXPECT_EQ(4, internal::kExpressiveStandardMenuTokens.content_padding_dp);
   EXPECT_EQ(4, internal::kExpressiveVibrantMenuTokens.content_padding_dp);
+}
+
+// Verifies expressive menu rows use their own shared default rather than the
+// list's segmented-row slot, while selected rows retain their fixed accent.
+TEST(Material3MenuRow, UsesIndependentMenuSurfaceDefaults) {
+  roo_scheduler::Scheduler scheduler;
+  Material3Theme material = DefaultTheme().material3Theme();
+  material.components.list.segmentedContainer =
+      ColorToken::kSurfaceContainerHigh;
+  material.components.menu.expressiveContainer =
+      ColorToken::kSurfaceContainerLow;
+  Theme theme = DefaultTheme();
+  theme.material3_theme = &material;
+  Environment environment(scheduler, theme);
+  ApplicationContext context(environment.scheduler(), environment.theme(),
+                             environment.keyboardColorTheme());
+  MenuEntry row(context);
+  ListEntryVisualContext visual;
+  visual.variant = ListVariant::kExpressive;
+  visual.style = ListStyle::kSegmented;
+  row.setVisualContext(visual);
+
+  EXPECT_EQ(ColorToken::kSurfaceContainerLow, row.containerRole());
+  visual.selected = true;
+  row.setVisualContext(visual);
+  EXPECT_EQ(ColorToken::kTertiaryContainer, row.containerRole());
 }
 
 TEST(Material3MenuRow, StandardItemExposesStableContentAndMutableState) {

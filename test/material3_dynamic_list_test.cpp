@@ -1246,6 +1246,7 @@ TEST_F(DynamicListTest, WidthAndPolicyChangesReusePreparedRows) {
 TEST(DynamicListTheme, UsesUpdatedThemeAndParentBackground) {
   roo_scheduler::Scheduler scheduler;
   Material3Theme material = DefaultTheme().material3Theme();
+  material.components.list.segmentedContainer = ColorToken::kSurfaceContainer;
   Theme theme = DefaultTheme();
   theme.material3_theme = &material;
   Environment environment(scheduler, theme);

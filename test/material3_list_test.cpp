@@ -1689,13 +1689,39 @@ TEST(Material3List, ListEntryResolvesFlatSegmentedAndSelectedFills) {
   ListEntryVisualContext segmented;
   segmented.style = ListStyle::kSegmented;
   entry.setVisualContext(segmented);
-  EXPECT_EQ(colors.surfaceContainer, entry.background());
-  EXPECT_EQ(ColorToken::kSurfaceContainer, entry.containerRole());
+  EXPECT_EQ(colors.surface, entry.background());
+  EXPECT_EQ(ColorToken::kSurface, entry.containerRole());
 
   ListEntryVisualContext selected;
   selected.selected = true;
   entry.setVisualContext(selected);
   EXPECT_EQ(colors.secondaryContainer, entry.background());
+  EXPECT_EQ(ColorToken::kSecondaryContainer, entry.containerRole());
+}
+
+// Verifies standard and segmented unselected rows select independent shared
+// list roles, while expressive selection retains its accent surface.
+TEST(Material3List, UsesIndependentThemedUnselectedRoles) {
+  roo_scheduler::Scheduler scheduler;
+  Material3Theme material = DefaultTheme().material3Theme();
+  material.components.list.standardContainer = ColorToken::kSurfaceContainerLow;
+  material.components.list.segmentedContainer =
+      ColorToken::kSurfaceContainerHigh;
+  Theme theme = DefaultTheme();
+  theme.material3_theme = &material;
+  Environment environment(scheduler, theme);
+  ApplicationContext context(environment.scheduler(), environment.theme(),
+                             environment.keyboardColorTheme());
+  TestListEntry entry(context);
+  ListEntryVisualContext visual;
+
+  EXPECT_EQ(ColorToken::kSurfaceContainerLow, entry.containerRole());
+  visual.style = ListStyle::kSegmented;
+  entry.setVisualContext(visual);
+  EXPECT_EQ(ColorToken::kSurfaceContainerHigh, entry.containerRole());
+  visual.variant = ListVariant::kExpressive;
+  visual.selected = true;
+  entry.setVisualContext(visual);
   EXPECT_EQ(ColorToken::kSecondaryContainer, entry.containerRole());
 }
 

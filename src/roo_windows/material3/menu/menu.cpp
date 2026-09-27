@@ -277,28 +277,34 @@ bool MenuEntry::isClickable() const {
 }
 
 ColorToken MenuEntry::containerRole() const {
-  if (!vibrant_) return ListEntry::containerRole();
-  return visualContext().selected
-             ? internal::kExpressiveVibrantMenuTokens.selected_container
-             : internal::kExpressiveVibrantMenuTokens.panel_container;
+  const ListEntryVisualContext& visual = visualContext();
+  if (visual.selected) {
+    return visual.variant == ListVariant::kBaseline
+               ? ColorToken::kSecondaryContainer
+               : ColorToken::kTertiaryContainer;
+  }
+  if (vibrant_) return ColorToken::kTertiaryContainer;
+  const MenuTheme& menu = theme().material3Theme().components.menu;
+  return visual.variant == ListVariant::kBaseline ? menu.baselineContainer
+                                                  : menu.expressiveContainer;
 }
 
 Color MenuEntry::background() const {
-  if (!vibrant_) return ListEntry::background();
   return theme().material3Theme().color.resolve(containerRole());
 }
 
 Color MenuEntry::headlineColor() const {
-  if (!vibrant_) return ListEntry::headlineColor();
-  const internal::MenuTokens& tokens = internal::kExpressiveVibrantMenuTokens;
-  return theme().material3Theme().color.resolve(visualContext().selected
-                                                    ? tokens.selected_content
-                                                    : tokens.panel_content);
+  const ListEntryVisualContext& visual = visualContext();
+  const ColorToken role = visual.selected
+                              ? (visual.variant == ListVariant::kBaseline
+                                     ? ColorToken::kOnSecondaryContainer
+                                     : ColorToken::kOnTertiaryContainer)
+                              : (vibrant_ ? ColorToken::kOnTertiaryContainer
+                                          : ColorToken::kOnSurface);
+  return theme().material3Theme().color.resolve(role);
 }
 
-Color MenuEntry::supportingColor() const {
-  return vibrant_ ? headlineColor() : ListEntry::supportingColor();
-}
+Color MenuEntry::supportingColor() const { return headlineColor(); }
 
 bool MenuEntry::onKeyEvent(const KeyEvent& event) {
   return menu_ != nullptr && menu_->handleEntryKey(*this, event);

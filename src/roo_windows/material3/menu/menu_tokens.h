@@ -56,8 +56,8 @@ inline constexpr MenuTokens kExpressiveStandardMenuTokens = {
     112, 280, 12, 4, 56, 20, 16, 2, 12, 8, 4,
     // Slightly less than the style guide's 16dp recommendation to avoid
     // clipping the panel's corner radius when using 4dp padding.
-    14, 3, ColorToken::kSurfaceContainer, ColorToken::kOnSurface,
-    ColorToken::kSecondaryContainer, ColorToken::kOnSecondaryContainer,
+    14, 3, ColorToken::kSurfaceContainerLow, ColorToken::kOnSurface,
+    ColorToken::kTertiaryContainer, ColorToken::kOnTertiaryContainer,
     ColorToken::kOutlineVariant};
 
 inline constexpr MenuTokens kExpressiveVibrantMenuTokens = {
@@ -65,7 +65,7 @@ inline constexpr MenuTokens kExpressiveVibrantMenuTokens = {
     // Slightly less than the style guide's 16dp recommendation to avoid
     // clipping the panel's corner radius when using 4dp padding.
     14, 3, ColorToken::kTertiaryContainer, ColorToken::kOnTertiaryContainer,
-    ColorToken::kPrimaryContainer, ColorToken::kOnPrimaryContainer,
+    ColorToken::kTertiaryContainer, ColorToken::kOnTertiaryContainer,
     ColorToken::kOnTertiaryContainer};
 
 }  // namespace roo_windows::material3::internal
