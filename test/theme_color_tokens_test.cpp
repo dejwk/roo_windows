@@ -1,3 +1,5 @@
+#include <cstddef>
+
 #include "gtest/gtest.h"
 #include "roo_windows/core/framework_theme.h"
 #include "roo_windows/core/theme.h"
@@ -59,6 +61,21 @@ TEST(Material3StateLayerThemeTest, ResolvesEveryTokenAndState) {
                               static_cast<InteractionState>(interaction)));
     }
   }
+}
+
+// Verifies aggregate Material themes retain their existing color/state
+// initialization while adding compact, initialized card surface defaults.
+TEST(Material3ThemeTest, InitializesCompactCardSurfaceDefaults) {
+  const material3::Material3Theme material = {};
+
+  EXPECT_EQ(static_cast<size_t>(3), sizeof(material3::CardTheme));
+  EXPECT_EQ(static_cast<size_t>(3), sizeof(material3::ComponentTheme));
+  EXPECT_EQ(material3::ColorToken::kSurfaceContainerLow,
+            material.components.card.elevatedContainer);
+  EXPECT_EQ(material3::ColorToken::kSurfaceContainerHighest,
+            material.components.card.filledContainer);
+  EXPECT_EQ(material3::ColorToken::kSurface,
+            material.components.card.outlinedContainer);
 }
 
 TEST(Material3ThemeTest, MakesTheDocumentedFrameworkMapping) {

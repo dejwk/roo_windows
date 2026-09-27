@@ -1,5 +1,6 @@
 #include "roo_windows/material3/card/flex_card.h"
 
+#include "roo_windows/material3/internal/component_theme.h"
 #include "roo_windows/material3/theme.h"
 
 namespace roo_windows {
@@ -16,7 +17,6 @@ FlexCard::FlexCard(ApplicationContext& context, Style style,
       container_role_override_(::roo_windows::material3::ColorToken::kNone),
       outline_role_override_(::roo_windows::material3::ColorToken::kNone) {
   Tokens defaults = styleDefaults(style_);
-  container_role_override_ = defaults.container_role;
   outline_role_override_ = defaults.outline_role;
   elevation_override_ = defaults.elevation;
   outline_width_override_ = defaults.outline_width;
@@ -29,16 +29,13 @@ FlexCard::FlexCard(ApplicationContext& context, Style style,
 void FlexCard::setStyle(Style style) {
   if (style_ == style) return;
 
-  Tokens before{container_role_override_, outline_role_override_,
-                elevation_override_, outline_width_override_,
-                corner_radius_override_};
+  const ColorToken before_container_role = containerRole();
+  Tokens before{outline_role_override_, elevation_override_,
+                outline_width_override_, corner_radius_override_};
 
   style_ = style;
   Tokens defaults = styleDefaults(style_);
 
-  if ((override_flags_ & kOverrideContainerRole) == 0) {
-    container_role_override_ = defaults.container_role;
-  }
   if ((override_flags_ & kOverrideOutlineRole) == 0) {
     outline_role_override_ = defaults.outline_role;
   }
@@ -52,11 +49,10 @@ void FlexCard::setStyle(Style style) {
     corner_radius_override_ = defaults.corner_radius;
   }
 
-  Tokens after{container_role_override_, outline_role_override_,
-               elevation_override_, outline_width_override_,
-               corner_radius_override_};
+  Tokens after{outline_role_override_, elevation_override_,
+               outline_width_override_, corner_radius_override_};
 
-  if (before.container_role != after.container_role ||
+  if (before_container_role != containerRole() ||
       before.outline_role != after.outline_role ||
       before.outline_width != after.outline_width ||
       before.corner_radius != after.corner_radius) {
@@ -76,20 +72,19 @@ void FlexCard::setContainerRole(::roo_windows::material3::ColorToken role) {
       container_role_override_ == role) {
     return;
   }
-  ::roo_windows::material3::ColorToken before = container_role_override_;
+  const ColorToken before = containerRole();
   override_flags_ |= kOverrideContainerRole;
   container_role_override_ = role;
-  if (before != container_role_override_) {
+  if (before != containerRole()) {
     invalidateInterior();
   }
 }
 
 void FlexCard::clearContainerRoleOverride() {
   if ((override_flags_ & kOverrideContainerRole) == 0) return;
-  ::roo_windows::material3::ColorToken before = container_role_override_;
+  const ColorToken before = containerRole();
   override_flags_ &= ~kOverrideContainerRole;
-  container_role_override_ = styleDefaults(style_).container_role;
-  if (before != container_role_override_) {
+  if (before != containerRole()) {
     invalidateInterior();
   }
 }
@@ -195,7 +190,29 @@ void FlexCard::clearCornerRadiusOverride() {
 }
 
 ::roo_windows::material3::ColorToken FlexCard::containerRole() const {
-  return container_role_override_;
+  if ((override_flags_ & kOverrideContainerRole) != 0) {
+    return container_role_override_;
+  }
+  const CardTheme& card = theme().material3Theme().components.card;
+  switch (style_) {
+    case Style::kElevated:
+      return internal::ValidateNeutralSurfaceRole(
+          card.elevatedContainer, ColorToken::kSurfaceContainerLow);
+    case Style::kFilled:
+      return internal::ValidateNeutralSurfaceRole(
+          card.filledContainer, ColorToken::kSurfaceContainerHighest);
+    case Style::kOutlined:
+      return internal::ValidateNeutralSurfaceRole(card.outlinedContainer,
+                                                  ColorToken::kSurface);
+  }
+  return ColorToken::kSurfaceContainerHighest;
+}
+
+roo_display::Color FlexCard::background() const {
+  const ColorToken role = containerRole();
+  return role == ColorToken::kNone
+             ? FlexLayout::background()
+             : theme().material3Theme().color.resolve(role);
 }
 
 roo_display::Color FlexCard::getOutlineColor() const {
@@ -215,21 +232,16 @@ uint8_t FlexCard::getElevation() const { return elevation_override_; }
 FlexCard::Tokens FlexCard::styleDefaults(Style style) {
   switch (style) {
     case Style::kElevated:
-      return Tokens{::roo_windows::material3::ColorToken::kSurfaceContainerLow,
-                    ::roo_windows::material3::ColorToken::kNone, 3,
+      return Tokens{::roo_windows::material3::ColorToken::kNone, 3,
                     SmallNumber(0), (uint8_t)Scaled(12)};
     case Style::kFilled:
-      return Tokens{
-          ::roo_windows::material3::ColorToken::kSurfaceContainerHighest,
-          ::roo_windows::material3::ColorToken::kNone, 0, SmallNumber(0),
-          (uint8_t)Scaled(12)};
+      return Tokens{::roo_windows::material3::ColorToken::kNone, 0,
+                    SmallNumber(0), (uint8_t)Scaled(12)};
     case Style::kOutlined:
-      return Tokens{::roo_windows::material3::ColorToken::kSurface,
-                    ::roo_windows::material3::ColorToken::kOutlineVariant, 0,
+      return Tokens{::roo_windows::material3::ColorToken::kOutlineVariant, 0,
                     SmallNumber::Of16ths(Scaled(16)), (uint8_t)Scaled(12)};
   }
-  return Tokens{::roo_windows::material3::ColorToken::kSurfaceContainerHighest,
-                ::roo_windows::material3::ColorToken::kNone, 0, SmallNumber(0),
+  return Tokens{::roo_windows::material3::ColorToken::kNone, 0, SmallNumber(0),
                 (uint8_t)Scaled(12)};
 }
 

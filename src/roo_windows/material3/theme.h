@@ -5,48 +5,10 @@
 
 #include "roo_display/color/color.h"
 #include "roo_windows/core/framework_theme.h"
+#include "roo_windows/material3/color_token.h"
+#include "roo_windows/material3/component_theme.h"
 
 namespace roo_windows::material3 {
-
-enum class ColorToken : uint8_t {
-  kPrimary,
-  kOnPrimary,
-  kPrimaryContainer,
-  kOnPrimaryContainer,
-  kSecondary,
-  kOnSecondary,
-  kSecondaryContainer,
-  kOnSecondaryContainer,
-  kTertiary,
-  kOnTertiary,
-  kTertiaryContainer,
-  kOnTertiaryContainer,
-  kBackground,
-  kOnBackground,
-  kSurface,
-  kSurfaceContainerLowest,
-  kSurfaceContainerLow,
-  kSurfaceContainer,
-  kSurfaceContainerHigh,
-  kSurfaceContainerHighest,
-  kOnSurface,
-  kSurfaceVariant,
-  kOnSurfaceVariant,
-  kError,
-  kOnError,
-  kErrorContainer,
-  kOnErrorContainer,
-  kOutline,
-  kOutlineVariant,
-  kInverseSurface,
-  kInverseOnSurface,
-  kInversePrimary,
-  kSurfaceTint,
-  // This is an optional-token sentinel, not a color. It deliberately does
-  // not resolve to transparent: no-paint must remain distinct from paint a
-  // transparent color.
-  kNone = 0xFF,
-};
 
 struct ColorScheme {
   roo_display::Color primary;
@@ -237,11 +199,9 @@ struct StateLayerTheme {
 struct Material3Theme {
   ColorScheme color;
   StateLayerTheme state;
+  ComponentTheme components{};
 };
 
 FrameworkTheme MakeFrameworkTheme(const Material3Theme& material_theme);
-
-static_assert(sizeof(ColorToken) == 1,
-              "Material 3 color tokens must remain compact.");
 
 }  // namespace roo_windows::material3

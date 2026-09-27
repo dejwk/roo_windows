@@ -505,6 +505,13 @@ cc_test(
 )
 
 cc_test(
+    name = "material3_card_theme_test",
+    srcs = ["test/material3_card_theme_test.cpp"],
+    linkstatic = 1,
+    deps = [":roo_windows", "@roo_testing//:arduino_gtest_main"],
+)
+
+cc_test(
     name = "flex_layout_test",
     srcs = [
         "test/flex_layout_test.cpp",

@@ -195,6 +195,11 @@ alias(
 )
 
 alias(
+    name = "material3_theme_surface_roles_example_build",
+    actual = "//examples/material3/theme/surface_roles",
+)
+
+alias(
     name = "simple_navigation_example_build",
     actual = "//examples/simple/navigation",
 )
@@ -244,6 +249,7 @@ filegroup(
         "//examples/material3/tabs/history_filter",
         "//examples/material3/tabs/scrollable_categories",
         "//examples/material3/tabs/status_pages",
+        "//examples/material3/theme/surface_roles",
         "//examples/material3/typography/pool_status",
     ],
 )

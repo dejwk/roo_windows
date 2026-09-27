@@ -25,15 +25,15 @@ class FlexCard : public FlexLayout {
                     FlexDirection direction = FlexDirection::kColumn);
 
   Style style() const { return style_; }
-  /// Switches the card style. Resets any previously overridden visual
-  /// tokens to the new style's defaults; explicit overrides set after this
-  /// call still take effect.
+  /// Switches the card style while preserving explicit visual overrides.
   void setStyle(Style style);
 
   /// Overrides the container color role used by the card's surface.
   void setContainerRole(::roo_windows::material3::ColorToken role);
+  /// Returns the effective default when no override is set, otherwise the
+  /// explicit container role.
   ::roo_windows::material3::ColorToken containerRoleOverride() const {
-    return container_role_override_;
+    return containerRole();
   }
   /// Reverts to the style-default container color role.
   void clearContainerRoleOverride();
@@ -74,8 +74,10 @@ class FlexCard : public FlexLayout {
   void clearCornerRadiusOverride();
 
   /// Returns either the configured override or the style-default container
-  /// color role.
+  /// color role selected by the current Material theme.
   ::roo_windows::material3::ColorToken containerRole() const override;
+  /// Resolves the selected Material container role to the card's owned fill.
+  Color background() const override;
   /// Returns the outline color resolved from the (overridden) outline role.
   roo_display::Color getOutlineColor() const override;
   /// Returns a `BorderStyle` built from the (overridden) corner radius and
@@ -94,7 +96,6 @@ class FlexCard : public FlexLayout {
   };
 
   struct Tokens {
-    ::roo_windows::material3::ColorToken container_role;
     ::roo_windows::material3::ColorToken outline_role;
     uint8_t elevation;
     SmallNumber outline_width;
