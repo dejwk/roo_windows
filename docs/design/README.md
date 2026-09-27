@@ -76,6 +76,7 @@ Status was audited against the source tree and tests on 2026-09-12. “Dependenc
 
 | Design | Dependency status |
 | --- | --- |
+| [Material 3 component surface theme](proposed/material3_component_surface_theme_design.md) | Theme ownership, color tokens and consuming components are implemented. Nested surface defaults, specification reconciliation and integrated rendering/resource acceptance are proposed. |
 | Button groups | Buttons and icon buttons are implemented; no group implementation exists. |
 | Click delivery policy | Click-animation lifecycle and settlement are implemented; widget-selected semantic delivery timing is not. |
 | Display runtime Phase 7 task-bounded transient coverage | Phase 6 input is implemented. Phase 7 is reconciled as task-bounded attachment of the one shared window host layer, retaining one active-presentation authority and explicit interaction owner; the extension remains unimplemented. |
