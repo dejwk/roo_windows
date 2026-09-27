@@ -23,6 +23,9 @@ class BasicNavigationItem : public FlexLayout {
                       const roo_display::Pictogram& icon, roo::string_view text,
                       NavigationHost& navigation, Destination& target);
 
+  /// Detaches the icon and label before their member storage is destroyed.
+  ~BasicNavigationItem() override { removeAll(); }
+
   bool isClickable() const override { return true; }
 
   PreferredSize getPreferredSize() const override {
@@ -51,6 +54,9 @@ class BasicNavigationItemWithSubtext : public FlexLayout {
                                  NavigationHost& navigation,
                                  Destination& target);
 
+  /// Detaches the icon and content layout before their members are destroyed.
+  ~BasicNavigationItemWithSubtext() override { removeAll(); }
+
   bool isClickable() const override { return true; }
 
   PreferredSize getPreferredSize() const override {
@@ -60,9 +66,10 @@ class BasicNavigationItemWithSubtext : public FlexLayout {
 
  private:
   Icon icon_;
-  FlexLayout content_;
   StringViewLabel label_;
   StringViewLabel subtext_;
+  // Destroy the borrowing layout before the labels it contains.
+  FlexLayout content_;
   NavigationHost& navigation_;
   Destination& target_;
 };

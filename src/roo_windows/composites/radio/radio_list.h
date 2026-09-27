@@ -30,6 +30,9 @@ class RadioListItem : public HorizontalLayout {
     init();
   }
 
+  /// Detaches the button and item before their member storage is destroyed.
+  ~RadioListItem() override { removeAll(); }
+
   /// Binds this row to its model index and synchronizes the radio button's
   /// on/off state to the model's current selection.
   void set(int idx, bool is_on) {

@@ -30,9 +30,9 @@ BasicNavigationItemWithSubtext::BasicNavigationItemWithSubtext(
     NavigationHost& navigation, Destination& target)
     : FlexLayout(context, FlexDirection::kRow),
       icon_(context, icon),
-      content_(context, FlexDirection::kColumn),
       label_(context, label, material2::text_style_subtitle1()),
       subtext_(context, subtext, material2::text_style_subtitle2()),
+      content_(context, FlexDirection::kColumn),
       navigation_(navigation),
       target_(target) {
   setAlignItems(AlignItems::kCenter);

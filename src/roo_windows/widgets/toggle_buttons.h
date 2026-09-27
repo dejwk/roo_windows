@@ -17,6 +17,9 @@ class ToggleButtons : public Panel {
   ToggleButtons(ApplicationContext& context, int16_t padding = Scaled(12))
       : Panel(context), padding_(padding), active_(-1) {}
 
+  /// Detaches buttons before their owning member vector is destroyed.
+  ~ToggleButtons() override { removeAll(); }
+
   /// Appends a new icon-only button at the end of the strip and returns the
   /// owning widget reference (for layout/styling tweaks).
   roo_windows::Widget& addButton(const MonoIcon& icon);

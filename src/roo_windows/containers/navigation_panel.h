@@ -15,6 +15,10 @@ class NavigationPanel : public Panel {
  public:
   NavigationPanel(ApplicationContext& context);
 
+  /// Detaches the rail and page layout before their member storage is
+  /// destroyed.
+  ~NavigationPanel() override { removeAll(); }
+
   /// Adds a new page accessible via the rail. The icon/caption become a new
   /// destination; the page widget is added to the stacked content area.
   void addPage(const MonoIcon& icon, std::string text, WidgetRef page);

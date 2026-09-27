@@ -52,6 +52,9 @@ class NavigationRail : public Panel {
 
   NavigationRail(ApplicationContext& context);
 
+  /// Detaches the divider and entries before their member storage is destroyed.
+  ~NavigationRail() override { removeAll(); }
+
   PreferredSize getPreferredSize() const override {
     return PreferredSize(PreferredSize::ExactWidth(72),
                          PreferredSize::MatchParentHeight());
