@@ -210,6 +210,14 @@ cc_library(
     deps = [":roo_windows"],
 )
 
+# Compiles shared-component-theme and representative widget sizeof() symbols
+# for target-ABI inspection. It is not linked into firmware images.
+cc_library(
+    name = "material3_component_surface_theme_size_probe",
+    srcs = ["benchmarks/material3_component_surface_theme_size_probe.cpp"],
+    deps = [":roo_windows"],
+)
+
 cc_test(
     name = "dialog_test",
     srcs = ["test/dialog_test.cpp"],
@@ -402,6 +410,16 @@ cc_test(
 cc_test(
     name = "theme_color_tokens_test",
     srcs = ["test/theme_color_tokens_test.cpp"],
+    linkstatic = 1,
+    deps = [
+        ":roo_windows",
+        "@roo_testing//:arduino_gtest_main",
+    ],
+)
+
+cc_test(
+    name = "material3_component_surface_theme_test",
+    srcs = ["test/material3_component_surface_theme_test.cpp"],
     linkstatic = 1,
     deps = [
         ":roo_windows",

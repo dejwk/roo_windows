@@ -64,12 +64,15 @@ TEST(Material3StateLayerThemeTest, ResolvesEveryTokenAndState) {
 }
 
 // Verifies aggregate Material themes retain their existing color/state
-// initialization while adding compact, initialized card surface defaults.
-TEST(Material3ThemeTest, InitializesCompactCardSurfaceDefaults) {
+// initialization while adding all compact component-surface defaults.
+TEST(Material3ThemeTest, InitializesCompactComponentSurfaceDefaults) {
   const material3::Material3Theme material = {};
 
   EXPECT_EQ(static_cast<size_t>(3), sizeof(material3::CardTheme));
   EXPECT_EQ(static_cast<size_t>(27), sizeof(material3::ComponentTheme));
+  // Color is a packed 32-bit ARGB value on the supported target. The 27-byte
+  // payload therefore adds 28 aligned bytes to the prior 928-byte theme.
+  EXPECT_EQ(static_cast<size_t>(956), sizeof(material3::Material3Theme));
   EXPECT_EQ(material3::ColorToken::kSurfaceContainerLow,
             material.components.card.elevatedContainer);
   EXPECT_EQ(material3::ColorToken::kSurfaceContainerHighest,

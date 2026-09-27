@@ -55,17 +55,24 @@ the host ABI.
 | Type | Bytes | Why it is tracked |
 | --- | ---: | --- |
 | `FrameworkTheme` | 228 | Owned generic framework color and interaction contract |
-| `material3::Material3Theme` | 928 | Full M3 color and state-layer contract |
+| `material3::ComponentTheme` | 27 | Shared component-surface role selection; one byte per implemented slot |
+| `material3::Material3Theme` | 956 | Full M3 color/state-layer contract plus 27-byte component policy (28 bytes aligned) |
 | `Theme` | 232 | Application-owned composition of framework theme and M3 slot |
 | `material3::Badge` | 20 | Representative lightweight M3 adornment; no widget allocation |
 | `material3::Slider` | 56 | Phase 2 transient-pin result; 60 bytes before indicator migration |
 | `material3::RangeSlider` | 64 | Phase 2 transient-pin result; 68 bytes before indicator migration |
 | `PresentationPin` | 28 | Active heap payload before allocator overhead; slider pin plans add no fields |
 
-`Theme` holds the M3 theme through a typed pointer. The 928-byte M3 object is
+`Theme` holds the M3 theme through a typed pointer. The 956-byte M3 object is
 therefore application/theme state, not per-widget RAM. The representative
 badge remains a compact inline helper and does not introduce a theme pointer
 or per-widget palette.
+
+The component-surface policy increased `Material3Theme` from 928 to 956 bytes
+on this 32-bit target: the intended 27-byte payload plus one byte of tail
+alignment. It adds no fields to migrated widgets. Recheck that claim with the
+`material3_component_surface_theme_size_probe` target and compare its named
+symbols against the preceding baseline when updating the supported firmware.
 
 The slider figures confirm that transient-pin adoption adds no dormant widget
 storage. Both slider classes instead remove their former 4-byte local

@@ -38,6 +38,7 @@ Status was audited against the source tree and tests on 2026-09-12. “Dependenc
 | Interrupted paint continuation | Deadline-bounded paint attempts retain completed exclusions and overlays, selectively reopen state changed between attempts, and preserve one animation snapshot until refresh completion. |
 | Layout scaffold | Shared adaptive primitives, the fixed-slot `LayoutScaffold` shell, fixed-slot `PaneLayout`, row-major `GridLayout`, and a build-covered catalog with app-bar, navigation-bar, and navigation-rail composition are implemented. Navigation drawer remains separate component work. |
 | Material 3 dialogs | The shared pinned-chrome scaffold, fixed action model, persistent body ownership, presenter focus, public basic/alert and full-screen families, veto hooks, unit/golden coverage, and dialog catalog are implemented. |
+| [Material 3 component surface theme](implemented/material3_component_surface_theme_design.md) | All six phases are implemented: 27 compact shared surface-role slots, component migrations, default reconciliation, focused rendering coverage, RGB565 integration acceptance, and target-ABI cost evidence. |
 | [Material 3 dynamic list composition](implemented/material3_dynamic_lists_design.md) | All five phases implement typed recycled sections, mixed sequencing, enum-based selection notifications, independent selection models, action participation, safe reset/input, and bounded focus navigation. Host/ASan tests, goldens, emulator build, and ESP32-C3 size audit pass; physical interaction checks remain manual. |
 | Material 3 lists | All twelve phases are implemented, including text policy, convenience and control rows, navigation/selection behavior, expandable content, and Material 3 menu row reuse. |
 | Material 3 menus | All six phases are implemented: list-backed rows, grouped scrollable panels, deterministic placement, shared-host presentation, selection and invocation, bounded submenu chains, keyboard navigation, examples, migration guidance, and target-ABI memory audit. |
@@ -76,7 +77,6 @@ Status was audited against the source tree and tests on 2026-09-12. “Dependenc
 
 | Design | Dependency status |
 | --- | --- |
-| [Material 3 component surface theme](proposed/material3_component_surface_theme_design.md) | Theme ownership, color tokens and consuming components are implemented. Nested surface defaults, specification reconciliation and integrated rendering/resource acceptance are proposed. |
 | Button groups | Buttons and icon buttons are implemented; no group implementation exists. |
 | Click delivery policy | Click-animation lifecycle and settlement are implemented; widget-selected semantic delivery timing is not. |
 | Display runtime Phase 7 task-bounded transient coverage | Phase 6 input is implemented. Phase 7 is reconciled as task-bounded attachment of the one shared window host layer, retaining one active-presentation authority and explicit interaction owner; the extension remains unimplemented. |

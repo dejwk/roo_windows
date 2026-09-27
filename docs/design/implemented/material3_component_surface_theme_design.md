@@ -1,7 +1,7 @@
 # Material 3 Component Surface Theme
 
-Status: **Proposed.** Theme ownership and consuming components are implemented;
-the component-theme API and reconciliation defined here are not.
+Status: **Implemented.** All six phases, including integrated RGB565 acceptance
+and target-ABI cost evidence, are complete.
 
 ## Objective
 

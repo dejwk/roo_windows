@@ -1,5 +1,11 @@
 # roo_windows 1.7.0
 
+- Added `Material3Theme::components`, a compact shared surface-role policy for
+  Material 3 cards, panels, navigation, lists, menus, and filled controls.
+  Applications can set neutral `ColorToken` roles once per theme; existing
+  per-instance card overrides and component-specific foreground behavior are
+  preserved. This adds 27 bytes to application-owned component storage (28
+  bytes after target alignment), not to each widget.
 - Added Material 3 dialogs, anchored menus with submenus and keyboard navigation, snackbars, progress indicators, and filled and outlined text fields.
 - Improved task-local text editing, secure UTF-8 input, and automatic scrolling to keep edited fields above the software keyboard.
 - Rebuilt the software keyboard with compact generated English and Polish layouts, circular action keys, and long-press alternatives.
@@ -157,4 +163,3 @@ Published 2024-08-06.
 Initial release.
 
 ---
-

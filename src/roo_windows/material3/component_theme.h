@@ -108,8 +108,9 @@ struct SwitchTheme {
 /// live, so applications that later change a slot must invalidate affected
 /// subtrees between completed frames.
 ///
-/// Phase 2 contains cards and panel-like components. Later phases append
-/// groups here, keeping existing aggregate initialization source-compatible.
+/// The 27 compact token slots below cover the implemented component-surface
+/// contract. Adding a slot changes the application-owned Material3Theme ABI;
+/// rebuild the library and application together.
 struct ComponentTheme {
   LayoutScaffoldTheme layoutScaffold;
   AppBarTheme appBar;

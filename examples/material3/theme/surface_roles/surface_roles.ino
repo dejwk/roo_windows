@@ -1,5 +1,5 @@
-// Learning goal: change shared Material 3 card surface roles without adding
-// per-card overrides.
+// Learning goal: change shared Material 3 component surface roles without
+// adding per-widget overrides.
 //
 // Try changing the ColorToken values in ApplicationTheme(). Every matching
 // component picks up its shared role, while a card that calls
@@ -100,6 +100,22 @@ const Theme& ApplicationTheme() {
     // own fullScreenContainer slot and keep the Material surface default.
     result.components.dialog.basicContainer =
         material3::ColorToken::kSurfaceContainer;
+
+    // Other groups follow the same pattern. Uncomment one while using the
+    // corresponding component in an application to compare only that family:
+    // result.components.navigationBar.container =
+    //     material3::ColorToken::kSurfaceContainerLow;
+    // result.components.list.segmentedContainer =
+    //     material3::ColorToken::kSurfaceContainer;
+    // result.components.textField.filledContainer =
+    //     material3::ColorToken::kSurfaceContainerLow;
+    // result.components.button.elevatedContainer =
+    //     material3::ColorToken::kSurfaceContainer;
+    // result.components.switchControl.unselectedTrack =
+    //     material3::ColorToken::kSurfaceContainerHigh;
+    // Keep roles neutral unless the component's foreground and interaction
+    // contract is also changed deliberately; accent/error roles are for
+    // instance-specific treatments with matching content colors.
     return result;
   }();
 
