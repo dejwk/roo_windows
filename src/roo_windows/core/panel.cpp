@@ -12,11 +12,7 @@ namespace roo_windows {
 using roo_display::Color;
 using roo_display::DisplayOutput;
 
-Panel::~Panel() {
-  for (auto* c : children_) {
-    if (c->isOwnedByParent()) delete c;
-  }
-}
+Panel::~Panel() { removeAll(); }
 
 void Panel::add(WidgetRef ref, const Rect& bounds) {
   Widget* child = ref.get();
@@ -25,10 +21,10 @@ void Panel::add(WidgetRef ref, const Rect& bounds) {
 }
 
 void Panel::removeAll() {
-  for (auto* c : children_) {
-    detachChild(c);
+  // Remove entries before detaching: cleanup can traverse the remaining tree.
+  while (!children_.empty()) {
+    removeLast();
   }
-  children_.clear();
 }
 
 void Panel::removeLast() {

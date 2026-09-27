@@ -26,7 +26,11 @@ class Panel : public Container {
  public:
   Panel(ApplicationContext& context) : Container(context) {}
 
-  ~Panel();
+  /// Detaches all children and deletes those owned by this panel.
+  /// Borrowed children must remain alive until detached. Subclasses borrowing
+  /// their own members must call removeAll() in their destructor body, before
+  /// those members are destroyed.
+  ~Panel() override;
 
   /// Returns the panel's child vector.
   const std::vector<Widget*>& children() const { return children_; }
@@ -44,10 +48,10 @@ class Panel : public Container {
   /// defers placement to the next layout pass).
   void add(WidgetRef child, const Rect& bounds = Rect(0, 0, -1, -1));
 
-  /// Detaches and destroys every child.
+  /// Detaches every child in reverse addition order, deleting owned children.
   void removeAll();
 
-  /// Detaches and destroys the last-added child.
+  /// Detaches the last-added child, deleting it if owned by this panel.
   void removeLast();
 
   virtual int getChildrenCount() const { return (int)children_.size(); }
