@@ -9,6 +9,7 @@
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/surface_widget.h"
 #include "roo_windows/material3/tabs/tabs.h"
+#include "roo_windows/material3/theme.h"
 #include "roo_windows/material3/typography.h"
 #include "roo_windows_render_test_support.h"
 
@@ -41,6 +42,28 @@ class TestBadgedTab : public BadgedTab {
 
   Rect coreContentBoundsForTest() const { return getCoreContentBounds(); }
 };
+
+// Verifies a tabs strip and its children resolve the same variant slot.
+TEST(Material3TabsTheme, UsesSharedVariantSurfaceForStripAndTabs) {
+  roo_scheduler::Scheduler scheduler;
+  Material3Theme material = DefaultTheme().material3Theme();
+  material.components.tabs.primaryContainer = ColorToken::kSurfaceContainerLow;
+  material.components.tabs.secondaryContainer =
+      ColorToken::kSurfaceContainerHigh;
+  Theme theme = DefaultTheme();
+  theme.material3_theme = &material;
+  Environment env(scheduler, theme);
+  ApplicationContext context = MakeContext(env);
+  Tabs tabs(context);
+  Tab child(context, "Overview");
+  tabs.addTab(child);
+
+  EXPECT_EQ(ColorToken::kSurfaceContainerLow, tabs.effectiveContainerRole());
+  EXPECT_EQ(tabs.background(), child.background());
+  tabs.setVariant(TabsVariant::kSecondary);
+  EXPECT_EQ(ColorToken::kSurfaceContainerHigh, tabs.effectiveContainerRole());
+  EXPECT_EQ(tabs.background(), child.background());
+}
 
 class RecordingTabs : public Tabs {
  public:
@@ -329,7 +352,6 @@ TEST_F(Material3TabsRenderTest, TapUpCommitsSelectionImmediatelyByDefault) {
   EXPECT_EQ(1, tabs_raw->invoked_index);
   EXPECT_EQ(1, tabs_raw->invoked_count);
   EXPECT_EQ(1, tabs_raw->changed_count);
-
 }
 
 // Verifies the opt-in compatibility flow where selection remains deferred

@@ -19,9 +19,9 @@ TEST(NavigationPanel, Material3RailSelectionChangesVisiblePage) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
-  NavigationPanel panel(context);
   Blank home(context, Dimensions(24, 24));
   Blank inbox(context, Dimensions(32, 32));
+  NavigationPanel panel(context);
 
   panel.addPage(ic_outlined_24_action_done(), "Home", WidgetRef(home));
   panel.addPage(ic_outlined_24_action_bookmark(), "Inbox", WidgetRef(inbox));

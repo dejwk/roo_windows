@@ -4,6 +4,7 @@
 
 #include "roo_display/ui/text_label.h"
 #include "roo_windows/material3/navigation_rail/navigation_rail_tokens.h"
+#include "roo_windows/material3/theme.h"
 #include "roo_windows/material3/typography.h"
 
 namespace roo_windows {
@@ -358,7 +359,10 @@ void NavigationRail::clear() {
 }
 
 ::roo_windows::material3::ColorToken NavigationRail::containerRole() const {
-  return ColorToken::kSurface;
+  const NavigationRailTheme& rail =
+      theme().material3Theme().components.navigationRail;
+  return layout() == NavigationRailLayout::kCollapsed ? rail.collapsedContainer
+                                                      : rail.expandedContainer;
 }
 
 int NavigationRail::getChildrenCount() const {

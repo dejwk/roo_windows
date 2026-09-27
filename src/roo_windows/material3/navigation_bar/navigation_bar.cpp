@@ -4,6 +4,7 @@
 
 #include "roo_display/ui/text_label.h"
 #include "roo_windows/material3/navigation_bar/navigation_bar_tokens.h"
+#include "roo_windows/material3/theme.h"
 #include "roo_windows/material3/typography.h"
 
 namespace roo_windows {
@@ -321,7 +322,7 @@ void NavigationBar::clear() {
 }
 
 ::roo_windows::material3::ColorToken NavigationBar::containerRole() const {
-  return ColorToken::kSurface;
+  return theme().material3Theme().components.navigationBar.container;
 }
 
 int NavigationBar::getChildrenCount() const { return destinationCount(); }

@@ -69,7 +69,7 @@ TEST(Material3ThemeTest, InitializesCompactCardSurfaceDefaults) {
   const material3::Material3Theme material = {};
 
   EXPECT_EQ(static_cast<size_t>(3), sizeof(material3::CardTheme));
-  EXPECT_EQ(static_cast<size_t>(14), sizeof(material3::ComponentTheme));
+  EXPECT_EQ(static_cast<size_t>(19), sizeof(material3::ComponentTheme));
   EXPECT_EQ(material3::ColorToken::kSurfaceContainerLow,
             material.components.card.elevatedContainer);
   EXPECT_EQ(material3::ColorToken::kSurfaceContainerHighest,
@@ -94,6 +94,12 @@ TEST(Material3ThemeTest, InitializesCompactCardSurfaceDefaults) {
             material.components.dialog.fullScreenContainer);
   EXPECT_EQ(material3::ColorToken::kSurfaceContainerHigh,
             material.components.datePicker.container);
+  EXPECT_EQ(material3::ColorToken::kSurfaceContainer,
+            material.components.navigationBar.container);
+  EXPECT_EQ(material3::ColorToken::kSurface,
+            material.components.navigationRail.collapsedContainer);
+  EXPECT_EQ(material3::ColorToken::kSurface,
+            material.components.tabs.primaryContainer);
 }
 
 TEST(Material3ThemeTest, MakesTheDocumentedFrameworkMapping) {

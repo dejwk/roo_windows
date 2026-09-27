@@ -106,7 +106,14 @@ void Tab::setIcon(const MonoIcon* icon) {
   requestLayout();
 }
 
-Color Tab::background() const { return theme().material3Theme().color.surface; }
+ColorToken Tab::containerRole() const {
+  if (parent() != nullptr) return parent()->effectiveContainerRole();
+  return theme().material3Theme().components.tabs.primaryContainer;
+}
+
+Color Tab::background() const {
+  return theme().material3Theme().color.resolve(containerRole());
+}
 
 Dimensions Tab::getContentMinimumDimensions() const {
   const TextStyle& style = TabLabelStyle();
@@ -459,8 +466,14 @@ void Tabs::setShowsDivider(bool shows_divider) {
   invalidateInterior();
 }
 
+ColorToken Tabs::effectiveContainerRole() const {
+  const TabsTheme& tabs = theme().material3Theme().components.tabs;
+  return variant() == TabsVariant::kPrimary ? tabs.primaryContainer
+                                            : tabs.secondaryContainer;
+}
+
 Color Tabs::background() const {
-  return theme().material3Theme().color.surface;
+  return theme().material3Theme().color.resolve(effectiveContainerRole());
 }
 
 void Tabs::paint(PaintContext& ctx) const {

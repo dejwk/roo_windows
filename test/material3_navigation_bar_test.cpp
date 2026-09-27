@@ -119,8 +119,7 @@ void ExpectDestinationPaintsEveryPixel(NavigationBarLayout layout,
                                        &ic_outlined_24_action_done());
   NavigationBarDestinationTestAccess::setLayout(destination, layout);
   NavigationBarDestinationTestAccess::setSelected(destination, selected);
-  const int16_t destination_height =
-      Scaled(64);
+  const int16_t destination_height = Scaled(64);
   static_cast<Widget&>(destination)
       .layout(Rect(0, 0, kWidth - 1, destination_height - 1));
 
@@ -205,6 +204,23 @@ TEST(Material3NavigationBar, PublicTypesStayWithinPhaseOneSizeBudget) {
   EXPECT_LE(sizeof(NavigationBarDestination), kDestinationBudget);
   EXPECT_LE(sizeof(BadgedNavigationBarDestination), kBadgedDestinationBudget);
   EXPECT_LE(sizeof(NavigationBar), kNavigationBarBudget);
+}
+
+// Verifies the bar surface and destination interaction background share the
+// application-owned navigation-bar role.
+TEST(Material3NavigationBar, UsesThemedContainerRole) {
+  roo_scheduler::Scheduler scheduler;
+  Material3Theme material = DefaultTheme().material3Theme();
+  material.components.navigationBar.container =
+      ColorToken::kSurfaceContainerHigh;
+  Theme theme = DefaultTheme();
+  theme.material3_theme = &material;
+  Environment env(scheduler, theme);
+  ApplicationContext context = MakeContext(env);
+  NavigationBar bar(context);
+
+  EXPECT_EQ(ColorToken::kSurfaceContainerHigh, bar.containerRole());
+  EXPECT_EQ(material.color.surfaceContainerHigh, bar.background());
 }
 
 // Verifies that base destinations preserve their non-owning text and icon
@@ -307,8 +323,7 @@ TEST(Material3NavigationBar, VerticalDestinationUsesShortBarMetricStack) {
       NavigationBarDestinationTestAccess::geometry(destination);
   EXPECT_EQ(Rect(Scaled(20), Scaled(6), Scaled(75), Scaled(37)),
             geometry.indicator_bounds);
-  EXPECT_EQ(Rect(0, Scaled(42), Scaled(95), Scaled(57)),
-            geometry.label_bounds);
+  EXPECT_EQ(Rect(0, Scaled(42), Scaled(95), Scaled(57)), geometry.label_bounds);
 }
 
 // The medium start-icon arrangement centers a 40 dp indicator around the
@@ -613,8 +628,8 @@ TEST(Material3NavigationBar, WrappedFocusRestoresEveryDestination) {
       const int index = y * kWidth + x;
       roo_display::Color actual;
       offscreen.raster().readColors(&x, &y, 1, &actual);
-      EXPECT_EQ(status_focused[index], actual) << "at (" << x << ", " << y
-                                                 << ')';
+      EXPECT_EQ(status_focused[index], actual)
+          << "at (" << x << ", " << y << ')';
     }
   }
 }

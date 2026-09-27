@@ -160,6 +160,27 @@ TEST(Material3NavigationRail, PublicTypesStayWithinPhaseOneSizeBudget) {
   EXPECT_LE(sizeof(NavigationRail), kNavigationRailBudget);
 }
 
+// Verifies collapsed and expanded persistent rails choose independent slots.
+TEST(Material3NavigationRail, UsesThemedContainerRolesForBothLayouts) {
+  roo_scheduler::Scheduler scheduler;
+  Material3Theme material = DefaultTheme().material3Theme();
+  material.components.navigationRail.collapsedContainer =
+      ColorToken::kSurfaceContainerLow;
+  material.components.navigationRail.expandedContainer =
+      ColorToken::kSurfaceContainerHigh;
+  Theme theme = DefaultTheme();
+  theme.material3_theme = &material;
+  Environment env(scheduler, theme);
+  ApplicationContext context = MakeContext(env);
+  NavigationRail rail(context);
+
+  EXPECT_EQ(ColorToken::kSurfaceContainerLow, rail.containerRole());
+  EXPECT_EQ(material.color.surfaceContainerLow, rail.background());
+  rail.setLayout(NavigationRailLayout::kExpanded);
+  EXPECT_EQ(ColorToken::kSurfaceContainerHigh, rail.containerRole());
+  EXPECT_EQ(material.color.surfaceContainerHigh, rail.background());
+}
+
 TEST(Material3NavigationRail, DestinationDefaultsAndSetters) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -654,10 +675,10 @@ TEST(Material3NavigationRail, RailLayoutsHeaderAndDestinationGroupByMode) {
   EXPECT_EQ(4, header.parent_bounds().yMin());
   EXPECT_EQ(60, first.parent_bounds().yMin());
   EXPECT_EQ(56, first.parent_bounds().height());
-  EXPECT_EQ(4, second.parent_bounds().yMin() - first.parent_bounds().yMax() -
-                   1);
-  EXPECT_EQ(4, third.parent_bounds().yMin() - second.parent_bounds().yMax() -
-                   1);
+  EXPECT_EQ(4,
+            second.parent_bounds().yMin() - first.parent_bounds().yMax() - 1);
+  EXPECT_EQ(4,
+            third.parent_bounds().yMin() - second.parent_bounds().yMax() - 1);
 
   // The compact example display is 240 px tall. A 40 px header interaction
   // target and three 56 px destinations fit exactly without clipping either
@@ -691,15 +712,15 @@ TEST(Material3NavigationRail, CollapsedWidthDoesNotDependOnDestinationState) {
   NavigationRail rail(context);
   NavigationRailDestination status(context, "Status",
                                    &ic_outlined_24_action_done());
-  BadgedNavigationRailDestination alerts(
-      context, "Alerts", &ic_outlined_24_action_bookmark());
+  BadgedNavigationRailDestination alerts(context, "Alerts",
+                                         &ic_outlined_24_action_bookmark());
   alerts.setBadgeValue(2);
   ASSERT_TRUE(rail.add(WidgetRef(status)));
   ASSERT_TRUE(rail.add(WidgetRef(alerts)));
 
   EXPECT_EQ(Scaled(80),
-            rail.measure(WidthSpec::Unspecified(0),
-                         HeightSpec::Unspecified(0)).width());
+            rail.measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0))
+                .width());
   static_cast<Widget&>(rail).layout(
       Rect(0, 0, Scaled(80) - 1, Scaled(160) - 1));
   EXPECT_EQ(Scaled(80), status.parent_bounds().width());
@@ -707,8 +728,8 @@ TEST(Material3NavigationRail, CollapsedWidthDoesNotDependOnDestinationState) {
 
   rail.setSelectedIndex(1);
   EXPECT_EQ(Scaled(80),
-            rail.measure(WidthSpec::Unspecified(0),
-                         HeightSpec::Unspecified(0)).width());
+            rail.measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0))
+                .width());
 }
 
 TEST(Material3NavigationRail, ArrowKeysMoveFocusWithoutChangingSelection) {

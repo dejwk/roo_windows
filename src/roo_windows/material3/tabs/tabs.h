@@ -63,9 +63,7 @@ class Tab : public SurfaceWidget {
   bool isClickable() const override { return isEnabled(); }
 
   /// Exposes each tab as a surface-colored interaction rectangle.
-  ::roo_windows::material3::ColorToken containerRole() const override {
-    return ::roo_windows::material3::ColorToken::kSurface;
-  }
+  ::roo_windows::material3::ColorToken containerRole() const override;
 
   /// Returns the tab background color.
   Color background() const override;
@@ -208,10 +206,8 @@ class Tabs : public Container {
   /// Selects a tab by index. Returns false for invalid or already-selected.
   bool setSelectedIndex(int index, bool animate = true);
 
-  /// Exposes the tabs row as a surface-colored container.
-  ::roo_windows::material3::ColorToken effectiveContainerRole() const override {
-    return ::roo_windows::material3::ColorToken::kSurface;
-  }
+  /// Exposes the tabs row as the configured variant's Material surface.
+  ::roo_windows::material3::ColorToken effectiveContainerRole() const override;
 
   /// Returns the row background color.
   Color background() const override;

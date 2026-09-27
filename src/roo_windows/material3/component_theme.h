@@ -46,6 +46,23 @@ struct DatePickerTheme {
   ColorToken container = ColorToken::kSurfaceContainerHigh;
 };
 
+/// Selects the Material surface used by the bottom navigation bar.
+struct NavigationBarTheme {
+  ColorToken container = ColorToken::kSurfaceContainer;
+};
+
+/// Selects optional fills for persistent navigation rail layouts.
+struct NavigationRailTheme {
+  ColorToken collapsedContainer = ColorToken::kSurface;
+  ColorToken expandedContainer = ColorToken::kSurface;
+};
+
+/// Selects the shared strip and tab fill for each tabs variant.
+struct TabsTheme {
+  ColorToken primaryContainer = ColorToken::kSurface;
+  ColorToken secondaryContainer = ColorToken::kSurface;
+};
+
 /// Collects application-wide Material component surface defaults.
 ///
 /// Assign one of the neutral roles (`kSurface` or a
@@ -69,13 +86,16 @@ struct ComponentTheme {
   CardTheme card;
   DialogTheme dialog;
   DatePickerTheme datePicker;
+  NavigationBarTheme navigationBar;
+  NavigationRailTheme navigationRail;
+  TabsTheme tabs;
 };
 
 static_assert(sizeof(CardTheme) == 3,
               "Card surface defaults must occupy three compact tokens.");
 static_assert(alignof(CardTheme) == 1,
               "Card surface defaults must not introduce padding.");
-static_assert(sizeof(ComponentTheme) == 14,
+static_assert(sizeof(ComponentTheme) == 19,
               "Component theme must contain only implemented surface slots.");
 static_assert(alignof(ComponentTheme) == 1,
               "Component theme must not introduce padding.");
