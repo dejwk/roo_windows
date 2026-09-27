@@ -36,9 +36,13 @@ class Container : public SurfaceWidget {
   /// touching the child because application callbacks may have destroyed it.
   virtual bool invokeChild(Widget& child) { return false; }
 
-  /// Returns the container's resolved background color, derived from its
-  /// effective container role.
+  /// Returns the background inherited from the parent, if any. Otherwise,
+  /// return a framework-level default. Subclasses can override to provide a
+  /// different background. Note that returning parent's background is different
+  /// than reporting a transparent background, which would allow the parent's
+  /// underlying content to show through.
   Color background() const override {
+    if (parent() != nullptr) return parent()->background();
     return theme().framework.color.resolve(FrameworkColorRole::kSurface);
   }
 

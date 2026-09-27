@@ -297,11 +297,11 @@ void LayoutScaffold::setBody(WidgetRef widget) {
 }
 
 roo_display::Color LayoutScaffold::background() const {
-  return theme().material3Theme().color.surface;
+  return theme().material3Theme().color.surfaceContainerLowest;
 }
 
 ::roo_windows::material3::ColorToken LayoutScaffold::containerRole() const {
-  return ColorToken::kSurface;
+  return ColorToken::kSurfaceContainerLowest;
 }
 
 PreferredSize LayoutScaffold::getPreferredSize() const {
