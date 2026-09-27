@@ -1,6 +1,9 @@
 #include <functional>
+#include <iterator>
+#include <vector>
 
 #include "gtest/gtest.h"
+#include "roo_windows/containers/blit_cache_container.h"
 #include "roo_windows/containers/horizontal_page_host.h"
 #include "roo_windows/core/destination.h"
 #include "roo_windows_render_test_support.h"
@@ -62,8 +65,7 @@ class DeletingHorizontalPageHost : public HorizontalPageHost {
 
 Rect SlotBoundsForPage(const Widget& page) {
   const Container* wrapper = page.parent();
-  return wrapper == nullptr ? Rect(0, 0, -1, -1)
-                            : wrapper->parent_bounds();
+  return wrapper == nullptr ? Rect(0, 0, -1, -1) : wrapper->parent_bounds();
 }
 
 // Models the display traffic relevant to a slow address-window device. Blits
@@ -133,11 +135,11 @@ class CountingOffscreenDevice : public OffscreenDevice<Argb4444> {
     }
   }
 
-  void blitCopy(int16_t src_x0, int16_t src_y0, int16_t src_x1,
-                int16_t src_y1, int16_t dst_x0, int16_t dst_y0) override {
+  void blitCopy(int16_t src_x0, int16_t src_y0, int16_t src_x1, int16_t src_y1,
+                int16_t dst_x0, int16_t dst_y0) override {
     ++blit_calls_;
-    OffscreenDevice<Argb4444>::blitCopy(src_x0, src_y0, src_x1, src_y1,
-                                       dst_x0, dst_y0);
+    OffscreenDevice<Argb4444>::blitCopy(src_x0, src_y0, src_x1, src_y1, dst_x0,
+                                        dst_y0);
   }
 
  private:
@@ -181,6 +183,37 @@ class HorizontalPageHostRenderTest : public testing::Test {
   Environment env_;
   Application app_;
 };
+
+// Verifies a plain cache's height change preserves existing child pixels and
+// repaints the exposed surface, without copying pixels from a stale cache.
+TEST_F(HorizontalPageHostRenderTest,
+       BlitCacheHeightResizePreservesChildPixels) {
+  auto cache = std::make_unique<BlitCacheContainer>(context());
+  BlitCacheContainer* cache_ptr = cache.get();
+  cache->setChild(std::make_unique<ColorBoxWidget>(context(), color::Red,
+                                                   Dimensions(120, 40)));
+  app_.add(std::move(cache), Box(0, 0, 119, 39));
+  ASSERT_TRUE(refresh());
+
+  for (int height : {50, 30, 45}) {
+    SCOPED_TRACE(height);
+    offscreen_.resetCounters();
+    cache_ptr->moveTo(Rect(0, 0, 119, height - 1));
+    ASSERT_TRUE(refresh());
+    EXPECT_EQ(0u, offscreen_.blitCalls());
+    // Growth beyond the child must not redraw it. Shrinking intersects the
+    // child; this simple test widget then repaints its whole visible surface.
+    if (height == 50) {
+      EXPECT_LT(offscreen_.outputPixels(), 120u * 40u);
+    }
+    EXPECT_EQ(QuantizeToArgb4444(color::Red), pixelAt(10, 10));
+    const std::vector<roo::byte> before(std::begin(raster_), std::end(raster_));
+    app_.root().invalidateInterior();
+    ASSERT_TRUE(refresh());
+    EXPECT_EQ(before,
+              std::vector<roo::byte>(std::begin(raster_), std::end(raster_)));
+  }
+}
 
 // Verifies horizontal drag reveals the adjacent page strip with correct colors
 // when the active-slot wrappers run on a blit-capable output.
@@ -286,12 +319,11 @@ TEST_F(HorizontalPageHostRenderTest, SettlePausesWhileHidden) {
 TEST_F(HorizontalPageHostRenderTest,
        NavigationDetachReconcilesTargetWithoutCallback) {
   TestHorizontalPageHost host(context());
-  host.addPage(std::make_unique<ColorBoxWidget>(
-      context(), color::Red, Dimensions(kWidth, kHeight)));
-  host.addPage(std::make_unique<ColorBoxWidget>(
-      context(), color::Blue, Dimensions(kWidth, kHeight)));
-  ColorBoxWidget covering(context(), color::Green,
-                          Dimensions(kWidth, kHeight));
+  host.addPage(std::make_unique<ColorBoxWidget>(context(), color::Red,
+                                                Dimensions(kWidth, kHeight)));
+  host.addPage(std::make_unique<ColorBoxWidget>(context(), color::Blue,
+                                                Dimensions(kWidth, kHeight)));
+  ColorBoxWidget covering(context(), color::Green, Dimensions(kWidth, kHeight));
   WidgetDestination covering_destination(covering);
   Task& task = app_.addTaskFullScreen(host);
   ASSERT_TRUE(refresh());
@@ -324,12 +356,12 @@ TEST_F(HorizontalPageHostRenderTest, CompletionCallbackCanDeleteHost) {
     host.reset();
     deleted = true;
   };
-  host = std::make_unique<DeletingHorizontalPageHost>(context(),
-                                                       delete_callback);
-  host->addPage(std::make_unique<ColorBoxWidget>(
-      context(), color::Red, Dimensions(kWidth, kHeight)));
-  host->addPage(std::make_unique<ColorBoxWidget>(
-      context(), color::Blue, Dimensions(kWidth, kHeight)));
+  host =
+      std::make_unique<DeletingHorizontalPageHost>(context(), delete_callback);
+  host->addPage(std::make_unique<ColorBoxWidget>(context(), color::Red,
+                                                 Dimensions(kWidth, kHeight)));
+  host->addPage(std::make_unique<ColorBoxWidget>(context(), color::Blue,
+                                                 Dimensions(kWidth, kHeight)));
   task = &app_.addTaskFullScreen(*host);
   ASSERT_TRUE(refresh());
 

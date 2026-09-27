@@ -141,9 +141,42 @@ void BlitCacheContainer::moveTo(const Rect& new_bounds) {
   int16_t dx = new_bounds.xMin() - parent_bounds().xMin();
   int32_t dy = new_bounds.yMin() - parent_bounds().yMin();
 
+  // Growing/shrinking a plain wrapper at a fixed origin and width leaves its
+  // overlapping area unchanged. In particular, adding off-screen diagnostic
+  // rows should not force unchanged visible rows to repaint. Borders and
+  // shadows can change pixels inside that overlap, so retain full invalidation
+  // for decorated wrappers.
+  //
+  // During layout, onLayout() still lays out the child afterward. The child
+  // must invalidate any content that actually changes or moves within the
+  // overlap; this only limits damage caused by the wrapper's own resize.
+  Rect resize_damage;
+  if (dx == 0 && dy == 0 && !bounds().empty() &&
+      new_bounds.width() == width() && new_bounds.height() != height() &&
+      getBorderStyle().getThickness() == 0 && getElevation() == 0) {
+    // This strip is newly exposed on growth and vacated on shrink. Existing
+    // parent notifications handle the background exposed by the old bounds.
+    resize_damage =
+        Rect(0, std::min(height(), new_bounds.height()), width() - 1,
+             std::max(height(), new_bounds.height()) - 1);
+    // Widget::setParentBounds() calls invalidateInterior() before and after
+    // updating the bounds. Redirect both calls to this strip, preserving the
+    // rest of the normal move/parent-notification machinery. The pointer is
+    // used synchronously and cleared below; no paint retains this stack data.
+    resize_damage_ = &resize_damage;
+    // Cache validity and repaint damage are separate: discard permission to
+    // copy pixels using the old geometry, without marking all existing pixels
+    // for repaint. paintWidgetContents() can establish a new safe region after
+    // painting. Cancel any previously queued scroll copy as well.
+    blit_safe_region_ = roo_display::Box(0, 0, -1, -1);
+    has_pending_blit_ = false;
+    pending_dx_ = 0;
+    pending_dy_ = 0;
+  }
   moving_ = true;
   Container::moveTo(new_bounds);
   moving_ = false;
+  resize_damage_ = nullptr;
 
   if (dx == 0 && dy == 0) return;
   if (blit_supported_ == 0) {
@@ -156,6 +189,17 @@ void BlitCacheContainer::moveTo(const Rect& new_bounds) {
   pending_dx_ += dx;
   pending_dy_ += dy;
   has_pending_blit_ = true;
+}
+
+void BlitCacheContainer::invalidateInterior() {
+  if (resize_damage_ != nullptr) {
+    // Region invalidation reaches only intersecting descendants and preserves
+    // any damage they already have. Outside moveTo's special resize path, keep
+    // the usual full-invalidation contract (including discarding the cache).
+    Container::invalidateInterior(*resize_damage_);
+  } else {
+    Container::invalidateInterior();
+  }
 }
 
 void BlitCacheContainer::invalidateDescending() {

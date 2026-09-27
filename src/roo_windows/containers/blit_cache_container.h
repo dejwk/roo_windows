@@ -51,6 +51,11 @@ class BlitCacheContainer : public Container {
   /// Public because a parent (e.g. `ScrollablePanel`) drives the reposition.
   void moveTo(const Rect& parent_bounds) override;
 
+  using Container::invalidateInterior;
+
+  /// Preserves unchanged child pixels during an in-place height resize.
+  void invalidateInterior() override;
+
  protected:
   PreferredSize getPreferredSize() const override;
 
@@ -91,6 +96,9 @@ class BlitCacheContainer : public Container {
   void shrinkSafeRegion(const Rect& dirty_rect);
 
   Widget* child_;
+
+  // Points to stack-owned damage only while moveTo performs a height resize.
+  const Rect* resize_damage_ = nullptr;
 
   // The region of the framebuffer (in device coordinates) known to contain
   // correct pixels from the last paint of this widget's child. Only this
