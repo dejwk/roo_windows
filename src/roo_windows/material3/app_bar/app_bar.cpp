@@ -9,7 +9,6 @@
 #include "roo_icons/outlined/24/action.h"
 #include "roo_logging.h"
 #include "roo_windows/material3/app_bar/app_bar_tokens.h"
-#include "roo_windows/material3/internal/component_theme.h"
 #include "roo_windows/material3/theme.h"
 #include "roo_windows/material3/typography.h"
 
@@ -239,10 +238,8 @@ Widget& AppBar::getChild(int idx) {
 ColorToken AppBar::containerRole() const {
   const AppBarTheme& app_bar = theme().material3Theme().components.appBar;
   return surface_state_ == AppBarSurfaceState::kFlat
-             ? internal::ValidateNeutralSurfaceRole(app_bar.flatContainer,
-                                                    ColorToken::kSurface)
-             : internal::ValidateNeutralSurfaceRole(
-                   app_bar.scrolledContainer, ColorToken::kSurfaceContainer);
+             ? app_bar.flatContainer
+             : app_bar.scrolledContainer;
 }
 
 Dimensions AppBar::onMeasure(WidthSpec width, HeightSpec height) {
@@ -391,9 +388,7 @@ void SearchBar::setDisplayText(roo::string_view text) {
 }
 
 ::roo_windows::material3::ColorToken SearchBar::containerRole() const {
-  return internal::ValidateNeutralSurfaceRole(
-      theme().material3Theme().components.searchBar.container,
-      ColorToken::kSurfaceContainerHigh);
+  return theme().material3Theme().components.searchBar.container;
 }
 
 const internal::SearchEntryTokens& SearchBar::entryTokens() const {
@@ -636,10 +631,8 @@ ColorToken SearchAppBar::containerRole() const {
   const SearchAppBarTheme& app_bar =
       theme().material3Theme().components.searchAppBar;
   return surface_state_ == AppBarSurfaceState::kFlat
-             ? internal::ValidateNeutralSurfaceRole(app_bar.flatContainer,
-                                                    ColorToken::kSurface)
-             : internal::ValidateNeutralSurfaceRole(
-                   app_bar.scrolledContainer, ColorToken::kSurfaceContainer);
+             ? app_bar.flatContainer
+             : app_bar.scrolledContainer;
 }
 
 void SearchAppBar::EmbeddedSearchBar::setSurfaceState(
@@ -654,11 +647,8 @@ SearchAppBar::EmbeddedSearchBar::containerRole() const {
   const SearchAppBarTheme& app_bar =
       theme().material3Theme().components.searchAppBar;
   return surface_state_ == AppBarSurfaceState::kFlat
-             ? internal::ValidateNeutralSurfaceRole(
-                   app_bar.flatSearchContainer, ColorToken::kSurfaceContainer)
-             : internal::ValidateNeutralSurfaceRole(
-                   app_bar.scrolledSearchContainer,
-                   ColorToken::kSurfaceContainerHighest);
+             ? app_bar.flatSearchContainer
+             : app_bar.scrolledSearchContainer;
 }
 
 const internal::SearchEntryTokens&

@@ -1,6 +1,5 @@
 #include "roo_windows/material3/card/flex_card.h"
 
-#include "roo_windows/material3/internal/component_theme.h"
 #include "roo_windows/material3/theme.h"
 
 namespace roo_windows {
@@ -196,14 +195,11 @@ void FlexCard::clearCornerRadiusOverride() {
   const CardTheme& card = theme().material3Theme().components.card;
   switch (style_) {
     case Style::kElevated:
-      return internal::ValidateNeutralSurfaceRole(
-          card.elevatedContainer, ColorToken::kSurfaceContainerLow);
+      return card.elevatedContainer;
     case Style::kFilled:
-      return internal::ValidateNeutralSurfaceRole(
-          card.filledContainer, ColorToken::kSurfaceContainerHighest);
+      return card.filledContainer;
     case Style::kOutlined:
-      return internal::ValidateNeutralSurfaceRole(card.outlinedContainer,
-                                                  ColorToken::kSurface);
+      return card.outlinedContainer;
   }
   return ColorToken::kSurfaceContainerHighest;
 }

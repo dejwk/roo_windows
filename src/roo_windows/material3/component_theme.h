@@ -48,6 +48,17 @@ struct DatePickerTheme {
 
 /// Collects application-wide Material component surface defaults.
 ///
+/// Assign one of the neutral roles (`kSurface` or a
+/// `kSurfaceContainer*` role) to these slots. Neutral roles preserve the
+/// components' existing foreground and interaction-layer contracts. Accent,
+/// inverse, error, and `kNone` roles need companion foreground or inheritance
+/// policy and should therefore remain instance-specific customizations.
+///
+/// Configure this shared storage before constructing widgets and keep it alive
+/// for as long as the Theme and its widgets borrow it. Component lookups are
+/// live, so applications that later change a slot must invalidate affected
+/// subtrees between completed frames.
+///
 /// Phase 2 contains cards and panel-like components. Later phases append
 /// groups here, keeping existing aggregate initialization source-compatible.
 struct ComponentTheme {

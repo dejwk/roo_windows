@@ -9,7 +9,6 @@
 #include "roo_windows/core/paint_context.h"
 #include "roo_windows/core/task.h"
 #include "roo_windows/material3/date_picker/date_picker_internal.h"
-#include "roo_windows/material3/internal/component_theme.h"
 #include "roo_windows/material3/typography.h"
 
 namespace roo_windows::material3::internal {
@@ -421,9 +420,7 @@ Widget* DatePickerPanel::preferredFocusChild() {
 }
 
 ColorToken DatePickerPanel::containerRole() const {
-  return ValidateNeutralSurfaceRole(
-      theme().material3Theme().components.datePicker.container,
-      ColorToken::kSurfaceContainerHigh);
+  return theme().material3Theme().components.datePicker.container;
 }
 
 BorderStyle DatePickerPanel::getBorderStyle() const {

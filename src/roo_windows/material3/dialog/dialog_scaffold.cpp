@@ -7,7 +7,6 @@
 #include "roo_logging.h"
 #include "roo_windows/core/display_window.h"
 #include "roo_windows/core/task.h"
-#include "roo_windows/material3/internal/component_theme.h"
 #include "roo_windows/material3/typography.h"
 
 namespace roo_windows::material3::internal {
@@ -129,11 +128,8 @@ DialogScaffold::~DialogScaffold() {
 
 ColorToken DialogScaffold::containerRole() const {
   const DialogTheme& dialog = theme().material3Theme().components.dialog;
-  return variant_ == DialogScaffoldVariant::kBasic
-             ? ValidateNeutralSurfaceRole(dialog.basicContainer,
-                                          ColorToken::kSurfaceContainerHigh)
-             : ValidateNeutralSurfaceRole(dialog.fullScreenContainer,
-                                          ColorToken::kSurface);
+  return variant_ == DialogScaffoldVariant::kBasic ? dialog.basicContainer
+                                                   : dialog.fullScreenContainer;
 }
 
 BorderStyle DialogScaffold::getBorderStyle() const {

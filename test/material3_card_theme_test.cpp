@@ -88,21 +88,5 @@ TEST(Material3CardThemeTest, PreservesOverridesAndRestoresLiveThemeDefaults) {
   EXPECT_EQ(ColorToken::kSurface, card.containerRole());
 }
 
-#ifdef NDEBUG
-// Verifies invalid component configuration falls back to the documented role.
-TEST(Material3CardThemeTest, InvalidThemeRoleFallsBackInReleaseBuilds) {
-  roo_scheduler::Scheduler scheduler;
-  Material3Theme material = DefaultTheme().material3Theme();
-  material.components.card.filledContainer = ColorToken::kPrimary;
-  Theme theme = DefaultTheme();
-  theme.material3_theme = &material;
-  Environment environment(scheduler, theme);
-  ApplicationContext context = MakeContext(environment);
-  FlexCard card(context);
-
-  EXPECT_EQ(ColorToken::kSurfaceContainerHighest, card.containerRole());
-}
-#endif
-
 }  // namespace
 }  // namespace roo_windows::material3
