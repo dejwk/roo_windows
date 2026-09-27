@@ -6,6 +6,7 @@
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/theme.h"
 #include "roo_windows/material3/layout_scaffold/layout_scaffold.h"
+#include "roo_windows/material3/theme.h"
 
 namespace roo_windows::material3 {
 namespace {
@@ -65,6 +66,21 @@ TEST(Material3LayoutScaffold, ResolvesExactScaledBreakpointBoundaries) {
   EXPECT_EQ(LayoutBreakpoint::kLarge, policy.resolveWidthPx(Scaled(1200)));
   EXPECT_EQ(LayoutBreakpoint::kExtraLarge, policy.resolveWidthPx(Scaled(1600)));
   EXPECT_EQ(LayoutBreakpoint::kCompact, policy.resolveWidthPx(-1));
+}
+
+// Verifies the scaffold role follows the application-owned component slot.
+TEST(Material3LayoutScaffold, UsesThemedContainerRole) {
+  roo_scheduler::Scheduler scheduler;
+  Material3Theme material = DefaultTheme().material3Theme();
+  material.components.layoutScaffold.container = ColorToken::kSurface;
+  Theme theme = DefaultTheme();
+  theme.material3_theme = &material;
+  Environment env(scheduler, theme);
+  ApplicationContext context = MakeContext(env);
+  TestLayoutScaffold scaffold(context);
+
+  EXPECT_EQ(ColorToken::kSurface, scaffold.containerRole());
+  EXPECT_EQ(material.color.surface, scaffold.background());
 }
 
 // Verifies the process-lifetime default preserves the documented 4/8/12

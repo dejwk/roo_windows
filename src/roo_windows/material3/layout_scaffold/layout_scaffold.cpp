@@ -5,6 +5,7 @@
 
 #include "roo_logging.h"
 #include "roo_windows/core/theme.h"
+#include "roo_windows/material3/internal/component_theme.h"
 
 namespace roo_windows::material3 {
 namespace {
@@ -297,7 +298,9 @@ void LayoutScaffold::setBody(WidgetRef widget) {
 }
 
 ::roo_windows::material3::ColorToken LayoutScaffold::containerRole() const {
-  return ColorToken::kSurfaceContainerLowest;
+  return internal::ValidateNeutralSurfaceRole(
+      theme().material3Theme().components.layoutScaffold.container,
+      ColorToken::kSurfaceContainerLowest);
 }
 
 PreferredSize LayoutScaffold::getPreferredSize() const {

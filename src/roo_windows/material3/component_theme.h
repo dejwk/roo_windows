@@ -11,20 +11,61 @@ struct CardTheme {
   ColorToken outlinedContainer = ColorToken::kSurface;
 };
 
+/// Selects the Material surface used by a page-level layout scaffold.
+struct LayoutScaffoldTheme {
+  ColorToken container = ColorToken::kSurfaceContainerLowest;
+};
+
+/// Selects flat and scrolled title app-bar surfaces.
+struct AppBarTheme {
+  ColorToken flatContainer = ColorToken::kSurface;
+  ColorToken scrolledContainer = ColorToken::kSurfaceContainer;
+};
+
+/// Selects the standalone search-entry surface.
+struct SearchBarTheme {
+  ColorToken container = ColorToken::kSurfaceContainerHigh;
+};
+
+/// Selects outer and embedded surfaces for a search app bar.
+struct SearchAppBarTheme {
+  ColorToken flatContainer = ColorToken::kSurface;
+  ColorToken scrolledContainer = ColorToken::kSurfaceContainer;
+  ColorToken flatSearchContainer = ColorToken::kSurfaceContainer;
+  ColorToken scrolledSearchContainer = ColorToken::kSurfaceContainerHighest;
+};
+
+/// Selects basic and full-screen dialog surfaces independently.
+struct DialogTheme {
+  ColorToken basicContainer = ColorToken::kSurfaceContainerHigh;
+  ColorToken fullScreenContainer = ColorToken::kSurface;
+};
+
+/// Selects the shared modal, docked, and input date-picker panel surface.
+struct DatePickerTheme {
+  ColorToken container = ColorToken::kSurfaceContainerHigh;
+};
+
 /// Collects application-wide Material component surface defaults.
 ///
-/// Phase 1 contains only cards. Later component-theme phases append their
+/// Phase 2 contains cards and panel-like components. Later phases append
 /// groups here, keeping existing aggregate initialization source-compatible.
 struct ComponentTheme {
+  LayoutScaffoldTheme layoutScaffold;
+  AppBarTheme appBar;
+  SearchBarTheme searchBar;
+  SearchAppBarTheme searchAppBar;
   CardTheme card;
+  DialogTheme dialog;
+  DatePickerTheme datePicker;
 };
 
 static_assert(sizeof(CardTheme) == 3,
               "Card surface defaults must occupy three compact tokens.");
 static_assert(alignof(CardTheme) == 1,
               "Card surface defaults must not introduce padding.");
-static_assert(sizeof(ComponentTheme) == 3,
-              "Component theme must contain only implemented card defaults.");
+static_assert(sizeof(ComponentTheme) == 14,
+              "Component theme must contain only implemented surface slots.");
 static_assert(alignof(ComponentTheme) == 1,
               "Component theme must not introduce padding.");
 

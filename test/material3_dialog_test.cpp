@@ -13,6 +13,7 @@
 #include "roo_windows/material3/dialog/dialog_scaffold.h"
 #include "roo_windows/material3/dialog/full_screen_dialog.h"
 #include "roo_windows/material3/menu/menu.h"
+#include "roo_windows/material3/theme.h"
 #include "roo_windows/widgets/text_field.h"
 
 namespace roo_windows::material3 {
@@ -218,6 +219,30 @@ class TestDestination final : public Destination {
  private:
   Widget& content_;
 };
+
+// Verifies basic and full-screen dialogs select independent shared defaults.
+TEST(Material3DialogTheme, UsesIndependentBasicAndFullScreenSurfaceSlots) {
+  roo_scheduler::Scheduler scheduler;
+  Material3Theme material = DefaultTheme().material3Theme();
+  material.components.dialog.basicContainer = ColorToken::kSurfaceContainerLow;
+  material.components.dialog.fullScreenContainer =
+      ColorToken::kSurfaceContainerHighest;
+  Theme theme = DefaultTheme();
+  theme.material3_theme = &material;
+  Environment environment(scheduler, theme);
+  ApplicationContext context(environment.scheduler(), environment.theme(),
+                             environment.keyboardColorTheme());
+  TestContent basic_body(context);
+  TestContent full_screen_body(context);
+  TestScaffold basic(context, WidgetRef(basic_body));
+  TestScaffold full_screen(context, WidgetRef(full_screen_body),
+                           internal::DialogScaffoldVariant::kFullScreen);
+
+  EXPECT_EQ(ColorToken::kSurfaceContainerLow, basic.containerRole());
+  EXPECT_EQ(material.color.surfaceContainerLow, basic.background());
+  EXPECT_EQ(ColorToken::kSurfaceContainerHighest, full_screen.containerRole());
+  EXPECT_EQ(material.color.surfaceContainerHighest, full_screen.background());
+}
 
 class Material3DialogTest : public ::testing::Test {
  protected:

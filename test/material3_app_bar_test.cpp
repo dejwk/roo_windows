@@ -110,6 +110,46 @@ TEST(Material3AppBar, SurfaceRolesFollowFlatAndScrolledStates) {
   EXPECT_EQ(colors.surfaceContainer, embedded_search.background());
 }
 
+// Verifies each app-bar and search surface reads its independent live theme
+// slot instead of sharing a literal role with another panel variant.
+TEST(Material3AppBar, UsesIndependentComponentThemeSlots) {
+  roo_scheduler::Scheduler scheduler;
+  Material3Theme material = DefaultTheme().material3Theme();
+  material.components.appBar.flatContainer = ColorToken::kSurfaceContainerLow;
+  material.components.appBar.scrolledContainer =
+      ColorToken::kSurfaceContainerHigh;
+  material.components.searchBar.container = ColorToken::kSurface;
+  material.components.searchAppBar.flatContainer =
+      ColorToken::kSurfaceContainerHighest;
+  material.components.searchAppBar.scrolledContainer =
+      ColorToken::kSurfaceContainerLow;
+  material.components.searchAppBar.flatSearchContainer =
+      ColorToken::kSurfaceContainerHigh;
+  material.components.searchAppBar.scrolledSearchContainer =
+      ColorToken::kSurface;
+  Theme theme = DefaultTheme();
+  theme.material3_theme = &material;
+  Environment env(scheduler, theme);
+  ApplicationContext context = MakeContext(env);
+  TestAppBar app_bar(context);
+  TestSearchAppBar search_app_bar(context);
+  SearchBar search_bar(context);
+  const SurfaceWidget& embedded_search =
+      static_cast<const SurfaceWidget&>(search_app_bar.childAt(0));
+
+  EXPECT_EQ(ColorToken::kSurfaceContainerLow, app_bar.containerRole());
+  EXPECT_EQ(ColorToken::kSurfaceContainerHighest,
+            search_app_bar.containerRole());
+  EXPECT_EQ(ColorToken::kSurfaceContainerHigh, embedded_search.containerRole());
+  EXPECT_EQ(ColorToken::kSurface, search_bar.containerRole());
+
+  app_bar.setSurfaceState(AppBarSurfaceState::kScrolled);
+  search_app_bar.setSurfaceState(AppBarSurfaceState::kScrolled);
+  EXPECT_EQ(ColorToken::kSurfaceContainerHigh, app_bar.containerRole());
+  EXPECT_EQ(ColorToken::kSurfaceContainerLow, search_app_bar.containerRole());
+  EXPECT_EQ(ColorToken::kSurface, embedded_search.containerRole());
+}
+
 // Verifies the Phase-1 defaults preserve the proposed public surface.
 TEST(Material3AppBar, DefaultsMatchThePhaseOneSurface) {
   roo_scheduler::Scheduler scheduler;

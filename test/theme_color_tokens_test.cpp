@@ -69,13 +69,31 @@ TEST(Material3ThemeTest, InitializesCompactCardSurfaceDefaults) {
   const material3::Material3Theme material = {};
 
   EXPECT_EQ(static_cast<size_t>(3), sizeof(material3::CardTheme));
-  EXPECT_EQ(static_cast<size_t>(3), sizeof(material3::ComponentTheme));
+  EXPECT_EQ(static_cast<size_t>(14), sizeof(material3::ComponentTheme));
   EXPECT_EQ(material3::ColorToken::kSurfaceContainerLow,
             material.components.card.elevatedContainer);
   EXPECT_EQ(material3::ColorToken::kSurfaceContainerHighest,
             material.components.card.filledContainer);
   EXPECT_EQ(material3::ColorToken::kSurface,
             material.components.card.outlinedContainer);
+  EXPECT_EQ(material3::ColorToken::kSurfaceContainerLowest,
+            material.components.layoutScaffold.container);
+  EXPECT_EQ(material3::ColorToken::kSurface,
+            material.components.appBar.flatContainer);
+  EXPECT_EQ(material3::ColorToken::kSurfaceContainer,
+            material.components.appBar.scrolledContainer);
+  EXPECT_EQ(material3::ColorToken::kSurfaceContainerHigh,
+            material.components.searchBar.container);
+  EXPECT_EQ(material3::ColorToken::kSurfaceContainer,
+            material.components.searchAppBar.flatSearchContainer);
+  EXPECT_EQ(material3::ColorToken::kSurfaceContainerHighest,
+            material.components.searchAppBar.scrolledSearchContainer);
+  EXPECT_EQ(material3::ColorToken::kSurfaceContainerHigh,
+            material.components.dialog.basicContainer);
+  EXPECT_EQ(material3::ColorToken::kSurface,
+            material.components.dialog.fullScreenContainer);
+  EXPECT_EQ(material3::ColorToken::kSurfaceContainerHigh,
+            material.components.datePicker.container);
 }
 
 TEST(Material3ThemeTest, MakesTheDocumentedFrameworkMapping) {

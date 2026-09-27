@@ -1,8 +1,8 @@
 // Learning goal: change shared Material 3 card surface roles without adding
 // per-card overrides.
 //
-// Try changing the ColorToken values in ApplicationTheme(). Every card of the
-// matching style picks up the new role, while a card that calls
+// Try changing the ColorToken values in ApplicationTheme(). Every matching
+// component picks up its shared role, while a card that calls
 // setContainerRole() keeps its local override. The selected role still uses
 // the application's Material palette, so it remains useful in light and dark
 // themes without copying literal colors into each card.
@@ -94,6 +94,12 @@ const Theme& ApplicationTheme() {
         material3::ColorToken::kSurfaceContainer;
     // result.components.card.outlinedContainer =
     //     material3::ColorToken::kSurfaceContainerHigh;
+
+    // Dialog surfaces are independent of cards and search panels. Try this
+    // with any BasicDialog in the application; full-screen dialogs have their
+    // own fullScreenContainer slot and keep the Material surface default.
+    result.components.dialog.basicContainer =
+        material3::ColorToken::kSurfaceContainer;
     return result;
   }();
 

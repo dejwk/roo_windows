@@ -9,6 +9,7 @@
 #include "roo_icons/outlined/24/action.h"
 #include "roo_logging.h"
 #include "roo_windows/material3/app_bar/app_bar_tokens.h"
+#include "roo_windows/material3/internal/component_theme.h"
 #include "roo_windows/material3/theme.h"
 #include "roo_windows/material3/typography.h"
 
@@ -236,9 +237,12 @@ Widget& AppBar::getChild(int idx) {
 }
 
 ColorToken AppBar::containerRole() const {
+  const AppBarTheme& app_bar = theme().material3Theme().components.appBar;
   return surface_state_ == AppBarSurfaceState::kFlat
-             ? ColorToken::kSurface
-             : ColorToken::kSurfaceContainer;
+             ? internal::ValidateNeutralSurfaceRole(app_bar.flatContainer,
+                                                    ColorToken::kSurface)
+             : internal::ValidateNeutralSurfaceRole(
+                   app_bar.scrolledContainer, ColorToken::kSurfaceContainer);
 }
 
 Dimensions AppBar::onMeasure(WidthSpec width, HeightSpec height) {
@@ -387,7 +391,9 @@ void SearchBar::setDisplayText(roo::string_view text) {
 }
 
 ::roo_windows::material3::ColorToken SearchBar::containerRole() const {
-  return ::roo_windows::material3::ColorToken::kSurfaceContainerHigh;
+  return internal::ValidateNeutralSurfaceRole(
+      theme().material3Theme().components.searchBar.container,
+      ColorToken::kSurfaceContainerHigh);
 }
 
 const internal::SearchEntryTokens& SearchBar::entryTokens() const {
@@ -627,9 +633,13 @@ Widget& SearchAppBar::getChild(int idx) {
 }
 
 ColorToken SearchAppBar::containerRole() const {
+  const SearchAppBarTheme& app_bar =
+      theme().material3Theme().components.searchAppBar;
   return surface_state_ == AppBarSurfaceState::kFlat
-             ? ColorToken::kSurface
-             : ColorToken::kSurfaceContainer;
+             ? internal::ValidateNeutralSurfaceRole(app_bar.flatContainer,
+                                                    ColorToken::kSurface)
+             : internal::ValidateNeutralSurfaceRole(
+                   app_bar.scrolledContainer, ColorToken::kSurfaceContainer);
 }
 
 void SearchAppBar::EmbeddedSearchBar::setSurfaceState(
@@ -641,9 +651,14 @@ void SearchAppBar::EmbeddedSearchBar::setSurfaceState(
 
 ::roo_windows::material3::ColorToken
 SearchAppBar::EmbeddedSearchBar::containerRole() const {
+  const SearchAppBarTheme& app_bar =
+      theme().material3Theme().components.searchAppBar;
   return surface_state_ == AppBarSurfaceState::kFlat
-             ? ::roo_windows::material3::ColorToken::kSurfaceContainer
-             : ::roo_windows::material3::ColorToken::kSurfaceContainerHighest;
+             ? internal::ValidateNeutralSurfaceRole(
+                   app_bar.flatSearchContainer, ColorToken::kSurfaceContainer)
+             : internal::ValidateNeutralSurfaceRole(
+                   app_bar.scrolledSearchContainer,
+                   ColorToken::kSurfaceContainerHighest);
 }
 
 const internal::SearchEntryTokens&
