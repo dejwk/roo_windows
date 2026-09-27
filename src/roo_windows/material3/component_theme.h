@@ -75,6 +75,26 @@ struct MenuTheme {
   ColorToken expressiveContainer = ColorToken::kSurfaceContainerLow;
 };
 
+/// Selects the enabled resting surface of filled text fields.
+struct TextFieldTheme {
+  ColorToken filledContainer = ColorToken::kSurfaceContainerHighest;
+};
+
+/// Selects the enabled resting surface of elevated buttons.
+struct ButtonTheme {
+  ColorToken elevatedContainer = ColorToken::kSurfaceContainerLow;
+};
+
+/// Selects the enabled unselected surface of filled toggle icon buttons.
+struct ToggleIconButtonTheme {
+  ColorToken filledUnselectedContainer = ColorToken::kSurfaceContainer;
+};
+
+/// Selects the enabled unselected track surface of switches.
+struct SwitchTheme {
+  ColorToken unselectedTrack = ColorToken::kSurfaceContainerHighest;
+};
+
 /// Collects application-wide Material component surface defaults.
 ///
 /// Assign one of the neutral roles (`kSurface` or a
@@ -103,13 +123,17 @@ struct ComponentTheme {
   TabsTheme tabs;
   ListTheme list;
   MenuTheme menu;
+  TextFieldTheme textField;
+  ButtonTheme button;
+  ToggleIconButtonTheme toggleIconButton;
+  SwitchTheme switchControl;
 };
 
 static_assert(sizeof(CardTheme) == 3,
               "Card surface defaults must occupy three compact tokens.");
 static_assert(alignof(CardTheme) == 1,
               "Card surface defaults must not introduce padding.");
-static_assert(sizeof(ComponentTheme) == 23,
+static_assert(sizeof(ComponentTheme) == 27,
               "Component theme must contain only implemented surface slots.");
 static_assert(alignof(ComponentTheme) == 1,
               "Component theme must not introduce padding.");

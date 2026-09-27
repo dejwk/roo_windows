@@ -266,6 +266,26 @@ TEST(Material3ToggleIconButton, SelectedStyleTokensAndOutlinedBorderChange) {
   EXPECT_EQ(0, (int)outlined.getBorderStyle().outline_width().floor());
 }
 
+// Verifies the unselected filled button reports and paints its shared slot,
+// while selected variants retain their fixed accent roles.
+TEST(Material3ToggleIconButton, FilledUnselectedUsesComponentTheme) {
+  roo_scheduler::Scheduler scheduler;
+  Material3Theme material = DefaultTheme().material3Theme();
+  material.components.toggleIconButton.filledUnselectedContainer =
+      ColorToken::kSurfaceContainerLow;
+  Theme theme = DefaultTheme();
+  theme.material3_theme = &material;
+  Environment env(scheduler, theme);
+  ApplicationContext context = MakeContext(env);
+  ToggleIconButton button(context, ic_outlined_24_action_done(), nullptr,
+                          IconButtonStyle::kFilled, false);
+
+  EXPECT_EQ(ColorToken::kSurfaceContainerLow, button.containerRole());
+  EXPECT_EQ(material.color.surfaceContainerLow, button.background());
+  button.setSelected(true);
+  EXPECT_EQ(ColorToken::kPrimary, button.containerRole());
+}
+
 // Verifies selection inverts the configured resting shape family.
 TEST(Material3ToggleIconButton, SelectionInvertsRestingShape) {
   roo_scheduler::Scheduler scheduler;

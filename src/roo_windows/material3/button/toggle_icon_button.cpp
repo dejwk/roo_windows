@@ -133,7 +133,10 @@ Color ResolveBackground(const ToggleIconButton& button) {
   }
   switch (button.style()) {
     case IconButtonStyle::kFilled:
-      return colors.surfaceContainer;
+      return colors.resolve(
+          button.theme()
+              .material3Theme()
+              .components.toggleIconButton.filledUnselectedContainer);
     case IconButtonStyle::kFilledTonal:
       return colors.secondaryContainer;
     case IconButtonStyle::kStandard:
@@ -226,9 +229,18 @@ Rect ToggleIconButton::getIconBounds() const {
 
 ::roo_windows::material3::ColorToken ToggleIconButton::containerRole() const {
   if (!isSelected()) {
-    return style() == IconButtonStyle::kFilledTonal
-               ? ColorToken::kSecondaryContainer
-               : ColorToken::kSurfaceVariant;
+    switch (style()) {
+      case IconButtonStyle::kFilled:
+        return theme()
+            .material3Theme()
+            .components.toggleIconButton.filledUnselectedContainer;
+      case IconButtonStyle::kFilledTonal:
+        return ColorToken::kSecondaryContainer;
+      case IconButtonStyle::kStandard:
+      case IconButtonStyle::kOutlined:
+        return ColorToken::kSurfaceVariant;
+    }
+    return ColorToken::kSurfaceVariant;
   }
   switch (style()) {
     case IconButtonStyle::kStandard:

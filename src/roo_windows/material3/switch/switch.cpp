@@ -50,6 +50,8 @@ struct Tokens {
 Tokens ResolveTokens(const Switch& widget) {
   const Theme& theme = widget.theme();
   const ColorScheme& colors = theme.material3Theme().color;
+  const ColorToken unselected_track =
+      theme.material3Theme().components.switchControl.unselectedTrack;
   bool enabled = widget.isEnabled();
   bool on = widget.isOn();
   bool interaction = enabled && (widget.isPressed() || widget.isClicking() ||
@@ -65,7 +67,7 @@ Tokens ResolveTokens(const Switch& widget) {
       };
     }
     return Tokens{
-        DisabledComposite(colors.surfaceContainerHighest, 0x1F, theme),
+        DisabledComposite(colors.resolve(unselected_track), 0x1F, theme),
         DisabledComposite(colors.onSurface, 0x1F, theme),
         DisabledComposite(colors.onSurface, 0x61, theme),
         DisabledComposite(colors.surfaceContainerHighest, 0x61, theme),
@@ -82,7 +84,7 @@ Tokens ResolveTokens(const Switch& widget) {
   }
 
   return Tokens{
-      colors.surfaceContainerHighest,
+      colors.resolve(unselected_track),
       colors.outline,
       interaction ? colors.onSurfaceVariant : colors.outline,
       colors.surfaceContainerHighest,
@@ -187,9 +189,10 @@ roo_display::FpPoint Switch::getPointOverlayFocus() const {
 }
 
 ::roo_windows::material3::ColorToken Switch::effectiveContainerRole() const {
-  return isOn()
-             ? ::roo_windows::material3::ColorToken::kPrimary
-             : ::roo_windows::material3::ColorToken::kSurfaceContainerHighest;
+  return isOn() ? ::roo_windows::material3::ColorToken::kPrimary
+                : theme()
+                      .material3Theme()
+                      .components.switchControl.unselectedTrack;
 }
 
 void Switch::onAnimationFrame(AnimationTag tag, const AnimationSample& sample) {

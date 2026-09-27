@@ -133,6 +133,24 @@ TEST(Material3Switch, EffectiveContainerRoleTracksState) {
             sw.effectiveContainerRole());
 }
 
+// Verifies the unselected track role is shared while the selected track
+// remains the fixed primary accent.
+TEST(Material3Switch, UnselectedTrackUsesComponentTheme) {
+  roo_scheduler::Scheduler scheduler;
+  Material3Theme material = DefaultTheme().material3Theme();
+  material.components.switchControl.unselectedTrack =
+      ColorToken::kSurfaceContainerLow;
+  Theme theme = DefaultTheme();
+  theme.material3_theme = &material;
+  Environment env(scheduler, theme);
+  ApplicationContext context = MakeContext(env);
+  Switch sw(context, Switch::OnOffState::kOff);
+
+  EXPECT_EQ(ColorToken::kSurfaceContainerLow, sw.effectiveContainerRole());
+  sw.setOn();
+  EXPECT_EQ(ColorToken::kPrimary, sw.effectiveContainerRole());
+}
+
 // Verifies a click starts the 100 ms Material thumb value track while the
 // independent click overlay remains active.
 TEST_F(SwitchAnimationTest, MaterialClickAnimationCoexistsWithThumbTrack) {

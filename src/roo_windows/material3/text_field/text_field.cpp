@@ -355,13 +355,14 @@ void TextField::paint(PaintContext& ctx) const {
   bool outlined = flags_ & kOutlined;
   // Resolve the final container color before blending disabled and interaction
   // state layers, so every foreground slot uses the same opaque background.
-  Color fill = outlined ? ancestor : colors.surfaceContainerHighest;
+  const ColorToken filled_role =
+      theme().material3Theme().components.textField.filledContainer;
+  Color fill = outlined ? ancestor : colors.resolve(filled_role);
   if (!isEnabled() && !outlined) {
     fill = Opacity(colors.onSurface, 10, ancestor);
   } else if (isEnabled() && (isPressed() || isHover())) {
     fill = AlphaBlend(fill, theme().material3Theme().state.resolve(
-                                outlined ? ColorToken::kSurface
-                                         : ColorToken::kSurfaceContainerHighest,
+                                outlined ? ColorToken::kSurface : filled_role,
                                 isPressed() ? InteractionState::kPressed
                                             : InteractionState::kHover));
   }

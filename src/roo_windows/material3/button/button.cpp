@@ -83,14 +83,15 @@ Color DisabledComposite(const Theme& theme, Color fg, uint8_t alpha) {
   return AlphaBlend(theme.material3Theme().color.surface, fg.withA(alpha));
 }
 
-::roo_windows::material3::ColorToken ContainerRoleFor(ButtonVariant v) {
+::roo_windows::material3::ColorToken ContainerRoleFor(const Theme& theme,
+                                                      ButtonVariant v) {
   switch (v) {
     case ButtonVariant::kFilled:
       return ::roo_windows::material3::ColorToken::kPrimary;
     case ButtonVariant::kFilledTonal:
       return ::roo_windows::material3::ColorToken::kSecondaryContainer;
     case ButtonVariant::kElevated:
-      return ::roo_windows::material3::ColorToken::kSurfaceContainerLow;
+      return theme.material3Theme().components.button.elevatedContainer;
     case ButtonVariant::kText:
     case ButtonVariant::kOutlined:
       return ::roo_windows::material3::ColorToken::kNone;
@@ -115,8 +116,9 @@ ButtonTokens ResolveTokens(const Theme& theme, ButtonVariant v, bool enabled) {
                         Transparent, 0, 0};
   }
   const ButtonColorTokens& tokens = kButtonColorTokens[static_cast<uint8_t>(v)];
+  const ColorToken container = ContainerRoleFor(theme, v);
   return ButtonTokens{
-      tokens.paint_container ? colors.resolve(tokens.container) : Transparent,
+      tokens.paint_container ? colors.resolve(container) : Transparent,
       colors.resolve(tokens.content),
       tokens.paint_outline ? colors.resolve(tokens.outline) : Transparent,
       tokens.resting_elevation,
@@ -306,7 +308,7 @@ Padding Button::getDefaultPadding() const {
 }
 
 ::roo_windows::material3::ColorToken Button::containerRole() const {
-  return ContainerRoleFor(variant());
+  return ContainerRoleFor(theme(), variant());
 }
 
 Color Button::background() const {

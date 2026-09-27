@@ -250,6 +250,24 @@ TEST(Material3Button, ContainerRoleMatchesVariant) {
   EXPECT_EQ(::roo_windows::material3::ColorToken::kNone, text.containerRole());
 }
 
+// Verifies only the elevated variant reads the shared neutral button slot.
+TEST(Material3Button, ElevatedContainerUsesComponentTheme) {
+  roo_scheduler::Scheduler scheduler;
+  Material3Theme material = DefaultTheme().material3Theme();
+  material.components.button.elevatedContainer =
+      ColorToken::kSurfaceContainerHigh;
+  Theme theme = DefaultTheme();
+  theme.material3_theme = &material;
+  Environment env(scheduler, theme);
+  ApplicationContext context = MakeContext(env);
+  Button elevated(context, "E", ButtonVariant::kElevated);
+  Button filled(context, "F", ButtonVariant::kFilled);
+
+  EXPECT_EQ(ColorToken::kSurfaceContainerHigh, elevated.containerRole());
+  EXPECT_EQ(material.color.surfaceContainerHigh, elevated.background());
+  EXPECT_EQ(ColorToken::kPrimary, filled.containerRole());
+}
+
 // Verifies that only the outlined variant advertises a non-zero outline width
 // to the surface pipeline.
 TEST(Material3Button, OutlinedVariantHasOutline) {
