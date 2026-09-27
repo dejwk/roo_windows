@@ -66,7 +66,8 @@ struct TabsTheme {
 /// Selects unselected standard and segmented list-row surfaces.
 struct ListTheme {
   ColorToken standardContainer = ColorToken::kSurface;
-  ColorToken segmentedContainer = ColorToken::kSurface;
+  // Spec says 'surface' but Compose uses 'surface container'.
+  ColorToken segmentedContainer = ColorToken::kSurfaceContainer;
 };
 
 /// Selects baseline and standard expressive menu resting surfaces.
