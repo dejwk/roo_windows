@@ -7,12 +7,20 @@ namespace roo_windows {
 enum class MarginSize {
   kDefault = 0,
   kNone = 1,
-  kSmall = 2,
-  kRegular = 3,
-  kLarge = 4,
-  kHuge = 5,
-  kHumongous = 6,
-  kNegativeSmall = 7,
+  k2dp = 2,
+  k4dp = 3,
+  k8dp = 4,
+  k12dp = 5,
+  k20dp = 6,
+  kNegative2dp = 7,
+  kNegative4dp = 8,
+
+  kSmall = k2dp,
+  kRegular = k4dp,
+  kLarge = k8dp,
+  kHuge = k12dp,
+  kHumongous = k20dp,
+  kNegativeSmall = kNegative2dp,
   kNegative = 8,
 };
 

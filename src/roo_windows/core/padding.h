@@ -9,14 +9,23 @@ namespace roo_windows {
 enum class PaddingSize {
   kDefault = 0,
   kNone = 1,
-  kTiny = 2,
-  kSmall = 3,
-  kRegular = 4,
-  kLarge = 5,
-  kHuge = 6,
-  kHumongous = 7,
-  kNegativeTiny = 8,
-  kNegativeSmall = 9,
+  k4dp = 2,
+  k8dp = 3,
+  k12dp = 4,
+  k16dp = 5,
+  k24dp = 6,
+  k36dp = 7,
+  kNegative4dp = 8,
+  kNegative8dp = 9,
+
+  kTiny = k4dp,
+  kSmall = k8dp,
+  kRegular = k12dp,
+  kLarge = k16dp,
+  kHuge = k24dp,
+  kHumongous = k36dp,
+  kNegativeTiny = kNegative4dp,
+  kNegativeSmall = kNegative8dp,
 };
 
 /// Inner spacing inside a widget, expressed either as raw pixels or as a
