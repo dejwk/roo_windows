@@ -90,6 +90,19 @@ roo_scheduler::Scheduler scheduler;
 Environment env(scheduler);
 Application app(&env, display);
 
+// Fixed spacing can be customized with virtual overrides, without storing
+// padding and margins in every button instance.
+class SpaciousButton : public SimpleButton {
+ public:
+  using SimpleButton::SimpleButton;
+
+  /// Adds extra space around the label and icon.
+  Padding getPadding() const override { return Padding(PaddingSize::kLarge); }
+
+  /// Separates this button from neighboring controls.
+  Margins getMargins() const override { return Margins(MarginSize::kLarge); }
+};
+
 // Simple container to put our button in. (Without it, the button would take
 // full screen).
 class MyPane : public VerticalLayout {
@@ -107,8 +120,6 @@ class MyPane : public VerticalLayout {
     button4_.setContentColor(roo_display::color::SaddleBrown);
     button4_.setCornerRadius(20);
     button4_.setElevation(10, 2);
-    button4_.setPadding(PaddingSize::kLarge);
-    button4_.setMargins(MarginSize::kLarge);
     button4_.setFont(font_h5());
     // You can further customize the button by subclassing it. For example, you
     // can override getBorderStyle() to change the outline thickness.
@@ -116,18 +127,14 @@ class MyPane : public VerticalLayout {
     add(button2_);
     add(button3_);
     add(button4_);
-    button1_.setOnInteractiveChange([this]() {
-      showNotification("Button 1 clicked.");
-    });
-    button2_.setOnInteractiveChange([this]() {
-      showNotification("Button 2 clicked.");
-    });
-    button3_.setOnInteractiveChange([this]() {
-      showNotification("Button 3 clicked.");
-    });
-    button4_.setOnInteractiveChange([this]() {
-      showNotification("Button 4 clicked.");
-    });
+    button1_.setOnInteractiveChange(
+        [this]() { showNotification("Button 1 clicked."); });
+    button2_.setOnInteractiveChange(
+        [this]() { showNotification("Button 2 clicked."); });
+    button3_.setOnInteractiveChange(
+        [this]() { showNotification("Button 3 clicked."); });
+    button4_.setOnInteractiveChange(
+        [this]() { showNotification("Button 4 clicked."); });
   }
 
  private:
@@ -145,7 +152,7 @@ class MyPane : public VerticalLayout {
   SimpleButton button1_;
   SimpleButton button2_;
   SimpleButton button3_;
-  SimpleButton button4_;
+  SpaciousButton button4_;
   material3::AlertDialog alert_;
 };
 

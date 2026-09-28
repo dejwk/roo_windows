@@ -80,8 +80,8 @@ void initDisplay() {
 #include "roo_windows/containers/flex_layout.h"
 #include "roo_windows/material3/button/button.h"
 #include "roo_windows/material3/typography.h"
-#include "roo_windows/widgets/text_label.h"
 #include "roo_windows/widgets/text_block.h"
+#include "roo_windows/widgets/text_label.h"
 
 namespace {
 
@@ -137,9 +137,6 @@ class PoolActions : public FlexLayout {
     heat_.setIcon(&ic_outlined_24_action_eco());
     circulate_.setIcon(&ic_outlined_24_action_cached());
     stop_.setIcon(&ic_outlined_24_av_stop());
-    heat_.setMargins(MarginSize::kNone);
-    circulate_.setMargins(MarginSize::kNone);
-    stop_.setMargins(MarginSize::kNone);
 
     actions_.add(heat_);
     actions_.add(circulate_);

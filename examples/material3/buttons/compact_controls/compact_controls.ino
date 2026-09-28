@@ -138,8 +138,6 @@ class CompactControls : public FlexLayout {
     backwash_.setSmallButtonPadding(material3::SmallButtonPadding::kReduced);
     prime_.setIcon(&ic_outlined_24_action_cached());
     backwash_.setIcon(&ic_outlined_24_action_build());
-    prime_.setMargins(MarginSize::kNone);
-    backwash_.setMargins(MarginSize::kNone);
 
     toolbar_.add(prime_);
     toolbar_.add(backwash_);
