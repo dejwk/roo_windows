@@ -657,8 +657,7 @@ class InvokableListItemBase : public HeadlineSupportingListItemBase {
   std::function<void()> on_invoked_;
 };
 
-/// Convenience item that owns a leading icon and trailing navigation
-/// affordance.
+/// Convenience item that owns a leading icon for a navigational action.
 class NavigationListItem : public InvokableListItemBase {
  public:
   /// Presents the final feedback frame before invoking navigation.
@@ -675,18 +674,13 @@ class NavigationListItem : public InvokableListItemBase {
 
   Widget* leading() override;
   const Widget* leading() const override;
-  Widget* trailing() override;
-  const Widget* trailing() const override;
 
   Icon& leadingIcon();
   const Icon& leadingIcon() const;
-  Icon& trailingAffordance();
-  const Icon& trailingAffordance() const;
   void setPictogram(const roo_display::Pictogram& pictogram);
 
  private:
   Icon leading_icon_;
-  Icon trailing_affordance_;
 };
 
 /// Convenience item with initials avatar and navigation affordance.

@@ -481,8 +481,8 @@ TEST(Material3List, ListEntryClickabilityDependsOnBoundItemInvocation) {
   EXPECT_FALSE(standard_row.isClickable());
 }
 
-// Verifies that Phase 9 navigation convenience items keep callback storage in
-// opt-in item types while exposing stable leading/trailing affordances.
+// Verifies that navigation convenience items keep callback storage in opt-in
+// item types while exposing a stable leading icon.
 TEST(Material3List, NavigationConvenienceItemsExposeInvokeSurface) {
   roo_scheduler::Scheduler scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
@@ -493,9 +493,8 @@ TEST(Material3List, NavigationConvenienceItemsExposeInvokeSurface) {
   EXPECT_EQ("Schedule sync", std::string(navigation.headlineText()));
   EXPECT_EQ("Open sync details", std::string(navigation.supportingText()));
   ASSERT_NE(nullptr, navigation.leading());
-  ASSERT_NE(nullptr, navigation.trailing());
+  EXPECT_EQ(nullptr, navigation.trailing());
   EXPECT_EQ(&navigation.leadingIcon(), navigation.leading());
-  EXPECT_EQ(&navigation.trailingAffordance(), navigation.trailing());
 
   int navigation_invocations = 0;
   navigation.setOnInvoked([&]() { ++navigation_invocations; });
@@ -1697,7 +1696,7 @@ TEST(Material3List, SegmentedListSkipsGoneRowsWhenResolvingPositions) {
   EXPECT_EQ(ListItemPosition::kLast, last.visualContext().position);
 }
 
-// Verifies painted text and both navigation icons follow selection changes,
+// Verifies painted text and the navigation icon follow selection changes,
 // including block text, deselection, baseline fallback, and explicit overrides.
 TEST_F(Material3ListRenderTest, ContentColorsFollowExpressiveSelection) {
   ListTextPolicy wrapping;
@@ -1724,7 +1723,6 @@ TEST_F(Material3ListRenderTest, ContentColorsFollowExpressiveSelection) {
     expectInkColor(row->getChild(1),
                    selected ? colors.onSecondaryContainer : colors.onSurface);
     expectInkColor(row->getChild(2), secondary);
-    expectInkColor(row->getChild(3), secondary);
   }
   row->item().leadingIcon().setColor(roo_display::color::Red);
   visual.variant = ListVariant::kExpressive;

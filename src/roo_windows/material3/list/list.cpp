@@ -1414,28 +1414,15 @@ NavigationListItem::NavigationListItem(ApplicationContext& context,
                                        ListTextPolicy supporting_policy)
     : InvokableListItemBase(headline, supporting, headline_policy,
                             supporting_policy),
-      leading_icon_(context, pictogram),
-      trailing_affordance_(context, ic_filled_24_navigation_chevron_right()) {}
+      leading_icon_(context, pictogram) {}
 
 Widget* NavigationListItem::leading() { return &leading_icon_; }
 
 const Widget* NavigationListItem::leading() const { return &leading_icon_; }
 
-Widget* NavigationListItem::trailing() { return &trailing_affordance_; }
-
-const Widget* NavigationListItem::trailing() const {
-  return &trailing_affordance_;
-}
-
 Icon& NavigationListItem::leadingIcon() { return leading_icon_; }
 
 const Icon& NavigationListItem::leadingIcon() const { return leading_icon_; }
-
-Icon& NavigationListItem::trailingAffordance() { return trailing_affordance_; }
-
-const Icon& NavigationListItem::trailingAffordance() const {
-  return trailing_affordance_;
-}
 
 void NavigationListItem::setPictogram(const roo_display::Pictogram& pictogram) {
   leading_icon_.setIcon(pictogram);
