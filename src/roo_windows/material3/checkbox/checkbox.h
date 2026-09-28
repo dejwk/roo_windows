@@ -10,14 +10,14 @@ namespace material3 {
 /// Theme colors come from `effectiveContainerRole()`.
 /// Default padding and margins are zero so the widget can be combined freely
 /// in compound rows.
-class Checkbox : public BasicWidget {
+class Checkbox : public Widget {
  public:
   /// Logical selection state exposed by the checkbox.
   enum class OnOffState : uint8_t { kOff, kIndeterminate, kOn };
 
   /// Creates a checkbox with the specified initial state.
   Checkbox(ApplicationContext& context, OnOffState state = OnOffState::kOff)
-      : BasicWidget(context), state_(state) {
+      : Widget(context), state_(state) {
     // Allow point overlay to bleed outside the immediate parent.
     setParentClipMode(ParentClipMode::kUnclipped);
   }
@@ -53,8 +53,8 @@ class Checkbox : public BasicWidget {
     setDirty();
   }
 
-  Padding getDefaultPadding() const override { return Padding(0); }
-  Margins getDefaultMargins() const override { return Margins(0); }
+  Padding getPadding() const override { return Padding(0); }
+  Margins getMargins() const override { return Margins(0); }
 
   /// Paints the box outline and the on/indeterminate glyph in theme colors.
   void paint(PaintContext& ctx) const override;

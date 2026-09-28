@@ -299,7 +299,7 @@ RangeSlider::Metrics RangeSlider::buildMetrics() const {
 
 RangeSlider::RangeSlider(ApplicationContext& context, SliderRange range,
                          float start_value, float end_value, SliderStyle style)
-    : BasicWidget(context),
+    : Widget(context),
       range_(range),
       style_(style),
       start_value_(0.0f),
@@ -316,12 +316,12 @@ RangeSlider::RangeSlider(ApplicationContext& context, SliderRange range,
 }
 
 void RangeSlider::setParent(Container* parent, bool is_owned) {
-  BasicWidget::setParent(parent, is_owned);
+  Widget::setParent(parent, is_owned);
   if (parent != nullptr) updateValueIndicatorPin();
 }
 
 void RangeSlider::onLayout(bool changed, const Rect& rect) {
-  BasicWidget::onLayout(changed, rect);
+  Widget::onLayout(changed, rect);
   updateValueIndicatorPin();
 }
 
@@ -343,7 +343,7 @@ void RangeSlider::onSingleTapUp(XDim x, YDim y) {
       ResolveNearestThumb(axis, start_center, end_center, primary_coord);
   overlay_thumb_ = active_thumb_;
   awaiting_direction_ = false;
-  BasicWidget::onSingleTapUp(x, y);
+  Widget::onSingleTapUp(x, y);
   onInteractionStart(active_thumb_);
   if (setActiveThumbValue(axis.valueFromPrimaryCoord(range_, primary_coord))) {
     triggerInteractiveChange();
@@ -441,7 +441,7 @@ void RangeSlider::onDragFinished(XDim x, YDim y) {
 
 void RangeSlider::onCancel() {
   bool had_active_thumb = active_thumb_ != kNoActiveThumb;
-  BasicWidget::onCancel();
+  Widget::onCancel();
   active_thumb_ = kNoActiveThumb;
   is_dragging_ = false;
   awaiting_direction_ = false;

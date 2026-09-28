@@ -46,7 +46,7 @@ class ToggleIconButton : public IconButton {
   void toggle() { setSelected(!isSelected()); }
 
   /// Returns padding for the stable slot enclosing both borrowed icons.
-  Padding getDefaultPadding() const override;
+  Padding getPadding() const override;
 
   /// Returns the state-independent icon slot used by badge-aware hosts.
   Rect getIconBounds() const override;

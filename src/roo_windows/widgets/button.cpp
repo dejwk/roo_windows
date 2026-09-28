@@ -59,7 +59,7 @@ roo_display::Color ButtonContentColor(const Theme& theme, Button::Style style) {
 }  // namespace
 
 Button::Button(ApplicationContext& context, Style style)
-    : BasicSurfaceWidget(context),
+    : SurfaceWidget(context),
       style_(style),
       outline_color_(ButtonOutlineColor(context.theme(), style)),
       interior_color_(ButtonInteriorColor(context.theme(), style)),
@@ -100,9 +100,9 @@ void Button::setElevation(uint8_t resting, uint8_t pressed) {
   }
 }
 
-Padding Button::getDefaultPadding() const { return Padding(4, 4); }
+Padding Button::getPadding() const { return Padding(4, 4); }
 
-Padding SimpleButton::getDefaultPadding() const { return Padding(14, 4); }
+Padding SimpleButton::getPadding() const { return Padding(14, 4); }
 
 SimpleButton::SimpleButton(ApplicationContext& context, const MonoIcon* icon,
                            std::string label, Style style)

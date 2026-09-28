@@ -49,7 +49,7 @@ enum class SmallButtonPadding : uint8_t {
 /// The label is held as a non-owning `roo::string_view`, so the caller must
 /// keep the backing string alive while the button is using it. See
 /// docs/material3_buttons_design.md for the full contract.
-class Button : public BasicSurfaceWidget {
+class Button : public SurfaceWidget {
  public:
   /// Creates a Material 3 button with the supplied label and visual variant.
   ///
@@ -117,9 +117,11 @@ class Button : public BasicSurfaceWidget {
   /// the icon object.
   void setIcon(const MonoIcon* icon);
 
-  // BasicSurfaceWidget overrides.
-  /// Returns the default content padding for the current icon/text layout.
-  Padding getDefaultPadding() const override;
+  /// Returns the content padding for the current icon/text layout.
+  Padding getPadding() const override;
+
+  /// Preserves the standard outer surface spacing.
+  Margins getMargins() const override { return Margins(MarginSize::kRegular); }
 
   /// Returns true because Material 3 buttons always participate in click
   /// handling.

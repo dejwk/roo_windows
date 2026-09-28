@@ -227,7 +227,7 @@ uint8_t InterpolateCornerRadiusPx(uint8_t from, uint8_t to, float progress) {
 
 Button::Button(ApplicationContext& context, roo::string_view label,
                ButtonVariant variant)
-    : BasicSurfaceWidget(context),
+    : SurfaceWidget(context),
       label_(label),
       icon_(nullptr),
       variant_(static_cast<uint8_t>(variant)),
@@ -293,7 +293,7 @@ void Button::setIcon(const MonoIcon* icon) {
   requestLayout();
 }
 
-Padding Button::getDefaultPadding() const {
+Padding Button::getPadding() const {
   ButtonSize button_size = size();
   ButtonContentMetrics metrics =
       ResolveContentMetrics(label_, icon_, button_size);
@@ -377,7 +377,7 @@ void Button::notifyStateChanged(uint16_t state_diff) {
       elevationChanged(std::max(old_elevation, new_elevation));
     }
   }
-  BasicSurfaceWidget::notifyStateChanged(state_diff);
+  SurfaceWidget::notifyStateChanged(state_diff);
 }
 
 Dimensions Button::getSuggestedMinimumDimensions() const {

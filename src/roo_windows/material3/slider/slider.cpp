@@ -340,7 +340,7 @@ void Slider::paintInsetIcons(const Canvas& canvas, Clipper& clipper,
 
 Slider::Slider(ApplicationContext& context, SliderRange range, float value,
                SliderVariant variant, SliderStyle style)
-    : BasicWidget(context),
+    : Widget(context),
       range_(range),
       variant_(variant),
       style_(style),
@@ -353,12 +353,12 @@ Slider::Slider(ApplicationContext& context, SliderRange range, float value,
 }
 
 void Slider::setParent(Container* parent, bool is_owned) {
-  BasicWidget::setParent(parent, is_owned);
+  Widget::setParent(parent, is_owned);
   if (parent != nullptr) updateValueIndicatorPin();
 }
 
 void Slider::onLayout(bool changed, const Rect& rect) {
-  BasicWidget::onLayout(changed, rect);
+  Widget::onLayout(changed, rect);
   updateValueIndicatorPin();
 }
 
@@ -372,7 +372,7 @@ void Slider::onSingleTapUp(XDim x, YDim y) {
   if (getMainWindow()->click_animation().isBusy()) {
     return;
   }
-  BasicWidget::onSingleTapUp(x, y);
+  Widget::onSingleTapUp(x, y);
   internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
   float value =
       axis.valueFromPrimaryCoord(range_, axis.primaryCoordFromPoint(x, y));
@@ -438,7 +438,7 @@ void Slider::onCancel() {
   if (is_dragging_) {
     onInteractionEnd(value_);
   }
-  BasicWidget::onCancel();
+  Widget::onCancel();
   is_dragging_ = false;
   updateValueIndicatorPin();
 }

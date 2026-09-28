@@ -147,7 +147,7 @@ uint8_t Interpolate(uint8_t from, uint8_t to, float progress) {
 
 IconButton::IconButton(ApplicationContext& context, const MonoIcon& icon,
                        IconButtonStyle style)
-    : BasicSurfaceWidget(context),
+    : SurfaceWidget(context),
       icon_(&icon),
       style_(static_cast<uint8_t>(style)),
       size_(static_cast<uint8_t>(ButtonSize::kSmall)),
@@ -199,7 +199,7 @@ void IconButton::setIcon(const MonoIcon& icon) {
   requestLayout();
 }
 
-Padding IconButton::getDefaultPadding() const {
+Padding IconButton::getPadding() const {
   const GeometryTokens& geometry = GeometryFor(size());
   Dimensions slot = IconSlotDimensions(*this);
   int16_t horizontal = std::max<int16_t>(
@@ -271,7 +271,7 @@ Dimensions IconButton::getSuggestedMinimumDimensions() const {
 
 void IconButton::notifyStateChanged(uint16_t state_diff) {
   if ((state_diff & kWidgetPressed) != 0) invalidateInterior();
-  BasicSurfaceWidget::notifyStateChanged(state_diff);
+  SurfaceWidget::notifyStateChanged(state_diff);
 }
 
 }  // namespace material3

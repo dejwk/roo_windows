@@ -8,7 +8,7 @@
 namespace roo_windows {
 
 // Implements basic button functionality: clickability, border, elevations.
-class Button : public BasicSurfaceWidget {
+class Button : public SurfaceWidget {
  public:
   /// Visual style. `CONTAINED` is filled, `OUTLINED` has a stroked border
   /// over a transparent interior, `TEXT` is borderless and flat.
@@ -44,7 +44,10 @@ class Button : public BasicSurfaceWidget {
     corner_radius_ = corner_radius;
   }
 
-  Padding getDefaultPadding() const override;
+  Padding getPadding() const override;
+
+  /// Preserves the standard outer surface spacing.
+  Margins getMargins() const override { return Margins(MarginSize::kRegular); }
 
   /// Buttons always opt in as clickable so they receive touch animation and
   /// click dispatch.
@@ -103,7 +106,7 @@ class SimpleButton : public Button {
                std::string label, Style style = CONTAINED)
       : SimpleButton(context, &icon, label, style) {}
 
-  Padding getDefaultPadding() const override;
+  Padding getPadding() const override;
 
   /// Color used to draw the icon and label. Transparent means the theme's
   /// content color for the active container role.

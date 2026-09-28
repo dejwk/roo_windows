@@ -15,7 +15,7 @@ struct SliderPaintTokens;
 
 // Supports both horizontal and vertical range selection. Material 3 guidance
 // discourages the vertical range variant, but it is kept for API completeness.
-class RangeSlider : public BasicWidget {
+class RangeSlider : public Widget {
  public:
   /// Creates a two-thumb slider over the supplied semantic value range.
   RangeSlider(ApplicationContext& context, SliderRange range, float start_value,
@@ -73,10 +73,10 @@ class RangeSlider : public BasicWidget {
                                        size_t scratch_size) const;
 
   /// Range sliders do not add default content padding.
-  Padding getDefaultPadding() const override { return Padding(0); }
+  Padding getPadding() const override { return Padding(0); }
 
   /// Range sliders do not add default outer margins.
-  Margins getDefaultMargins() const override { return Margins(0); }
+  Margins getMargins() const override { return Margins(0); }
 
   /// Returns the minimum square footprint required by the active size preset.
   Dimensions getSuggestedMinimumDimensions() const override;

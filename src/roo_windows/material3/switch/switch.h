@@ -8,7 +8,7 @@ namespace material3 {
 /// Material 3 on/off switch with animated thumb and optional state icons.
 ///
 /// Optional selected/unselected pictograms render inside the thumb.
-class Switch : public BasicWidget {
+class Switch : public Widget {
  public:
   /// Logical selection state exposed by the switch.
   enum class OnOffState : uint8_t { kOff, kOn };
@@ -16,7 +16,7 @@ class Switch : public BasicWidget {
   /// Creates a switch with the specified initial state.
   explicit Switch(ApplicationContext& context,
                   OnOffState state = OnOffState::kOff)
-      : BasicWidget(context),
+      : Widget(context),
         state_(StateBits(state) | EndpointFraction(state)),
         selected_icon_(nullptr),
         unselected_icon_(nullptr) {
@@ -73,8 +73,8 @@ class Switch : public BasicWidget {
   /// selected.
   const MonoIcon* unselectedIcon() const { return unselected_icon_; }
 
-  Padding getDefaultPadding() const override { return Padding(0); }
-  Margins getDefaultMargins() const override { return Margins(0); }
+  Padding getPadding() const override { return Padding(0); }
+  Margins getMargins() const override { return Margins(0); }
 
   /// Paints the track, thumb, and optional state icon for the current
   /// animated position.

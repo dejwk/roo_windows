@@ -8,7 +8,7 @@ namespace material3 {
 /// Material 3 single-selection radio button.
 ///
 /// Renders the standard outer ring + inner dot icon using theme colors.
-class RadioButton : public BasicWidget {
+class RadioButton : public Widget {
  public:
   /// Logical selection state exposed by the radio button.
   enum class OnOffState : uint8_t { kOff, kOn };
@@ -16,7 +16,7 @@ class RadioButton : public BasicWidget {
   /// Creates a radio button with the specified initial state.
   explicit RadioButton(ApplicationContext& context,
                        OnOffState state = OnOffState::kOff)
-      : BasicWidget(context), state_(state) {
+      : Widget(context), state_(state) {
     // Allow point overlay to bleed outside the immediate parent.
     setParentClipMode(ParentClipMode::kUnclipped);
   }
@@ -46,8 +46,8 @@ class RadioButton : public BasicWidget {
     setDirty();
   }
 
-  Padding getDefaultPadding() const override { return Padding(0); }
-  Margins getDefaultMargins() const override { return Margins(0); }
+  Padding getPadding() const override { return Padding(0); }
+  Margins getMargins() const override { return Margins(0); }
 
   /// Paints the outer ring and, when on, the inner dot in theme colors.
   void paint(PaintContext& ctx) const override;

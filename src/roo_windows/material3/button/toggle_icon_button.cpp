@@ -208,7 +208,7 @@ void ToggleIconButton::setSelected(bool selected) {
   startSelectionAnimation(from_radius);
 }
 
-Padding ToggleIconButton::getDefaultPadding() const {
+Padding ToggleIconButton::getPadding() const {
   const GeometryTokens& geometry = GeometryFor(size());
   Dimensions slot = IconSlotDimensions(*this);
   int16_t horizontal = std::max<int16_t>(

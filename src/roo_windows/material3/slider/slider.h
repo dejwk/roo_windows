@@ -119,7 +119,7 @@ struct InsetIcon {
 /// and the touch / drag / scroll interaction. Subclasses can hook value-change
 /// callbacks (`onValueChange`, `onInteractionStart`, `onInteractionEnd`) and
 /// supply an optional inset icon painted inside the track.
-class Slider : public BasicWidget {
+class Slider : public Widget {
  public:
   /// Creates a single-value Material 3 slider over the supplied semantic value
   /// range.
@@ -168,10 +168,10 @@ class Slider : public BasicWidget {
                                        size_t scratch_size) const;
 
   /// Sliders do not add default content padding.
-  Padding getDefaultPadding() const override { return Padding(0); }
+  Padding getPadding() const override { return Padding(0); }
 
   /// Sliders do not add default outer margins.
-  Margins getDefaultMargins() const override { return Margins(0); }
+  Margins getMargins() const override { return Margins(0); }
 
   /// Returns the minimum square footprint required by the active size preset.
   Dimensions getSuggestedMinimumDimensions() const override;

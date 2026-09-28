@@ -29,7 +29,7 @@ enum class IconButtonWidth : uint8_t {
 ///
 /// The icon is borrowed and must outlive this widget. Size, shape, width, and
 /// colors resolve from Material 3 tokens without per-instance appearances.
-class IconButton : public BasicSurfaceWidget {
+class IconButton : public SurfaceWidget {
  public:
   /// Creates an icon button that borrows `icon`.
   explicit IconButton(ApplicationContext& context, const MonoIcon& icon,
@@ -77,10 +77,10 @@ class IconButton : public BasicSurfaceWidget {
   virtual Rect getIconBounds() const;
 
   /// Returns token-derived padding around the resolved icon slot.
-  Padding getDefaultPadding() const override;
+  Padding getPadding() const override;
 
   /// Returns zero implicit outer margins for toolbar and row composition.
-  Margins getDefaultMargins() const override { return Margins(0); }
+  Margins getMargins() const override { return Margins(0); }
 
   /// Returns true so the button participates in activation without a callback.
   bool isClickable() const override { return true; }
