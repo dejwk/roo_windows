@@ -11,9 +11,10 @@ enum class MarginSize {
   k4dp = 3,
   k8dp = 4,
   k12dp = 5,
-  k20dp = 6,
-  kNegative2dp = 7,
-  kNegative4dp = 8,
+  k16dp = 6,
+  k20dp = 7,
+  kNegative2dp = 8,
+  kNegative4dp = 9,
 
   kSmall = k2dp,
   kRegular = k4dp,
@@ -79,6 +80,8 @@ class Margins {
         return Scaled(8);
       case MarginSize::k12dp:
         return Scaled(12);
+      case MarginSize::k16dp:
+        return Scaled(16);
       case MarginSize::k20dp:
         return Scaled(20);
       case MarginSize::kNegative2dp:
