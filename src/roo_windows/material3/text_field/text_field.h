@@ -13,7 +13,7 @@ enum class TextFieldVariant : uint8_t { kFilled, kOutlined };
 /// icon pointers must outlive their assignment. Input must be valid single-line
 /// UTF-8. Editing uses the owning Task, never a per-field editor or child
 /// widget.
-class TextField : public BasicSurfaceWidget,
+class TextField : public SurfaceWidget,
                   private ::roo_windows::internal::TextEditTarget {
  public:
   /// Creates a field with a borrowed label and an empty owned value.
@@ -234,7 +234,7 @@ class TextField : public BasicSurfaceWidget,
 
 // Includes the edit-target vptr, string ABI, slot views and packed state.
 static_assert(sizeof(TextField) <=
-                  sizeof(BasicSurfaceWidget) + sizeof(std::string) +
+                  sizeof(SurfaceWidget) + sizeof(std::string) +
                       5 * sizeof(roo::string_view) + 4 * sizeof(void*),
               "TextField must not acquire per-instance editor, child or "
               "callback storage");

@@ -72,7 +72,7 @@ void PaintCell(PaintContext& ctx, roo::string_view text, const Rect& cell,
 
 DatePickerHeader::DatePickerHeader(ApplicationContext& context,
                                    DatePickerPanel& panel)
-    : BasicWidget(context), panel_(panel) {}
+    : Widget(context), panel_(panel) {}
 
 Rect DatePickerHeader::controlBounds(int control) const {
   if (control == 4) return Rect(width() - kCell, 0, width() - 1, kCell - 1);
@@ -181,7 +181,7 @@ bool DatePickerHeader::onKeyEvent(const KeyEvent& event) {
 
 DatePickerBody::DatePickerBody(ApplicationContext& context,
                                DatePickerPanel& panel)
-    : BasicSurfaceWidget(context), panel_(panel) {}
+    : SurfaceWidget(context), panel_(panel) {}
 
 Color DatePickerBody::background() const { return panel_.background(); }
 

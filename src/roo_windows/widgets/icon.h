@@ -10,15 +10,15 @@ namespace roo_windows {
 ///
 /// The pictogram pointer is held by reference, so the underlying glyph data
 /// must outlive the widget (typically a constexpr/program-memory icon).
-class Icon : public BasicWidget {
+class Icon : public Widget {
  public:
   Icon(ApplicationContext& context,
        Color color = roo_display::color::Transparent)
-      : BasicWidget(context), icon_(nullptr), color_(color) {}
+      : Widget(context), icon_(nullptr), color_(color) {}
 
   Icon(ApplicationContext& context, const roo_display::Pictogram& def,
        Color color = roo_display::color::Transparent)
-      : BasicWidget(context), icon_(&def), color_(color) {}
+      : Widget(context), icon_(&def), color_(color) {}
 
   /// Paints the pictogram centered in the widget bounds, in either the
   /// configured color or the resolved theme default when transparent.

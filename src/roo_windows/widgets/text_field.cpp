@@ -543,7 +543,7 @@ void TextField::onLayout(bool changed, const Rect& rect) {
 void TextField::onAnimationFrame(AnimationTag tag,
                                  const AnimationSample& sample) {
   if (tag != kCaret) {
-    BasicWidget::onAnimationFrame(tag, sample);
+    Widget::onAnimationFrame(tag, sample);
     return;
   }
   Task* task = getTask();

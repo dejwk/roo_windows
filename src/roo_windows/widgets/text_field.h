@@ -28,14 +28,14 @@ static constexpr roo_time::Duration kShowLastGlyphInterval =
 /// Acts as a compact on/off control: clicking toggles it, paint() chooses the
 /// matching pictogram, and the consuming `TextField` reacts to the state
 /// change.
-class VisibilityToggle : public BasicWidget {
+class VisibilityToggle : public Widget {
  public:
   /// Logical selection state exposed by the visibility toggle.
   enum class OnOffState : uint8_t { kOff, kOn };
 
   /// Creates the toggle in the default hidden-text state.
   VisibilityToggle(ApplicationContext& context)
-      : BasicWidget(context), state_(OnOffState::kOff) {}
+      : Widget(context), state_(OnOffState::kOff) {}
 
   /// Returns true when the text is shown.
   bool isOn() const { return state_ == OnOffState::kOn; }
@@ -220,7 +220,7 @@ class TextFieldEditor {
 /// scroll) is delegated to the shared `TextFieldEditor`, so individual fields
 /// stay lightweight. Set `setStarred(true)` to render the value as bullet
 /// characters for password-style fields.
-class TextField : public BasicWidget, public internal::TextEditTarget {
+class TextField : public Widget, public internal::TextEditTarget {
  public:
   enum Decoration {
     NONE,
@@ -231,7 +231,7 @@ class TextField : public BasicWidget, public internal::TextEditTarget {
   TextField(ApplicationContext& context, const roo_display::Font& font,
             std::string hint, roo_display::Alignment alignment,
             Decoration decoration)
-      : BasicWidget(context),
+      : Widget(context),
         decoration_(decoration),
         value_(""),
         hint_(std::move(hint)),

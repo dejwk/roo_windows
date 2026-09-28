@@ -87,7 +87,7 @@ struct TextField::Slots {
 
 TextField::TextField(ApplicationContext& context, roo::string_view label,
                      TextFieldVariant variant)
-    : BasicSurfaceWidget(context),
+    : SurfaceWidget(context),
       label_(label),
       flags_(variant == TextFieldVariant::kOutlined ? kOutlined : 0) {}
 
@@ -639,7 +639,7 @@ void TextField::maskingChanged() {
 }
 
 void TextField::notifyStateChanged(uint16_t diff) {
-  BasicSurfaceWidget::notifyStateChanged(diff);
+  SurfaceWidget::notifyStateChanged(diff);
   if (!isEnabled() && isEdited()) {
     getTask()->textFieldEditor().cancel();
   }
@@ -650,7 +650,7 @@ void TextField::onAnimationFrame(AnimationTag tag,
   if (tag == 0 && isEdited()) {
     getTask()->textFieldEditor().applyCursorFrame(*this, sample);
   } else {
-    BasicSurfaceWidget::onAnimationFrame(tag, sample);
+    SurfaceWidget::onAnimationFrame(tag, sample);
   }
 }
 

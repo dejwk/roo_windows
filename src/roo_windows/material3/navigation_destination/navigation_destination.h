@@ -34,7 +34,7 @@ struct NavigationDestinationGeometry {
 /// Concrete navigation components retain ownership of their geometry, tokens,
 /// layout enums, and selection containers. They provide only the resolved
 /// content slots and the component-specific activation callback.
-class NavigationDestinationBase : public BasicWidget {
+class NavigationDestinationBase : public Widget {
  public:
   roo::string_view label() const;
   void setLabel(roo::string_view label);

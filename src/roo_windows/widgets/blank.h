@@ -8,10 +8,10 @@ namespace roo_windows {
 ///
 /// Paints transparent over its background and reports a fixed suggested
 /// minimum size. Useful for spacing or as a stand-in during layout work.
-class Blank : public BasicWidget {
+class Blank : public Widget {
  public:
   Blank(ApplicationContext& context, Dimensions dims)
-      : BasicWidget(context), dims_(dims) {}
+      : Widget(context), dims_(dims) {}
 
   void paint(PaintContext& ctx) const override { ctx.clear(); }
 

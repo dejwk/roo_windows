@@ -13,14 +13,14 @@ namespace roo_windows {
 // Note: once set, the anchor extents of the underlying drawable should remain
 // constant. If they do change, however, call requestLayout() to make the image
 // aware of the changed dimensions.
-class Image : public BasicWidget {
+class Image : public Widget {
  public:
   // Creates an empty image. You can set the content after construction by
   // calling setImage().
   Image(ApplicationContext& context,
         roo_display::Alignment alignment = roo_display::kCenter |
                                            roo_display::kMiddle)
-      : BasicWidget(context), image_(nullptr), alignment_(alignment) {}
+      : Widget(context), image_(nullptr), alignment_(alignment) {}
 
   // Creates an image with the specified content, and optionally the alignment.
   // If the alignment is not specified, it defaults to centered (kCenter |
@@ -28,7 +28,7 @@ class Image : public BasicWidget {
   Image(ApplicationContext& context, const roo_display::Drawable& image,
         roo_display::Alignment alignment = roo_display::kCenter |
                                            roo_display::kMiddle)
-      : BasicWidget(context), image_(&image), alignment_(alignment) {}
+      : Widget(context), image_(&image), alignment_(alignment) {}
 
   // Sets the new content and invalidates the interior if needed so that it gets
   // redrawn. If nullptr, the image is drawn as an empty canvas.

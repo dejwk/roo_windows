@@ -423,10 +423,10 @@ using internal::ShouldShowDivider;
 
 // Keeps the avatar-specific paint logic private to the convenience item layer
 // instead of introducing a broader public widget before the API needs one.
-class AvatarVisual : public BasicWidget {
+class AvatarVisual : public Widget {
  public:
   AvatarVisual(ApplicationContext& context, roo::string_view initials)
-      : BasicWidget(context), initials_(initials) {}
+      : Widget(context), initials_(initials) {}
 
   Dimensions getSuggestedMinimumDimensions() const override {
     int16_t side = Scaled(kAvatarSizeDp);

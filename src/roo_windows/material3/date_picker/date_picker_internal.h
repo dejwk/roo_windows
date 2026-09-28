@@ -17,7 +17,7 @@ enum class DatePickerMode : uint8_t { kDays, kMonths, kYears, kInput };
 class DatePickerPanel;
 
 /// Owner-painted header with five keyboard/touch controls.
-class DatePickerHeader final : public BasicWidget {
+class DatePickerHeader final : public Widget {
  public:
   /// Borrows the session panel for header state and actions.
   DatePickerHeader(ApplicationContext& context, DatePickerPanel& panel);
@@ -58,7 +58,7 @@ class DatePickerHeader final : public BasicWidget {
 };
 
 /// Arithmetic calendar/list cells, without child objects per cell.
-class DatePickerBody final : public BasicSurfaceWidget {
+class DatePickerBody final : public SurfaceWidget {
  public:
   /// Borrows the panel for arithmetic cell content and selection.
   DatePickerBody(ApplicationContext& context, DatePickerPanel& panel);

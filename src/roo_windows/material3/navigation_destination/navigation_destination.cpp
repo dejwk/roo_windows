@@ -41,7 +41,7 @@ ColorToken UnselectedIndicatorRole(
 NavigationDestinationBase::NavigationDestinationBase(
     ApplicationContext& context, roo::string_view label, const MonoIcon* icon,
     const MonoIcon* selected_icon)
-    : BasicWidget(context),
+    : Widget(context),
       label_(label),
       icon_(icon),
       selected_icon_(selected_icon),
