@@ -5,6 +5,7 @@
 #include "roo_display/ui/string_printer.h"
 #include "roo_windows/containers/aligned_layout.h"
 #include "roo_windows/containers/flex_layout.h"
+#include "roo_windows/core/margins_mixin.h"
 #include "roo_windows/widgets/slider.h"
 #include "roo_windows/widgets/text_label.h"
 
@@ -43,7 +44,7 @@ class BaseSliderWithCaption : public roo_windows::FlexLayout {
   roo_windows::AlignedLayout text_section_;
   roo_windows::TextLabel caption_;
   roo_windows::TextLabel value_;
-  roo_windows::Slider slider_;
+  roo_windows::MarginsMixin<roo_windows::Slider> slider_;
 };
 
 /// Concrete `BaseSliderWithCaption` that maps the slider position to a float

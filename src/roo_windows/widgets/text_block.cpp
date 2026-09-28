@@ -392,7 +392,7 @@ class Interior : public roo_display::Drawable {
 TextBlock::TextBlock(ApplicationContext& context, std::string value,
                      const TextStyle& text_style, roo_display::Color color,
                      roo_display::Alignment alignment)
-    : MarginsMixin<PaddingMixin<Widget>>(context),
+    : Widget(context),
       value_(),
       ink_insets_(Insets::Zero()),
       text_dims_(0, 0),

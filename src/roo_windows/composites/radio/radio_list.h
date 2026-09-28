@@ -4,6 +4,7 @@
 #include "roo_windows/containers/horizontal_layout.h"
 #include "roo_windows/containers/list_layout.h"
 #include "roo_windows/core/application_context.h"
+#include "roo_windows/core/margins_mixin.h"
 #include "roo_windows/core/panel.h"
 #include "roo_windows/core/widget.h"
 #include "roo_windows/widgets/radio_button.h"
@@ -72,7 +73,7 @@ class RadioListItem : public HorizontalLayout {
   }
 
   int idx_;
-  RadioButton button_;
+  MarginsMixin<RadioButton> button_;
   std::unique_ptr<Widget> item_;
   std::function<void(int idx)> on_click_;
 };

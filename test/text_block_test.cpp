@@ -8,6 +8,7 @@
 #include "roo_windows.h"
 #include "roo_windows/containers/flex_layout.h"
 #include "roo_windows/core/environment.h"
+#include "roo_windows/core/padding_mixin.h"
 
 namespace roo_windows {
 namespace {
@@ -105,7 +106,8 @@ TEST(TextBlock, SingleLineContentBoundsReflectFontInk) {
   Environment bootstrap(scheduler);
   ApplicationContext context = MakeContext(bootstrap);
   const auto& font = material2::text_style_body2();
-  TextBlock block(context, "abc", font, roo_display::kLeft | roo_display::kTop);
+  PaddingMixin<TextBlock> block(context, "abc", font,
+                                roo_display::kLeft | roo_display::kTop);
   block.setPadding(PaddingSize::kNone);
   block.setWrapMode(TextWrapMode::kNoWrap);
 
@@ -129,7 +131,8 @@ TEST(TextBlock, PendingWrappedLayoutUsesConservativeFontBounds) {
   Environment bootstrap(scheduler);
   ApplicationContext context = MakeContext(bootstrap);
   const auto& font = material2::text_style_body2();
-  TextBlock block(context, "abc", font, roo_display::kLeft | roo_display::kTop);
+  PaddingMixin<TextBlock> block(context, "abc", font,
+                                roo_display::kLeft | roo_display::kTop);
   block.setPadding(PaddingSize::kNone);
 
   int16_t line_height = font.lineHeight();
@@ -151,7 +154,8 @@ TEST(TextBlock, SetPaddingRequestsLayoutAndUpdatesContentBounds) {
   Environment bootstrap(scheduler);
   ApplicationContext context = MakeContext(bootstrap);
   const auto& font = material2::text_style_body2();
-  TextBlock block(context, "abc", font, roo_display::kLeft | roo_display::kTop);
+  PaddingMixin<TextBlock> block(context, "abc", font,
+                                roo_display::kLeft | roo_display::kTop);
   block.setWrapMode(TextWrapMode::kNoWrap);
   block.setPadding(PaddingSize::kNone);
 
@@ -214,8 +218,9 @@ class TextBlockGoldenTest : public testing::Test {
       int16_t max_height = 0, uint16_t max_lines = 0, bool ellipsize = false) {
     Application app(&env_, display_);
 
-    TextBlock block(app.context(), text, material2::text_style_body2(),
-                    roo_display::kLeft | roo_display::kTop);
+    PaddingMixin<TextBlock> block(app.context(), text,
+                                  material2::text_style_body2(),
+                                  roo_display::kLeft | roo_display::kTop);
     block.setPadding(PaddingSize::kNone);
     block.setWrapMode(TextWrapMode::kWordWrap);
     block.setTextAlign(align);
@@ -243,8 +248,8 @@ class TextBlockGoldenTest : public testing::Test {
       PaddingSize padding = PaddingSize::kNone) {
     Application app(&env_, display_);
 
-    TextBlock block(app.context(), kOverhangText, material2::text_style_body2(),
-                    alignment);
+    PaddingMixin<TextBlock> block(app.context(), kOverhangText,
+                                  material2::text_style_body2(), alignment);
     block.setPadding(padding);
     block.setWrapMode(TextWrapMode::kNoWrap);
 

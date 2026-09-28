@@ -12,7 +12,7 @@ WifiIndicatorBase::WifiIndicatorBase(ApplicationContext& context)
 
 WifiIndicatorBase::WifiIndicatorBase(ApplicationContext& context,
                                      roo_display::Color color)
-    : PaddingMixin<Widget>(context),
+    : Widget(context),
       color_(color),
       connection_status_(DISCONNECTED),
       locked_(false),

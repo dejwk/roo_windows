@@ -2,6 +2,8 @@
 
 #include "roo_windows/dialogs/dialog.h"
 #include "roo_windows/dialogs/string_constants.h"
+#include "roo_windows/core/margins_mixin.h"
+#include "roo_windows/core/padding_mixin.h"
 #include "roo_windows/widgets/text_block.h"
 
 namespace roo_windows {
@@ -30,7 +32,7 @@ class AlertDialog : public Dialog {
   bool onEnter() override;
 
  private:
-  TextBlock supporting_text_;
+  MarginsMixin<PaddingMixin<TextBlock>> supporting_text_;
 };
 
 }  // namespace roo_windows
