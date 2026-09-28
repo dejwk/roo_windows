@@ -21,7 +21,6 @@ FlexCard::FlexCard(ApplicationContext& context, Style style,
   outline_width_override_ = defaults.outline_width;
   corner_radius_override_ = defaults.corner_radius;
 
-  setMargins(MarginSize::kRegular);
   setPadding(Padding(PaddingSize::kRegular, PaddingSize::kRegular));
 }
 
