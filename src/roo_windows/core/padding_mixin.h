@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <type_traits>
+#include <utility>
 
 #include "roo_windows/core/padding.h"
 #include "roo_windows/core/widget.h"
@@ -20,7 +21,9 @@ class PaddingMixin : public WidgetBase {
                 "PaddingMixin base must derive from Widget");
 
  public:
-  explicit PaddingMixin(ApplicationContext& context) : WidgetBase(context) {}
+  template <typename... Args>
+  explicit PaddingMixin(Args&&... args)
+      : WidgetBase(std::forward<Args>(args)...) {}
 
   /// Returns the padding used for axes configured as kDefault. Subclasses may
   /// override this to provide asymmetric or runtime-dependent defaults.

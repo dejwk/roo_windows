@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <type_traits>
+#include <utility>
 
 #include "roo_windows/core/margins.h"
 #include "roo_windows/core/widget.h"
@@ -19,7 +20,9 @@ class MarginsMixin : public WidgetBase {
                 "MarginsMixin base must derive from Widget");
 
  public:
-  explicit MarginsMixin(ApplicationContext& context) : WidgetBase(context) {}
+  template <typename... Args>
+  explicit MarginsMixin(Args&&... args)
+      : WidgetBase(std::forward<Args>(args)...) {}
 
   /// Returns the margins used for axes configured as kDefault. Subclasses may
   /// override this to provide asymmetric or runtime-dependent defaults.
