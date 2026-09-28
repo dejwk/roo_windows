@@ -3,7 +3,6 @@
 #include <vector>
 
 #include "roo_windows/core/cached_measure.h"
-#include "roo_windows/core/margins.h"
 #include "roo_windows/core/padding.h"
 #include "roo_windows/core/panel.h"
 
@@ -365,11 +364,7 @@ class FlexLayout : public Panel {
   /// the first/last flex line).
   void setPadding(Padding padding);
 
-  /// @brief Sets the container's outer margins.
-  void setMargins(Margins margins);
-
   Padding getPadding() const override { return padding_; }
-  Margins getMargins() const override { return margins_; }
 
   PreferredSize getPreferredSize() const override {
     return PreferredSize(PreferredSize::WrapContentWidth(),
@@ -429,7 +424,6 @@ class FlexLayout : public Panel {
   int16_t row_gap_;
 
   Padding padding_;
-  Margins margins_;
   Dimensions min_dimensions_;
 
   // Parallel to Panel::children_: index i here corresponds to index i there.

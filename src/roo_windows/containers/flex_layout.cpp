@@ -60,7 +60,6 @@ FlexLayout::FlexLayout(ApplicationContext& context, FlexDirection direction)
       column_gap_(0),
       row_gap_(0),
       padding_(PaddingSize::kNone),
-      margins_(MarginSize::kNone),
       min_dimensions_(0, 0) {}
 
 // ---------------------------------------------------------------------------
@@ -117,12 +116,6 @@ void FlexLayout::setRowGap(int16_t gap) {
 void FlexLayout::setPadding(Padding padding) {
   if (padding_ == padding) return;
   padding_ = padding;
-  requestLayout();
-}
-
-void FlexLayout::setMargins(Margins margins) {
-  if (margins_ == margins) return;
-  margins_ = margins;
   requestLayout();
 }
 

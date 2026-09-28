@@ -4,7 +4,6 @@
 
 #include "roo_windows/core/cached_measure.h"
 #include "roo_windows/core/gravity.h"
-#include "roo_windows/core/margins.h"
 #include "roo_windows/core/padding.h"
 #include "roo_windows/core/panel.h"
 
@@ -40,7 +39,6 @@ class VerticalLayout : public Panel {
   VerticalLayout(ApplicationContext& context)
       : Panel(context),
         padding_(PaddingSize::kNone),
-        margins_(MarginSize::kNone),
         gravity_(),
         use_largest_child_(false),
         weight_sum_(0),
@@ -57,13 +55,6 @@ class VerticalLayout : public Panel {
   void setPadding(Padding padding) {
     if (padding_ == padding) return;
     padding_ = padding;
-    requestLayout();
-  }
-
-  /// Sets outer margins. Triggers a re-layout when changed.
-  void setMargins(Margins margins) {
-    if (margins_ == margins) return;
-    margins_ = margins;
     requestLayout();
   }
 
@@ -96,8 +87,6 @@ class VerticalLayout : public Panel {
 
   Padding getPadding() const override { return padding_; }
 
-  Margins getMargins() const override { return margins_; }
-
   Dimensions getSuggestedMinimumDimensions() const override {
     return min_dimensions_;
   }
@@ -115,7 +104,6 @@ class VerticalLayout : public Panel {
 
  private:
   Padding padding_;
-  Margins margins_;
 
   // The vertical component dictates how the children are aligned in case there
   // is some extra vertical space. The horizontal component is the default
