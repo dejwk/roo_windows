@@ -2,6 +2,7 @@
 #include "gtest/gtest.h"
 #include "roo_display.h"
 #include "roo_display/core/offscreen.h"
+#include "roo_windows/core/basic_surface_widget.h"
 #include "roo_scheduler.h"
 #include "roo_windows.h"
 #include "roo_windows/material3/checkbox/checkbox.h"

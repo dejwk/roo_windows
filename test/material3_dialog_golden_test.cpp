@@ -17,10 +17,10 @@
 namespace roo_windows::material3 {
 namespace {
 
-class Backdrop final : public BasicSurfaceWidget {
+class Backdrop final : public SurfaceWidget {
  public:
   explicit Backdrop(ApplicationContext& context)
-      : BasicSurfaceWidget(context) {}
+      : SurfaceWidget(context) {}
 
   Color background() const override { return Color(0xFFE8E4DC); }
   void paint(PaintContext& ctx) const override { ctx.clear(); }

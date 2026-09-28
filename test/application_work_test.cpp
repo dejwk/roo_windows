@@ -40,9 +40,9 @@ class WorkKeys : public KeySource {
   bool pending = false;
 };
 
-class WorkWidget : public BasicSurfaceWidget {
+class WorkWidget : public SurfaceWidget {
  public:
-  using BasicSurfaceWidget::BasicSurfaceWidget;
+  using SurfaceWidget::SurfaceWidget;
   Dimensions getSuggestedMinimumDimensions() const override {
     return Dimensions(8, 8);
   }

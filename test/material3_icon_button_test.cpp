@@ -22,11 +22,11 @@ roo_display::Color QuantizeToArgb4444(roo_display::Color color) {
   return mode.toArgbColor(mode.fromArgbColor(color));
 }
 
-class SolidBackdrop : public BasicSurfaceWidget {
+class SolidBackdrop : public SurfaceWidget {
  public:
   SolidBackdrop(ApplicationContext& context, roo_display::Color color,
                 Dimensions dimensions)
-      : BasicSurfaceWidget(context), color_(color), dimensions_(dimensions) {}
+      : SurfaceWidget(context), color_(color), dimensions_(dimensions) {}
 
   roo_display::Color background() const override { return color_; }
   void paint(PaintContext& ctx) const override { ctx.clear(); }
@@ -185,7 +185,7 @@ TEST(Material3IconButton, IsClickableAndFitsItsStorageBudget) {
   IconButton button(context, ic_outlined_24_action_done());
 
   EXPECT_TRUE(button.isClickable());
-  constexpr size_t kRawBudget = sizeof(BasicSurfaceWidget) + sizeof(void*) + 4;
+  constexpr size_t kRawBudget = sizeof(SurfaceWidget) + sizeof(void*) + 4;
   constexpr size_t kAlignmentSlack = alignof(IconButton) - 1;
   EXPECT_LE(sizeof(IconButton), kRawBudget + kAlignmentSlack);
 }

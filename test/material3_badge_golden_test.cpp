@@ -34,10 +34,10 @@ Insets InsetsFromEnvelope(const Rect& logical_bounds, const Rect& envelope) {
                 logical_bounds.yMax() - combined.yMax());
 }
 
-class SolidBackdrop : public BasicSurfaceWidget {
+class SolidBackdrop : public SurfaceWidget {
  public:
   SolidBackdrop(ApplicationContext& context, Color color, Dimensions dims)
-      : BasicSurfaceWidget(context), color_(color), dims_(dims) {}
+      : SurfaceWidget(context), color_(color), dims_(dims) {}
 
   Color background() const override { return color_; }
 

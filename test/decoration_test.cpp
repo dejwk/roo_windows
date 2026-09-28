@@ -10,10 +10,10 @@ namespace {
 
 using roo_display::Color;
 
-class SolidWidget : public BasicSurfaceWidget {
+class SolidWidget : public SurfaceWidget {
  public:
   SolidWidget(ApplicationContext& context, Color color, Dimensions dims)
-      : BasicSurfaceWidget(context), color_(color), dims_(dims) {}
+      : SurfaceWidget(context), color_(color), dims_(dims) {}
 
   Color background() const override { return color_; }
 
@@ -26,12 +26,12 @@ class SolidWidget : public BasicSurfaceWidget {
   Dimensions dims_;
 };
 
-class DecoratedWidget : public BasicSurfaceWidget {
+class DecoratedWidget : public SurfaceWidget {
  public:
   DecoratedWidget(ApplicationContext& context, Color fill_color,
                   Color outline_color, BorderStyle border_style,
                   uint8_t elevation, Dimensions dims)
-      : BasicSurfaceWidget(context),
+      : SurfaceWidget(context),
         fill_color_(fill_color),
         outline_color_(outline_color),
         border_style_(border_style),

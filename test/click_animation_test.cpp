@@ -70,9 +70,9 @@ class CountingKeys : public KeySource {
   bool hasPendingEvents() const override { return false; }
 };
 
-class ClickFrameWidget : public BasicSurfaceWidget {
+class ClickFrameWidget : public SurfaceWidget {
  public:
-  using BasicSurfaceWidget::BasicSurfaceWidget;
+  using SurfaceWidget::SurfaceWidget;
   Dimensions getSuggestedMinimumDimensions() const override {
     return Dimensions(16, 16);
   }

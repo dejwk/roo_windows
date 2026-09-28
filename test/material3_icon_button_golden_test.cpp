@@ -13,10 +13,10 @@ namespace {
 
 using roo_display::Color;
 
-class SolidBackdrop : public BasicSurfaceWidget {
+class SolidBackdrop : public SurfaceWidget {
  public:
   SolidBackdrop(ApplicationContext& context, Color color, Dimensions dims)
-      : BasicSurfaceWidget(context), color_(color), dims_(dims) {}
+      : SurfaceWidget(context), color_(color), dims_(dims) {}
 
   Color background() const override { return color_; }
   void paint(PaintContext& ctx) const override { ctx.clear(); }

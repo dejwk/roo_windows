@@ -24,10 +24,10 @@ Color QuantizeToArgb4444(Color color) {
   return mode.toArgbColor(mode.fromArgbColor(color));
 }
 
-class SolidBackdrop : public BasicSurfaceWidget {
+class SolidBackdrop : public SurfaceWidget {
  public:
   SolidBackdrop(ApplicationContext& context, Color color, Dimensions dims)
-      : BasicSurfaceWidget(context), color_(color), dims_(dims) {}
+      : SurfaceWidget(context), color_(color), dims_(dims) {}
 
   Color background() const override { return color_; }
 
@@ -2984,8 +2984,8 @@ TEST_F(Material3SliderRenderTest, IndicatorPinsRegisterInPopupAndDialogLayers) {
 // Verifies Phase 2 does not add a dormant pin handle or state object to either
 // slider. These budgets include the semantic slider fields, not heap payload.
 TEST(Material3SliderValueIndicator, PersistentObjectSizesStayBounded) {
-  constexpr size_t kSliderBudget = sizeof(BasicWidget) + 64;
-  constexpr size_t kRangeSliderBudget = sizeof(BasicWidget) + 80;
+  constexpr size_t kSliderBudget = sizeof(Widget) + 64;
+  constexpr size_t kRangeSliderBudget = sizeof(Widget) + 80;
   EXPECT_LE(sizeof(Slider), kSliderBudget);
   EXPECT_LE(sizeof(RangeSlider), kRangeSliderBudget);
 }

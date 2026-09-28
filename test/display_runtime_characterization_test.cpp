@@ -70,9 +70,9 @@ class ColorDestination final : public Destination {
   Widget& getContents() override { return contents; }
 
  private:
-  class Contents final : public BasicSurfaceWidget {
+  class Contents final : public SurfaceWidget {
    public:
-    explicit Contents(ApplicationContext& context) : BasicSurfaceWidget(context) {}
+    explicit Contents(ApplicationContext& context) : SurfaceWidget(context) {}
     roo_display::Color background() const override { return roo_display::color::Green; }
     void paint(PaintContext& ctx) const override { ctx.clear(); }
     Dimensions getSuggestedMinimumDimensions() const override {

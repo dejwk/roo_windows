@@ -83,10 +83,10 @@ void initDisplay() {
 
 namespace {
 
-class ColorPage : public BasicSurfaceWidget {
+class ColorPage : public SurfaceWidget {
  public:
   ColorPage(ApplicationContext& context, Color color)
-      : BasicSurfaceWidget(context), color_(color) {}
+      : SurfaceWidget(context), color_(color) {}
 
   Color background() const override { return color_; }
 
