@@ -1,5 +1,6 @@
 #pragma once
 
+#include "roo_windows/core/child_layout.h"
 #include "roo_windows/core/panel.h"
 
 namespace roo_windows {
@@ -23,20 +24,20 @@ class StackedLayout : public Panel {
     XDim w = 0;
     YDim h = 0;
     for (const auto& child : children()) {
-      Dimensions d = child->measure(width, height);
+      Dimensions d = MeasureChildWithMargins(*child, width, height);
       if (!child->isGone()) {
         w = std::max(w, d.width());
         h = std::max(h, d.height());
       }
     }
-    return Dimensions(w, h);
+    return Dimensions(width.resolveSize(w), height.resolveSize(h));
   }
 
-  /// Lays every child out to fill the full container rect (stacking them).
+  /// Lays every child out to fill the container inside its own margins.
   void onLayout(bool changed, const Rect& rect) {
     Rect local(0, 0, rect.width() - 1, rect.height() - 1);
     for (const auto& child : children()) {
-      child->layout(local);
+      LayoutChildWithMargins(*child, local);
     }
   }
 

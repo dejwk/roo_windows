@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include "roo_display/ui/text_label.h"
+#include "roo_windows/core/child_layout.h"
 #include "roo_windows/material3/navigation_bar/navigation_bar_tokens.h"
 #include "roo_windows/material3/theme.h"
 #include "roo_windows/material3/typography.h"
@@ -346,8 +347,9 @@ Dimensions NavigationBar::onMeasure(WidthSpec width, HeightSpec height) {
   int16_t desired_width = 0;
   if (layout() == NavigationBarLayout::kVertical) {
     for (NavigationBarDestination* destination : destinations_) {
-      Dimensions child = destination->measure(WidthSpec::Unspecified(0),
-                                              HeightSpec::Exactly(bar_height));
+      Dimensions child =
+          MeasureChildWithMargins(*destination, WidthSpec::Unspecified(0),
+                                  HeightSpec::Exactly(bar_height));
       desired_width += child.width();
     }
   } else {
@@ -387,10 +389,10 @@ void NavigationBar::onLayout(bool changed, const Rect& rect) {
     for (int i = 0; i < count; ++i) {
       const int16_t next_x = static_cast<int16_t>(
           (static_cast<int32_t>(i + 1) * available_width) / count);
-      destinations_[i]->measure(WidthSpec::Exactly(next_x - x),
-                                HeightSpec::Exactly(bar_height));
-      static_cast<Widget&>(*destinations_[i])
-          .layout(Rect(x, 0, next_x - 1, bar_height - 1));
+      MeasureChildWithMargins(*destinations_[i], WidthSpec::Exactly(next_x - x),
+                              HeightSpec::Exactly(bar_height));
+      LayoutChildWithMargins(*destinations_[i],
+                             Rect(x, 0, next_x - 1, bar_height - 1));
       x = next_x;
     }
     return;
@@ -398,10 +400,10 @@ void NavigationBar::onLayout(bool changed, const Rect& rect) {
 
   for (int i = 0; i < count; ++i) {
     const int16_t x = start_x + i * item_width;
-    destinations_[i]->measure(WidthSpec::Exactly(item_width),
-                              HeightSpec::Exactly(bar_height));
-    static_cast<Widget&>(*destinations_[i])
-        .layout(Rect(x, 0, x + item_width - 1, bar_height - 1));
+    MeasureChildWithMargins(*destinations_[i], WidthSpec::Exactly(item_width),
+                            HeightSpec::Exactly(bar_height));
+    LayoutChildWithMargins(*destinations_[i],
+                           Rect(x, 0, x + item_width - 1, bar_height - 1));
   }
 }
 

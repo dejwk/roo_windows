@@ -5,6 +5,7 @@
 #include "roo_display/ui/text_label.h"
 #include "roo_logging.h"
 #include "roo_windows/core/application.h"
+#include "roo_windows/core/child_layout.h"
 #include "roo_windows/core/main_window.h"
 #include "roo_windows/core/task.h"
 #include "roo_windows/material3/typography.h"
@@ -120,18 +121,16 @@ Widget& SnackbarWidget::getChild(int index) {
 Dimensions SnackbarWidget::onMeasure(WidthSpec width, HeightSpec height) {
   const int16_t w = width.resolveSize(Scaled(344));
   const int16_t inner = std::max<int16_t>(0, w - 2 * kMargin);
-  action_width_ = action_.isGone()
-                      ? 0
-                      : action_
-                            .measure(WidthSpec::AtMost(inner),
-                                     HeightSpec::Exactly(kControlHeight))
-                            .width();
-  dismiss_width_ = dismiss_.isGone()
-                       ? 0
-                       : dismiss_
-                             .measure(WidthSpec::AtMost(inner),
-                                      HeightSpec::Exactly(kControlHeight))
-                             .width();
+  action_width_ = action_.isGone() ? 0
+                                   : MeasureChildWithMargins(
+                                         action_, WidthSpec::AtMost(inner),
+                                         HeightSpec::Exactly(kControlHeight))
+                                         .width();
+  dismiss_width_ = dismiss_.isGone() ? 0
+                                     : MeasureChildWithMargins(
+                                           dismiss_, WidthSpec::AtMost(inner),
+                                           HeightSpec::Exactly(kControlHeight))
+                                           .width();
   const int16_t controls = action_width_ + dismiss_width_;
   separate_dismiss_ = controls > inner;
   stacked_ = controls > 0 && inner - controls - kGap < Scaled(80);
@@ -167,27 +166,28 @@ void SnackbarWidget::onLayout(bool changed, const Rect& rect) {
     const int16_t ay = rect.height() - 2 * kControlHeight;
     const int16_t ax = rtl_ ? kMargin : rect.width() - kMargin - action_width_;
     const int16_t dx = rtl_ ? kMargin : rect.width() - kMargin - dismiss_width_;
-    action_.layout(
-        Rect(ax, ay, ax + action_width_ - 1, ay + kControlHeight - 1));
-    dismiss_.layout(Rect(dx, ay + kControlHeight, dx + dismiss_width_ - 1,
-                         ay + 2 * kControlHeight - 1));
+    LayoutChildWithMargins(
+        action_, Rect(ax, ay, ax + action_width_ - 1, ay + kControlHeight - 1));
+    LayoutChildWithMargins(
+        dismiss_, Rect(dx, ay + kControlHeight, dx + dismiss_width_ - 1,
+                       ay + 2 * kControlHeight - 1));
     return;
   }
   const int16_t cy = stacked_ ? rect.height() - kControlHeight
                               : (rect.height() - kControlHeight) / 2;
   int16_t cx = rtl_ ? kMargin : rect.width() - kMargin - controls;
   if (rtl_) {
-    dismiss_.layout(
-        Rect(cx, cy, cx + dismiss_width_ - 1, cy + kControlHeight - 1));
+    LayoutChildWithMargins(dismiss_, Rect(cx, cy, cx + dismiss_width_ - 1,
+                                          cy + kControlHeight - 1));
     cx += dismiss_width_;
-    action_.layout(
-        Rect(cx, cy, cx + action_width_ - 1, cy + kControlHeight - 1));
+    LayoutChildWithMargins(
+        action_, Rect(cx, cy, cx + action_width_ - 1, cy + kControlHeight - 1));
   } else {
-    action_.layout(
-        Rect(cx, cy, cx + action_width_ - 1, cy + kControlHeight - 1));
+    LayoutChildWithMargins(
+        action_, Rect(cx, cy, cx + action_width_ - 1, cy + kControlHeight - 1));
     cx += action_width_;
-    dismiss_.layout(
-        Rect(cx, cy, cx + dismiss_width_ - 1, cy + kControlHeight - 1));
+    LayoutChildWithMargins(dismiss_, Rect(cx, cy, cx + dismiss_width_ - 1,
+                                          cy + kControlHeight - 1));
   }
 }
 

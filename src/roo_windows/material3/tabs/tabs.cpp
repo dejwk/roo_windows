@@ -9,6 +9,7 @@
 #include "roo_display/ui/text_label.h"
 #include "roo_logging.h"
 #include "roo_windows/core/application.h"
+#include "roo_windows/core/child_layout.h"
 #include "roo_windows/core/gesture_detector.h"
 #include "roo_windows/core/theme.h"
 #include "roo_windows/material3/theme.h"
@@ -729,8 +730,8 @@ Dimensions Tabs::onMeasure(WidthSpec width, HeightSpec height) {
   int16_t desired_width = 0;
   int16_t desired_height = rowHeight();
   for (Tab* tab : tabs_) {
-    Dimensions child = tab->measure(WidthSpec::Unspecified(0),
-                                    HeightSpec::Exactly(desired_height));
+    Dimensions child = MeasureChildWithMargins(
+        *tab, WidthSpec::Unspecified(0), HeightSpec::Exactly(desired_height));
     desired_width += child.width();
   }
   return Dimensions(width.resolveSize(desired_width),
@@ -751,9 +752,10 @@ void Tabs::onLayout(bool changed, const Rect& rect) {
   for (int i = 0; i < count; ++i) {
     int16_t next_x = ((int32_t)(i + 1) * available_width) / count;
     int16_t tab_width = next_x - x;
-    tabs_[i]->measure(WidthSpec::Exactly(tab_width),
-                      HeightSpec::Exactly(row_height));
-    tabs_[i]->layout(Rect(x, 0, x + tab_width - 1, row_height - 1));
+    MeasureChildWithMargins(*tabs_[i], WidthSpec::Exactly(tab_width),
+                            HeightSpec::Exactly(row_height));
+    LayoutChildWithMargins(*tabs_[i],
+                           Rect(x, 0, x + tab_width - 1, row_height - 1));
     x = next_x;
   }
   syncIndicatorAfterLayout();
@@ -784,8 +786,9 @@ Dimensions ScrollableTabs::onMeasure(WidthSpec width, HeightSpec height) {
   int16_t desired_width = Scaled(kScrollableLeadingInsetDp);
   int16_t desired_height = rowHeight();
   for (int i = 0; i < tabCount(); ++i) {
-    Dimensions child = tabAt(i).measure(WidthSpec::Unspecified(0),
-                                        HeightSpec::Exactly(desired_height));
+    Dimensions child =
+        MeasureChildWithMargins(tabAt(i), WidthSpec::Unspecified(0),
+                                HeightSpec::Exactly(desired_height));
     desired_width += child.width();
   }
   return Dimensions(width.resolveSize(desired_width),
@@ -812,8 +815,8 @@ void ScrollableTabs::onLayout(bool changed, const Rect& rect) {
   int16_t row_height = rowHeight();
   XDim strip_x = Scaled(kScrollableLeadingInsetDp);
   for (int i = 0; i < count; ++i) {
-    Dimensions child = tabAt(i).measure(WidthSpec::Unspecified(0),
-                                        HeightSpec::Exactly(row_height));
+    Dimensions child = MeasureChildWithMargins(
+        tabAt(i), WidthSpec::Unspecified(0), HeightSpec::Exactly(row_height));
     strip_x += child.width();
   }
   strip_width_ = strip_x;
@@ -825,9 +828,10 @@ void ScrollableTabs::onLayout(bool changed, const Rect& rect) {
 
   XDim x = Scaled(kScrollableLeadingInsetDp) + scroll_x_;
   for (int i = 0; i < count; ++i) {
-    Dimensions child = tabAt(i).measure(WidthSpec::Unspecified(0),
-                                        HeightSpec::Exactly(row_height));
-    tabAt(i).layout(Rect(x, 0, x + child.width() - 1, row_height - 1));
+    Dimensions child = MeasureChildWithMargins(
+        tabAt(i), WidthSpec::Unspecified(0), HeightSpec::Exactly(row_height));
+    LayoutChildWithMargins(tabAt(i),
+                           Rect(x, 0, x + child.width() - 1, row_height - 1));
     x += child.width();
   }
   layoutScrollableChildren();
@@ -994,8 +998,9 @@ void ScrollableTabs::layoutScrollableChildren() {
   XDim x = Scaled(kScrollableLeadingInsetDp) + scroll_x_;
   for (int i = 0; i < tabCount(); ++i) {
     Tab& tab = tabAt(i);
-    XDim tab_width = tab.width();
-    tab.layout(Rect(x, 0, x + tab_width - 1, row_height - 1));
+    XDim tab_width =
+        AddChildMargins(tab, Dimensions(tab.width(), tab.height())).width();
+    LayoutChildWithMargins(tab, Rect(x, 0, x + tab_width - 1, row_height - 1));
     x += tab_width;
   }
 }

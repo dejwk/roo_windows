@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include "roo_logging.h"
+#include "roo_windows/core/child_layout.h"
 #include "roo_windows/core/paint_context.h"
 #include "roo_windows/core/theme.h"
 
@@ -75,7 +76,8 @@ Dimensions MenuGroup::onMeasure(WidthSpec width, HeightSpec height) {
   int16_t measured_width = 0;
   int32_t measured_height = 0;
   for (MenuEntry* entry : entries_) {
-    Dimensions size = entry->measure(width, HeightSpec::Unspecified(0));
+    Dimensions size =
+        MeasureChildWithMargins(*entry, width, HeightSpec::Unspecified(0));
     measured_width = std::max(measured_width, size.width());
     measured_height += size.height();
   }
@@ -96,9 +98,10 @@ void MenuGroup::onLayout(bool changed, const Rect& rect) {
   int16_t gap = rowGap();
   for (size_t i = 0; i < entries_.size(); ++i) {
     MenuEntry* entry = entries_[i];
-    Dimensions size = entry->measure(WidthSpec::Exactly(rect.width()),
-                                     HeightSpec::Unspecified(0));
-    entry->layout(Rect(0, y, rect.width() - 1, y + size.height() - 1));
+    Dimensions size = MeasureChildWithMargins(
+        *entry, WidthSpec::Exactly(rect.width()), HeightSpec::Unspecified(0));
+    LayoutChildWithMargins(*entry,
+                           Rect(0, y, rect.width() - 1, y + size.height() - 1));
     y += size.height();
     if (i + 1 < entries_.size()) y += gap;
   }
@@ -204,7 +207,8 @@ Dimensions MenuGroupStack::onMeasure(WidthSpec width, HeightSpec height) {
   int16_t measured_width = 0;
   int32_t measured_height = 0;
   for (size_t i = 0; i < groups_.size(); ++i) {
-    Dimensions size = groups_[i]->measure(width, HeightSpec::Unspecified(0));
+    Dimensions size =
+        MeasureChildWithMargins(*groups_[i], width, HeightSpec::Unspecified(0));
     measured_width = std::max(measured_width, size.width());
     measured_height += size.height();
     if (i + 1 < groups_.size()) measured_height += separator;
@@ -226,9 +230,10 @@ void MenuGroupStack::onLayout(bool changed, const Rect& rect) {
   }
   int32_t y = 0;
   for (MenuGroup* group : groups_) {
-    Dimensions size = group->measure(WidthSpec::Exactly(rect.width()),
-                                     HeightSpec::Unspecified(0));
-    group->layout(Rect(0, y, rect.width() - 1, y + size.height() - 1));
+    Dimensions size = MeasureChildWithMargins(
+        *group, WidthSpec::Exactly(rect.width()), HeightSpec::Unspecified(0));
+    LayoutChildWithMargins(*group,
+                           Rect(0, y, rect.width() - 1, y + size.height() - 1));
     y += size.height() + separator;
   }
 }

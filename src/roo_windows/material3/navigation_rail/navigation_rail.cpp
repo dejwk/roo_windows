@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include "roo_display/ui/text_label.h"
+#include "roo_windows/core/child_layout.h"
 #include "roo_windows/material3/navigation_rail/navigation_rail_tokens.h"
 #include "roo_windows/material3/theme.h"
 #include "roo_windows/material3/typography.h"
@@ -394,7 +395,7 @@ Dimensions NavigationRail::onMeasure(WidthSpec width, HeightSpec height) {
       width.resolveSize(Scaled(layout() == NavigationRailLayout::kCollapsed
                                    ? tokens.collapsed_min_width_dp
                                    : tokens.expanded_min_width_dp));
-  // Destinations use the full rail width: their indicators are resolved
+  // Destination slots use the full rail width: their indicators are resolved
   // internally, while their hit targets must not depend on content or labels.
   // The header remains naturally sized and centered by onLayout().
   const XDim content_width = std::max<XDim>(
@@ -406,36 +407,39 @@ Dimensions NavigationRail::onMeasure(WidthSpec width, HeightSpec height) {
   // it is a caller-supplied composite and may choose a narrower natural width.
   // Its separation gap exists only when there is a destination group below it.
   if (header_ != nullptr && !header_->isGone()) {
-    const Dimensions header_size = header_->measure(
-        WidthSpec::AtMost(content_width), HeightSpec::Unspecified(0));
+    const Dimensions header_size = MeasureChildWithMargins(
+        *header_, WidthSpec::AtMost(content_width), HeightSpec::Unspecified(0));
     desired_height += header_size.height();
     if (!destinations_.empty()) {
       desired_height += Scaled(tokens.header_destination_gap_dp);
     }
   }
 
-  // Destinations always receive the full content width and stack vertically.
+  // Destination slots receive the full content width and stack vertically.
+  // Each destination is measured and placed inside its own margins.
   // Height remains unconstrained here so each destination can report its
   // layout-mode minimum; the parent HeightSpec resolves the final rail height.
   for (int i = 0; i < destinationCount(); ++i) {
-    const Dimensions destination_size = destinations_[i]->measure(
-        WidthSpec::Exactly(content_width), HeightSpec::Unspecified(0));
+    const Dimensions destination_size = MeasureChildWithMargins(
+        *destinations_[i], WidthSpec::Exactly(content_width),
+        HeightSpec::Unspecified(0));
     desired_height += destination_size.height();
     if (i > 0) desired_height += Scaled(tokens.destination_gap_dp);
   }
   return Dimensions(rail_width, height.resolveSize(desired_height));
 }
 
-void NavigationRail::onLayout(bool changed, const Rect& rect) {
+void NavigationRail::onLayout(bool changed, const Rect& parent_rect) {
+  const Rect rect(0, 0, parent_rect.width() - 1, parent_rect.height() - 1);
   (void)changed;
   const internal::NavigationRailTokens& tokens =
       internal::kNavigationRailTokens;
   if (rect.empty()) {
     // An empty parent target must also clear stale child geometry. Otherwise a
     // detached or clipped rail could leave old child hit targets reachable.
-    if (header_ != nullptr) static_cast<Widget&>(*header_).layout(EmptyRect());
+    if (header_ != nullptr) LayoutChildWithMargins(*header_, EmptyRect());
     for (NavigationRailDestination* destination : destinations_) {
-      static_cast<Widget&>(*destination).layout(EmptyRect());
+      LayoutChildWithMargins(*destination, EmptyRect());
     }
     return;
   }
@@ -449,9 +453,9 @@ void NavigationRail::onLayout(bool changed, const Rect& rect) {
       rect.xMin() + horizontal_padding, rect.yMin() + vertical_padding,
       rect.xMax() - horizontal_padding, rect.yMax() - vertical_padding);
   if (content.empty()) {
-    if (header_ != nullptr) static_cast<Widget&>(*header_).layout(EmptyRect());
+    if (header_ != nullptr) LayoutChildWithMargins(*header_, EmptyRect());
     for (NavigationRailDestination* destination : destinations_) {
-      static_cast<Widget&>(*destination).layout(EmptyRect());
+      LayoutChildWithMargins(*destination, EmptyRect());
     }
     return;
   }
@@ -461,17 +465,17 @@ void NavigationRail::onLayout(bool changed, const Rect& rect) {
     // Keep the generic header at its natural measured size and center it in
     // the rail. The destination group then occupies only the remaining band.
     const Dimensions header_size =
-        header_->measure(WidthSpec::AtMost(content.width()),
-                         HeightSpec::AtMost(content.height()));
+        MeasureChildWithMargins(*header_, WidthSpec::AtMost(content.width()),
+                                HeightSpec::AtMost(content.height()));
     const XDim header_width =
         std::min<XDim>(content.width(), header_size.width());
     const YDim header_height =
         std::min<YDim>(content.height(), header_size.height());
     const XDim header_left =
         content.xMin() + (content.width() - header_width) / 2;
-    static_cast<Widget&>(*header_).layout(
-        Rect(header_left, content.yMin(), header_left + header_width - 1,
-             content.yMin() + header_height - 1));
+    LayoutChildWithMargins(*header_, Rect(header_left, content.yMin(),
+                                          header_left + header_width - 1,
+                                          content.yMin() + header_height - 1));
     destination_top = content.yMin() + header_height;
     if (!destinations_.empty()) {
       destination_top = std::min<YDim>(
@@ -479,7 +483,7 @@ void NavigationRail::onLayout(bool changed, const Rect& rect) {
           destination_top + Scaled(tokens.header_destination_gap_dp));
     }
   } else if (header_ != nullptr) {
-    static_cast<Widget&>(*header_).layout(EmptyRect());
+    LayoutChildWithMargins(*header_, EmptyRect());
   }
 
   if (destinations_.empty() || destination_top > content.yMax()) return;
@@ -505,11 +509,11 @@ void NavigationRail::onLayout(bool changed, const Rect& rect) {
   if (preferred_total <= available_height) {
     for (int i = 0; i < count; ++i) {
       NavigationRailDestination* destination = destinations_[i];
-      destination->measure(WidthSpec::Exactly(content.width()),
-                           HeightSpec::Exactly(minimum_height));
-      static_cast<Widget&>(*destination)
-          .layout(Rect(content.xMin(), destination_top, content.xMax(),
-                       destination_top + minimum_height - 1));
+      MeasureChildWithMargins(*destination, WidthSpec::Exactly(content.width()),
+                              HeightSpec::Exactly(minimum_height));
+      LayoutChildWithMargins(
+          *destination, Rect(content.xMin(), destination_top, content.xMax(),
+                             destination_top + minimum_height - 1));
       destination_top += minimum_height + gap;
     }
     return;
@@ -518,16 +522,15 @@ void NavigationRail::onLayout(bool changed, const Rect& rect) {
   // Under vertical pressure, free gaps are removed before destinations shrink.
   // Integer boundaries guarantee that every available pixel belongs to one
   // target, preserving the full-width hit-test contract.
+  const YDim group_top = destination_top;
   for (int i = 0; i < count; ++i) {
     const YDim next_top = static_cast<YDim>(
-        destination_top +
-        (static_cast<int32_t>(i + 1) * available_height) / count);
+        group_top + (static_cast<int32_t>(i + 1) * available_height) / count);
     NavigationRailDestination* destination = destinations_[i];
-    destination->measure(WidthSpec::Exactly(content.width()),
-                         HeightSpec::Exactly(next_top - destination_top));
-    static_cast<Widget&>(*destination)
-        .layout(Rect(content.xMin(), destination_top, content.xMax(),
-                     next_top - 1));
+    MeasureChildWithMargins(*destination, WidthSpec::Exactly(content.width()),
+                            HeightSpec::Exactly(next_top - destination_top));
+    LayoutChildWithMargins(*destination, Rect(content.xMin(), destination_top,
+                                              content.xMax(), next_top - 1));
     destination_top = next_top;
   }
 }

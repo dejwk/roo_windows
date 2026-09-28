@@ -4,6 +4,7 @@
 #include <limits>
 
 #include "roo_logging.h"
+#include "roo_windows/core/child_layout.h"
 #include "roo_windows/core/theme.h"
 
 namespace roo_windows::material3 {
@@ -320,46 +321,45 @@ Dimensions LayoutScaffold::onMeasure(WidthSpec width, HeightSpec height) {
   if (safe.empty()) return Dimensions(measured_width, measured_height);
 
   if (top_bar_ != nullptr && top_bar_->isVisible()) {
-    top_bar_height_ = std::min<YDim>(
-        safe.height(), top_bar_
-                           ->measure(WidthSpec::Exactly(safe.width()),
-                                     HeightSpec::AtMost(safe.height()))
-                           .height());
+    top_bar_height_ =
+        MeasureChildWithMargins(*top_bar_, WidthSpec::Exactly(safe.width()),
+                                HeightSpec::AtMost(safe.height()))
+            .height();
   }
   const YDim band_height = std::max<YDim>(0, safe.height() - top_bar_height_);
   if (bottom_bar_ != nullptr && bottom_bar_->isVisible()) {
-    bottom_bar_height_ = std::min<YDim>(
-        band_height, bottom_bar_
-                         ->measure(WidthSpec::Exactly(safe.width()),
-                                   HeightSpec::AtMost(band_height))
-                         .height());
+    bottom_bar_height_ =
+        MeasureChildWithMargins(*bottom_bar_, WidthSpec::Exactly(safe.width()),
+                                HeightSpec::AtMost(band_height))
+            .height();
   }
   const YDim rail_height = std::max<YDim>(0, band_height - bottom_bar_height_);
   if (leading_rail_ != nullptr && leading_rail_->isVisible()) {
-    leading_rail_width_ = std::min<XDim>(
-        safe.width(), leading_rail_
-                          ->measure(WidthSpec::AtMost(safe.width()),
-                                    HeightSpec::Exactly(rail_height))
-                          .width());
+    leading_rail_width_ =
+        MeasureChildWithMargins(*leading_rail_, WidthSpec::AtMost(safe.width()),
+                                HeightSpec::Exactly(rail_height))
+            .width();
   }
   const XDim remaining_width =
       std::max<XDim>(0, safe.width() - leading_rail_width_);
   if (trailing_rail_ != nullptr && trailing_rail_->isVisible()) {
-    trailing_rail_width_ = std::min<XDim>(
-        remaining_width, trailing_rail_
-                             ->measure(WidthSpec::AtMost(remaining_width),
-                                       HeightSpec::Exactly(rail_height))
-                             .width());
+    trailing_rail_width_ =
+        MeasureChildWithMargins(*trailing_rail_,
+                                WidthSpec::AtMost(remaining_width),
+                                HeightSpec::Exactly(rail_height))
+            .width();
   }
   if (body_ != nullptr && !body_->isGone()) {
-    body_->measure(WidthSpec::Exactly(std::max<XDim>(
-                       0, remaining_width - trailing_rail_width_)),
-                   HeightSpec::Exactly(rail_height));
+    MeasureChildWithMargins(*body_,
+                            WidthSpec::Exactly(std::max<XDim>(
+                                0, remaining_width - trailing_rail_width_)),
+                            HeightSpec::Exactly(rail_height));
   }
   return Dimensions(measured_width, measured_height);
 }
 
-void LayoutScaffold::onLayout(bool changed, const Rect& rect) {
+void LayoutScaffold::onLayout(bool changed, const Rect& parent_rect) {
+  const Rect rect(0, 0, parent_rect.width() - 1, parent_rect.height() - 1);
   const LayoutBreakpoint breakpoint = policy_->resolveWidthPx(rect.width());
   updateChromeVisibility(breakpoint);
   const Rect safe = childBounds(rect);
@@ -418,7 +418,8 @@ void LayoutScaffold::onLayout(bool changed, const Rect& rect) {
   layoutSlot(leading_rail_, leading_bounds);
   layoutSlot(trailing_rail_, trailing_bounds);
   layoutSlot(body_, body_ != nullptr ? body_bounds : EmptyRect());
-  bottom_bar_bounds_ = bottom_bounds;
+  bottom_bar_bounds_ =
+      bottom_bar_ != nullptr ? bottom_bar_->parent_bounds() : EmptyRect();
   if (body_ == nullptr || body_bounds.empty()) {
     metrics_ = policy_->resolveMetricsForBreakpoint(EmptyRect(), breakpoint,
                                                     layoutDirection());
@@ -524,7 +525,7 @@ void LayoutScaffold::clearLayoutMetrics(LayoutBreakpoint breakpoint) {
 }
 
 void LayoutScaffold::layoutSlot(Widget* widget, const Rect& bounds) {
-  if (widget != nullptr) widget->layout(bounds);
+  if (widget != nullptr) LayoutChildWithMargins(*widget, bounds);
 }
 
 PaneLayout::PaneLayout(ApplicationContext& context)
@@ -643,21 +644,25 @@ Dimensions PaneLayout::onMeasure(WidthSpec width, HeightSpec height) {
       resolvePlan(Rect(0, 0, measured_width - 1, measured_height - 1));
   applyVisibility(plan);
   if (plan.leading_visible) {
-    leading_->measure(WidthSpec::Exactly(plan.leading_bounds.width()),
-                      HeightSpec::Exactly(plan.leading_bounds.height()));
+    MeasureChildWithMargins(*leading_,
+                            WidthSpec::Exactly(plan.leading_bounds.width()),
+                            HeightSpec::Exactly(plan.leading_bounds.height()));
   }
   if (plan.main_visible) {
-    main_->measure(WidthSpec::Exactly(plan.main_bounds.width()),
-                   HeightSpec::Exactly(plan.main_bounds.height()));
+    MeasureChildWithMargins(*main_,
+                            WidthSpec::Exactly(plan.main_bounds.width()),
+                            HeightSpec::Exactly(plan.main_bounds.height()));
   }
   if (plan.trailing_visible) {
-    trailing_->measure(WidthSpec::Exactly(plan.trailing_bounds.width()),
-                       HeightSpec::Exactly(plan.trailing_bounds.height()));
+    MeasureChildWithMargins(*trailing_,
+                            WidthSpec::Exactly(plan.trailing_bounds.width()),
+                            HeightSpec::Exactly(plan.trailing_bounds.height()));
   }
   return Dimensions(measured_width, measured_height);
 }
 
-void PaneLayout::onLayout(bool changed, const Rect& rect) {
+void PaneLayout::onLayout(bool changed, const Rect& parent_rect) {
+  const Rect rect(0, 0, parent_rect.width() - 1, parent_rect.height() - 1);
   // resolvePlan() is deliberately side-effect free. Apply its complete answer
   // once so focus clearing and empty bounds cannot observe a partial layout.
   const PanePlan plan = resolvePlan(rect);
@@ -892,7 +897,7 @@ void PaneLayout::applyVisibility(const PanePlan& plan) {
 }
 
 void PaneLayout::layoutSlot(Widget* widget, const Rect& bounds) {
-  if (widget != nullptr) widget->layout(bounds);
+  if (widget != nullptr) LayoutChildWithMargins(*widget, bounds);
 }
 
 GridLayout::GridLayout(ApplicationContext& context)
@@ -980,8 +985,9 @@ Dimensions GridLayout::onMeasure(WidthSpec width, HeightSpec height) {
       row_height = 0;
     }
     const XDim span_width = SpanWidth(measurement_metrics, span);
-    item.measured_dimensions = item.widget->measure(
-        WidthSpec::Exactly(span_width), HeightSpec::Unspecified(0));
+    item.measured_dimensions =
+        MeasureChildWithMargins(*item.widget, WidthSpec::Exactly(span_width),
+                                HeightSpec::Unspecified(0));
     occupied_columns += span;
     row_height = std::max(row_height, item.measured_dimensions.height());
     has_row = true;
@@ -994,10 +1000,11 @@ Dimensions GridLayout::onMeasure(WidthSpec width, HeightSpec height) {
   return Dimensions(measured_width, measured_height);
 }
 
-void GridLayout::onLayout(bool changed, const Rect& rect) {
+void GridLayout::onLayout(bool changed, const Rect& parent_rect) {
+  const Rect rect(0, 0, parent_rect.width() - 1, parent_rect.height() - 1);
   metrics_ = policy_->resolveMetrics(rect, layoutDirection());
   if (rect.empty()) {
-    for (Item& item : items_) item.widget->layout(EmptyRect());
+    for (Item& item : items_) LayoutChildWithMargins(*item.widget, EmptyRect());
     return;
   }
 
@@ -1020,7 +1027,7 @@ void GridLayout::onLayout(bool changed, const Rect& rect) {
     while (row_end < item_count) {
       Item& item = items_[row_end];
       if (item.widget->isGone()) {
-        item.widget->layout(EmptyRect());
+        LayoutChildWithMargins(*item.widget, EmptyRect());
         ++row_end;
         continue;
       }
@@ -1047,8 +1054,9 @@ void GridLayout::onLayout(bool changed, const Rect& rect) {
       } else if (item.params.gravity.isBottom()) {
         child_top += row_height - child_height;
       }
-      item.widget->layout(Rect(cell.xMin(), child_top, cell.xMax(),
-                               child_top + child_height - 1));
+      LayoutChildWithMargins(*item.widget,
+                             Rect(cell.xMin(), child_top, cell.xMax(),
+                                  child_top + child_height - 1));
       occupied_columns += span;
     }
     row_top += row_height + row_gap;

@@ -110,6 +110,10 @@ class LayoutBreakpointPolicy {
 };
 
 /// Fixed-slot Material 3 application shell for top-level page chrome.
+///
+/// Slots include child margins: bars reserve their height plus vertical
+/// margins, rails reserve their width plus horizontal margins, and children
+/// fill the remaining slot area inside their margins.
 class LayoutScaffold : public Material3Container {
  public:
   /// Creates an empty match-parent scaffold using the default policy.
@@ -193,14 +197,16 @@ class LayoutScaffold : public Material3Container {
   /// Returns the latest resolved scaffold ruler metrics.
   const LayoutMetrics& metrics() const { return metrics_; }
 
-  /// Returns the resolved body band, or an empty rectangle before layout.
+  /// Returns the resolved body band including body margins, or an empty
+  /// rectangle before layout.
   Rect bodyBounds() const { return metrics_.safe_bounds; }
 
   /// Returns the physical chrome, safety, and padding insets around
   /// `bodyBounds()`.
   Insets contentInsets() const { return content_insets_; }
 
-  /// Returns the active bottom-bar rectangle, or an empty rectangle.
+  /// Returns the active bottom-bar rectangle excluding its margins, or an
+  /// empty rectangle.
   Rect bottomBarBounds() const { return bottom_bar_bounds_; }
 
   /// Identifies the page background as a Material surface.
@@ -264,6 +270,7 @@ enum class PaneRole : uint8_t {
 };
 
 /// Width and breakpoint constraints for a docked side pane.
+/// Widths describe the occupied slot, including the pane child's margins.
 struct PaneSpec {
   int16_t min_width_dp = 280;
   int16_t preferred_width_dp = 360;
@@ -402,8 +409,8 @@ struct GridSpan {
 /// Breakpoint-aware Material grid with row-major span packing.
 ///
 /// Grid children retain their insertion order. Rows use the height of their
-/// tallest child, so varied card heights preserve horizontal rhythm instead of
-/// creating masonry columns.
+/// tallest child including margins, so varied card heights preserve horizontal
+/// rhythm instead of creating masonry columns.
 class GridLayout : public Container {
  public:
   /// Per-child span and vertical placement within its shared row.

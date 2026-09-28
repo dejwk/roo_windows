@@ -2,6 +2,7 @@
 
 #include "roo_logging.h"
 #include "roo_windows/core/application.h"
+#include "roo_windows/core/child_layout.h"
 #include "roo_windows/core/task.h"
 
 namespace roo_windows {
@@ -69,7 +70,7 @@ Dimensions TaskPanel::onMeasure(WidthSpec width, HeightSpec height) {
     if (!viewport.empty() && HasScrollAncestor(target, *this)) {
       height = HeightSpec::Exactly(viewport.height());
     }
-    content_->measure(width, height);
+    MeasureChildWithMargins(*content_, width, height);
   }
   return Dimensions(this->width(), this->height());
 }
@@ -80,7 +81,7 @@ void TaskPanel::onLayout(bool changed, const Rect& rect) {
   Widget* target = task_.textFieldEditor().editedWidget();
   bool scrollable = HasScrollAncestor(target, *this);
   Rect content_bounds = !viewport.empty() && scrollable ? viewport : bounds();
-  content_->layout(content_bounds);
+  LayoutChildWithMargins(*content_, content_bounds);
   // Layout can end a session through focus/presentation callbacks.
   if (task_.textFieldEditor().editedWidget() != target || target == nullptr ||
       viewport.empty() || viewport == bounds())

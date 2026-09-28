@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include "roo_windows/core/canvas.h"
+#include "roo_windows/core/child_layout.h"
 #include "roo_windows/core/clipper.h"
 
 namespace roo_windows {
@@ -122,19 +123,31 @@ PreferredSize BlitCacheContainer::getPreferredSize() const {
     return PreferredSize(PreferredSize::WrapContentWidth(),
                          PreferredSize::WrapContentHeight());
   }
-  return child_->getPreferredSize();
+  const PreferredSize preferred = child_->getPreferredSize();
+  const Margins margins = child_->getMargins();
+  return PreferredSize(preferred.width().isExact()
+                           ? PreferredSize::ExactWidth(std::max<XDim>(
+                                 0, preferred.width().value() + margins.left() +
+                                        margins.right()))
+                           : preferred.width(),
+                       preferred.height().isExact()
+                           ? PreferredSize::ExactHeight(std::max<YDim>(
+                                 0, preferred.height().value() + margins.top() +
+                                        margins.bottom()))
+                           : preferred.height());
 }
 
 Dimensions BlitCacheContainer::onMeasure(WidthSpec width, HeightSpec height) {
   if (child_ == nullptr) {
     return Dimensions(width.resolveSize(0), height.resolveSize(0));
   }
-  return child_->measure(width, height);
+  return MeasureChildWithMargins(*child_, width, height);
 }
 
 void BlitCacheContainer::onLayout(bool changed, const Rect& rect) {
   if (child_ == nullptr) return;
-  child_->layout(Rect(0, 0, rect.width() - 1, rect.height() - 1));
+  LayoutChildWithMargins(*child_,
+                         Rect(0, 0, rect.width() - 1, rect.height() - 1));
 }
 
 void BlitCacheContainer::moveTo(const Rect& new_bounds) {

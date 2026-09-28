@@ -5,6 +5,7 @@
 
 #include "roo_logging.h"
 #include "roo_windows/core/application.h"
+#include "roo_windows/core/child_layout.h"
 #include "roo_windows/core/gesture_detector.h"
 
 namespace roo_windows {
@@ -135,7 +136,7 @@ Dimensions HorizontalPageHost::onMeasure(WidthSpec width, HeightSpec height) {
   XDim max_width = 0;
   YDim max_height = 0;
   for (WidgetRef& page : pages_) {
-    Dimensions d = page->measure(width, height);
+    Dimensions d = MeasureChildWithMargins(*page, width, height);
     max_width = std::max(max_width, d.width());
     max_height = std::max(max_height, d.height());
   }

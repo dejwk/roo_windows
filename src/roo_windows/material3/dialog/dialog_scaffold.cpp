@@ -5,6 +5,7 @@
 #include "roo_display/ui/alignment.h"
 #include "roo_display/ui/tile.h"
 #include "roo_logging.h"
+#include "roo_windows/core/child_layout.h"
 #include "roo_windows/core/display_window.h"
 #include "roo_windows/core/task.h"
 #include "roo_windows/material3/typography.h"
@@ -311,12 +312,15 @@ Dimensions DialogScaffold::onMeasure(WidthSpec width, HeightSpec height) {
       chrome_width_[i] = 0;
       chrome_height_[i] = 0;
       if (chrome_[i] == nullptr || chrome_[i]->isGone()) continue;
-      Dimensions chrome = chrome_[i]->measure(
+      Dimensions chrome = MeasureChildWithMargins(
+          *chrome_[i],
           WidthSpec::Exactly(
-              i == 0
-                  ? kFullScreenControlSlot
-                  : std::min<XDim>(width.value() / 3,
-                                   chrome_[i]->getNaturalDimensions().width())),
+              i == 0 ? kFullScreenControlSlot
+                     : std::min<XDim>(
+                           width.value() / 3,
+                           AddChildMargins(*chrome_[i],
+                                           chrome_[i]->getNaturalDimensions())
+                               .width())),
           HeightSpec::Exactly(kFullScreenControlSlot));
       chrome_width_[i] = chrome.width();
       chrome_height_[i] = chrome.height();
@@ -358,8 +362,9 @@ Dimensions DialogScaffold::onMeasure(WidthSpec width, HeightSpec height) {
   for (uint8_t i = 0; i < 2; ++i) {
     Widget* chrome = chrome_[i];
     if (chrome == nullptr || chrome->isGone()) continue;
-    Dimensions measured = chrome->measure(WidthSpec::AtMost(available_width),
-                                          HeightSpec::AtMost(available_height));
+    Dimensions measured =
+        MeasureChildWithMargins(*chrome, WidthSpec::AtMost(available_width),
+                                HeightSpec::AtMost(available_height));
     desired_width = std::max(desired_width, measured.width());
     chrome_width_[i] = measured.width();
     chrome_height_[i] = measured.height();
@@ -391,15 +396,17 @@ void DialogScaffold::onLayout(bool, const Rect& rect) {
     if (leading != nullptr && !leading->isGone()) {
       const XDim w =
           leading == chrome_[0] ? chrome_width_[0] : chrome_width_[1];
-      leading->layout(Rect(leading_left, control_top, leading_left + w - 1,
-                           control_top + kFullScreenControlSlot - 1));
+      LayoutChildWithMargins(
+          *leading, Rect(leading_left, control_top, leading_left + w - 1,
+                         control_top + kFullScreenControlSlot - 1));
       leading_left += w;
     }
     if (trailing != nullptr && !trailing->isGone()) {
       const XDim w =
           trailing == chrome_[0] ? chrome_width_[0] : chrome_width_[1];
-      trailing->layout(Rect(trailing_right - w + 1, control_top, trailing_right,
-                            control_top + kFullScreenControlSlot - 1));
+      LayoutChildWithMargins(
+          *trailing, Rect(trailing_right - w + 1, control_top, trailing_right,
+                          control_top + kFullScreenControlSlot - 1));
       trailing_right -= w;
     }
     if (!title_.isGone()) {
@@ -428,7 +435,7 @@ void DialogScaffold::onLayout(bool, const Rect& rect) {
     if (chrome == nullptr || chrome->isGone()) continue;
     const YDim h = chrome_height_[idx];
     bottom -= h;
-    chrome->layout(Rect(left, bottom, right, bottom + h - 1));
+    LayoutChildWithMargins(*chrome, Rect(left, bottom, right, bottom + h - 1));
     bottom -= kSectionGap;
   }
   if (icon_height_ > 0) top += icon_height_ + kSectionGap;
@@ -577,8 +584,8 @@ Dimensions DialogActionStrip::onMeasure(WidthSpec width, HeightSpec height) {
   XDim horizontal_width = 0;
   YDim horizontal_height = 0;
   for (uint8_t i = 0; i < action_count_; ++i) {
-    button_dimensions_[i] =
-        buttons_[i].measure(WidthSpec::AtMost(width.value()), height);
+    button_dimensions_[i] = MeasureChildWithMargins(
+        buttons_[i], WidthSpec::AtMost(width.value()), height);
     horizontal_width += button_dimensions_[i].width();
     horizontal_height =
         std::max(horizontal_height, button_dimensions_[i].height());
@@ -602,7 +609,8 @@ void DialogActionStrip::onLayout(bool, const Rect& rect) {
     const int16_t x = direction_ == LayoutDirection::kLeftToRight
                           ? rect.width() - d.width()
                           : 0;
-    buttons_[0].layout(Rect(x, 0, x + d.width() - 1, d.height() - 1));
+    LayoutChildWithMargins(buttons_[0],
+                           Rect(x, 0, x + d.width() - 1, d.height() - 1));
     return;
   }
   const uint8_t dismiss =
@@ -611,12 +619,14 @@ void DialogActionStrip::onLayout(bool, const Rect& rect) {
   if (stacked_) {
     const Dimensions confirm_dims = button_dimensions_[confirm];
     const Dimensions dismiss_dims = button_dimensions_[dismiss];
-    buttons_[confirm].layout(Rect(rect.width() - confirm_dims.width(), 0,
-                                  rect.width() - 1, confirm_dims.height() - 1));
+    LayoutChildWithMargins(buttons_[confirm],
+                           Rect(rect.width() - confirm_dims.width(), 0,
+                                rect.width() - 1, confirm_dims.height() - 1));
     const int16_t y = confirm_dims.height() + kActionGap;
-    buttons_[dismiss].layout(Rect(rect.width() - dismiss_dims.width(), y,
-                                  rect.width() - 1,
-                                  y + dismiss_dims.height() - 1));
+    LayoutChildWithMargins(
+        buttons_[dismiss],
+        Rect(rect.width() - dismiss_dims.width(), y, rect.width() - 1,
+             y + dismiss_dims.height() - 1));
     return;
   }
   const uint8_t first =
@@ -626,10 +636,11 @@ void DialogActionStrip::onLayout(bool, const Rect& rect) {
   const Dimensions second_dims = button_dimensions_[second];
   int16_t x =
       rect.width() - first_dims.width() - kActionGap - second_dims.width();
-  buttons_[first].layout(
-      Rect(x, 0, x + first_dims.width() - 1, first_dims.height() - 1));
+  LayoutChildWithMargins(buttons_[first], Rect(x, 0, x + first_dims.width() - 1,
+                                               first_dims.height() - 1));
   x += first_dims.width() + kActionGap;
-  buttons_[second].layout(
+  LayoutChildWithMargins(
+      buttons_[second],
       Rect(x, 0, x + second_dims.width() - 1, second_dims.height() - 1));
 }
 

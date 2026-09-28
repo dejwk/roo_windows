@@ -10,6 +10,7 @@
 #include "roo_icons/filled/24/navigation.h"
 #include "roo_logging.h"
 #include "roo_windows/core/application_context.h"
+#include "roo_windows/core/child_layout.h"
 #include "roo_windows/core/theme.h"
 #include "roo_windows/material3/list/dynamic_list.h"
 #include "roo_windows/material3/list/list_geometry.h"
@@ -181,12 +182,12 @@ TextSlotMetrics MeasureTextSlots(const ListItem* item) {
 
 Dimensions MeasureChild(Widget* child, WidthSpec width, HeightSpec height) {
   if (child == nullptr || child->isGone()) return Dimensions(0, 0);
-  return child->measure(width, height);
+  return MeasureChildWithMargins(*child, width, height);
 }
 
 Dimensions SuggestedMinimumChild(const Widget* child) {
   if (child == nullptr || child->isGone()) return Dimensions(0, 0);
-  return child->getSuggestedMinimumDimensions();
+  return AddChildMargins(*child, child->getSuggestedMinimumDimensions());
 }
 
 int16_t ConstrainWidth(int16_t desired, WidthSpec spec) {
@@ -594,7 +595,8 @@ Dimensions ExpandablePanel::getSuggestedMinimumDimensions() const {
   if (content == nullptr || content->isGone()) {
     return Dimensions(0, 0);
   }
-  Dimensions suggested = content->getSuggestedMinimumDimensions();
+  Dimensions suggested =
+      AddChildMargins(*content, content->getSuggestedMinimumDimensions());
   return Dimensions(suggested.width(),
                     resolveVisibleHeight(suggested.height()));
 }
@@ -660,8 +662,8 @@ Dimensions ExpandablePanel::onMeasure(WidthSpec width, HeightSpec height) {
     return Dimensions(width.resolveSize(0), height.resolveSize(0));
   }
 
-  Dimensions measured =
-      content->measure(width, HeightSpec::Unspecified(height.value()));
+  Dimensions measured = MeasureChildWithMargins(
+      *content, width, HeightSpec::Unspecified(height.value()));
   int16_t visible_height = resolveVisibleHeight(measured.height());
   return Dimensions(width.resolveSize(measured.width()),
                     height.resolveSize(visible_height));
@@ -672,14 +674,15 @@ void ExpandablePanel::onLayout(bool changed, const Rect& rect) {
   Widget* content = content_.get();
   if (content == nullptr || content->isGone()) return;
   if (rect.width() <= 0 || rect.height() <= 0) {
-    content->layout(Rect(0, 0, -1, -1));
+    LayoutChildWithMargins(*content, Rect(0, 0, -1, -1));
     return;
   }
 
   // Keep child layout clipped to the panel's current visible height so child
   // max-bounds cannot spill into sibling paint/invalidation regions during
   // expand/collapse animation.
-  content->layout(Rect(0, 0, rect.width() - 1, rect.height() - 1));
+  LayoutChildWithMargins(*content,
+                         Rect(0, 0, rect.width() - 1, rect.height() - 1));
 }
 
 void ExpandablePanel::onAnimationFrame(AnimationTag tag,
@@ -1103,17 +1106,18 @@ void ListEntry::onLayout(bool changed, const Rect& rect) {
                              int16_t max_width) -> int16_t {
     if (slot == nullptr || slot->isGone()) return 0;
     if (max_width <= 0) {
-      slot->layout(Rect(0, 0, -1, -1));
+      LayoutChildWithMargins(*slot, Rect(0, 0, -1, -1));
       return 0;
     }
-    Dimensions measured =
-        slot->measure(WidthSpec::AtMost(max_width), HeightSpec::Unspecified(0));
+    Dimensions measured = MeasureChildWithMargins(
+        *slot, WidthSpec::AtMost(max_width), HeightSpec::Unspecified(0));
     int16_t slot_width = std::min<int16_t>(measured.width(), max_width);
     if (slot_width <= 0 || measured.height() <= 0) {
-      slot->layout(Rect(0, 0, -1, -1));
+      LayoutChildWithMargins(*slot, Rect(0, 0, -1, -1));
       return 0;
     }
-    slot->layout(Rect(x, y, x + slot_width - 1, y + measured.height() - 1));
+    LayoutChildWithMargins(
+        *slot, Rect(x, y, x + slot_width - 1, y + measured.height() - 1));
     return measured.height();
   };
 
@@ -1125,21 +1129,23 @@ void ListEntry::onLayout(bool changed, const Rect& rect) {
   layout_text_slot(supporting_text_, layout.text_x, text_y, layout.text_width);
 
   if (leading_child_ != nullptr && !leading_child_->isGone()) {
-    leading_child_->layout(
-        Rect(layout.leading_x, layout.leading_y,
-             layout.leading_x + layout.leading.width() - 1,
-             layout.leading_y + layout.leading.height() - 1));
+    LayoutChildWithMargins(
+        *leading_child_, Rect(layout.leading_x, layout.leading_y,
+                              layout.leading_x + layout.leading.width() - 1,
+                              layout.leading_y + layout.leading.height() - 1));
   }
   if (trailing_child_ != nullptr && !trailing_child_->isGone()) {
-    trailing_child_->layout(
+    LayoutChildWithMargins(
+        *trailing_child_,
         Rect(layout.trailing_x, layout.trailing_y,
              layout.trailing_x + layout.trailing.width() - 1,
              layout.trailing_y + layout.trailing.height() - 1));
   }
   if (body_child_ != nullptr && !body_child_->isGone()) {
-    body_child_->layout(Rect(layout.body_x, layout.body_y,
-                             layout.body_x + layout.body.width() - 1,
-                             layout.body_y + layout.body.height() - 1));
+    LayoutChildWithMargins(*body_child_,
+                           Rect(layout.body_x, layout.body_y,
+                                layout.body_x + layout.body.width() - 1,
+                                layout.body_y + layout.body.height() - 1));
   }
 }
 
@@ -2212,8 +2218,8 @@ Dimensions List::onMeasure(WidthSpec width, HeightSpec height) {
   if (width.kind() != EXACTLY) {
     for (Section& section : sections_) {
       if (sectionCount(section) == 0) continue;
-      Dimensions measured =
-          section.widget->measure(width, HeightSpec::Unspecified(0));
+      Dimensions measured = MeasureChildWithMargins(*section.widget, width,
+                                                    HeightSpec::Unspecified(0));
       resolved_width = std::max(resolved_width, measured.width());
     }
     resolved_width = width.resolveSize(resolved_width);
@@ -2223,10 +2229,9 @@ Dimensions List::onMeasure(WidthSpec width, HeightSpec height) {
   for (int i = 0; i < static_cast<int>(sections_.size()); ++i) {
     if (sectionCount(sections_[i]) == 0) continue;
     if (previous >= 0) total += interSectionGap(previous, i);
-    total += sections_[i]
-                 .widget
-                 ->measure(WidthSpec::Exactly(resolved_width),
-                           HeightSpec::Unspecified(0))
+    total += MeasureChildWithMargins(*sections_[i].widget,
+                                     WidthSpec::Exactly(resolved_width),
+                                     HeightSpec::Unspecified(0))
                  .height();
     CHECK_LE(total, Rect::MaximumRect().yMax());
     previous = i;
@@ -2246,18 +2251,19 @@ void List::onLayout(bool changed, const Rect& rect) {
     Widget& widget = *sections_[i].widget;
     if (sectionCount(sections_[i]) == 0) {
       if (!widget.isGone()) {
-        widget.measure(WidthSpec::Exactly(rect.width()),
-                       HeightSpec::Exactly(0));
-        widget.layout(Rect(0, y, rect.width() - 1, y - 1));
+        MeasureChildWithMargins(widget, WidthSpec::Exactly(rect.width()),
+                                HeightSpec::Exactly(0));
+        LayoutChildWithMargins(widget, Rect(0, y, rect.width() - 1, y - 1));
       }
       continue;
     }
     if (previous >= 0) y += interSectionGap(previous, i);
-    Dimensions measured = widget.measure(WidthSpec::Exactly(rect.width()),
-                                         HeightSpec::Unspecified(0));
+    Dimensions measured = MeasureChildWithMargins(
+        widget, WidthSpec::Exactly(rect.width()), HeightSpec::Unspecified(0));
     CHECK_LE(static_cast<int64_t>(y) + measured.height(),
              Rect::MaximumRect().yMax());
-    widget.layout(Rect(0, y, rect.width() - 1, y + measured.height() - 1));
+    LayoutChildWithMargins(
+        widget, Rect(0, y, rect.width() - 1, y + measured.height() - 1));
     y += measured.height();
     previous = i;
   }

@@ -20,8 +20,8 @@ class SnackbarTestAccess {
     p.execute(id);
   }
   static void seekMotion(SnackbarPresenter& p, uint32_t elapsed_ms) {
-    p.host_.context().animations().seek(
-        p.host_, SnackbarHost::kMotion, roo_time::Millis(elapsed_ms));
+    p.host_.context().animations().seek(p.host_, SnackbarHost::kMotion,
+                                        roo_time::Millis(elapsed_ms));
   }
   static void finishMotion(SnackbarPresenter& p) {
     p.host_.context().animations().finish(p.host_, SnackbarHost::kMotion);
@@ -317,7 +317,9 @@ TEST_F(SnackbarTest, FocusTouchAndBackUseOrdinaryTaskRouting) {
   app_->refresh();
   EXPECT_EQ(&body_, task_.focus().focused());
   std::vector<Widget*> path;
-  ASSERT_TRUE(host_.fillTouchTargetPath(1, 1, path));
+  // The body button's margins are outside its touch target.
+  ASSERT_TRUE(host_.fillTouchTargetPath(body_.offsetLeft() + 1,
+                                        body_.offsetTop() + 1, path));
   EXPECT_EQ(&body_, path.back());
   EXPECT_EQ(BackResult::kUnhandled, task_.requestBack());
   EXPECT_TRUE(a.isRegistered());
@@ -586,8 +588,7 @@ TEST_F(SnackbarTest, ModalPausesAndResumesEntryTrack) {
   ASSERT_TRUE(app_->refresh());
   delay(200);
   ASSERT_TRUE(app_->refresh());
-  EXPECT_FLOAT_EQ(paused_offset,
-                  test::SnackbarTestAccess::offset(presenter()));
+  EXPECT_FLOAT_EQ(paused_offset, test::SnackbarTestAccess::offset(presenter()));
   EXPECT_TRUE(test::SnackbarTestAccess::motionScheduled(presenter()));
   EXPECT_FALSE(test::SnackbarTestAccess::scheduled(presenter()));
 

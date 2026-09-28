@@ -8,6 +8,7 @@
 #include "roo_display/ui/text_label.h"
 #include "roo_icons/outlined/24/action.h"
 #include "roo_logging.h"
+#include "roo_windows/core/child_layout.h"
 #include "roo_windows/material3/app_bar/app_bar_tokens.h"
 #include "roo_windows/material3/theme.h"
 #include "roo_windows/material3/typography.h"
@@ -250,13 +251,13 @@ Dimensions AppBar::onMeasure(WidthSpec width, HeightSpec height) {
   // Measure all children even when an exact app-bar width leaves them no room;
   // this preserves the normal child layout-request lifecycle.
   if (leading_ != nullptr) {
-    leading_->measure(WidthSpec::AtMost(row_height),
-                      HeightSpec::AtMost(row_height));
+    MeasureChildWithMargins(*leading_, WidthSpec::AtMost(row_height),
+                            HeightSpec::AtMost(row_height));
   }
   for (Widget* slot : trailing_) {
     if (slot != nullptr) {
-      slot->measure(WidthSpec::AtMost(row_height),
-                    HeightSpec::AtMost(row_height));
+      MeasureChildWithMargins(*slot, WidthSpec::AtMost(row_height),
+                              HeightSpec::AtMost(row_height));
     }
   }
   title_widget_.measure(
@@ -288,12 +289,13 @@ void AppBar::onLayout(bool changed, const Rect& rect) {
   auto layout_action = [action_size, action_y](Widget* child, int16_t x) {
     if (child == nullptr) return;
     // Keep the action slot fixed while allowing a smaller visual surface.
-    Dimensions measured = child->measure(WidthSpec::AtMost(action_size),
-                                         HeightSpec::AtMost(action_size));
+    Dimensions measured =
+        MeasureChildWithMargins(*child, WidthSpec::AtMost(action_size),
+                                HeightSpec::AtMost(action_size));
     const int16_t left = x + (action_size - measured.width()) / 2;
     const int16_t top = action_y + (action_size - measured.height()) / 2;
-    child->layout(Rect(left, top, left + measured.width() - 1,
-                       top + measured.height() - 1));
+    LayoutChildWithMargins(*child, Rect(left, top, left + measured.width() - 1,
+                                        top + measured.height() - 1));
   };
   if (leading_ != nullptr) {
     const int16_t slot = std::min<int16_t>(action_size, right - left);
@@ -490,16 +492,16 @@ Dimensions SearchBar::onMeasure(WidthSpec width, HeightSpec height) {
   const int16_t row_height = Scaled(tokens.container_height_dp);
   Widget* leading = leading_ == nullptr ? &passive_search_icon_ : leading_;
   int16_t occupied = edge * 2;
-  occupied += leading
-                  ->measure(WidthSpec::AtMost(row_height),
-                            HeightSpec::Exactly(row_height))
+  occupied += MeasureChildWithMargins(*leading, WidthSpec::AtMost(row_height),
+                                      HeightSpec::Exactly(row_height))
                   .width();
   if (!display_text_.empty()) occupied += gap;
   for (Widget* slot : trailing_) {
     if (slot == nullptr) continue;
-    occupied += gap + slot->measure(WidthSpec::AtMost(row_height),
-                                    HeightSpec::Exactly(row_height))
-                          .width();
+    occupied +=
+        gap + MeasureChildWithMargins(*slot, WidthSpec::AtMost(row_height),
+                                      HeightSpec::Exactly(row_height))
+                  .width();
   }
   Dimensions text = display_text_widget_.measure(
       WidthSpec::Unspecified(0), HeightSpec::AtMost(row_height));
@@ -520,12 +522,12 @@ void SearchBar::onLayout(bool changed, const Rect& rect) {
   int16_t right = rect.width() - edge;
   auto place = [row_height](Widget* child, int16_t x, int16_t max_width) {
     if (child == nullptr) return int16_t{0};
-    Dimensions measured = child->measure(WidthSpec::AtMost(max_width),
-                                         HeightSpec::AtMost(row_height));
+    Dimensions measured = MeasureChildWithMargins(
+        *child, WidthSpec::AtMost(max_width), HeightSpec::AtMost(row_height));
     int16_t w = std::min<int16_t>(measured.width(), max_width);
     int16_t h = std::min<int16_t>(measured.height(), row_height);
-    child->layout(
-        Rect(x, (row_height - h) / 2, x + w - 1, (row_height - h) / 2 + h - 1));
+    LayoutChildWithMargins(*child, Rect(x, (row_height - h) / 2, x + w - 1,
+                                        (row_height - h) / 2 + h - 1));
     return w;
   };
   Widget* leading = leading_ == nullptr ? &passive_search_icon_ : leading_;
@@ -533,9 +535,9 @@ void SearchBar::onLayout(bool changed, const Rect& rect) {
   for (int i = 1; i >= 0; --i) {
     Widget* slot = trailing_[i];
     if (slot == nullptr) continue;
-    Dimensions measured =
-        slot->measure(WidthSpec::AtMost(std::max<int16_t>(0, right - left)),
-                      HeightSpec::AtMost(row_height));
+    Dimensions measured = MeasureChildWithMargins(
+        *slot, WidthSpec::AtMost(std::max<int16_t>(0, right - left)),
+        HeightSpec::AtMost(row_height));
     int16_t w =
         std::min<int16_t>(measured.width(), std::max<int16_t>(0, right - left));
     right -= w;
@@ -663,12 +665,12 @@ Dimensions SearchAppBar::onMeasure(WidthSpec width, HeightSpec height) {
       Scaled(internal::kEmbeddedSearchEntryTokens.container_height_dp);
   const int16_t available_width = std::max<int16_t>(0, width.value());
   if (leading_)
-    leading_->measure(WidthSpec::AtMost(action_size),
-                      HeightSpec::Exactly(action_size));
+    MeasureChildWithMargins(*leading_, WidthSpec::Exactly(action_size),
+                            HeightSpec::Exactly(action_size));
   for (Widget* slot : trailing_) {
     if (slot)
-      slot->measure(WidthSpec::AtMost(action_size),
-                    HeightSpec::Exactly(action_size));
+      MeasureChildWithMargins(*slot, WidthSpec::Exactly(action_size),
+                              HeightSpec::Exactly(action_size));
   }
   const int16_t outer_slots =
       (leading_ != nullptr) * action_size + ChildCount(trailing_) * action_size;
@@ -696,8 +698,8 @@ void SearchAppBar::onLayout(bool changed, const Rect& rect) {
   int16_t right = std::max<int16_t>(left, width - edge);
   auto layout_outer = [action_size, action_y](Widget* child, int16_t x) {
     if (child)
-      child->layout(
-          Rect(x, action_y, x + action_size - 1, action_y + action_size - 1));
+      LayoutChildWithMargins(*child, Rect(x, action_y, x + action_size - 1,
+                                          action_y + action_size - 1));
   };
   if (leading_) {
     layout_outer(leading_, left);

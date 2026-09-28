@@ -221,10 +221,16 @@ TEST_F(HorizontalPageHostRenderTest, RevealedStripRepaintsWithBlitSupport) {
   auto host = std::make_unique<TestHorizontalPageHost>(context());
   TestHorizontalPageHost* host_ptr = host.get();
 
-  host_ptr->addPage(std::make_unique<ColorBoxWidget>(context(), color::Red,
-                                                     Dimensions(120, 60)));
-  host_ptr->addPage(std::make_unique<ColorBoxWidget>(context(), color::Blue,
-                                                     Dimensions(120, 60)));
+  // This traffic benchmark uses full-bleed pages so each exposed strip is
+  // one rectangle. Margined page painting is checked separately below.
+  auto red = std::make_unique<ColorBoxWidget>(context(), color::Red,
+                                              Dimensions(120, 60));
+  auto blue = std::make_unique<ColorBoxWidget>(context(), color::Blue,
+                                               Dimensions(120, 60));
+  red->setMargins(MarginSize::kNone);
+  blue->setMargins(MarginSize::kNone);
+  host_ptr->addPage(std::move(red));
+  host_ptr->addPage(std::move(blue));
 
   app_.add(std::move(host), Box(0, 0, 119, 59));
 
@@ -248,6 +254,32 @@ TEST_F(HorizontalPageHostRenderTest, RevealedStripRepaintsWithBlitSupport) {
   ASSERT_TRUE(refresh());
   EXPECT_NE(QuantizeToArgb4444(color::Red), pixelAt(10, 20));
   EXPECT_EQ(QuantizeToArgb4444(color::Red), pixelAt(40, 20));
+}
+
+// Verifies page margins expose the host background and a blitted partial
+// repaint produces the same pixels as repainting the entire screen.
+TEST_F(HorizontalPageHostRenderTest, MarginedPagesPreserveRepaintCorrectness) {
+  auto host = std::make_unique<TestHorizontalPageHost>(context());
+  TestHorizontalPageHost* host_ptr = host.get();
+  host->addPage(std::make_unique<ColorBoxWidget>(context(), color::Red,
+                                                 Dimensions(120, 60)));
+  host->addPage(std::make_unique<ColorBoxWidget>(context(), color::Blue,
+                                                 Dimensions(120, 60)));
+  app_.add(std::move(host), Box(0, 0, 119, 59));
+  ASSERT_TRUE(refresh());
+  EXPECT_NE(QuantizeToArgb4444(color::Red), pixelAt(1, 20));
+  EXPECT_EQ(QuantizeToArgb4444(color::Red), pixelAt(10, 20));
+  host_ptr->onDragStart(0, 0);
+  host_ptr->onDrag(0, 0, -30, 0);
+  ASSERT_TRUE(refresh());
+  EXPECT_EQ(QuantizeToArgb4444(color::Red), pixelAt(10, 20));
+  EXPECT_EQ(QuantizeToArgb4444(color::Blue), pixelAt(110, 20));
+  EXPECT_NE(QuantizeToArgb4444(color::Blue), pixelAt(91, 20));
+  const std::vector<roo::byte> before(std::begin(raster_), std::end(raster_));
+  app_.root().invalidateInterior();
+  ASSERT_TRUE(refresh());
+  EXPECT_EQ(before,
+            std::vector<roo::byte>(std::begin(raster_), std::end(raster_)));
 }
 
 // Verifies a drag takes over at the last applied registry sample and no stale

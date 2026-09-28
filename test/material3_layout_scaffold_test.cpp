@@ -2,9 +2,9 @@
 
 #include "gtest/gtest.h"
 #include "roo_scheduler.h"
-#include "roo_windows/core/widget.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/theme.h"
+#include "roo_windows/core/widget.h"
 #include "roo_windows/material3/layout_scaffold/layout_scaffold.h"
 #include "roo_windows/material3/theme.h"
 
@@ -32,6 +32,9 @@ class ProbeWidget : public Widget {
 
   bool isFocusable() const override { return true; }
 
+  Margins getMargins() const override { return margins; }
+
+  Margins margins;
   Dimensions measured = Dimensions(0, 0);
 
  protected:
@@ -193,6 +196,117 @@ TEST(Material3LayoutScaffold, PlacesChromeAndPublishesBodyGeometry) {
   EXPECT_EQ(bottom.parent_bounds(), scaffold.bottomBarBounds());
   EXPECT_EQ(LayoutBreakpoint::kCompact, scaffold.metrics().breakpoint);
   EXPECT_EQ(Rect(25, 13, 162, 83), scaffold.metrics().safe_bounds);
+}
+
+// Verifies every slot measures inside its margins and reserves chrome margins
+// before placing the body, with physical margins preserved in both directions.
+TEST(Material3LayoutScaffold, RespectsAllSlotMargins) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
+  ProbeWidget top(context, 1, 10);
+  ProbeWidget bottom(context, 1, 12);
+  ProbeWidget leading(context, 20, 1);
+  ProbeWidget trailing(context, 30, 1);
+  ProbeWidget body(context, 1, 1);
+  top.margins = Margins(2, 3);
+  bottom.margins = Margins(4, 5);
+  leading.margins = Margins(6, 7);
+  trailing.margins = Margins(8, 9);
+  body.margins = Margins(10, 11);
+  TestLayoutScaffold scaffold(context);
+  scaffold.setTopBar(top);
+  scaffold.setBottomBar(bottom);
+  scaffold.setLeadingRail(leading, BreakpointRange());
+  scaffold.setTrailingRail(trailing);
+  scaffold.setBody(body);
+
+  Layout(scaffold, 200, 100);
+
+  EXPECT_EQ(196, top.measured.width());
+  EXPECT_EQ(10, top.measured.height());
+  EXPECT_EQ(192, bottom.measured.width());
+  EXPECT_EQ(12, bottom.measured.height());
+  EXPECT_EQ(20, leading.measured.width());
+  EXPECT_EQ(48, leading.measured.height());
+  EXPECT_EQ(30, trailing.measured.width());
+  EXPECT_EQ(44, trailing.measured.height());
+  EXPECT_EQ(102, body.measured.width());
+  EXPECT_EQ(40, body.measured.height());
+  EXPECT_EQ(Rect(2, 3, 197, 12), top.parent_bounds());
+  EXPECT_EQ(Rect(4, 83, 195, 94), bottom.parent_bounds());
+  EXPECT_EQ(Rect(6, 23, 25, 70), leading.parent_bounds());
+  EXPECT_EQ(Rect(162, 25, 191, 68), trailing.parent_bounds());
+  EXPECT_EQ(Rect(42, 27, 143, 66), body.parent_bounds());
+  EXPECT_EQ(Rect(32, 16, 153, 77), scaffold.bodyBounds());
+  EXPECT_EQ(Insets(32, 16, 46, 22), scaffold.contentInsets());
+  EXPECT_EQ(bottom.parent_bounds(), scaffold.bottomBarBounds());
+
+  scaffold.setLayoutDirection(LayoutDirection::kRightToLeft);
+  Layout(scaffold, 200, 100);
+  EXPECT_EQ(Rect(174, 23, 193, 70), leading.parent_bounds());
+  EXPECT_EQ(Rect(8, 25, 37, 68), trailing.parent_bounds());
+  EXPECT_EQ(Rect(56, 27, 157, 66), body.parent_bounds());
+  EXPECT_EQ(Rect(46, 16, 167, 77), scaffold.bodyBounds());
+}
+
+// Verifies margins compose with safety insets and padding, including negative
+// margins that intentionally expand a child's allocation.
+TEST(Material3LayoutScaffold, CombinesBodyMarginsWithPaddingAndSafetyInsets) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
+  ProbeWidget body(context, 1, 1);
+  TestLayoutScaffold scaffold(context);
+  scaffold.setBody(body);
+  scaffold.setSafetyInsets(Insets(1, 2, 3, 4));
+  scaffold.setPadding(Padding(5, 6));
+  body.margins = Margins(7, 8);
+  Layout(scaffold, 100, 80);
+  EXPECT_EQ(Rect(13, 16, 84, 61), body.parent_bounds());
+  EXPECT_EQ(72, body.measured.width());
+  EXPECT_EQ(46, body.measured.height());
+  EXPECT_EQ(Rect(6, 8, 91, 69), scaffold.bodyBounds());
+
+  body.margins = Margins(-2, -3);
+  body.requestLayout();
+  Layout(scaffold, 100, 80);
+  EXPECT_EQ(Rect(4, 5, 93, 72), body.parent_bounds());
+  EXPECT_EQ(90, body.measured.width());
+  EXPECT_EQ(68, body.measured.height());
+}
+
+// Verifies oversized margins clamp measurement to zero, clear old child bounds,
+// and reserve no space for chrome excluded by its breakpoint range.
+TEST(Material3LayoutScaffold, HandlesExhaustedAndHiddenSlotsWithMargins) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
+  ProbeWidget top(context, 10, 10);
+  ProbeWidget body(context, 1, 1);
+  top.margins = Margins(6, 7);
+  body.margins = Margins(8, 9);
+  TestLayoutScaffold scaffold(context);
+  scaffold.setTopBar(top);
+  scaffold.setBody(body);
+  Layout(scaffold, 100, 80);
+  EXPECT_FALSE(top.parent_bounds().empty());
+  EXPECT_FALSE(body.parent_bounds().empty());
+
+  Layout(scaffold, 10, 10);
+  EXPECT_EQ(0, top.measured.width());
+  EXPECT_EQ(0, top.measured.height());
+  EXPECT_EQ(0, body.measured.width());
+  EXPECT_EQ(0, body.measured.height());
+  EXPECT_TRUE(top.parent_bounds().empty());
+  EXPECT_TRUE(body.parent_bounds().empty());
+
+  scaffold.setTopBarVisibility(
+      {LayoutBreakpoint::kExpanded, LayoutBreakpoint::kExtraLarge});
+  Layout(scaffold, 100, 80);
+  EXPECT_TRUE(top.parent_bounds().empty());
+  EXPECT_EQ(Rect(8, 9, 91, 70), body.parent_bounds());
+  EXPECT_EQ(Rect(0, 0, 99, 79), scaffold.bodyBounds());
 }
 
 // Verifies zero defaults, changes after layout, unchanged-value no-ops,

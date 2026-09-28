@@ -1211,3 +1211,13 @@ cc_test(
     linkstatic = 1,
     deps = [":roo_windows", "@roo_testing//:arduino_gtest_main"],
 )
+
+cc_test(
+    name = "container_margins_test",
+    srcs = ["test/container_margins_test.cpp"],
+    linkstatic = 1,
+    deps = [
+        ":roo_windows",
+        "@roo_testing//:arduino_gtest_main",
+    ],
+)

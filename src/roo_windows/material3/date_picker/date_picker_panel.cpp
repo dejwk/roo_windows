@@ -6,6 +6,7 @@
 #include "roo_icons/filled/24/action.h"
 #include "roo_icons/filled/24/editor.h"
 #include "roo_icons/filled/24/navigation.h"
+#include "roo_windows/core/child_layout.h"
 #include "roo_windows/core/paint_context.h"
 #include "roo_windows/core/task.h"
 #include "roo_windows/material3/date_picker/date_picker_internal.h"
@@ -470,8 +471,10 @@ Dimensions DatePickerPanel::onMeasure(WidthSpec width, HeightSpec height) {
                   HeightSpec::Exactly(kHeader - kInset / 2));
   viewport_.measure(WidthSpec::Exactly(w - 2 * kInset),
                     HeightSpec::Exactly(h - kHeader - kFooter - kInset));
-  cancel_.measure(WidthSpec::Exactly(Scaled(96)), HeightSpec::Exactly(kCell));
-  confirm_.measure(WidthSpec::Exactly(Scaled(64)), HeightSpec::Exactly(kCell));
+  MeasureChildWithMargins(cancel_, WidthSpec::Exactly(Scaled(96)),
+                          HeightSpec::Exactly(kCell));
+  MeasureChildWithMargins(confirm_, WidthSpec::Exactly(Scaled(64)),
+                          HeightSpec::Exactly(kCell));
   if (input_)
     input_->measure(WidthSpec::Exactly(w - 2 * kInset),
                     HeightSpec::Exactly(Scaled(80)));
@@ -482,11 +485,12 @@ void DatePickerPanel::onLayout(bool, const Rect&) {
   header_.layout(Rect(kInset, kInset / 2, width() - kInset - 1, kHeader - 1));
   viewport_.layout(Rect(kInset, kHeader, width() - kInset - 1,
                         height() - kFooter - kInset - 1));
-  cancel_.layout(Rect(width() - kInset - Scaled(160), height() - kFooter,
-                      width() - kInset - Scaled(64) - 1,
-                      height() - kInset - 1));
-  confirm_.layout(Rect(width() - kInset - Scaled(64), height() - kFooter,
-                       width() - kInset - 1, height() - kInset - 1));
+  LayoutChildWithMargins(
+      cancel_, Rect(width() - kInset - Scaled(160), height() - kFooter,
+                    width() - kInset - Scaled(64) - 1, height() - kInset - 1));
+  LayoutChildWithMargins(confirm_,
+                         Rect(width() - kInset - Scaled(64), height() - kFooter,
+                              width() - kInset - 1, height() - kInset - 1));
   if (input_)
     input_->layout(
         Rect(kInset, kHeader, width() - kInset - 1,

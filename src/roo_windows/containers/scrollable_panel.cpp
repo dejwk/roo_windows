@@ -231,8 +231,8 @@ void SimpleScrollablePanel::onLayout(bool changed, const Rect& rect) {
   if (c == nullptr) return;
   Margins m = contents()->getMargins();
   Rect bounds(0, 0, measured_.width() - 1, measured_.height() - 1);
-  bounds =
-      bounds.translate(c->offsetLeft() + m.left(), c->offsetTop() + m.top());
+  bounds = bounds.translate(c->bounds().empty() ? m.left() : c->offsetLeft(),
+                            c->bounds().empty() ? m.top() : c->offsetTop());
   c->layout(bounds);
   scroll_bar_.layout(
       Rect(rect.width() - Scaled(6), 0, rect.width() - 1, rect.height() - 1));
@@ -334,10 +334,12 @@ void SimpleScrollablePanel::applyScrollResult(
   Margins m = c->getMargins();
   Rect inner_pane(m.left(), m.top(), width() - m.right() - 1,
                   height() - m.bottom() - 1);
-  auto aligned = ResolveAlignmentOffset(bounds(), c->bounds(), alignment_);
+  auto aligned = ResolveAlignmentOffset(
+      Rect(0, 0, inner_pane.width() - 1, inner_pane.height() - 1), c->bounds(),
+      alignment_);
   XDim visual_x = result.x;
   YDim visual_y = result.y;
-  XDim clamped_y = result.y;
+  YDim clamped_y = result.y;
   if (c->width() < inner_pane.width()) {
     visual_x = static_cast<XDim>(aligned.first);
   }
@@ -349,14 +351,15 @@ void SimpleScrollablePanel::applyScrollResult(
                                std::min<YDim>(result.y, 0));
   }
 
-  if (c->height() <= height()) {
+  const YDim content_height = c->height() + m.top() + m.bottom();
+  if (content_height <= height()) {
     scroll_bar_.setRange(0, height() - 1);
   } else {
     YDim scroll_pix_height =
-        std::max(kScrollBarMinHeightPx, height() * height() / c->height());
+        std::max(kScrollBarMinHeightPx, height() * height() / content_height);
     YDim scroll_pix_range = height() - scroll_pix_height;
     YDim scroll_pix_begin =
-        -(scroll_pix_range) * (clamped_y + m.top()) / (c->height() - height());
+        -(scroll_pix_range)*clamped_y / (content_height - height());
     scroll_bar_.setRange(scroll_pix_begin,
                          scroll_pix_begin + scroll_pix_height - 1);
   }
@@ -374,7 +377,7 @@ bool SimpleScrollablePanel::onInterceptTouchEvent(const TouchEvent& event) {
     return true;
   }
   if (scroll_bar_presence_ != VerticalScrollBar::Presence::kAlwaysHidden &&
-      contents() != nullptr && contents()->height() > height() &&
+      contents() != nullptr && motionGeometry().minY() < 0 &&
       event.x() >= width() - kScrollBarTouchWidth) {
     scroll_bar_gesture_ = true;
     // We set a higher bar for recognizing the interaction as an actual touch of
@@ -425,7 +428,7 @@ void SimpleScrollablePanel::onSingleTapUp(XDim x, YDim y) {
     // Calculate the difference in pixels between the minimum and maximum
     // position of the scrolled content (i.e., the possible range of the
     // offset).
-    YDim view_range = contents()->height() - height();
+    YDim view_range = -motionGeometry().minY();
     if (scroll_range > 0) {
       YDim new_y = -(y - (scroll_bar_.end() - scroll_bar_.begin()) / 2) *
                    view_range / scroll_range;
@@ -458,7 +461,7 @@ void SimpleScrollablePanel::onDrag(XDim x, YDim y, XDim dx, YDim dy) {
       // Calculate the difference in pixels between the minimum and maximum
       // position of the scrolled content (i.e., the possible range of the
       // offset).
-      YDim view_range = contents()->height() - height();
+      YDim view_range = -motionGeometry().minY();
       YDim y_shift = -dy * view_range / scroll_range;
       // The new y might be out of range, but that's ok - scrollBy will trim it.
       scrollBy(0, y_shift);
