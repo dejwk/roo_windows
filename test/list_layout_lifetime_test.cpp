@@ -3,9 +3,9 @@
 #include "roo_windows/containers/list_layout.h"
 #include "roo_windows/containers/scrollable_panel.h"
 #include "roo_windows/core/application.h"
-#include "roo_windows/core/widget.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/margins_mixin.h"
+#include "roo_windows/core/widget.h"
 
 namespace roo_windows {
 namespace {
@@ -25,7 +25,8 @@ class Row : public Widget {
 
 class SpacedRow : public MarginsMixin<Row> {
  public:
-  explicit SpacedRow(ApplicationContext& context) : MarginsMixin<Row>(context) {}
+  explicit SpacedRow(ApplicationContext& context)
+      : MarginsMixin<Row>(context) {}
 
   PreferredSize getPreferredSize() const override {
     return {PreferredSize::MatchParentWidth(), PreferredSize::ExactHeight(72)};
@@ -50,6 +51,45 @@ TEST(ListLayoutLifetime, PreferredHeightIncludesRowMargins) {
   EXPECT_EQ(list.measure(WidthSpec::Exactly(320), HeightSpec::Unspecified(0))
                 .height(),
             preferred.height().value());
+}
+
+class PaddedList : public ListLayout {
+ public:
+  using ListLayout::contentExtent;
+  using ListLayout::ListLayout;
+  using ListLayout::rowBounds;
+  using ListLayout::viewportRange;
+
+  Padding getPadding() const override { return Padding(12, 8); }
+};
+
+// Verifies overridden padding controls measurement, row bounds, and viewport
+// selection even when the base class stores a different padding value.
+TEST(ListLayoutLifetime, GeometryUsesVirtualPadding) {
+  roo_scheduler::Scheduler scheduler;
+  Environment environment(scheduler);
+  ApplicationContext context(scheduler, environment.theme(),
+                             environment.keyboardColorTheme());
+  Rows model;
+  PaddedList list(context, model,
+                  [&]() { return std::make_unique<SpacedRow>(context); });
+  list.setPadding(Padding(1));
+  const PreferredSize preferred = static_cast<Widget&>(list).getPreferredSize();
+  EXPECT_EQ(preferred.height().value(), 40 * 74 + 16);
+  const Dimensions measured =
+      list.measure(WidthSpec::Exactly(320), HeightSpec::Unspecified(0));
+  EXPECT_EQ(measured.height(), 40 * 74 + 16);
+  EXPECT_EQ(list.contentExtent(), measured.height());
+  list.layout(Rect(0, 0, 319, measured.height() - 1));
+  EXPECT_EQ(list.rowBounds(0), Rect(20, 9, 299, 80));
+  EXPECT_EQ(list.rowBounds(1), Rect(20, 83, 299, 154));
+  int begin;
+  int end;
+  list.viewportRange(Rect(0, 0, 319, 7), begin, end);
+  EXPECT_GT(begin, end);
+  list.viewportRange(Rect(0, 80, 319, 80), begin, end);
+  EXPECT_EQ(begin, 0);
+  EXPECT_EQ(end, 0);
 }
 
 // Verifies a populated row pool detaches before destruction; under ASan this

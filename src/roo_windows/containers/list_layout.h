@@ -218,8 +218,9 @@ class ListLayout : public Panel {
 
   /// Computes content extent with checked wide intermediate arithmetic.
   virtual YDim contentExtent() const {
+    const Padding padding = getPadding();
     int64_t extent = static_cast<int64_t>(element_count_) * rowStride() +
-                     padding_.top() + padding_.bottom();
+                     padding.top() + padding.bottom();
     CHECK_GE(extent, 0);
     CHECK_LE(extent, Rect::MaximumRect().yMax());
     return static_cast<YDim>(extent);
@@ -227,20 +228,22 @@ class ListLayout : public Panel {
 
   /// Returns the surface bounds for one row in local content coordinates.
   virtual Rect rowBounds(int index) const {
+    const Padding padding = getPadding();
     Margins margins = prototype_->getMargins();
-    YDim top = padding_.top() + index * rowStride() + margins.top();
-    return Rect(padding_.left() + margins.left(), top,
-                width() - padding_.right() - margins.right() - 1,
+    YDim top = padding.top() + index * rowStride() + margins.top();
+    return Rect(padding.left() + margins.left(), top,
+                width() - padding.right() - margins.right() - 1,
                 top + row_height_ - margins.top() - margins.bottom() - 1);
   }
 
   /// Finds a bounded active interval; an empty interval has end < begin.
   virtual void viewportRange(const Rect& viewport, int& begin, int& end) const {
+    const Padding padding = getPadding();
     begin = 0;
     end = -1;
     if (element_count_ == 0 || viewport.empty() || rowStride() <= 0) return;
-    YDim top = std::max<YDim>(0, viewport.yMin() - padding_.top());
-    YDim bottom = viewport.yMax() - padding_.top();
+    YDim top = std::max<YDim>(0, viewport.yMin() - padding.top());
+    YDim bottom = viewport.yMax() - padding.top();
     if (bottom < 0) return;
     begin = std::min<int>(element_count_, top / rowStride());
     end = std::min<int>(element_count_ - 1, bottom / rowStride());
@@ -319,6 +322,7 @@ class ListLayout : public Panel {
   }
 
   PreferredSize getPreferredSize() const override {
+    const Padding padding = getPadding();
     PreferredSize preferred = prototype_->getPreferredSize();
     Margins margins = prototype_->getMargins();
     if (!preferred.height().isExact()) {
@@ -327,20 +331,21 @@ class ListLayout : public Panel {
     int64_t extent =
         static_cast<int64_t>(element_count_) *
             (preferred.height().value() + margins.top() + margins.bottom()) +
-        padding_.top() + padding_.bottom();
+        padding.top() + padding.bottom();
     CHECK_LE(extent, Rect::MaximumRect().yMax());
     return {PreferredSize::MatchParentWidth(),
             PreferredSize::ExactHeight(extent)};
   }
 
   Dimensions onMeasure(WidthSpec width, HeightSpec height) override {
+    const Padding padding = getPadding();
     if (!prototype_prepared_) {
       prepareRow(*prototype_);
       prototype_prepared_ = true;
     }
     Margins margins = prototype_->getMargins();
     XDim horizontal =
-        padding_.left() + padding_.right() + margins.left() + margins.right();
+        padding.left() + padding.right() + margins.left() + margins.right();
     PreferredSize preferred = prototype_->getPreferredSize();
     Dimensions measured = prototype_->measure(
         width.getChildWidthSpec(horizontal, preferred.width()),
