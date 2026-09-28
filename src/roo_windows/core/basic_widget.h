@@ -1,94 +1,24 @@
 #pragma once
 
-#include "roo_windows/core/margins.h"
-#include "roo_windows/core/padding.h"
+#include "roo_windows/core/margins_mixin.h"
+#include "roo_windows/core/padding_mixin.h"
 #include "roo_windows/core/widget.h"
 
 namespace roo_windows {
 
-// Base class for widgets that want cheap stored padding and margin
-// customization. Minimal painted leaves should stay on Widget when they do not
-// need that storage or when their clickability semantics are custom.
-class BasicWidget : public Widget {
+// Compatibility base for widgets that want both stored padding and margins.
+// New specialized widgets can inherit PaddingMixin or MarginsMixin directly
+// when they need only one of those capabilities.
+class BasicWidget : public MarginsMixin<PaddingMixin<Widget>> {
  public:
-  BasicWidget(ApplicationContext& context)
-      : Widget(context), padding_(0), margins_(0) {}
+  using Base = MarginsMixin<PaddingMixin<Widget>>;
 
-  /// Returns the widget's default padding token, used when an axis has been
-  /// configured as `kDefault`.
-  virtual Padding getDefaultPadding() const {
-    return Padding(PaddingSize::kNone);
-  }
-
-  /// Returns the widget's default margins token, used when an axis has been
-  /// configured as `kDefault`.
-  virtual Margins getDefaultMargins() const {
-    return Margins(MarginSize::kNone);
-  }
-
-  /// Updates horizontal and vertical padding (independently). Triggers
-  /// repaint and relayout when the value actually changes.
-  void setPadding(PaddingSize h, PaddingSize v) {
-    uint8_t padding = ((int)h << 4) | (int)v;
-    if (padding_ == padding) return;
-    padding_ = padding;
-    invalidateInterior();
-    requestLayout();
-  }
-
-  /// Sets both horizontal and vertical padding to the same token.
-  void setPadding(PaddingSize size) { setPadding(size, size); }
-
-  /// Resolves the configured padding tokens to pixel padding, falling back
-  /// to the per-subclass default when a token is `kDefault`.
-  Padding getPadding() const override {
-    PaddingSize hs = (PaddingSize)(padding_ >> 4);
-    PaddingSize vs = (PaddingSize)(padding_ & 15);
-    Padding def;
-    int16_t h, v;
-    if (hs == PaddingSize::kDefault || vs == PaddingSize::kDefault) {
-      def = getDefaultPadding();
-    }
-    h = (hs == PaddingSize::kDefault) ? (def.left() + def.right()) / 2
-                                      : Padding::DimensionForSize(hs);
-    v = (vs == PaddingSize::kDefault) ? (def.top() + def.bottom()) / 2
-                                      : Padding::DimensionForSize(vs);
-    return Padding(h, v);
-  }
-
-  /// Updates horizontal and vertical margins (independently).
-  void setMargins(MarginSize h, MarginSize v) {
-    margins_ = ((int)h << 4) | (int)v;
-  }
-
-  /// Sets both horizontal and vertical margins to the same token.
-  void setMargins(MarginSize size) { setMargins(size, size); }
+  BasicWidget(ApplicationContext& context) : Base(context) {}
 
   /// `BasicWidget`s are considered clickable iff an interactive-change
   /// callback is registered. Subclasses that are intrinsically clickable
   /// override this.
   bool isClickable() const override { return hasInteractiveChangeHandler(); }
-
-  /// Resolves the configured margin tokens to pixel margins, falling back
-  /// to the per-subclass default when a token is `kDefault`.
-  Margins getMargins() const override {
-    MarginSize hs = (MarginSize)(margins_ >> 4);
-    MarginSize vs = (MarginSize)(margins_ & 15);
-    Margins def;
-    int16_t h, v;
-    if (hs == MarginSize::kDefault || vs == MarginSize::kDefault) {
-      def = getDefaultMargins();
-    }
-    h = (hs == MarginSize::kDefault) ? (def.left() + def.right()) / 2
-                                     : Margins::DimensionForSize(hs);
-    v = (vs == MarginSize::kDefault) ? (def.top() + def.bottom()) / 2
-                                     : Margins::DimensionForSize(vs);
-    return Margins(h, v);
-  }
-
- private:
-  uint8_t padding_;
-  uint8_t margins_;
 };
 
 }  // namespace roo_windows
