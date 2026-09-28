@@ -8,10 +8,11 @@
 #include "roo_icons/outlined/24/notification.h"
 #include "roo_scheduler.h"
 #include "roo_windows/containers/flex_layout.h"
-#include "roo_windows/core/widget.h"
 #include "roo_windows/core/destination.h"
 #include "roo_windows/core/environment.h"
+#include "roo_windows/core/widget.h"
 #include "roo_windows/material3/list/list.h"
+#include "roo_windows/material3/typography.h"
 #include "roo_windows/widgets/text_label.h"
 #include "roo_windows_render_test_support.h"
 
@@ -239,7 +240,26 @@ class ExpandableBodyListItem : public InvokableListItemBase {
 };
 
 class Material3ListRenderTest
-    : public test_support::RooWindowsRenderTestSized<180, 140> {};
+    : public test_support::RooWindowsRenderTestSized<180, 140> {
+ protected:
+  void expectInkColor(const Widget& widget, Color color) {
+    int left = 0;
+    int top = 0;
+    for (const Widget* ancestor = &widget; ancestor != nullptr;
+         ancestor = ancestor->parent()) {
+      left += ancestor->offsetLeft();
+      top += ancestor->offsetTop();
+    }
+    Color expected = test_support::QuantizeToArgb4444(color);
+    int count = 0;
+    for (int y = top; y < top + widget.height(); ++y) {
+      for (int x = left; x < left + widget.width(); ++x) {
+        if (pixelAt(x, y) == expected) ++count;
+      }
+    }
+    EXPECT_GT(count, 0);
+  }
+};
 
 // Larger fixture sized to the emulator display so the faithful expandable-row
 // reproduction scene (deep scroll, multi-line wrapping body) lays out exactly
@@ -1677,6 +1697,72 @@ TEST(Material3List, SegmentedListSkipsGoneRowsWhenResolvingPositions) {
   EXPECT_EQ(ListItemPosition::kLast, last.visualContext().position);
 }
 
+// Verifies painted text and both navigation icons follow selection changes,
+// including block text, deselection, baseline fallback, and explicit overrides.
+TEST_F(Material3ListRenderTest, ContentColorsFollowExpressiveSelection) {
+  ListTextPolicy wrapping;
+  wrapping.overflow = TextOverflowPolicy::kWrap;
+  wrapping.max_lines = 2;
+  auto owned = std::make_unique<TestListRow<NavigationListItem>>(
+      context(), ic_filled_24_device_wifi_tethering(), "Label", "Support",
+      ListTextPolicy{}, wrapping);
+  auto* row = owned.get();
+  app_.add(WidgetRef(std::move(owned)), roo_display::Box(0, 0, 179, 139));
+  const ColorScheme& colors = context().theme().material3Theme().color;
+  ListEntryVisualContext visual;
+  for (int state = 0; state < 4; ++state) {
+    SCOPED_TRACE(state);
+    visual.selected = state == 1 || state == 3;
+    visual.variant =
+        state == 3 ? ListVariant::kBaseline : ListVariant::kExpressive;
+    row->setVisualContext(visual);
+    ASSERT_TRUE(refresh());
+    bool selected = state == 1;
+    Color secondary =
+        selected ? colors.onSecondaryContainer : colors.onSurfaceVariant;
+    expectInkColor(row->getChild(0), secondary);
+    expectInkColor(row->getChild(1),
+                   selected ? colors.onSecondaryContainer : colors.onSurface);
+    expectInkColor(row->getChild(2), secondary);
+    expectInkColor(row->getChild(3), secondary);
+  }
+  row->item().leadingIcon().setColor(roo_display::color::Red);
+  visual.variant = ListVariant::kExpressive;
+  row->setVisualContext(visual);
+  ASSERT_TRUE(refresh());
+  expectInkColor(row->getChild(0), roo_display::color::Red);
+  row->item().leadingIcon().setColor(roo_display::color::Transparent);
+  ASSERT_TRUE(refresh());
+  expectInkColor(row->getChild(0), colors.onSecondaryContainer);
+}
+
+// Verifies default-colored trailing text and overlines share the secondary
+// role, including when selection is supplied before the item is bound.
+TEST_F(Material3ListRenderTest, TrailingTextAndOverlineInheritListColors) {
+  StringViewLabel trailing(context(), "42", text_style_body_medium());
+  auto owned = std::make_unique<TestListEntry>(context());
+  TestListEntry* row = owned.get();
+  ListEntryVisualContext visual;
+  visual.selected = true;
+  row->setVisualContext(visual);
+  StandardListItem item(StandardListItemInit::ThreeLine(
+      "Label", "Support", "Overline", nullptr, &trailing));
+  row->setItem(item);
+  app_.add(WidgetRef(std::move(owned)), roo_display::Box(0, 0, 179, 139));
+  const ColorScheme& colors = context().theme().material3Theme().color;
+  for (bool selected : {true, false, true}) {
+    visual.selected = selected;
+    row->setVisualContext(visual);
+    ASSERT_TRUE(refresh());
+    for (int index : {0, 2, 3}) {
+      expectInkColor(row->getChild(index), selected
+                                               ? colors.onSecondaryContainer
+                                               : colors.onSurfaceVariant);
+    }
+  }
+  row->clearItem();
+}
+
 TEST(Material3List, ListEntryResolvesFlatSegmentedAndSelectedFills) {
   roo_scheduler::Scheduler scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
@@ -1782,6 +1868,7 @@ TEST(Material3List, ListResolvesSelectionAndDividerContext) {
   EXPECT_TRUE(first.visualContext().selected);
   EXPECT_FALSE(second.visualContext().selected);
   EXPECT_TRUE(first.visualContext().show_divider);
+  list.clear();
 }
 
 // Verifies that expressive standard lists keep a small visual separator

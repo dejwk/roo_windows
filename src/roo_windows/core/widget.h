@@ -253,7 +253,9 @@ class Widget {
   // Returns the effective theme for this widget.
   virtual const Theme& theme() const;
 
-  // Returns default color that should be used by monochromatic content.
+  /// Returns the default color for monochromatic content.
+  /// Containers may override this to supply a component-specific content role.
+  //
   // Calculated by determining the effective background color of this widget
   // (which is the result of layering the, possibly semi-transparent,
   // backgrounds of the ancestors), and consulting the theme to see if it has
@@ -270,7 +272,7 @@ class Widget {
   //
   // NOTE: during paint(PaintContext&), the default foreground color is
   // derived from the effective container role.
-  roo_display::Color defaultColor() const;
+  virtual roo_display::Color defaultColor() const;
 
   virtual ::roo_windows::material3::ColorToken effectiveContainerRole() const;
   virtual ::roo_windows::material3::ColorToken effectiveOverlayColorRole()

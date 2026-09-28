@@ -884,11 +884,35 @@ void ListEntry::syncTextSlotsFromItem() {
 }
 
 Color ListEntry::headlineColor() const {
-  return context().theme().material3Theme().color.onSurface;
+  const ColorScheme& colors = theme().material3Theme().color;
+  return visual_context_.selected &&
+                 visual_context_.variant == ListVariant::kExpressive
+             ? colors.onSecondaryContainer
+             : colors.onSurface;
 }
 
 Color ListEntry::supportingColor() const {
-  return context().theme().material3Theme().color.onSurfaceVariant;
+  const ColorScheme& colors = theme().material3Theme().color;
+  return visual_context_.selected &&
+                 visual_context_.variant == ListVariant::kExpressive
+             ? colors.onSecondaryContainer
+             : colors.onSurfaceVariant;
+}
+
+Color ListEntry::defaultColor() const { return supportingColor(); }
+
+// Updates retained text widgets without reading a possibly unbound model.
+void ListEntry::syncTextColors() {
+  auto set_color = [](Widget* slot, TextSlotMode mode, Color color) {
+    if (mode == TextSlotMode::kLabel) {
+      static_cast<StringViewLabel*>(slot)->setColor(color);
+    } else if (mode == TextSlotMode::kBlock) {
+      static_cast<TextBlock*>(slot)->setColor(color);
+    }
+  };
+  set_color(headline_text_, headline_mode_, headlineColor());
+  set_color(overline_text_, overline_mode_, supportingColor());
+  set_color(supporting_text_, supporting_mode_, supportingColor());
 }
 
 void ListEntry::setItem(ListItem& item) {
@@ -963,7 +987,10 @@ void ListEntry::setVisualContext(const ListEntryVisualContext& context) {
       visual_context_.divider_end_inset == context.divider_end_inset) {
     return;
   }
+  const bool colors_changed = visual_context_.selected != context.selected ||
+                              visual_context_.variant != context.variant;
   visual_context_ = context;
+  if (colors_changed) syncTextColors();
   invalidateInterior();
 }
 

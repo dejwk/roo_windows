@@ -41,7 +41,8 @@ class Icon : public Widget {
   roo_display::Color color() const { return color_; }
 
   /// Replaces the foreground color used to draw the pictogram. Transparent
-  /// means: defer to the theme's content color.
+  /// means: inherit the parent's default content color, or the theme's
+  /// content color when detached.
   void setColor(roo_display::Color color);
 
  private:

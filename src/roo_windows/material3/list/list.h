@@ -363,6 +363,10 @@ class ListEntry : public Material3Container {
   /// Returns the current list-resolved visual context.
   const ListEntryVisualContext& visualContext() const;
 
+  /// Supplies the secondary content color for default-colored slot widgets.
+  /// Explicit widget colors remain unchanged.
+  Color defaultColor() const override;
+
   /// Returns the row's Material 3 container color role.
   ::roo_windows::material3::ColorToken containerRole() const override;
 
@@ -414,6 +418,7 @@ class ListEntry : public Material3Container {
   void clearTextSlot(Widget*& slot, TextSlotMode& mode);
   void clearTextSlots();
   void syncTextSlotsFromItem();
+  void syncTextColors();
 
   ListItem* item_;
   Widget* leading_child_;

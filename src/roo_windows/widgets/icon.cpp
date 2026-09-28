@@ -1,6 +1,7 @@
 #include "roo_windows/widgets/icon.h"
 
 #include "roo_display/ui/tile.h"
+#include "roo_windows/core/container.h"
 
 namespace roo_windows {
 
@@ -23,7 +24,9 @@ void Icon::paint(PaintContext& ctx) const {
   Color color = color_;
   if (color == roo_display::color::Transparent) {
     const Theme& myTheme = theme();
-    color = myTheme.framework.color.resolve(FrameworkColorRole::kContent);
+    color = parent() != nullptr
+                ? parent()->defaultColor()
+                : myTheme.framework.color.resolve(FrameworkColorRole::kContent);
     if (isActivated() && usesHighlighterColor()) {
       color = myTheme.framework.color.resolve(FrameworkColorRole::kEmphasis);
     }
