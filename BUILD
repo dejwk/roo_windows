@@ -273,6 +273,8 @@ cc_test(
         ":roo_windows",
         ":test_golden_utils",
         "@roo_testing//:arduino_gtest_main",
+        # Capture the initial tap frame independently of host execution speed.
+        "@roo_testing//roo_testing/system:manual_time_mode",
     ],
 )
 
