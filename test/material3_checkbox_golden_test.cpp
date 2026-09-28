@@ -2,7 +2,7 @@
 #include "gtest/gtest.h"
 #include "roo_display.h"
 #include "roo_display/core/offscreen.h"
-#include "roo_windows/core/basic_surface_widget.h"
+#include "roo_windows/core/surface_widget.h"
 #include "roo_scheduler.h"
 #include "roo_windows.h"
 #include "roo_windows/material3/checkbox/checkbox.h"
@@ -13,10 +13,10 @@ namespace {
 
 using roo_display::Color;
 
-class SolidBackdrop : public BasicSurfaceWidget {
+class SolidBackdrop : public SurfaceWidget {
  public:
   SolidBackdrop(ApplicationContext& context, Color color, Dimensions dims)
-      : BasicSurfaceWidget(context), color_(color), dims_(dims) {}
+      : SurfaceWidget(context), color_(color), dims_(dims) {}
 
   Color background() const override { return color_; }
 

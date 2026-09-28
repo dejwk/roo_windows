@@ -12,7 +12,7 @@
 #include "roo_icons/outlined/24/action.h"
 #include "roo_scheduler.h"
 #include "roo_windows/core/application.h"
-#include "roo_windows/core/basic_widget.h"
+#include "roo_windows/core/widget.h"
 #include "roo_windows/core/canvas.h"
 #include "roo_windows/core/click_animation.h"
 #include "roo_windows/core/clipper.h"
@@ -149,7 +149,7 @@ class QueuedKeySource : public KeySource {
 // storage, selection, and layout bits.
 TEST(Material3NavigationRail, PublicTypesStayWithinPhaseOneSizeBudget) {
   constexpr size_t kDestinationBudget =
-      sizeof(BasicWidget) + sizeof(roo::string_view) + 2 * sizeof(void*) + 8;
+      sizeof(Widget) + sizeof(roo::string_view) + 2 * sizeof(void*) + 8;
   constexpr size_t kBadgedDestinationBudget =
       sizeof(NavigationRailDestination) + sizeof(Badge) + 4;
   constexpr size_t kNavigationRailBudget =

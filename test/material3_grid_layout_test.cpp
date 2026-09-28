@@ -1,6 +1,6 @@
 #include "gtest/gtest.h"
 #include "roo_scheduler.h"
-#include "roo_windows/core/basic_widget.h"
+#include "roo_windows/core/widget.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/theme.h"
 #include "roo_windows/material3/layout_scaffold/layout_scaffold.h"
@@ -15,10 +15,10 @@ class TestGridLayout : public GridLayout {
   int childCount() const { return getChildrenCount(); }
 };
 
-class ProbeWidget : public BasicWidget {
+class ProbeWidget : public Widget {
  public:
   ProbeWidget(ApplicationContext& context, YDim natural_height)
-      : BasicWidget(context), natural_height_(natural_height) {}
+      : Widget(context), natural_height_(natural_height) {}
 
   Dimensions getSuggestedMinimumDimensions() const override {
     return Dimensions(1, natural_height_);

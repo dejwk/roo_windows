@@ -5,7 +5,7 @@
 #include "roo_display/core/offscreen.h"
 #include "roo_testing/system/timer.h"
 #include "roo_windows/core/application.h"
-#include "roo_windows/core/basic_widget.h"
+#include "roo_windows/core/widget.h"
 #include "roo_windows/core/transient_surface_host.h"
 
 namespace roo_windows {

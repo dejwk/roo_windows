@@ -4,7 +4,7 @@
 #include "roo_scheduler.h"
 #include "roo_testing/system/timer.h"
 #include "roo_windows/core/application.h"
-#include "roo_windows/core/basic_widget.h"
+#include "roo_windows/core/widget.h"
 #include "roo_windows/core/environment.h"
 
 namespace roo_windows {
@@ -127,9 +127,9 @@ TEST(DisplayWindow, DisabledTouchNeverPolls) {
   }
   EXPECT_EQ(0, touch.polls);
 }
-class DeadlineRecordingWidget : public BasicWidget {
+class DeadlineRecordingWidget : public Widget {
  public:
-  using BasicWidget::BasicWidget;
+  using Widget::Widget;
   Dimensions getSuggestedMinimumDimensions() const override {
     return Dimensions(8, 8);
   }
@@ -184,9 +184,9 @@ TEST(DisplayWindow, GestureDeadlineWakesWithoutNewTouch) {
   EXPECT_TRUE(scheduler.empty());
 }
 
-class IdlePaintWidget : public BasicWidget {
+class IdlePaintWidget : public Widget {
  public:
-  using BasicWidget::BasicWidget;
+  using Widget::Widget;
   Dimensions getSuggestedMinimumDimensions() const override {
     return Dimensions(8, 8);
   }

@@ -12,7 +12,7 @@
 #include "roo_scheduler.h"
 #include "roo_windows/core/animation_registry.h"
 #include "roo_windows/core/application.h"
-#include "roo_windows/core/basic_widget.h"
+#include "roo_windows/core/widget.h"
 #include "roo_windows/core/environment.h"
 
 namespace {

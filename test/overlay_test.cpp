@@ -1679,7 +1679,7 @@ TEST_F(RooWindowsRenderTest, PointOverlayCanTintFlexOwnedGapSpace) {
   auto front = std::make_unique<PointOverlayBoxWidget>(context(), color::Blue,
                                                        Dimensions(18, 18));
   PointOverlayBoxWidget* front_ptr = front.get();
-  // Strip the BasicSurfaceWidget default padding so the widget's logical
+  // Strip the SurfaceWidget default padding so the widget's logical
   // bounds match the supplied 18x18 dimensions; otherwise the kPointOverlay
   // halo is fully inside the widget and there is no gap-space to test.
   front_ptr->setPadding(PaddingSize::kNone);

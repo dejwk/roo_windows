@@ -3,8 +3,9 @@
 #include "roo_windows/containers/list_layout.h"
 #include "roo_windows/containers/scrollable_panel.h"
 #include "roo_windows/core/application.h"
-#include "roo_windows/core/basic_widget.h"
+#include "roo_windows/core/widget.h"
 #include "roo_windows/core/environment.h"
+#include "roo_windows/core/margins_mixin.h"
 
 namespace roo_windows {
 namespace {
@@ -13,18 +14,18 @@ class Rows : public ListModel {
   int elementCount() const override { return 40; }
   void set(int, Widget&) const override {}
 };
-class Row : public BasicWidget {
+class Row : public Widget {
  public:
-  explicit Row(ApplicationContext& context) : BasicWidget(context) {}
+  explicit Row(ApplicationContext& context) : Widget(context) {}
   Dimensions getSuggestedMinimumDimensions() const override {
     return {100, 72};
   }
   void paint(PaintContext& context) const override { context.clear(); }
 };
 
-class SpacedRow : public Row {
+class SpacedRow : public MarginsMixin<Row> {
  public:
-  explicit SpacedRow(ApplicationContext& context) : Row(context) {}
+  explicit SpacedRow(ApplicationContext& context) : MarginsMixin<Row>(context) {}
 
   PreferredSize getPreferredSize() const override {
     return {PreferredSize::MatchParentWidth(), PreferredSize::ExactHeight(72)};

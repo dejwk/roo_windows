@@ -15,7 +15,7 @@
 #include "roo_scheduler.h"
 #include "roo_windows/core/animation_registry.h"
 #include "roo_windows/core/application.h"
-#include "roo_windows/core/basic_widget.h"
+#include "roo_windows/core/widget.h"
 #include "roo_windows/core/environment.h"
 
 namespace roo_windows::test {
@@ -54,9 +54,9 @@ class TestApplication {
   Application app_;
 };
 
-class ProbeWidget final : public BasicWidget {
+class ProbeWidget final : public Widget {
  public:
-  explicit ProbeWidget(ApplicationContext& context) : BasicWidget(context) {}
+  explicit ProbeWidget(ApplicationContext& context) : Widget(context) {}
 
   Dimensions getSuggestedMinimumDimensions() const override {
     return Dimensions(1, 1);

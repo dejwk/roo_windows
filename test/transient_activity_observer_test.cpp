@@ -10,10 +10,10 @@ namespace {
 
 using test_support::RooWindowsRenderTest;
 
-class ActivityObserver : public BasicWidget {
+class ActivityObserver : public Widget {
  public:
   explicit ActivityObserver(ApplicationContext& context)
-      : BasicWidget(context) {}
+      : Widget(context) {}
 
   Dimensions getSuggestedMinimumDimensions() const override {
     return Dimensions(8, 8);

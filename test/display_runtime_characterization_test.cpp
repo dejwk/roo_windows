@@ -7,7 +7,7 @@
 #include "roo_windows/core/destination.h"
 #include "roo_windows/core/navigation_host.h"
 #include "roo_windows/core/application.h"
-#include "roo_windows/core/basic_widget.h"
+#include "roo_windows/core/widget.h"
 #include "roo_windows/core/environment.h"
 
 namespace roo_windows {
@@ -33,9 +33,9 @@ class QueuedKeySource final : public KeySource {
   std::deque<KeyEvent> events_;
 };
 
-class RecordingWidget final : public BasicWidget {
+class RecordingWidget final : public Widget {
  public:
-  explicit RecordingWidget(ApplicationContext& context) : BasicWidget(context) {}
+  explicit RecordingWidget(ApplicationContext& context) : Widget(context) {}
 
   Dimensions getSuggestedMinimumDimensions() const override {
     return Dimensions(16, 16);

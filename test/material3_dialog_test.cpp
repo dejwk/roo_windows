@@ -5,7 +5,7 @@
 #include "roo_display/core/offscreen.h"
 #include "roo_scheduler.h"
 #include "roo_windows/core/application.h"
-#include "roo_windows/core/basic_widget.h"
+#include "roo_windows/core/widget.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/panel.h"
 #include "roo_windows/core/text_input.h"
@@ -32,11 +32,11 @@ class DialogTestAccess {
 
 namespace {
 
-class TestContent final : public BasicWidget {
+class TestContent final : public Widget {
  public:
   explicit TestContent(ApplicationContext& context,
                        int* destruction_count = nullptr)
-      : BasicWidget(context), destruction_count_(destruction_count) {}
+      : Widget(context), destruction_count_(destruction_count) {}
 
   ~TestContent() override {
     if (destruction_count_ != nullptr) ++*destruction_count_;
@@ -144,10 +144,10 @@ class InlineBodyDialog final : public BasicDialog {
   ~InlineBodyDialog() override { prepareForDerivedDestruction(); }
 
  private:
-  class InlineBody final : public BasicWidget {
+  class InlineBody final : public Widget {
    public:
     InlineBody(ApplicationContext& context, bool& detached_before_delete)
-        : BasicWidget(context),
+        : Widget(context),
           detached_before_delete_(detached_before_delete) {}
 
     ~InlineBody() override { detached_before_delete_ = parent() == nullptr; }

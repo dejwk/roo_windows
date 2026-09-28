@@ -6,26 +6,26 @@
 #include "roo_display/core/offscreen.h"
 #include "roo_scheduler.h"
 #include "roo_windows/core/application.h"
-#include "roo_windows/core/basic_widget.h"
+#include "roo_windows/core/widget.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/panel.h"
 
 namespace roo_windows {
 namespace {
 
-class TestWidget final : public BasicWidget {
+class TestWidget final : public Widget {
  public:
-  explicit TestWidget(ApplicationContext& context) : BasicWidget(context) {}
+  explicit TestWidget(ApplicationContext& context) : Widget(context) {}
 
   Dimensions getSuggestedMinimumDimensions() const override {
     return Dimensions(1, 1);
   }
 };
 
-class ObservingWidget final : public BasicWidget {
+class ObservingWidget final : public Widget {
  public:
   explicit ObservingWidget(ApplicationContext& context)
-      : BasicWidget(context) {}
+      : Widget(context) {}
 
   bool observePresentation() {
     return context().presentations().observe(*this);

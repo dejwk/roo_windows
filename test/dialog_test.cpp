@@ -5,15 +5,15 @@
 #include "roo_display/core/offscreen.h"
 #include "roo_scheduler.h"
 #include "roo_windows/core/application.h"
-#include "roo_windows/core/basic_widget.h"
+#include "roo_windows/core/widget.h"
 #include "roo_windows/core/environment.h"
 
 namespace roo_windows {
 namespace {
 
-class TestContent final : public BasicWidget {
+class TestContent final : public Widget {
  public:
-  explicit TestContent(ApplicationContext& context) : BasicWidget(context) {}
+  explicit TestContent(ApplicationContext& context) : Widget(context) {}
 
   Dimensions getSuggestedMinimumDimensions() const override {
     return Dimensions(1, 1);
@@ -91,10 +91,10 @@ class MutatingDialog final : public Dialog {
   TestParent& new_parent_;
 };
 
-class DestructionContent final : public BasicWidget {
+class DestructionContent final : public Widget {
  public:
   DestructionContent(ApplicationContext& context, bool& detached_before_delete)
-      : BasicWidget(context), detached_before_delete_(detached_before_delete) {}
+      : Widget(context), detached_before_delete_(detached_before_delete) {}
 
   ~DestructionContent() override {
     detached_before_delete_ = parent() == nullptr;
@@ -136,10 +136,10 @@ class EnterContentDialog final : public Dialog {
   ~EnterContentDialog() override { prepareForDerivedDestruction(); }
 
  private:
-  class MeasuredContent final : public BasicWidget {
+  class MeasuredContent final : public Widget {
    public:
     MeasuredContent(ApplicationContext& context, int& measure_count)
-        : BasicWidget(context), measure_count_(measure_count) {}
+        : Widget(context), measure_count_(measure_count) {}
 
     Dimensions getSuggestedMinimumDimensions() const override {
       ++measure_count_;

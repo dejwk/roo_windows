@@ -10,7 +10,7 @@
 #include "roo_icons/outlined/24/action.h"
 #include "roo_scheduler.h"
 #include "roo_windows/core/application.h"
-#include "roo_windows/core/basic_widget.h"
+#include "roo_windows/core/widget.h"
 #include "roo_windows/core/canvas.h"
 #include "roo_windows/core/clipper.h"
 #include "roo_windows/core/container.h"
@@ -195,7 +195,7 @@ class TestNavigationBar : public NavigationBar {
 // selection, and layout mode.
 TEST(Material3NavigationBar, PublicTypesStayWithinPhaseOneSizeBudget) {
   constexpr size_t kDestinationBudget =
-      sizeof(BasicWidget) + sizeof(roo::string_view) + 2 * sizeof(void*) + 8;
+      sizeof(Widget) + sizeof(roo::string_view) + 2 * sizeof(void*) + 8;
   constexpr size_t kBadgedDestinationBudget =
       sizeof(NavigationBarDestination) + sizeof(Badge) + 4;
   constexpr size_t kNavigationBarBudget =

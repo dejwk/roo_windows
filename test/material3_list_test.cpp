@@ -8,7 +8,7 @@
 #include "roo_icons/outlined/24/notification.h"
 #include "roo_scheduler.h"
 #include "roo_windows/containers/flex_layout.h"
-#include "roo_windows/core/basic_widget.h"
+#include "roo_windows/core/widget.h"
 #include "roo_windows/core/destination.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/material3/list/list.h"
@@ -52,10 +52,10 @@ static_assert(std::is_base_of<ListItem, RadioListItem>::value,
 static_assert(std::is_base_of<ListItem, SwitchListItem>::value,
               "SwitchListItem must remain a ListItem descriptor");
 
-class TestWidget : public BasicWidget {
+class TestWidget : public Widget {
  public:
   explicit TestWidget(ApplicationContext& context, Dimensions dimensions = {})
-      : BasicWidget(context), dimensions_(dimensions) {}
+      : Widget(context), dimensions_(dimensions) {}
 
   Dimensions getSuggestedMinimumDimensions() const override {
     return dimensions_;
@@ -65,11 +65,11 @@ class TestWidget : public BasicWidget {
   Dimensions dimensions_;
 };
 
-class CountingMeasureWidget : public BasicWidget {
+class CountingMeasureWidget : public Widget {
  public:
   CountingMeasureWidget(ApplicationContext& context, Dimensions suggested,
                         Dimensions measured)
-      : BasicWidget(context),
+      : Widget(context),
         suggested_(suggested),
         measured_(measured),
         measure_count_(0) {}

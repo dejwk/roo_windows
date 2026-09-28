@@ -10,7 +10,7 @@
 #include "roo_scheduler.h"
 #include "roo_testing/system/timer.h"
 #include "roo_windows/core/application.h"
-#include "roo_windows/core/basic_widget.h"
+#include "roo_windows/core/widget.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/panel.h"
 #include "roo_windows/core/text_input.h"
@@ -66,10 +66,10 @@ class TestPanel : public Panel {
   Widget* preferred_ = nullptr;
 };
 
-class FocusableWidget : public BasicWidget {
+class FocusableWidget : public Widget {
  public:
   explicit FocusableWidget(ApplicationContext& context)
-      : BasicWidget(context) {}
+      : Widget(context) {}
 
   bool isFocusable() const override { return true; }
 
@@ -247,10 +247,10 @@ class ManualTouchDevice : public roo_display::TouchDevice {
   int16_t y_ = 0;
 };
 
-class GestureSpyWidget : public BasicWidget {
+class GestureSpyWidget : public Widget {
  public:
   explicit GestureSpyWidget(ApplicationContext& context)
-      : BasicWidget(context) {}
+      : Widget(context) {}
 
   bool supportsTap() const override { return tap_enabled; }
 
@@ -281,7 +281,7 @@ class GestureSpyWidget : public BasicWidget {
 
   void onCancel() override {
     ++cancel_count;
-    BasicWidget::onCancel();
+    Widget::onCancel();
     if (cancellation != nullptr) cancellation();
   }
 

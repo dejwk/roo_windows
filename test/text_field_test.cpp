@@ -6,9 +6,9 @@
 #include "roo_windows_render_test_support.h"
 namespace roo_windows {
 namespace {
-class Target : public BasicWidget, public internal::TextEditTarget {
+class Target : public Widget, public internal::TextEditTarget {
  public:
-  using BasicWidget::BasicWidget;
+  using Widget::Widget;
   Dimensions getSuggestedMinimumDimensions() const override {
     return {100, 40};
   }

@@ -8,7 +8,7 @@
 #include "roo_display/core/offscreen.h"
 #include "roo_scheduler.h"
 #include "roo_windows/core/application.h"
-#include "roo_windows/core/basic_widget.h"
+#include "roo_windows/core/widget.h"
 #include "roo_windows/core/environment.h"
 
 namespace roo_windows {
@@ -22,9 +22,9 @@ class NavigationHostTestAccess {
 }  // namespace test
 namespace {
 
-class TestWidget : public BasicWidget {
+class TestWidget : public Widget {
  public:
-  explicit TestWidget(ApplicationContext& context) : BasicWidget(context) {}
+  explicit TestWidget(ApplicationContext& context) : Widget(context) {}
 
   Dimensions getSuggestedMinimumDimensions() const override {
     return Dimensions(4, 4);

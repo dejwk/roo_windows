@@ -332,8 +332,8 @@ TEST_F(SwitchAnimationTest, DetachedLegacySwitchSnapsWithoutResume) {
 // Records the idle widget costs separately from the registry's bounded active
 // record (budgeted at 128 bytes in the animation-registry design).
 TEST(Material3Switch, RegistryMigrationKeepsCompactIdleState) {
-  EXPECT_LE(sizeof(Switch), sizeof(BasicWidget) + 2 * sizeof(void*) + 8U);
-  EXPECT_LE(sizeof(::roo_windows::Switch), sizeof(BasicWidget) + 8U);
+  EXPECT_LE(sizeof(Switch), sizeof(Widget) + 2 * sizeof(void*) + 8U);
+  EXPECT_LE(sizeof(::roo_windows::Switch), sizeof(Widget) + 8U);
 }
 
 }  // namespace

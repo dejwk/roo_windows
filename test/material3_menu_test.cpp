@@ -5,7 +5,7 @@
 #include "roo_display/core/offscreen.h"
 #include "roo_scheduler.h"
 #include "roo_windows/core/application.h"
-#include "roo_windows/core/basic_widget.h"
+#include "roo_windows/core/widget.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/panel.h"
 #include "roo_windows/material3/menu/menu.h"
@@ -20,9 +20,9 @@ class TestPanel final : public Panel {
   using Panel::removeLast;
 };
 
-class SourceWidget final : public BasicWidget {
+class SourceWidget final : public Widget {
  public:
-  explicit SourceWidget(ApplicationContext& context) : BasicWidget(context) {}
+  explicit SourceWidget(ApplicationContext& context) : Widget(context) {}
   Dimensions getSuggestedMinimumDimensions() const override {
     return Dimensions(40, 24);
   }

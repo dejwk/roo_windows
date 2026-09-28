@@ -5,7 +5,7 @@
 #include "roo_scheduler.h"
 #include "roo_windows/containers/horizontal_page_host.h"
 #include "roo_windows/containers/scroll_motion_controller.h"
-#include "roo_windows/core/basic_widget.h"
+#include "roo_windows/core/widget.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/surface_widget.h"
 #include "roo_windows/material3/tabs/tabs.h"
@@ -126,9 +126,9 @@ class RecordingScrollableTabs : public ScrollableTabs {
 class Material3TabsRenderTest
     : public RooWindowsRenderTestSized<180, Scaled(48)> {};
 
-class ProbePage : public BasicWidget {
+class ProbePage : public Widget {
  public:
-  explicit ProbePage(ApplicationContext& context) : BasicWidget(context) {}
+  explicit ProbePage(ApplicationContext& context) : Widget(context) {}
 
   Dimensions getSuggestedMinimumDimensions() const override {
     return Dimensions(10, 10);

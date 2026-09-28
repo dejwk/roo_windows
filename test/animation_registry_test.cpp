@@ -11,7 +11,7 @@
 #include "roo_scheduler.h"
 #include "roo_time.h"
 #include "roo_windows/core/application.h"
-#include "roo_windows/core/basic_widget.h"
+#include "roo_windows/core/widget.h"
 #include "roo_windows/core/environment.h"
 
 namespace roo_windows {
@@ -61,10 +61,10 @@ class TestApplication {
   Application app_;
 };
 
-class RecordingWidget : public BasicWidget {
+class RecordingWidget : public Widget {
  public:
   explicit RecordingWidget(ApplicationContext& context)
-      : BasicWidget(context) {}
+      : Widget(context) {}
 
   struct Frame {
     AnimationTag tag;

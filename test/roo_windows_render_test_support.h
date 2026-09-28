@@ -4,8 +4,10 @@
 #include "roo_display.h"
 #include "roo_display/core/offscreen.h"
 #include "roo_scheduler.h"
-#include "roo_windows/core/basic_surface_widget.h"
-#include "roo_windows/core/basic_widget.h"
+#include "roo_windows/core/margins_mixin.h"
+#include "roo_windows/core/padding_mixin.h"
+#include "roo_windows/core/surface_widget.h"
+#include "roo_windows/core/widget.h"
 #include "roo_windows.h"
 
 namespace roo_windows::test_support {
@@ -15,11 +17,16 @@ inline roo_display::Color QuantizeToArgb4444(roo_display::Color color) {
   return mode.toArgbColor(mode.fromArgbColor(color));
 }
 
-class ColorBoxWidget : public BasicSurfaceWidget {
+class ColorBoxWidget
+    : public MarginsMixin<PaddingMixin<SurfaceWidget, PaddingSize::kRegular>,
+                          MarginSize::kRegular> {
  public:
+  using Base = MarginsMixin<PaddingMixin<SurfaceWidget, PaddingSize::kRegular>,
+                            MarginSize::kRegular>;
+
   ColorBoxWidget(ApplicationContext& context, roo_display::Color color,
                  Dimensions dims)
-      : BasicSurfaceWidget(context), color_(color), dims_(dims) {}
+      : Base(context), color_(color), dims_(dims) {}
 
   roo_display::Color background() const override { return color_; }
 
@@ -55,11 +62,11 @@ class PointOverlayBoxWidget : public ColorBoxWidget {
   bool isClickable() const override { return true; }
 };
 
-class MutableShapeColorBoxWidget : public BasicSurfaceWidget {
+class MutableShapeColorBoxWidget : public SurfaceWidget {
  public:
   MutableShapeColorBoxWidget(ApplicationContext& context,
                              roo_display::Color color, Dimensions dims)
-      : BasicSurfaceWidget(context),
+      : SurfaceWidget(context),
         color_(color),
         dims_(dims),
         rounded_(false) {}
@@ -86,10 +93,10 @@ class MutableShapeColorBoxWidget : public BasicSurfaceWidget {
   bool rounded_;
 };
 
-class TouchSpyWidget : public BasicWidget {
+class TouchSpyWidget : public Widget {
  public:
   explicit TouchSpyWidget(ApplicationContext& context, Dimensions dims)
-      : BasicWidget(context), dims_(dims) {}
+      : Widget(context), dims_(dims) {}
 
   Dimensions getSuggestedMinimumDimensions() const override { return dims_; }
 
@@ -97,10 +104,10 @@ class TouchSpyWidget : public BasicWidget {
   Dimensions dims_;
 };
 
-class GestureRoleSpyWidget : public BasicWidget {
+class GestureRoleSpyWidget : public Widget {
  public:
   explicit GestureRoleSpyWidget(ApplicationContext& context)
-      : BasicWidget(context), down_count_(0) {}
+      : Widget(context), down_count_(0) {}
 
   bool supportsTap() const override { return true; }
 
@@ -120,11 +127,11 @@ class GestureRoleSpyWidget : public BasicWidget {
   int down_count_;
 };
 
-class InkBoundsWidget : public BasicWidget {
+class InkBoundsWidget : public Widget {
  public:
   InkBoundsWidget(ApplicationContext& context, Dimensions dims,
                   Insets ink_insets)
-      : BasicWidget(context), dims_(dims), ink_insets_(ink_insets) {}
+      : Widget(context), dims_(dims), ink_insets_(ink_insets) {}
 
   Dimensions getSuggestedMinimumDimensions() const override { return dims_; }
 

@@ -4,7 +4,7 @@
 
 #include "gtest/gtest.h"
 #include "roo_scheduler.h"
-#include "roo_windows/core/basic_widget.h"
+#include "roo_windows/core/widget.h"
 #include "roo_windows/core/environment.h"
 
 namespace roo_windows {
@@ -15,10 +15,10 @@ ApplicationContext MakeContext(Environment& bootstrap) {
                             bootstrap.keyboardColorTheme());
 }
 
-class ProbeWidget : public BasicWidget {
+class ProbeWidget : public Widget {
  public:
   ProbeWidget(ApplicationContext& context, Dimensions natural)
-      : BasicWidget(context),
+      : Widget(context),
         natural_(natural),
         measure_count_(0),
         layout_count_(0),

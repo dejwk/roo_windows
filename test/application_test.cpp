@@ -4,7 +4,7 @@
 #include "roo_display.h"
 #include "roo_display/core/offscreen.h"
 #include "roo_scheduler.h"
-#include "roo_windows/core/basic_widget.h"
+#include "roo_windows/core/widget.h"
 #include "roo_windows/core/destination.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/navigation_host.h"
@@ -14,9 +14,9 @@
 namespace roo_windows {
 namespace {
 
-class TestWidget : public BasicWidget {
+class TestWidget : public Widget {
  public:
-  explicit TestWidget(ApplicationContext& context) : BasicWidget(context) {}
+  explicit TestWidget(ApplicationContext& context) : Widget(context) {}
 
   Dimensions getSuggestedMinimumDimensions() const override {
     return Dimensions(1, 1);

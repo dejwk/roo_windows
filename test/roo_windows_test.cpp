@@ -13,11 +13,11 @@ using namespace roo_windows::test_support;
 
 namespace roo_windows {
 
-class TiledRectWidget : public BasicSurfaceWidget {
+class TiledRectWidget : public SurfaceWidget {
  public:
   TiledRectWidget(ApplicationContext& context, Rect tile_bounds,
                   bool draw_border)
-      : BasicSurfaceWidget(context),
+      : SurfaceWidget(context),
         tile_bounds_(tile_bounds),
         draw_border_(draw_border) {}
 
@@ -66,10 +66,10 @@ class OpaqueExposedPanel : public ExposedPanel {
   Color background() const override { return color::Blue; }
 };
 
-class FocusableTestWidget : public BasicWidget {
+class FocusableTestWidget : public Widget {
  public:
   explicit FocusableTestWidget(ApplicationContext& context)
-      : BasicWidget(context), focus_change_count_(0), last_focused_(false) {}
+      : Widget(context), focus_change_count_(0), last_focused_(false) {}
 
   Dimensions getSuggestedMinimumDimensions() const override {
     return Dimensions(1, 1);
@@ -96,11 +96,11 @@ class TextFieldDestination : public Destination {
   TextField field;
 };
 
-class SloppyTouchSpyWidget : public BasicWidget {
+class SloppyTouchSpyWidget : public Widget {
  public:
   SloppyTouchSpyWidget(ApplicationContext& context, Dimensions dims,
                        int16_t right_slop)
-      : BasicWidget(context), dims_(dims), right_slop_(right_slop) {}
+      : Widget(context), dims_(dims), right_slop_(right_slop) {}
 
   Dimensions getSuggestedMinimumDimensions() const override { return dims_; }
 
@@ -114,23 +114,25 @@ class SloppyTouchSpyWidget : public BasicWidget {
   int16_t right_slop_;
 };
 
-class DispatcherTestWidget : public BasicWidget {
+class DispatcherTestWidget : public Widget {
  public:
   explicit DispatcherTestWidget(ApplicationContext& context)
-      : BasicWidget(context) {}
+      : Widget(context) {}
 
   Dimensions getSuggestedMinimumDimensions() const override {
     return Dimensions(1, 1);
   }
 
+  bool isClickable() const override { return hasInteractiveChangeHandler(); }
+
   void triggerChange() { triggerInteractiveChange(); }
 };
 
-class SelfExcludingColorWidget : public BasicWidget {
+class SelfExcludingColorWidget : public Widget {
  public:
   SelfExcludingColorWidget(ApplicationContext& context, Color color,
                            Dimensions dims)
-      : BasicWidget(context),
+      : Widget(context),
         color_(color),
         dims_(dims),
         paint_delay_ms_(0),
@@ -166,10 +168,10 @@ class SelfExcludingColorWidget : public BasicWidget {
   mutable int paint_count_;
 };
 
-class RedirtyingColorWidget : public BasicWidget {
+class RedirtyingColorWidget : public Widget {
  public:
   explicit RedirtyingColorWidget(ApplicationContext& context)
-      : BasicWidget(context), redirty_(false), paint_count_(0) {}
+      : Widget(context), redirty_(false), paint_count_(0) {}
 
   void paint(PaintContext& ctx) const override {
     ++paint_count_;

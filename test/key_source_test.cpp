@@ -5,7 +5,7 @@
 #include "roo_display/core/offscreen.h"
 #include "roo_scheduler.h"
 #include "roo_windows/core/application.h"
-#include "roo_windows/core/basic_widget.h"
+#include "roo_windows/core/widget.h"
 #include "roo_windows/core/destination.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/navigation_host.h"
@@ -49,10 +49,10 @@ class QueuedKeySource : public KeySource {
   std::vector<int> max_events_;
 };
 
-class FocusableBackWidget : public BasicWidget {
+class FocusableBackWidget : public Widget {
  public:
   explicit FocusableBackWidget(ApplicationContext& context)
-      : BasicWidget(context) {}
+      : Widget(context) {}
 
   bool isFocusable() const override { return true; }
   Dimensions getSuggestedMinimumDimensions() const override {
@@ -60,10 +60,10 @@ class FocusableBackWidget : public BasicWidget {
   }
 };
 
-class KeyRecordingWidget : public BasicWidget {
+class KeyRecordingWidget : public Widget {
  public:
   explicit KeyRecordingWidget(ApplicationContext& context)
-      : BasicWidget(context) {}
+      : Widget(context) {}
 
   bool isFocusable() const override { return true; }
   Dimensions getSuggestedMinimumDimensions() const override {

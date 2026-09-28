@@ -7,7 +7,7 @@
 #include "roo_icons/outlined/24/alert.h"
 #include "roo_scheduler.h"
 #include "roo_windows/core/application.h"
-#include "roo_windows/core/basic_surface_widget.h"
+#include "roo_windows/core/surface_widget.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/material3/dialog/basic_dialog.h"
 #include "roo_windows/material3/dialog/full_screen_dialog.h"

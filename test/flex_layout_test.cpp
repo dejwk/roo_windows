@@ -3,7 +3,7 @@
 #include "gtest/gtest.h"
 #include "roo_scheduler.h"
 #include "roo_windows/containers/scrollable_panel.h"
-#include "roo_windows/core/basic_widget.h"
+#include "roo_windows/core/widget.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/material3/slider/slider.h"
 #include "roo_windows/widgets/divider.h"
@@ -38,10 +38,10 @@ class TestFullWidthFlexLayout : public TestFlexLayout {
   }
 };
 
-class TestWrapContentWidget : public BasicWidget {
+class TestWrapContentWidget : public Widget {
  public:
   TestWrapContentWidget(ApplicationContext& context, Dimensions dims)
-      : BasicWidget(context), dims_(dims) {}
+      : Widget(context), dims_(dims) {}
 
   Dimensions getSuggestedMinimumDimensions() const override { return dims_; }
 
@@ -63,10 +63,10 @@ class TestPaddedColumnFlexLayout : public TestFlexLayout {
 // A widget that reports an exact preferred size larger than what the parent
 // is able to provide. Mimics e.g. a long TextLabel whose natural width exceeds
 // the available cross-axis space in a padded container.
-class TestExactSizeWidget : public BasicWidget {
+class TestExactSizeWidget : public Widget {
  public:
   TestExactSizeWidget(ApplicationContext& context, Dimensions dims)
-      : BasicWidget(context), dims_(dims) {}
+      : Widget(context), dims_(dims) {}
 
   Dimensions getSuggestedMinimumDimensions() const override { return dims_; }
 

@@ -5,7 +5,7 @@
 #include "roo_display/core/offscreen.h"
 #include "roo_scheduler.h"
 #include "roo_windows.h"
-#include "roo_windows/core/basic_surface_widget.h"
+#include "roo_windows/core/surface_widget.h"
 #include "roo_windows/core/clipper.h"
 #include "roo_windows/core/overlay_spec.h"
 
@@ -33,10 +33,10 @@ void ExpectPressOverlaySpecEq(const PressOverlaySpec& expected,
   EXPECT_FLOAT_EQ(expected.clip_circle_radius, actual.clip_circle_radius);
 }
 
-class OverlaySpecSourceWidget : public BasicSurfaceWidget {
+class OverlaySpecSourceWidget : public SurfaceWidget {
  public:
   explicit OverlaySpecSourceWidget(ApplicationContext& context)
-      : BasicSurfaceWidget(context) {}
+      : SurfaceWidget(context) {}
 
   Color background() const override { return color::White; }
 

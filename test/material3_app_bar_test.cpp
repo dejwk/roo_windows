@@ -4,7 +4,7 @@
 #include "gtest/gtest.h"
 #include "roo_icons/outlined/24/navigation.h"
 #include "roo_scheduler.h"
-#include "roo_windows/core/basic_widget.h"
+#include "roo_windows/core/widget.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/material3/app_bar/app_bar.h"
 #include "roo_windows/material3/app_bar/app_bar_tokens.h"
@@ -38,9 +38,9 @@ class TestSearchAppBar : public SearchAppBar {
   Widget& childAt(int index) { return getChild(index); }
 };
 
-class ProbeWidget : public BasicWidget {
+class ProbeWidget : public Widget {
  public:
-  using BasicWidget::BasicWidget;
+  using Widget::Widget;
   Dimensions getSuggestedMinimumDimensions() const override {
     return Dimensions(1, 1);
   }

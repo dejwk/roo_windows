@@ -9,7 +9,7 @@
 #include "roo_display.h"
 #include "roo_display/core/offscreen.h"
 #include "roo_testing/system/timer.h"
-#include "roo_windows/core/basic_widget.h"
+#include "roo_windows/core/widget.h"
 #include "roo_windows/core/gesture_detector.h"
 
 namespace {
@@ -517,9 +517,9 @@ class DeadlinePanel : public Panel {
   DragAxis dragAxis() const override { return DragAxis::kHorizontal; }
 };
 
-class DeadlineWidget : public BasicWidget {
+class DeadlineWidget : public Widget {
  public:
-  explicit DeadlineWidget(ApplicationContext& context) : BasicWidget(context) {
+  explicit DeadlineWidget(ApplicationContext& context) : Widget(context) {
     trace.reserve(32);
   }
   Dimensions getSuggestedMinimumDimensions() const override {

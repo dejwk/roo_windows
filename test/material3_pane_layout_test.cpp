@@ -1,6 +1,6 @@
 #include "gtest/gtest.h"
 #include "roo_scheduler.h"
-#include "roo_windows/core/basic_widget.h"
+#include "roo_windows/core/widget.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/theme.h"
 #include "roo_windows/material3/layout_scaffold/layout_scaffold.h"
@@ -15,9 +15,9 @@ class TestPaneLayout : public PaneLayout {
   int childCount() const { return getChildrenCount(); }
 };
 
-class ProbeWidget : public BasicWidget {
+class ProbeWidget : public Widget {
  public:
-  explicit ProbeWidget(ApplicationContext& context) : BasicWidget(context) {}
+  explicit ProbeWidget(ApplicationContext& context) : Widget(context) {}
 
   Dimensions getSuggestedMinimumDimensions() const override {
     return Dimensions(1, 1);

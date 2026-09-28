@@ -2,7 +2,7 @@
 
 #include "gtest/gtest.h"
 #include "roo_scheduler.h"
-#include "roo_windows/core/basic_widget.h"
+#include "roo_windows/core/widget.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/theme.h"
 #include "roo_windows/material3/layout_scaffold/layout_scaffold.h"
@@ -18,11 +18,11 @@ class TestLayoutScaffold : public LayoutScaffold {
   int childCount() const { return getChildrenCount(); }
 };
 
-class ProbeWidget : public BasicWidget {
+class ProbeWidget : public Widget {
  public:
   ProbeWidget(ApplicationContext& context, XDim natural_width,
               YDim natural_height)
-      : BasicWidget(context),
+      : Widget(context),
         natural_width_(natural_width),
         natural_height_(natural_height) {}
 

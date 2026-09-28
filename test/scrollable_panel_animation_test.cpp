@@ -8,10 +8,10 @@ using namespace roo_windows::test_support;
 namespace roo_windows {
 namespace {
 
-class MutableContent : public BasicSurfaceWidget {
+class MutableContent : public SurfaceWidget {
  public:
   MutableContent(ApplicationContext& context, Dimensions dimensions)
-      : BasicSurfaceWidget(context), dimensions_(dimensions) {}
+      : SurfaceWidget(context), dimensions_(dimensions) {}
 
   Dimensions getSuggestedMinimumDimensions() const override {
     return dimensions_;

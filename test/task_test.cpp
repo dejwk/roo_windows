@@ -8,16 +8,16 @@
 #include "roo_scheduler.h"
 #include "roo_windows/containers/scrollable_panel.h"
 #include "roo_windows/core/application.h"
-#include "roo_windows/core/basic_widget.h"
+#include "roo_windows/core/widget.h"
 #include "roo_windows/core/environment.h"
 
 namespace roo_windows {
 namespace {
 
-class FocusableWidget : public BasicWidget {
+class FocusableWidget : public Widget {
  public:
   explicit FocusableWidget(ApplicationContext& context)
-      : BasicWidget(context) {}
+      : Widget(context) {}
 
   /// Reports a stable test size so Application refresh attaches layout bounds.
   Dimensions getSuggestedMinimumDimensions() const override {
@@ -35,13 +35,15 @@ class EmptyKeySource : public KeySource {
   bool hasPendingEvents() const override { return false; }
 };
 
-class DirectWidget : public BasicWidget {
+class DirectWidget : public Widget {
  public:
-  explicit DirectWidget(ApplicationContext& context) : BasicWidget(context) {}
+  explicit DirectWidget(ApplicationContext& context) : Widget(context) {}
 
   Dimensions getSuggestedMinimumDimensions() const override {
     return Dimensions(4, 4);
   }
+
+  bool isClickable() const override { return hasInteractiveChangeHandler(); }
 };
 
 class DestructionTrackingWidget : public FocusableWidget {

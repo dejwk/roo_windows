@@ -5,7 +5,7 @@
 #include "roo_display/core/offscreen.h"
 #include "roo_scheduler.h"
 #include "roo_windows/core/application.h"
-#include "roo_windows/core/basic_widget.h"
+#include "roo_windows/core/widget.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/panel.h"
 #include "roo_windows/dialogs/dialog.h"
@@ -14,9 +14,9 @@
 namespace roo_windows {
 namespace {
 
-class PinAnchor final : public BasicWidget {
+class PinAnchor final : public Widget {
  public:
-  explicit PinAnchor(ApplicationContext& context) : BasicWidget(context) {}
+  explicit PinAnchor(ApplicationContext& context) : Widget(context) {}
 
   Dimensions getSuggestedMinimumDimensions() const override {
     return Dimensions(1, 1);
@@ -396,7 +396,7 @@ TEST_F(RooWindowsRenderTest, DeadlineInterruptionRetainsPendingPin) {
 // Verifies repeated presentations own one compact active object and leave no
 // dormant storage in the anchor class.
 TEST_F(RooWindowsRenderTest, RepeatedShowHideUsesActiveOnlyStorage) {
-  static_assert(sizeof(PinAnchor) == sizeof(BasicWidget),
+  static_assert(sizeof(PinAnchor) == sizeof(Widget),
                 "pin anchors must not gain dormant storage");
   static_assert(
       sizeof(MutablePin) <= sizeof(PresentationPin) + 2 * sizeof(void*),

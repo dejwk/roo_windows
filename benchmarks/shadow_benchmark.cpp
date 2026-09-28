@@ -45,11 +45,11 @@ roo_display::Display display(device);
 namespace roo_windows {
 namespace {
 
-// class SolidWidget : public BasicWidget {
+// class SolidWidget : public Widget {
 //  public:
 //   SolidWidget(const Environment& env, roo_display::Color color, Dimensions
 //   dims)
-//       : BasicWidget(env), color_(color), dims_(dims) {}
+//       : Widget(env), color_(color), dims_(dims) {}
 
 //   roo_display::Color background() const override { return color_; }
 
@@ -62,12 +62,12 @@ namespace {
 //   Dimensions dims_;
 // };
 
-class DecoratedWidget : public BasicSurfaceWidget {
+class DecoratedWidget : public SurfaceWidget {
  public:
   DecoratedWidget(ApplicationContext& cxt, roo_display::Color fill_color,
                   roo_display::Color outline_color, BorderStyle border_style,
                   uint8_t elevation, Dimensions dims)
-      : BasicSurfaceWidget(cxt),
+      : SurfaceWidget(cxt),
         fill_color_(fill_color),
         outline_color_(outline_color),
         border_style_(border_style),
