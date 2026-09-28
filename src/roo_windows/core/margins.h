@@ -47,19 +47,19 @@ class Margins {
     switch (size) {
       case MarginSize::kNone:
         return 0;
-      case MarginSize::kSmall:
+      case MarginSize::k2dp:
         return Scaled(2);
-      case MarginSize::kRegular:
+      case MarginSize::k4dp:
         return Scaled(4);
-      case MarginSize::kLarge:
+      case MarginSize::k8dp:
         return Scaled(8);
-      case MarginSize::kHuge:
+      case MarginSize::k12dp:
         return Scaled(12);
-      case MarginSize::kHumongous:
+      case MarginSize::k20dp:
         return Scaled(20);
-      case MarginSize::kNegativeSmall:
+      case MarginSize::kNegative2dp:
         return Scaled(-2);
-      case MarginSize::kNegative:
+      case MarginSize::kNegative4dp:
         return Scaled(-4);
       default:
         return Scaled(4);

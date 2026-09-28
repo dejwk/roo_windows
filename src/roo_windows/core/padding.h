@@ -51,21 +51,21 @@ class Padding {
     switch (size) {
       case PaddingSize::kNone:
         return 0;
-      case PaddingSize::kTiny:
+      case PaddingSize::k4dp:
         return Scaled(4);
-      case PaddingSize::kSmall:
+      case PaddingSize::k8dp:
         return Scaled(8);
-      case PaddingSize::kRegular:
+      case PaddingSize::k12dp:
         return Scaled(12);
-      case PaddingSize::kLarge:
+      case PaddingSize::k16dp:
         return Scaled(16);
-      case PaddingSize::kHuge:
+      case PaddingSize::k24dp:
         return Scaled(24);
-      case PaddingSize::kHumongous:
+      case PaddingSize::k36dp:
         return Scaled(36);
-      case PaddingSize::kNegativeTiny:
+      case PaddingSize::kNegative4dp:
         return Scaled(-4);
-      case PaddingSize::kNegativeSmall:
+      case PaddingSize::kNegative8dp:
         return Scaled(-8);
       default:
         return Scaled(12);
