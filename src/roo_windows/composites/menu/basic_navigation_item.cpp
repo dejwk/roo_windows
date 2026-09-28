@@ -17,7 +17,6 @@ BasicNavigationItem::BasicNavigationItem(ApplicationContext& context,
   setPadding(Padding(PaddingSize::kSmall, PaddingSize::kTiny));
   setGap(Scaled(8));
   add(icon_, {.flex_grow = 0, .flex_shrink = 0});
-  label_.setMargins(MarginSize::kNone);
   label_.setPadding(PaddingSize::kNone, PaddingSize::kTiny);
   add(label_, {.flex_grow = 1, .flex_shrink = 1});
 
@@ -39,9 +38,7 @@ BasicNavigationItemWithSubtext::BasicNavigationItemWithSubtext(
   setPadding(Padding(PaddingSize::kSmall, PaddingSize::kTiny));
   setGap(Scaled(8));
   add(icon_, {.flex_grow = 0, .flex_shrink = 0});
-  label_.setMargins(MarginSize::kNone);
   label_.setPadding(PaddingSize::kNone);
-  subtext_.setMargins(MarginSize::kNone);
   subtext_.setPadding(PaddingSize::kNone);
   content_.add(label_);
   content_.add(subtext_);

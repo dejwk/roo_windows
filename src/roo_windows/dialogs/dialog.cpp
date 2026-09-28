@@ -20,7 +20,6 @@ Dialog::Dialog(ApplicationContext& context,
   title_panel_.setMargins(Margins(MarginSize::kNone, MarginSize::kRegular));
   add(title_panel_);
   title_.setPadding(PaddingSize::kLarge, PaddingSize::kSmall);
-  title_.setMargins(MarginSize::kNone, MarginSize::kNone);
   title_panel_.add(title_);
   setDividersVisible(false);
   add(divider1_);

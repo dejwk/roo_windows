@@ -14,7 +14,6 @@ Title::Title(ApplicationContext& context, std::string title)
   setAlignItems(AlignItems::kCenter);
   setPadding(Padding(PaddingSize::kSmall, PaddingSize::kTiny));
   setGap(Scaled(8));
-  label_.setMargins(MarginSize::kNone);
   label_.setPadding(PaddingSize::kNone, PaddingSize::kTiny);
   add(back_, {.flex_grow = 0, .flex_shrink = 0});
   add(label_, {.flex_grow = 1, .flex_shrink = 1});

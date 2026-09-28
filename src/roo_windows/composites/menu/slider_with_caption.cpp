@@ -15,15 +15,12 @@ BaseSliderWithCaption::BaseSliderWithCaption(ApplicationContext& context,
       slider_(context) {
   setPadding(Padding(PaddingSize::kSmall, PaddingSize::kTiny));
   setGap(Scaled(8));
-  caption_.setMargins(MarginSize::kNone);
-  value_.setMargins(MarginSize::kNone);
   caption_.setPadding(PaddingSize::kNone);
   value_.setPadding(PaddingSize::kNone);
   text_section_.add(caption_, roo_display::kLeft);
   text_section_.add(value_, roo_display::kRight);
   add(text_section_,
       {.flex_grow = 0, .flex_shrink = 0, .align_self = AlignSelf::kStretch});
-  slider_.setMargins(MarginSize::kNone);
   add(slider_,
       {.flex_grow = 0, .flex_shrink = 1, .align_self = AlignSelf::kStretch});
   slider_.setOnInteractiveChange([this]() {
