@@ -3,7 +3,7 @@
 #include <stdint.h>
 
 #include "roo_backport/string_view.h"
-#include "roo_windows/core/basic_widget.h"
+#include "roo_windows/core/widget.h"
 #include "roo_windows/material3/theme.h"
 #include "roo_windows/widgets/icon.h"
 

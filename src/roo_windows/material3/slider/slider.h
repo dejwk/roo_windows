@@ -5,7 +5,7 @@
 
 #include "roo_backport/string_view.h"
 #include "roo_display/image/image.h"
-#include "roo_windows/core/basic_widget.h"
+#include "roo_windows/core/widget.h"
 #include "roo_windows/material3/slider/slider_internal.h"
 
 namespace roo_windows {

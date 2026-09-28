@@ -51,7 +51,7 @@ void Slider::onSingleTapUp(XDim x, YDim y) {
   if (animation.isBusy() && animation.target() != this) {
     return;
   }
-  BasicWidget::onSingleTapUp(x, y);
+  MarginsMixin<Widget>::onSingleTapUp(x, y);
   Padding p = getPadding();
   int16_t range = range_from_width(width(), p);
   if (setPos(pos_from_x(x, range, p))) {
@@ -97,7 +97,7 @@ void Slider::onDrag(XDim x, YDim y, XDim dx, YDim dy) {
 }
 
 void Slider::onDragFinished(XDim x, YDim y) {
-  BasicWidget::onDragFinished(x, y);
+  MarginsMixin<Widget>::onDragFinished(x, y);
   is_dragging_ = false;
 }
 
@@ -216,7 +216,7 @@ roo_display::FpPoint Slider::getPointOverlayFocus() const {
 }
 
 void Slider::onCancel() {
-  BasicWidget::onCancel();
+  MarginsMixin<Widget>::onCancel();
   is_dragging_ = false;
 }
 

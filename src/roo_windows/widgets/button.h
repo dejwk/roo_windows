@@ -2,7 +2,7 @@
 
 #include <string>
 
-#include "roo_windows/core/basic_surface_widget.h"
+#include "roo_windows/core/surface_widget.h"
 #include "roo_windows/core/border_style.h"
 
 namespace roo_windows {

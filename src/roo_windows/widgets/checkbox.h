@@ -1,20 +1,20 @@
 #pragma once
 
-#include "roo_windows/core/basic_widget.h"
+#include "roo_windows/core/widget.h"
 
 namespace roo_windows {
 
 /// Tri-state checkbox using the legacy (pre-Material 3) style.
 ///
 /// For new code, prefer `material3::Checkbox`.
-class Checkbox : public BasicWidget {
+class Checkbox : public Widget {
  public:
   /// Logical selection state exposed by the checkbox.
   enum class OnOffState : uint8_t { kOff, kIndeterminate, kOn };
 
   /// Creates a checkbox with the specified initial state.
   Checkbox(ApplicationContext& context, OnOffState state = OnOffState::kOff)
-      : BasicWidget(context), state_(state) {}
+      : Widget(context), state_(state) {}
 
   /// Returns true when the checkbox is in the on state.
   bool isOn() const { return state_ == OnOffState::kOn; }

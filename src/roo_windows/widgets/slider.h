@@ -1,6 +1,6 @@
 #pragma once
 
-#include "roo_windows/core/basic_widget.h"
+#include "roo_windows/core/margins_mixin.h"
 
 namespace roo_windows {
 
@@ -10,10 +10,10 @@ namespace roo_windows {
 /// dragging, scroll gestures, and tap-to-set. For new code, prefer
 /// `material3::Slider`, which exposes richer styling and discrete-stop
 /// behavior.
-class Slider : public BasicWidget {
+class Slider : public MarginsMixin<Widget> {
  public:
   Slider(ApplicationContext& context, uint16_t pos = 0)
-      : BasicWidget(context), pos_(pos), is_dragging_(false) {}
+      : MarginsMixin<Widget>(context), pos_(pos), is_dragging_(false) {}
 
   /// Paints the track and thumb based on the current position; press state
   /// is reflected via the standard widget overlay.

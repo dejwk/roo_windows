@@ -3,7 +3,8 @@
 #include "roo_backport/string_view.h"
 #include "roo_display/color/color.h"
 #include "roo_display/font/font.h"
-#include "roo_windows/core/basic_widget.h"
+#include "roo_windows/core/padding_mixin.h"
+#include "roo_windows/core/margins_mixin.h"
 #include "roo_windows/core/gravity.h"
 #include "roo_windows/core/panel.h"
 #include "roo_windows/core/text_style.h"
@@ -16,7 +17,7 @@ namespace roo_windows {
 /// supports `setText()` and `setTextf()`). For labels backed by a stable
 /// string buffer that the caller already keeps alive, prefer the cheaper
 /// `StringViewLabel`.
-class TextLabel : public BasicWidget {
+class TextLabel : public MarginsMixin<PaddingMixin<Widget>> {
  public:
   TextLabel(ApplicationContext& context, std::string value,
             const TextStyle& text_style);
@@ -77,7 +78,7 @@ class TextLabel : public BasicWidget {
 /// Avoids the per-instance allocation that `TextLabel` carries, at the cost
 /// of requiring the caller to keep the underlying buffer alive for the widget's
 /// lifetime. Ideal for constant or theme-supplied strings.
-class StringViewLabel : public BasicWidget {
+class StringViewLabel : public MarginsMixin<PaddingMixin<Widget>> {
  public:
   StringViewLabel(ApplicationContext& context, roo::string_view value,
                   const TextStyle& text_style);

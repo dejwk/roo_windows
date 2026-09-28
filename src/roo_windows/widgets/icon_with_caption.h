@@ -4,7 +4,7 @@
 #include "roo_display/shape/basic.h"
 #include "roo_display/ui/text_label.h"
 #include "roo_display/ui/tile.h"
-#include "roo_windows/core/basic_widget.h"
+#include "roo_windows/core/padding_mixin.h"
 #include "roo_windows/core/panel.h"
 #include "roo_windows/core/theme.h"
 
@@ -14,7 +14,7 @@ namespace roo_windows {
 ///
 /// Used by `Destination` (navigation rail entries) and similar compound
 /// widgets. The caption font defaults to the theme's caption font.
-class IconWithCaption : public BasicWidget {
+class IconWithCaption : public PaddingMixin<Widget> {
  public:
   IconWithCaption(ApplicationContext& context,
                   const roo_display::Pictogram& def, const std::string& caption)

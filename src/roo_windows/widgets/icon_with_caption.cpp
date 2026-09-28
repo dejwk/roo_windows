@@ -7,7 +7,7 @@ namespace roo_windows {
 IconWithCaption::IconWithCaption(ApplicationContext& context,
                                  const roo_display::Pictogram& def,
                                  const std::string& caption, const Font* font)
-    : BasicWidget(context),
+    : PaddingMixin<Widget>(context),
       icon_(&def),
       caption_(caption),
       font_(font),

@@ -9,7 +9,7 @@
 #include "roo_display/core/utf8.h"
 #include "roo_display/font/font.h"
 #include "roo_windows/containers/scrollable_panel.h"
-#include "roo_windows/core/basic_widget.h"
+#include "roo_windows/core/padding_mixin.h"
 #include "roo_windows/core/widget.h"
 
 namespace roo_windows {
@@ -17,7 +17,7 @@ namespace log {
 
 // For capturing textual logs, consisting of lines that get continuously
 // appended.
-class Log : public roo_windows::BasicWidget {
+class Log : public roo_windows::PaddingMixin<roo_windows::Widget> {
  public:
   // Create the log widget with the specified buffer size and max lines. The
   // total memory footprint of the log will be approximately equal to the buffer

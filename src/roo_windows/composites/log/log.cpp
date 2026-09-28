@@ -15,7 +15,7 @@ using namespace roo_windows;
 
 Log::Log(roo_windows::ApplicationContext& context, uint32_t buffer_size,
          size_t max_lines)
-    : roo_windows::BasicWidget(context),
+    : roo_windows::PaddingMixin<roo_windows::Widget>(context),
       buffer_size_(buffer_size),
       buffer_(new char[buffer_size]),
       font_(&font_NotoSans_Condensed_18()),

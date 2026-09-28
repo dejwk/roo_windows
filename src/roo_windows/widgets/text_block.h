@@ -7,7 +7,8 @@
 #include "roo_display/color/color.h"
 #include "roo_display/font/font.h"
 #include "roo_display/ui/tile.h"
-#include "roo_windows/core/basic_widget.h"
+#include "roo_windows/core/margins_mixin.h"
+#include "roo_windows/core/padding_mixin.h"
 #include "roo_windows/core/panel.h"
 #include "roo_windows/core/text_style.h"
 
@@ -27,7 +28,7 @@ enum class TextAlign {
 
 // Multi-line block of text. Supports explicit '\n' line breaks and optional
 // automatic wrapping.
-class TextBlock : public BasicWidget {
+class TextBlock : public MarginsMixin<PaddingMixin<Widget>> {
  public:
   TextBlock(ApplicationContext& context, std::string value,
             const TextStyle& text_style,

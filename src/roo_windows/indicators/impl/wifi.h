@@ -1,6 +1,6 @@
 #pragma once
 
-#include "roo_windows/core/basic_widget.h"
+#include "roo_windows/core/padding_mixin.h"
 
 namespace roo_windows {
 
@@ -10,7 +10,7 @@ namespace roo_windows {
 /// maps them to a discrete icon index resolved against a subclass-supplied
 /// icon table. Concrete size variants under `indicators/<size>/wifi.h`
 /// plug in the matching icon family.
-class WifiIndicatorBase : public BasicWidget {
+class WifiIndicatorBase : public PaddingMixin<Widget> {
  public:
   enum ConnectionStatus {
     DISCONNECTED = 0,

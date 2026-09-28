@@ -81,7 +81,7 @@ roo_display::FpPoint Switch::getPointOverlayFocus() const {
 
 void Switch::onAnimationFrame(AnimationTag tag, const AnimationSample& sample) {
   if (tag != kThumb) {
-    BasicWidget::onAnimationFrame(tag, sample);
+    Widget::onAnimationFrame(tag, sample);
     return;
   }
   int16_t fraction = static_cast<int16_t>(sample.value + 0.5f);

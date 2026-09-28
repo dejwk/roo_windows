@@ -1,7 +1,7 @@
 #pragma once
 
 #include "roo_windows/containers/scrollable_panel.h"
-#include "roo_windows/core/basic_widget.h"
+#include "roo_windows/core/widget.h"
 #include "roo_windows/core/transient_surface_host.h"
 #include "roo_windows/material3/button/button.h"
 #include "roo_windows/material3/container.h"

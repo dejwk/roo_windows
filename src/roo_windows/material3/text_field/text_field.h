@@ -1,6 +1,6 @@
 #pragma once
 
-#include "roo_windows/core/basic_surface_widget.h"
+#include "roo_windows/core/surface_widget.h"
 #include "roo_windows/core/layout_direction.h"
 #include "roo_windows/internal/text_edit_target.h"
 #include "roo_windows/material3/typography.h"

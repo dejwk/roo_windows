@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-#include "roo_windows/core/basic_surface_widget.h"
+#include "roo_windows/core/surface_widget.h"
 #include "roo_windows/core/border_style.h"
 #include "roo_windows/core/theme.h"
 #include "roo_windows/material3/button/button_types.h"

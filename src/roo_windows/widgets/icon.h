@@ -1,7 +1,7 @@
 #pragma once
 
 #include "roo_display/image/image.h"
-#include "roo_windows/core/basic_widget.h"
+#include "roo_windows/core/widget.h"
 
 namespace roo_windows {
 
