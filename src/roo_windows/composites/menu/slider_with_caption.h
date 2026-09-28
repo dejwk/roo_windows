@@ -34,7 +34,7 @@ class BaseSliderWithCaption : public roo_windows::FlexLayout {
 
   /// Returns the row's outer margins; subclasses may override to tighten or
   /// expand the vertical rhythm.
-  virtual Margins getMargins() const { return Margins(0, Scaled(8)); }
+  virtual Margins getMargins() const { return Margins::Vertical(MarginSize::k8dp); }
 
  protected:
   /// Renders the value readout for the supplied raw 16-bit slider position.

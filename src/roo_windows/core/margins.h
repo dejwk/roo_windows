@@ -27,23 +27,47 @@ enum class MarginSize {
 /// Outer spacing around a widget, expressed either as raw pixels or as a
 /// theme-scaled `MarginSize` token.
 ///
-/// Stored as two bytes (horizontal + vertical, biased by 32 to support small
-/// negative values) so it fits cheaply in per-widget state.
+/// Stored as four bytes (for each side: left, top, right, bottom), biased by 32
+/// to support small negative values).
+///
+/// Avoid storing in per-widget state.
 class Margins {
  public:
-  Margins() : Margins(0) {}
+  constexpr Margins() : Margins(0, 0, 0, 0) {}
 
-  Margins(int16_t margins) : value_h_(margins + 32), value_v_(margins + 32) {}
+  constexpr Margins(int16_t left, int16_t top, int16_t right, int16_t bottom)
+      : left_(left + 32),
+        top_(top + 32),
+        right_(right + 32),
+        bottom_(bottom + 32) {}
 
-  Margins(int16_t horizontal, int16_t vertical)
-      : value_h_(horizontal + 32), value_v_(vertical + 32) {}
+  constexpr Margins(MarginSize left, MarginSize top, MarginSize right,
+                    MarginSize bottom)
+      : Margins(DimensionForSize(left), DimensionForSize(top),
+                DimensionForSize(right), DimensionForSize(bottom)) {}
 
-  Margins(MarginSize size) : Margins(size, size) {}
+  constexpr Margins(int16_t value) : Margins(value, value, value, value) {}
 
-  Margins(MarginSize horizontal, MarginSize vertical)
-      : Margins(DimensionForSize(horizontal), DimensionForSize(vertical)) {}
+  constexpr Margins(MarginSize size) : Margins(DimensionForSize(size)) {}
 
-  inline static int16_t DimensionForSize(MarginSize size) {
+  constexpr Margins(int16_t h, int16_t v) : Margins(h, v, h, v) {}
+
+  constexpr Margins(MarginSize h, MarginSize v)
+      : Margins(DimensionForSize(h), DimensionForSize(v)) {}
+
+  static constexpr Margins Horizontal(int16_t h) { return Margins(h, 0, h, 0); }
+
+  static constexpr Margins Horizontal(MarginSize size) {
+    return Margins::Horizontal(DimensionForSize(size));
+  }
+
+  static constexpr Margins Vertical(int16_t v) { return Margins(0, v, 0, v); }
+
+  static constexpr Margins Vertical(MarginSize size) {
+    return Margins::Vertical(DimensionForSize(size));
+  }
+
+  inline static constexpr int16_t DimensionForSize(MarginSize size) {
     switch (size) {
       case MarginSize::kNone:
         return 0;
@@ -66,20 +90,23 @@ class Margins {
     }
   }
 
-  int16_t top() const { return (int16_t)value_v_ - 32; }
-  int16_t left() const { return (int16_t)value_h_ - 32; }
-  int16_t right() const { return (int16_t)value_h_ - 32; }
-  int16_t bottom() const { return (int16_t)value_v_ - 32; }
+  constexpr int16_t top() const { return (int16_t)top_ - 32; }
+  constexpr int16_t left() const { return (int16_t)left_ - 32; }
+  constexpr int16_t right() const { return (int16_t)right_ - 32; }
+  constexpr int16_t bottom() const { return (int16_t)bottom_ - 32; }
 
  private:
-  friend bool operator==(Margins a, Margins b);
+  friend constexpr bool operator==(Margins a, Margins b);
 
-  uint8_t value_h_;
-  uint8_t value_v_;
+  uint8_t left_;
+  uint8_t top_;
+  uint8_t right_;
+  uint8_t bottom_;
 };
 
-inline bool operator==(Margins a, Margins b) {
-  return a.value_h_ == b.value_h_ && a.value_v_ == b.value_v_;
+inline constexpr bool operator==(Margins a, Margins b) {
+  return a.left_ == b.left_ && a.top_ == b.top_ && a.right_ == b.right_ &&
+         a.bottom_ == b.bottom_;
 }
 
 }  // namespace roo_windows
