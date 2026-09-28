@@ -103,7 +103,7 @@ TEST(Material3ThemeTest, InitializesCompactComponentSurfaceDefaults) {
             material.components.navigationRail.collapsedContainer);
   EXPECT_EQ(material3::ColorToken::kSurface,
             material.components.tabs.primaryContainer);
-  EXPECT_EQ(material3::ColorToken::kSurface,
+  EXPECT_EQ(material3::ColorToken::kSurfaceContainer,
             material.components.list.segmentedContainer);
   EXPECT_EQ(material3::ColorToken::kSurfaceContainer,
             material.components.menu.baselineContainer);

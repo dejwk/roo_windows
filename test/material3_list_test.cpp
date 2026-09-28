@@ -1689,8 +1689,8 @@ TEST(Material3List, ListEntryResolvesFlatSegmentedAndSelectedFills) {
   ListEntryVisualContext segmented;
   segmented.style = ListStyle::kSegmented;
   entry.setVisualContext(segmented);
-  EXPECT_EQ(colors.surface, entry.background());
-  EXPECT_EQ(ColorToken::kSurface, entry.containerRole());
+  EXPECT_EQ(colors.surfaceContainer, entry.background());
+  EXPECT_EQ(ColorToken::kSurfaceContainer, entry.containerRole());
 
   ListEntryVisualContext selected;
   selected.selected = true;
