@@ -257,6 +257,15 @@ class ApplicationTextInput {
     if (active_editor_ == &editor) active_editor_ = nullptr;
   }
 
+  Widget* editedWidget() const {
+    return active_editor_ == nullptr ? nullptr : active_editor_->editedWidget();
+  }
+
+  void dismiss() {
+    checkUiThread();
+    if (active_editor_ != nullptr) active_editor_->cancel();
+  }
+
   bool isActiveEditor(const TextFieldEditor& editor) const {
     return active_editor_ == &editor;
   }
@@ -549,6 +558,12 @@ void Application::activateTextInput(TextFieldEditor& editor) {
 void Application::deactivateTextInput(TextFieldEditor& editor) {
   text_input_->deactivate(editor);
 }
+
+Widget* Application::activeTextEditorWidget() const {
+  return text_input_->editedWidget();
+}
+
+void Application::dismissTextEditor() { text_input_->dismiss(); }
 
 void Application::setTextEditorKeyboardVisibility(bool visible) {
   if (visible) {

@@ -25,6 +25,15 @@ class MainWindow : public Container {
 
   ~MainWindow() override;
 
+  /// Routes outside keyboard taps to the window for dismissal.
+  bool fillTouchTargetPath(XDim x, YDim y, std::vector<Widget*>& path) override;
+
+  /// Accepts dismissal taps while the software keyboard is visible.
+  bool supportsTap() const override;
+
+  /// Ends editing after a completed outside tap, preserving entered text.
+  void onSingleTapUp(XDim x, YDim y) override;
+
   /// Samples and invalidates click feedback for a new logical frame.
   /// Leaves a retained paint continuation on its original sample.
   void refreshClickAnimation();

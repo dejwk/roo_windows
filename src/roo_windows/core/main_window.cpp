@@ -79,6 +79,35 @@ MainWindow::MainWindow(Application& app, const roo_display::Box& bounds)
   //     framework.color.resolve(FrameworkColorRole::kCanvas));
 }
 
+bool MainWindow::fillTouchTargetPath(XDim x, YDim y,
+                                     std::vector<Widget*>& path) {
+  const size_t begin = path.size();
+  if (!Container::fillTouchTargetPath(x, y, path)) return false;
+  if (!app_.keyboard().getContents().isVisible()) return true;
+  const Widget* editor = app_.activeTextEditorWidget();
+  for (size_t i = begin; i < path.size(); ++i) {
+    // Hosted surfaces retain their own outside-interaction policy.
+    if (path[i] == &host_layer_ ||
+        path[i] == app_.keyboard().getContents().parent() ||
+        path[i] == editor) {
+      return true;
+    }
+  }
+  // Consume the gesture so closing the keyboard cannot also activate a
+  // control underneath it or move the form during an in-flight gesture.
+  path.resize(begin + 1);
+  return true;
+}
+
+bool MainWindow::supportsTap() const {
+  return app_.keyboard().getContents().isVisible();
+}
+
+void MainWindow::onSingleTapUp(XDim x, YDim y) {
+  if (!app_.keyboard().getContents().isVisible()) return;
+  app_.dismissTextEditor();
+}
+
 void MainWindow::transientActivityObserverSubtreeDetaching(Widget& subtree) {
   transient_presentation_slot_.activityObserverSubtreeDetaching(subtree);
 }

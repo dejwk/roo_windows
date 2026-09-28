@@ -6,7 +6,6 @@
 #include "roo_scheduler.h"
 #include "roo_threads.h"
 #include "roo_time.h"
-#include "roo_windows/keyboard/keyboard.h"
 #include "roo_windows/core/application_context.h"
 #include "roo_windows/core/display_window.h"
 #include "roo_windows/core/environment.h"
@@ -14,6 +13,7 @@
 #include "roo_windows/core/task.h"
 #include "roo_windows/core/text_input.h"
 #include "roo_windows/dialogs/dialog.h"
+#include "roo_windows/keyboard/keyboard.h"
 #include "roo_windows/widgets/text_field.h"
 
 namespace roo_windows {
@@ -162,6 +162,7 @@ class Application {
  private:
   friend struct test::ApplicationWorkTestAccess;
   friend class Widget;
+  friend class MainWindow;
   friend class TaskPanel;
   friend class ApplicationInputRouter;
   friend class ApplicationTextInput;
@@ -202,6 +203,8 @@ class Application {
   void activateTextInput(TextFieldEditor& editor);
   void deactivateTextInput(TextFieldEditor& editor);
   void setTextEditorKeyboardVisibility(bool visible);
+  Widget* activeTextEditorWidget() const;
+  void dismissTextEditor();
 
   // Unobscured content area in the owning task panel's local coordinates.
   Rect textEditorViewport(const Task& task) const;

@@ -65,6 +65,83 @@ TEST_F(KeyboardAvoidanceTest, ResizesScrollViewportAndPreservesLiveSession) {
   task.navigation().clear();
 }
 
+// Verifies an outside tap is consumed, ends editing without losing text,
+// and restores the viewport. Field and keyboard taps keep their own targets.
+TEST_F(KeyboardAvoidanceTest, OutsideTapDismissesKeyboard) {
+  TextField field(context(), "Value");
+  TextField other(context(), "Other");
+  FullWidthColumn form(context());
+  form.add(field);
+  form.add(other);
+  SimpleScrollablePanel scroller(context(), form);
+  Task& task = app_.addTaskFullScreen(scroller);
+  int back_requests = 0;
+  task.setBackCallback([&back_requests](BackSource) {
+    ++back_requests;
+    return BackResult::kHandled;
+  });
+  ASSERT_TRUE(refresh());
+  field.setText("retained");
+  field.edit();
+  ASSERT_TRUE(refresh());
+  MainWindow& root = *field.getMainWindow();
+  std::vector<Widget*> path;
+  Rect bounds = ScreenBounds(field);
+  ASSERT_TRUE(
+      root.fillTouchTargetPath(bounds.xMin() + 1, bounds.yMin() + 1, path));
+  EXPECT_EQ(&field, path.back());
+  path.clear();
+  bounds = ScreenBounds(app_.keyboard().getContents());
+  ASSERT_TRUE(
+      root.fillTouchTargetPath(bounds.xMin() + 1, bounds.yMin() + 1, path));
+  EXPECT_EQ(&app_.keyboard().getContents(), path.back());
+  path.clear();
+  bounds = ScreenBounds(other);
+  ASSERT_TRUE(
+      root.fillTouchTargetPath(bounds.xMin() + 1, bounds.yMin() + 1, path));
+  ASSERT_EQ(1u, path.size());
+  EXPECT_EQ(&root, path.back());
+  EXPECT_TRUE(root.supportsTap());
+  EXPECT_TRUE(field.isEdited());
+  root.onSingleTapUp(bounds.xMin() + 1, bounds.yMin() + 1);
+  ASSERT_TRUE(refresh());
+  EXPECT_FALSE(field.isEdited());
+  EXPECT_FALSE(other.isEdited());
+  EXPECT_FALSE(app_.keyboard().getContents().isVisible());
+  EXPECT_EQ("retained", field.text());
+  EXPECT_EQ(320, scroller.height());
+  EXPECT_FALSE(root.supportsTap());
+  EXPECT_EQ(0, back_requests);
+  task.setBackCallback(nullptr);
+  task.navigation().clear();
+}
+
+// Verifies blank space dismisses on release, while a canceled gesture leaves
+// the editor open and does not change the viewport.
+TEST_F(KeyboardAvoidanceTest, BlankSpaceDismissesOnlyOnCompletedTap) {
+  TextField field(context(), "Value");
+  FullWidthColumn form(context());
+  form.add(field);
+  Task& task = app_.addTaskFullScreen(form);
+  ASSERT_TRUE(refresh());
+  field.edit();
+  ASSERT_TRUE(refresh());
+  std::vector<Widget*> path;
+  ASSERT_TRUE(app_.root().fillTouchTargetPath(230, 150, path));
+  ASSERT_EQ(1u, path.size());
+  Widget* target = path.back();
+  ASSERT_TRUE(target->supportsTap());
+  target->onDown(230, 150);
+  target->onCancel();
+  EXPECT_TRUE(field.isEdited());
+  EXPECT_TRUE(app_.keyboard().getContents().isVisible());
+  target->onDown(230, 150);
+  target->onSingleTapUp(230, 150);
+  EXPECT_FALSE(field.isEdited());
+  EXPECT_FALSE(app_.keyboard().getContents().isVisible());
+  task.navigation().clear();
+}
+
 class StaticKeyboardForm : public Panel {
  public:
   StaticKeyboardForm(ApplicationContext& context, TextField& field)
