@@ -7,6 +7,7 @@
 #include "roo_windows/containers/vertical_layout.h"
 #include "roo_windows/core/panel.h"
 #include "roo_windows/core/transient_surface_host.h"
+#include "roo_windows/core/margins_mixin.h"
 #include "roo_windows/widgets/button.h"
 #include "roo_windows/widgets/divider.h"
 #include "roo_windows/widgets/text_label.h"
@@ -143,9 +144,10 @@ class Dialog : public VerticalLayout {
     CallbackFn callback_fn_;
   };
 
-  class FullWidthPanel : public HorizontalLayout {
+  class FullWidthPanel : public MarginsMixin<HorizontalLayout> {
    public:
-    using HorizontalLayout::HorizontalLayout;
+    using Base = MarginsMixin<HorizontalLayout>;
+    using Base::Base;
 
     void clearChildrenForDestruction() { removeAll(); }
 

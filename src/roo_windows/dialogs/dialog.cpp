@@ -17,7 +17,7 @@ Dialog::Dialog(ApplicationContext& context,
       button_panel_(context),
       callback_fn_(nullptr),
       registration_(*this) {
-  title_panel_.setMargins(Margins(MarginSize::kNone, MarginSize::kRegular));
+  title_panel_.setMargins(MarginSize::kNone, MarginSize::kRegular);
   add(title_panel_);
   title_.setPadding(PaddingSize::kLarge, PaddingSize::kSmall);
   title_panel_.add(title_);
@@ -28,7 +28,7 @@ Dialog::Dialog(ApplicationContext& context,
   add(contents_, {weight : 1});
   add(divider2_);
   button_panel_.setPadding(PaddingSize::kTiny);
-  button_panel_.setMargins(Margins(MarginSize::kNone, MarginSize::kSmall));
+  button_panel_.setMargins(MarginSize::kNone, MarginSize::kSmall);
   add(button_panel_, {gravity : kGravityRight});
   button_panel_.setGravity(kGravityRight | kGravityMiddle);
   buttons_.reserve(button_labels.size());
