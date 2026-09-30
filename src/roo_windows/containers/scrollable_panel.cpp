@@ -395,7 +395,7 @@ scroll_motion::Geometry SimpleScrollablePanel::motionGeometry() const {
 SimpleScrollablePanel::ScrollPosition
 SimpleScrollablePanel::currentScrollPosition() const {
   const Widget* c = contents();
-  if (c == nullptr) return {0, 0};
+  if (c == nullptr || c->bounds().empty()) return {0, 0};
   Margins m = c->getMargins();
   return {static_cast<XDim>(c->offsetLeft() - m.left()),
           static_cast<YDim>(c->offsetTop() - m.top())};

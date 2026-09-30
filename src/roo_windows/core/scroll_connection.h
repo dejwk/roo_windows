@@ -31,8 +31,15 @@ class ScrollConnection {
   /// Creates a participant linking two widgets in the same context.
   ScrollConnection(Widget& owner, SimpleScrollablePanel& panel);
   virtual ~ScrollConnection() = default;
+  /// Reports whether a connection callback is currently being delivered.
+  bool isDispatching() const { return dispatch_depth_ != 0; }
+
   /// Returns the visual endpoint.
   Widget& owner() const { return *owner_; }
+  /// Returns the shared context while endpoints are alive.
+  ApplicationContext& context() const;
+  /// Stops and clamps the scrolling endpoint without losing its registration.
+  void stopPanelMotion();
   /// Returns the scrolling endpoint.
   SimpleScrollablePanel& panel() const { return *panel_; }
   /// Restores a surviving endpoint after removal; destroying is never accessed.

@@ -1,6 +1,6 @@
 // Learning goal: use a flexible top app bar to establish hierarchy on a
 // detail screen and change its surface as equipment details scroll underneath.
-// Scroll the body; return to the top to restore the flat surface.
+// Scroll up to compact the title; reverse direction to expand it immediately.
 
 // *************** EMULATOR SETUP BEGIN
 
@@ -129,11 +129,10 @@ class HeatingDetails : public FlexLayout {
     content_.add(schedule_);
     scroller_.setContents(content_);
 
-    // The bar stays outside the scrolling viewport. Content origins become
-    // negative when scrolling down; positive top overscroll stays flat.
-    // The initial origin is zero, matching the bar's default flat surface.
+    // The binding coordinates bar height and body movement and leaves the
+    // panel's application callback slot available.
     CHECK(app_bar_.setScrollBehavior(
-              scroller_, material3::AppBarScrollBehavior::kPinned) ==
+              scroller_, material3::AppBarScrollBehavior::kEnterAlways) ==
           ScrollConnectionStatus::kSuccess);
 
     add(app_bar_);

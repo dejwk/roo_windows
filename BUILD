@@ -1240,6 +1240,7 @@ cc_library(
 cc_test(
     name = "app_bar_scroll_behavior_test",
     srcs = ["test/app_bar_scroll_behavior_test.cpp", "test/roo_windows_render_test_support.h"],
+    data = glob(["test/goldens/app_bar_scroll/*.ppm"], allow_empty = True),
     linkstatic = 1,
-    deps = [":roo_windows", "@roo_testing//:arduino_gtest_main"],
+    deps = [":roo_windows", ":test_golden_utils", "@roo_testing//:arduino_gtest_main"],
 )

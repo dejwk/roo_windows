@@ -8,6 +8,7 @@
 #include "roo_display/ui/text_label.h"
 #include "roo_icons/outlined/24/action.h"
 #include "roo_logging.h"
+#include "roo_windows/containers/scrollable_panel.h"
 #include "roo_windows/core/child_layout.h"
 #include "roo_windows/material3/app_bar/app_bar_tokens.h"
 #include "roo_windows/material3/theme.h"
@@ -123,6 +124,10 @@ const internal::AppBarVariantTokens& AppBar::tokens() const {
 }
 
 const TextStyle& AppBar::titleTextStyle() const {
+  auto connection = internal::FindAppBarConnection(*this);
+  if (connection != nullptr && connection->limit() > 0 &&
+      connection->collapse() * 2 >= connection->limit())
+    return text_style_title_large();
   switch (variant_) {
     case AppBarVariant::kSmall:
       return text_style_title_large();
@@ -177,7 +182,21 @@ AppBarSurfaceState AppBar::surfaceState() const {
 
 ScrollConnectionStatus AppBar::setScrollBehavior(
     SimpleScrollablePanel& panel, AppBarScrollBehavior behavior) {
-  return internal::ConnectAppBar(context(), *this, panel, behavior, false);
+  auto previous = internal::FindAppBarConnection(*this);
+  ScrollConnectionStatus status =
+      internal::ConnectAppBar(context(), *this, panel, behavior, false);
+  if (status == ScrollConnectionStatus::kSuccess) {
+    auto connection = internal::FindAppBarConnection(*this);
+    if (connection == previous) return status;
+    connection->measureHeight(
+        Scaled(containerHeightDp()),
+        variant_ == AppBarVariant::kSmall ? 0 : Scaled(64),
+        HeightSpec::Unspecified(0));
+    connection->onPositionChanged({}, panel.getScrollPosition(),
+                                  ScrollSource::kProgrammatic);
+    requestLayout();
+  }
+  return status;
 }
 
 ScrollConnectionStatus AppBar::clearScrollBehavior() {
@@ -186,6 +205,21 @@ ScrollConnectionStatus AppBar::clearScrollBehavior() {
 
 bool AppBar::hasScrollBehavior() const {
   return internal::FindAppBarConnection(*this) != nullptr;
+}
+
+void AppBar::onAnimationFrame(AnimationTag tag, const AnimationSample& sample) {
+  auto connection = internal::FindAppBarConnection(*this);
+  if (tag == internal::AppBarScrollConnection::kSettle && connection != nullptr)
+    connection->animate(sample);
+  else
+    Material3Container::onAnimationFrame(tag, sample);
+}
+
+void AppBar::onPresentationChanged(const PresentationChange& change) {
+  auto connection = internal::FindAppBarConnection(*this);
+  if (connection != nullptr && (change.state != PresentationState::kPresented ||
+                                change.detached_since_delivery))
+    connection->suspend();
 }
 
 void AppBar::setSurfaceState(AppBarSurfaceState state) {
@@ -268,6 +302,20 @@ ColorToken AppBar::containerRole() const {
 Dimensions AppBar::onMeasure(WidthSpec width, HeightSpec height) {
   const int16_t row_height = Scaled(internal::kActionTapTargetDp);
   const int16_t container_height = Scaled(containerHeightDp());
+  auto connection = internal::FindAppBarConnection(*this);
+  YDim resolved_height =
+      connection == nullptr
+          ? height.resolveSize(container_height)
+          : connection->measureHeight(
+                container_height,
+                variant_ == AppBarVariant::kSmall ? 0 : Scaled(64), height);
+  title_widget_.setTextStyle(titleTextStyle());
+  bool subtitle_visible = tokens().supports_subtitle &&
+                          !subtitle_widget_.text().empty() &&
+                          (connection == nullptr || connection->limit() == 0 ||
+                           connection->collapse() * 2 < connection->limit());
+  subtitle_widget_.setVisibility(subtitle_visible ? Visibility::kVisible
+                                                  : Visibility::kGone);
   const int16_t available_width = width.value();
 
   // Measure all children even when an exact app-bar width leaves them no room;
@@ -288,8 +336,7 @@ Dimensions AppBar::onMeasure(WidthSpec width, HeightSpec height) {
   subtitle_widget_.measure(
       WidthSpec::AtMost(std::max<int16_t>(0, available_width)),
       HeightSpec::Unspecified(container_height));
-  return Dimensions(width.resolveSize(available_width),
-                    height.resolveSize(container_height));
+  return Dimensions(width.resolveSize(available_width), resolved_height);
 }
 
 void AppBar::onLayout(bool changed, const Rect& rect) {
@@ -298,7 +345,9 @@ void AppBar::onLayout(bool changed, const Rect& rect) {
   const int16_t title_inset = Scaled(internal::kAppBarTitleInsetDp);
   const int16_t action_size = Scaled(internal::kActionTapTargetDp);
   const int16_t width = std::max<int16_t>(0, rect.width());
-  const int16_t height = std::max<int16_t>(0, rect.height());
+  auto connection = internal::FindAppBarConnection(*this);
+  const YDim collapse = connection == nullptr ? 0 : connection->collapse();
+  const int16_t height = std::max<int16_t>(0, rect.height() + collapse);
   const bool single_row = variant_ == AppBarVariant::kSmall;
   int16_t left = std::min<int16_t>(edge, width);
   int16_t right = std::max<int16_t>(left, width - edge);
@@ -377,6 +426,25 @@ void AppBar::onLayout(bool changed, const Rect& rect) {
   if (show_subtitle) {
     subtitle_widget_.layout(Rect(left, stack_top + title_height, right - 1,
                                  stack_top + stack_height - 1));
+  }
+  if (collapse > 0 && single_row) {
+    for (int i = 0; i < getChildrenCount(); ++i) {
+      Widget& child = getChild(i);
+      child.layout(child.parent_bounds().translate(0, -collapse));
+    }
+  } else if (collapse > 0) {
+    float t = static_cast<float>(collapse) / connection->limit();
+    int16_t compact_left =
+        leading_ == nullptr ? title_inset : edge + action_size + Scaled(4);
+    int16_t compact_right = std::max<int16_t>(
+        compact_left, width - edge - ChildCount(trailing_) * action_size -
+                          (ChildCount(trailing_) > 0 ? Scaled(4) : 0));
+    int16_t title_left = left + (compact_left - left) * t;
+    int16_t title_right = right + (compact_right - right) * t;
+    int16_t compact_top = (Scaled(64) - title_height) / 2;
+    int16_t top = stack_top + (compact_top - stack_top) * t;
+    title_widget_.layout(
+        Rect(title_left, top, title_right - 1, top + title_height - 1));
   }
 }
 
@@ -601,7 +669,18 @@ AppBarSurfaceState SearchAppBar::surfaceState() const {
 
 ScrollConnectionStatus SearchAppBar::setScrollBehavior(
     SimpleScrollablePanel& panel, AppBarScrollBehavior behavior) {
-  return internal::ConnectAppBar(context(), *this, panel, behavior, true);
+  auto previous = internal::FindAppBarConnection(*this);
+  ScrollConnectionStatus status =
+      internal::ConnectAppBar(context(), *this, panel, behavior, true);
+  if (status == ScrollConnectionStatus::kSuccess) {
+    auto connection = internal::FindAppBarConnection(*this);
+    if (connection == previous) return status;
+    connection->measureHeight(Scaled(64), 0, HeightSpec::Unspecified(0));
+    connection->onPositionChanged({}, panel.getScrollPosition(),
+                                  ScrollSource::kProgrammatic);
+    requestLayout();
+  }
+  return status;
 }
 
 ScrollConnectionStatus SearchAppBar::clearScrollBehavior() {
@@ -610,6 +689,22 @@ ScrollConnectionStatus SearchAppBar::clearScrollBehavior() {
 
 bool SearchAppBar::hasScrollBehavior() const {
   return internal::FindAppBarConnection(*this) != nullptr;
+}
+
+void SearchAppBar::onAnimationFrame(AnimationTag tag,
+                                    const AnimationSample& sample) {
+  auto connection = internal::FindAppBarConnection(*this);
+  if (tag == internal::AppBarScrollConnection::kSettle && connection != nullptr)
+    connection->animate(sample);
+  else
+    Material3Container::onAnimationFrame(tag, sample);
+}
+
+void SearchAppBar::onPresentationChanged(const PresentationChange& change) {
+  auto connection = internal::FindAppBarConnection(*this);
+  if (connection != nullptr && (change.state != PresentationState::kPresented ||
+                                change.detached_since_delivery))
+    connection->suspend();
 }
 
 void SearchAppBar::setSurfaceState(AppBarSurfaceState state) {
@@ -708,6 +803,7 @@ SearchAppBar::EmbeddedSearchBar::entryTokens() const {
 Dimensions SearchAppBar::onMeasure(WidthSpec width, HeightSpec height) {
   const int16_t action_size = Scaled(internal::kActionTapTargetDp);
   const int16_t outer_height = Scaled(64);
+  auto connection = internal::FindAppBarConnection(*this);
   const int16_t entry_height =
       Scaled(internal::kEmbeddedSearchEntryTokens.container_height_dp);
   const int16_t available_width = std::max<int16_t>(0, width.value());
@@ -729,7 +825,9 @@ Dimensions SearchAppBar::onMeasure(WidthSpec width, HeightSpec height) {
   search_entry_.measure(WidthSpec::Exactly(entry_width),
                         HeightSpec::Exactly(entry_height));
   return Dimensions(width.resolveSize(available_width),
-                    height.resolveSize(outer_height));
+                    connection == nullptr
+                        ? height.resolveSize(outer_height)
+                        : connection->measureHeight(outer_height, 0, height));
 }
 
 void SearchAppBar::onLayout(bool changed, const Rect& rect) {
@@ -739,7 +837,9 @@ void SearchAppBar::onLayout(bool changed, const Rect& rect) {
   const int16_t entry_height =
       Scaled(internal::kEmbeddedSearchEntryTokens.container_height_dp);
   const int16_t width = std::max<int16_t>(0, rect.width());
-  const int16_t height = std::max<int16_t>(0, rect.height());
+  auto connection = internal::FindAppBarConnection(*this);
+  const int16_t height = std::max<int16_t>(
+      0, rect.height() + (connection == nullptr ? 0 : connection->collapse()));
   const int16_t action_y = std::max<int16_t>(0, (height - action_size) / 2);
   int16_t left = std::min<int16_t>(edge, width);
   int16_t right = std::max<int16_t>(left, width - edge);
@@ -766,6 +866,14 @@ void SearchAppBar::onLayout(bool changed, const Rect& rect) {
   const int16_t lane_top = std::max<int16_t>(0, (height - entry_height) / 2);
   search_entry_.layout(Rect(lane_left, lane_top, lane_left + lane_width - 1,
                             lane_top + entry_height - 1));
+  auto scroll_connection = internal::FindAppBarConnection(*this);
+  if (scroll_connection != nullptr && scroll_connection->collapse() > 0) {
+    for (int i = 0; i < getChildrenCount(); ++i) {
+      Widget& child = getChild(i);
+      child.layout(
+          child.parent_bounds().translate(0, -scroll_connection->collapse()));
+    }
+  }
 }
 
 bool SearchAppBar::fillTouchTargetPath(XDim x, YDim y,

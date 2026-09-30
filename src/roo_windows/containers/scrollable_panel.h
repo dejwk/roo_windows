@@ -275,6 +275,7 @@ class SimpleScrollablePanel : public Container,
   void notifyScrollPositionChanged(ScrollPosition previous);
 
   friend class ScrollableBlitPanel;
+  friend class internal::ScrollConnection;
   void setContentsInternal(WidgetRef new_contents, bool notify);
   bool containsDescendant(const Widget& descendant) const;
 

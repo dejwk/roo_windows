@@ -214,6 +214,7 @@ filegroup(
     srcs = [
         "//examples/material3/app_bar/basic_top_bar",
         "//examples/material3/app_bar/flexible_top_bar",
+        "//examples/material3/app_bar/enter_always",
         "//examples/material3/badge/custom_anchor",
         "//examples/material3/badge/notification_count",
         "//examples/material3/buttons/compact_controls",

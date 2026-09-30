@@ -7,6 +7,15 @@ namespace roo_windows::internal {
 ScrollConnection::ScrollConnection(Widget& owner, SimpleScrollablePanel& panel)
     : owner_(&owner), panel_(&panel) {}
 
+ApplicationContext& ScrollConnection::context() const {
+  return owner().context();
+}
+
+void ScrollConnection::stopPanelMotion() {
+  kinetic = false;
+  panel().stopMotionAndClamp();
+}
+
 std::shared_ptr<ScrollConnection> ScrollConnectionRegistry::find(
     const Widget& endpoint) const {
   auto owner = owners_.find(&endpoint);

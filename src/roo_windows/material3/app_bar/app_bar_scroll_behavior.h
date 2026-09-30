@@ -1,4 +1,6 @@
 #pragma once
+#include "roo_windows/core/animation_types.h"
+#include "roo_windows/core/measure_spec.h"
 #include "roo_windows/core/scroll_connection.h"
 
 namespace roo_windows::material3 {
@@ -18,7 +20,31 @@ class AppBarScrollConnection : public roo_windows::internal::ScrollConnection {
                          ScrollSource source) override;
   void onDisconnected(Widget* destroying) override;
   AppBarScrollBehavior behavior() const { return behavior_; }
-  bool scrolled() const { return scrolled_; }
+  bool scrolled() const { return scrolled_ || collapse_ > 0; }
+  /// Updates collapse bounds from current tokens and parent constraints.
+  YDim measureHeight(YDim expanded, YDim compact, HeightSpec spec);
+  /// Returns the applied collapse in physical pixels.
+  YDim collapse() const { return collapse_; }
+  /// Returns the expanded-to-collapsed travel.
+  YDim limit() const { return limit_; }
+  YDim onPreScroll(YDim available) override;
+  bool canScroll() const override { return limit_ > 0 && !constrained_; }
+  void cancel() override;
+  void finish() override;
+  void reset() override;
+  /// Applies a retained settlement sample before layout and paint.
+  void animate(const AnimationSample& sample);
+  /// Suspends both motion participants on hide or detachment.
+  void suspend();
+  static constexpr AnimationTag kSettle = 230;
+
+ private:
+  void setCollapse(YDim collapse);
+  YDim consume(YDim available);
+  YDim collapse_ = 0;
+  YDim limit_ = 0;
+  bool constrained_ = false;
+  bool warned_ = false;
 
  private:
   AppBarScrollBehavior behavior_;

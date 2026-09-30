@@ -16,7 +16,8 @@ class Application;
 class Widget;
 namespace internal {
 class ScrollConnectionRegistry;
-}
+class ScrollConnection;
+}  // namespace internal
 
 /// Bundles application-scoped runtime services shared by widgets.
 ///

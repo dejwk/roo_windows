@@ -94,6 +94,11 @@ class AppBar : public Material3Container {
   /// Returns whether this bar has an active connection.
   bool hasScrollBehavior() const;
 
+  /// Applies scroll settlement and suspends motion when presentation ends.
+  void onAnimationFrame(AnimationTag tag,
+                        const AnimationSample& sample) override;
+  void onPresentationChanged(const PresentationChange& change) override;
+
   /// Returns the surface role for the current flat or scrolled state.
   ColorToken containerRole() const override;
 
@@ -212,6 +217,11 @@ class SearchAppBar : public Material3Container {
   ScrollConnectionStatus clearScrollBehavior();
   /// Returns whether this bar has an active connection.
   bool hasScrollBehavior() const;
+
+  /// Applies scroll settlement and suspends motion when presentation ends.
+  void onAnimationFrame(AnimationTag tag,
+                        const AnimationSample& sample) override;
+  void onPresentationChanged(const PresentationChange& change) override;
 
   /// Returns the surface role for the current flat or scrolled state.
   ColorToken containerRole() const override;
