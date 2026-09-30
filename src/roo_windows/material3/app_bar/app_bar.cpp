@@ -140,7 +140,8 @@ roo_display::Color internal::AppBarText::textColor(
 
 roo_display::Color internal::AppBarSubtitle::textColor(
     roo_display::Color background) const {
-  roo_display::Color foreground = AppBarText::textColor(background);
+  roo_display::Color foreground =
+      theme().material3Theme().color.onSurfaceVariant;
   if (parent() == nullptr) return foreground;
   auto connection = internal::FindAppBarConnection(*parent());
   if (connection == nullptr || connection->limit() == 0 ||

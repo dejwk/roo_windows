@@ -313,7 +313,8 @@ This design therefore makes five direct decisions:
 4. `SearchAppBar` resolves the embedded search-entry container from
    `Theme::color.surfaceContainer` when flat and
    `Theme::color.surfaceContainerHighest` when scrolled.
-5. App-bar headline and subtitle text resolve from `Theme::color.onSurface`.
+5. App-bar headline text resolves from `Theme::color.onSurface`; subtitle text
+   resolves from `Theme::color.onSurfaceVariant`.
 6. Search-entry display text resolves from `Theme::color.onSurfaceVariant`.
 7. The base family does not own overflow icons, badges, or other promoted
    action treatments; those remain on adjacent widgets composed into the bar.
