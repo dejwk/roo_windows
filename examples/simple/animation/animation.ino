@@ -92,7 +92,7 @@ void initDisplay() {
 #include "roo_windows/widgets/image.h"
 #include "roo_windows/widgets/progress_bar.h"
 
-roo_scheduler::Scheduler scheduler;
+roo_scheduler::SchedulingService scheduler;
 Environment env(scheduler);
 Application app(&env, display);
 

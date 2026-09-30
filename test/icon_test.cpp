@@ -56,7 +56,7 @@ roo_display::Pictogram MakePictogram(roo_display::Box extents,
 // that fall outside its anchor box, and that getSuggestedMinimumDimensions()
 // returns the anchor-box dimensions.
 TEST(Icon, InkInsetsFollowDrawableBounds) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment bootstrap(scheduler);
   ApplicationContext context = MakeContext(bootstrap);
   roo_display::Pictogram pictogram =
@@ -72,7 +72,7 @@ TEST(Icon, InkInsetsFollowDrawableBounds) {
 // single region that covers the union of the icon's previous and new
 // maxParentBounds, so partial repaint correctly covers shrink + grow cases.
 TEST(Icon, SwapInvalidatesOldAndNewVisualBounds) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment bootstrap(scheduler);
   ApplicationContext context = MakeContext(bootstrap);
   roo_display::Pictogram old_icon =

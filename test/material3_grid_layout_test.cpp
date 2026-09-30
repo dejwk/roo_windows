@@ -1,8 +1,8 @@
 #include "gtest/gtest.h"
 #include "roo_scheduler.h"
-#include "roo_windows/core/widget.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/theme.h"
+#include "roo_windows/core/widget.h"
 #include "roo_windows/material3/layout_scaffold/layout_scaffold.h"
 
 namespace roo_windows::material3 {
@@ -70,7 +70,7 @@ LayoutBreakpointPolicy FourColumnPolicy() {
 // Verifies row-major spans share the tallest row height, and bottom gravity
 // aligns the shorter peer without creating a waterfall column.
 TEST(Material3GridLayout, PacksMixedHeightRowsWithSharedRhythm) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   ProbeWidget short_card(context, 10);
@@ -93,7 +93,7 @@ TEST(Material3GridLayout, PacksMixedHeightRowsWithSharedRhythm) {
 // Verifies spans larger than the local ruler clamp to a full row instead of
 // overflowing or creating an invalid zero-width cell.
 TEST(Material3GridLayout, ClampsOverWideSpansToAvailableColumns) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   ProbeWidget card(context, 10);
@@ -110,7 +110,7 @@ TEST(Material3GridLayout, ClampsOverWideSpansToAvailableColumns) {
 // Verifies logical columns mirror in RTL while preserving row-major insertion
 // order and the shared local ruler metrics.
 TEST(Material3GridLayout, MirrorsLogicalColumnsForRtl) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   ProbeWidget leading(context, 10);
@@ -132,7 +132,7 @@ TEST(Material3GridLayout, MirrorsLogicalColumnsForRtl) {
 // Verifies each grid resolves spans from its own compact, medium, and expanded
 // width class rather than inheriting an outer scaffold's breakpoint.
 TEST(Material3GridLayout, ResolvesSpansFromLocalBreakpoint) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   ProbeWidget card(context, 10);
@@ -158,7 +158,7 @@ TEST(Material3GridLayout, ResolvesSpansFromLocalBreakpoint) {
 // Verifies clearing borrowed children removes them from the specialized item
 // vector and detaches each parent relationship.
 TEST(Material3GridLayout, ClearsBorrowedChildren) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   ProbeWidget first(context, 10);

@@ -526,7 +526,7 @@ TEST(KeyboardPaint, AlternativePopupDirtyPaintMatchesFullPaint) {
   std::vector<roo::byte> pixels(412 * 320 * 2);
   KeyboardDisplay device(pixels.data());
   roo_display::Display display(device);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   Application app(&env, display);
   for (bool multirow : {false, true}) {
@@ -719,7 +719,7 @@ TEST(KeyboardPaint, SinglePassAndDirtyPaintMatchesFullPaint) {
   std::vector<roo::byte> pixels(412 * 320 * 2);
   KeyboardDisplay device(pixels.data());
   roo_display::Display display(device);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   Application app(&env, display);
   ASSERT_TRUE(app.refresh());
@@ -805,7 +805,7 @@ TEST(KeyboardPaint, FirstRowMatchesOriginalButtons) {
   roo_display::OffscreenDevice<roo_display::Argb4444> device(
       320, 240, pixels.data(), roo_display::Argb4444());
   roo_display::Display display(device);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   Application app(&env, display);
   app.keyboard().show();
@@ -846,7 +846,7 @@ TEST(KeyboardPaint, TextPressAndReleaseWithEditorDamageStayLocal) {
   std::vector<roo::byte> pixels(412 * 320 * 2);
   KeyboardDisplay device(pixels.data());
   roo_display::Display display(device);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   Application app(&env, display);
   TextField field(app.context(), font_body1(), "", roo_display::kLeft,

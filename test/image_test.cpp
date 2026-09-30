@@ -61,7 +61,7 @@ class RecordingPanel : public Panel {
 // extents overhang its anchor box, and that suggested minimum dimensions
 // come from the anchor box.
 TEST(Image, InkInsetsFollowDrawableBounds) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment bootstrap(scheduler);
   ApplicationContext context = MakeContext(bootstrap);
   TestDrawable drawable(Box(-2, 1, 6, 8), Box(0, 0, 4, 7));
@@ -81,7 +81,7 @@ TEST(Image, InkInsetsFollowDrawableBounds) {
 // parent-space visual bounds, so partial repaints cover both directions of
 // size change.
 TEST(Image, SwapInvalidatesOldAndNewVisualBounds) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment bootstrap(scheduler);
   ApplicationContext context = MakeContext(bootstrap);
   TestDrawable old_drawable(Box(-2, 0, 4, 4), Box(0, 0, 4, 4));

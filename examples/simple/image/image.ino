@@ -84,7 +84,7 @@ void initDisplay() {
 
 using namespace roo_windows;
 
-roo_scheduler::Scheduler scheduler;
+roo_scheduler::SchedulingService scheduler;
 Environment env(scheduler);
 Application app(&env, display);
 

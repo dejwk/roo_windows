@@ -12,8 +12,8 @@
 #include "roo_scheduler.h"
 #include "roo_windows/core/animation_registry.h"
 #include "roo_windows/core/application.h"
-#include "roo_windows/core/widget.h"
 #include "roo_windows/core/environment.h"
+#include "roo_windows/core/widget.h"
 
 namespace {
 
@@ -176,7 +176,7 @@ TEST(ProgressResourceTest, WarmedAnimationDoesNotAllocate) {
   roo_display::OffscreenDevice<roo_display::Argb4444> device(
       260, 100, raster, roo_display::Argb4444());
   roo_display::Display display(device);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment environment(scheduler);
   Application app(&environment, display);
   LinearProgressIndicator linear(app.context());

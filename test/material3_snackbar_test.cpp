@@ -166,7 +166,7 @@ class SnackbarTest : public testing::Test {
   roo::byte raster_[320 * 240 * 2]{};
   CountingOffscreenDevice device_;
   roo_display::Display display_;
-  roo_scheduler::Scheduler scheduler_;
+  roo_scheduler::SchedulingService scheduler_;
   Environment env_;
   std::unique_ptr<Application> app_;
   SnackbarHost host_;

@@ -78,8 +78,8 @@ void initDisplay() {
 #include "roo_windows/containers/flex_layout.h"
 #include "roo_windows/material3/radio_button/radio_button.h"
 #include "roo_windows/material3/typography.h"
-#include "roo_windows/widgets/text_label.h"
 #include "roo_windows/widgets/text_block.h"
+#include "roo_windows/widgets/text_label.h"
 
 namespace {
 
@@ -185,7 +185,7 @@ class ControlDensity : public FlexLayout, public DensityGroup {
 
 }  // namespace
 
-roo_scheduler::Scheduler scheduler;
+roo_scheduler::SchedulingService scheduler;
 Environment env(scheduler);
 #ifdef ROO_TESTING
 Application app(&env, display, emulator_keys, true);

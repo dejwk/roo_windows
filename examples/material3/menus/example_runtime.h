@@ -56,7 +56,7 @@ inline roo_display::Display display(
     screen, touch,
     roo_display::TouchCalibration(269, 249, 3829, 3684,
                                   roo_display::Orientation::LeftDown()));
-inline roo_scheduler::Scheduler scheduler;
+inline roo_scheduler::SchedulingService scheduler;
 inline roo_windows::Environment environment(scheduler);
 #ifdef ROO_TESTING
 inline roo_windows::Application app(&environment, display, emulator_keys, true);

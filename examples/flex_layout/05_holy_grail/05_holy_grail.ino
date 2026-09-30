@@ -156,7 +156,7 @@ class HolyGrail : public FlexLayout {
   NamedPanel footer_;
 };
 
-roo_scheduler::Scheduler scheduler;
+roo_scheduler::SchedulingService scheduler;
 Environment env(scheduler);
 Application app(&env, display);
 HolyGrail holy_grail(app.context());

@@ -4,11 +4,11 @@
 #include "roo_display.h"
 #include "roo_display/core/offscreen.h"
 #include "roo_scheduler.h"
-#include "roo_windows/core/destination.h"
-#include "roo_windows/core/navigation_host.h"
 #include "roo_windows/core/application.h"
-#include "roo_windows/core/widget.h"
+#include "roo_windows/core/destination.h"
 #include "roo_windows/core/environment.h"
+#include "roo_windows/core/navigation_host.h"
+#include "roo_windows/core/widget.h"
 
 namespace roo_windows {
 namespace {
@@ -55,7 +55,8 @@ class RecordingWidget final : public Widget {
 
 class RecordingDestination final : public Destination {
  public:
-  explicit RecordingDestination(ApplicationContext& context) : contents(context) {}
+  explicit RecordingDestination(ApplicationContext& context)
+      : contents(context) {}
 
   Widget& getContents() override { return contents; }
   void onStop() override { ++stop_count; }
@@ -73,7 +74,9 @@ class ColorDestination final : public Destination {
   class Contents final : public SurfaceWidget {
    public:
     explicit Contents(ApplicationContext& context) : SurfaceWidget(context) {}
-    roo_display::Color background() const override { return roo_display::color::Green; }
+    roo_display::Color background() const override {
+      return roo_display::color::Green;
+    }
     void paint(PaintContext& ctx) const override { ctx.clear(); }
     Dimensions getSuggestedMinimumDimensions() const override {
       return Dimensions(16, 16);
@@ -81,14 +84,15 @@ class ColorDestination final : public Destination {
   } contents;
 };
 
-// Verifies a public refresh paints the destination tree and a deadline-interrupted
-// frame remains resumable through the same public one-shot entry point.
+// Verifies a public refresh paints the destination tree and a
+// deadline-interrupted frame remains resumable through the same public one-shot
+// entry point.
 TEST(DisplayRuntimeCharacterization, RefreshPaintsAndResumesInterruptedFrame) {
   roo::byte raster[32 * 32 * 2] = {};
   roo_display::OffscreenDevice<roo_display::Argb4444> device(
       32, 32, raster, roo_display::Argb4444());
   roo_display::Display display(device);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment environment(scheduler);
 
   Application app(&environment, display);
@@ -102,27 +106,28 @@ TEST(DisplayRuntimeCharacterization, RefreshPaintsAndResumesInterruptedFrame) {
   int16_t y = 4;
   roo_display::Color pixel;
   device.raster().readColors(&x, &y, 1, &pixel);
-  EXPECT_EQ(roo_display::Argb4444().toArgbColor(
-                roo_display::Argb4444().fromArgbColor(roo_display::color::Green)),
-            pixel);
+  EXPECT_EQ(
+      roo_display::Argb4444().toArgbColor(
+          roo_display::Argb4444().fromArgbColor(roo_display::color::Green)),
+      pixel);
   navigation.clear();
 }
 
 // Verifies a scheduled application tick preserves the full key sample while
 // retaining normal Enter Down/Up press-lifecycle semantics.
-TEST(DisplayRuntimeCharacterization, ScheduledTickRoutesKeySamplesAndActivation) {
+TEST(DisplayRuntimeCharacterization,
+     ScheduledTickRoutesKeySamplesAndActivation) {
   roo::byte raster[32 * 32 * 2] = {};
   roo_display::OffscreenDevice<roo_display::Argb4444> device(
       32, 32, raster, roo_display::Argb4444());
   roo_display::Display display(device);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment environment(scheduler);
-  QueuedKeySource keys({{KeyPhase::kDown, KeyCode::kCharacter,
-                         kKeyModifierControl, PhysicalKey::kX, U'x'},
-                        {KeyPhase::kDown, KeyCode::kEnter, 0,
-                         PhysicalKey::kEnter, 0},
-                        {KeyPhase::kUp, KeyCode::kEnter, 0,
-                         PhysicalKey::kEnter, 0}});
+  QueuedKeySource keys(
+      {{KeyPhase::kDown, KeyCode::kCharacter, kKeyModifierControl,
+        PhysicalKey::kX, U'x'},
+       {KeyPhase::kDown, KeyCode::kEnter, 0, PhysicalKey::kEnter, 0},
+       {KeyPhase::kUp, KeyCode::kEnter, 0, PhysicalKey::kEnter, 0}});
 
   Application app(&environment, display, keys, false);
   RecordingDestination destination(app.context());
@@ -140,8 +145,7 @@ TEST(DisplayRuntimeCharacterization, ScheduledTickRoutesKeySamplesAndActivation)
   EXPECT_EQ(U'x', destination.contents.first_event.rune);
   EXPECT_EQ(KeyPhase::kUp, destination.contents.last_event.phase);
   EXPECT_EQ(KeyCode::kEnter, destination.contents.last_event.code);
-  EXPECT_EQ(PhysicalKey::kEnter,
-            destination.contents.last_event.physical_key);
+  EXPECT_EQ(PhysicalKey::kEnter, destination.contents.last_event.physical_key);
   EXPECT_FALSE(destination.contents.isPressed());
   navigation.clear();
 }
@@ -153,7 +157,7 @@ TEST(DisplayRuntimeCharacterization, DestructionStopsBorrowedDestinations) {
   roo_display::OffscreenDevice<roo_display::Argb4444> device(
       32, 32, raster, roo_display::Argb4444());
   roo_display::Display display(device);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment environment(scheduler);
 
   RecordingDestination* destination = nullptr;

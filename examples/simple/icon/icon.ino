@@ -85,7 +85,7 @@ void initDisplay() {
 #include "roo_windows/containers/horizontal_layout.h"
 #include "roo_windows/widgets/icon.h"
 
-roo_scheduler::Scheduler scheduler;
+roo_scheduler::SchedulingService scheduler;
 Environment env(scheduler);
 Application app(&env, display);
 

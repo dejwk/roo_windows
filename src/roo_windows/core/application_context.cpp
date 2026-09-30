@@ -5,7 +5,7 @@
 namespace roo_windows {
 
 ApplicationContext::ApplicationContext(
-    roo_scheduler::Scheduler& scheduler, const Theme& theme,
+    roo_scheduler::SchedulerClient& scheduler, const Theme& theme,
     const KeyboardColorTheme& keyboard_color_theme)
     : scheduler_(scheduler),
       theme_(theme),
@@ -28,7 +28,7 @@ ApplicationContext::~ApplicationContext() {
   lifetime_->release();
 }
 
-roo_scheduler::Scheduler& ApplicationContext::scheduler() const {
+roo_scheduler::SchedulerClient& ApplicationContext::scheduler() const {
   return scheduler_;
 }
 

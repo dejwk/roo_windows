@@ -5,9 +5,9 @@
 #include "roo_scheduler.h"
 #include "roo_windows/containers/horizontal_page_host.h"
 #include "roo_windows/containers/scroll_motion_controller.h"
-#include "roo_windows/core/widget.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/surface_widget.h"
+#include "roo_windows/core/widget.h"
 #include "roo_windows/material3/tabs/tabs.h"
 #include "roo_windows/material3/theme.h"
 #include "roo_windows/material3/typography.h"
@@ -45,7 +45,7 @@ class TestBadgedTab : public BadgedTab {
 
 // Verifies a tabs strip and its children resolve the same variant slot.
 TEST(Material3TabsTheme, UsesSharedVariantSurfaceForStripAndTabs) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Material3Theme material = DefaultTheme().material3Theme();
   material.components.tabs.primaryContainer = ColorToken::kSurfaceContainerLow;
   material.components.tabs.secondaryContainer =
@@ -183,7 +183,7 @@ void PageBoundTabs::onSelectedIndexChanged(int old_index, int new_index) {
 // Verifies that a new row starts on the phase-1 primary fixed configuration
 // without an implicit selected tab.
 TEST(Material3Tabs, DefaultsToPrimaryFixedWithDivider) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
@@ -199,7 +199,7 @@ TEST(Material3Tabs, DefaultsToPrimaryFixedWithDivider) {
 // Verifies that the base tab keeps the cheap non-owning label view and
 // optional borrowed icon pointer.
 TEST(Material3Tabs, TabStoresLabelAndOptionalIcon) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
@@ -220,7 +220,7 @@ TEST(Material3Tabs, TabStoresLabelAndOptionalIcon) {
 // press, and focus overlays span the entire tab bounds, while selection itself
 // stays an indicator/content-color change rather than an activation overlay.
 TEST(Material3Tabs, TabOwnsSurfaceAreaForStateOverlays) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
@@ -237,7 +237,7 @@ TEST(Material3Tabs, TabOwnsSurfaceAreaForStateOverlays) {
 // Verifies that adding the first tab establishes row-owned selection and
 // mirrors it into the child's activated state.
 TEST(Material3Tabs, FirstAddedTabBecomesSelectedAndActivated) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
@@ -259,7 +259,7 @@ TEST(Material3Tabs, FirstAddedTabBecomesSelectedAndActivated) {
 // Verifies the construction-time regression: initial selection must not call
 // subclass hooks before companion content widgets are ready.
 TEST(Material3Tabs, FirstAddedTabDoesNotFireSelectionChangedHook) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
@@ -275,7 +275,7 @@ TEST(Material3Tabs, FirstAddedTabDoesNotFireSelectionChangedHook) {
 // Verifies that programmatic selection changes keep child activated state in
 // sync with the selected index.
 TEST(Material3Tabs, SetSelectedIndexUpdatesActivatedState) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
@@ -297,7 +297,7 @@ TEST(Material3Tabs, SetSelectedIndexUpdatesActivatedState) {
 // Verifies that invalid and duplicate selections are rejected without changing
 // the current selected index.
 TEST(Material3Tabs, SetSelectedIndexRejectsInvalidAndSameIndex) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
@@ -313,7 +313,7 @@ TEST(Material3Tabs, SetSelectedIndexRejectsInvalidAndSameIndex) {
 // Verifies tab-click ordering: invocation fires first, then selection changes
 // with row state already updated for the change hook.
 TEST(Material3Tabs, ClickingTabInvokesThenChangesSelection) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
@@ -384,7 +384,7 @@ TEST_F(Material3TabsRenderTest, CanDeferSelectionUntilClickAnimationCompletes) {
 // Verifies that fixed mode divides the available row width equally among
 // visible tabs.
 TEST(Material3Tabs, FixedLayoutDividesWidthEqually) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
@@ -432,7 +432,7 @@ TEST(Material3Tabs, PublicTypesStayWithinPhaseFiveSizeBudget) {
 // Verifies the phase-5 integration pattern: tab selection drives the content
 // host without making `Tabs` own a pager or page vector.
 TEST(Material3Tabs, SelectionChangesDriveHorizontalPageHost) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
@@ -492,7 +492,7 @@ TEST_F(Material3TabsRenderTest, HorizontalPageHostGestureDrivesSelection) {
 // Verifies that scrollable tabs use intrinsic child widths and the Material 3
 // 52dp leading inset instead of fixed equal-width slots.
 TEST(Material3Tabs, ScrollableLayoutUsesIntrinsicWidthsAndLeadingInset) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
@@ -517,7 +517,7 @@ TEST(Material3Tabs, ScrollableLayoutUsesIntrinsicWidthsAndLeadingInset) {
 // Verifies that selecting an off-screen tab in scrollable mode adjusts the
 // strip origin so the selected tab is brought into the viewport.
 TEST(Material3Tabs, ScrollableSelectionRevealsSelectedTab) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
@@ -727,7 +727,7 @@ TEST_F(Material3TabsRenderTest, DetachedScrollableTabsCancelBothChannels) {
 // Focus reveal is independent from selection: arrow-key traversal may expose
 // an unselected tab without moving the selection indicator or changing pages.
 TEST(Material3Tabs, ScrollableFocusRevealDoesNotChangeSelection) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
@@ -752,7 +752,7 @@ TEST(Material3Tabs, ScrollableFocusRevealDoesNotChangeSelection) {
 // Verifies that visible badges participate in intrinsic tab width, which is
 // the width source for scrollable tabs.
 TEST(Material3Tabs, ScrollableLayoutIncludesVisibleBadgeWidth) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
@@ -776,7 +776,7 @@ TEST(Material3Tabs, ScrollableLayoutIncludesVisibleBadgeWidth) {
 // Verifies that horizontal drag in scrollable mode uses the shared motion path
 // to move the tab strip without changing selection.
 TEST(Material3Tabs, ScrollableDragMovesStripWithoutSelecting) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
@@ -799,7 +799,7 @@ TEST(Material3Tabs, ScrollableDragMovesStripWithoutSelecting) {
 // Verifies that rows containing an icon tab use the Material 3 64dp container
 // height.
 TEST(Material3Tabs, IconTabsRequestSixtyFourDpRowHeight) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
@@ -817,7 +817,7 @@ TEST(Material3Tabs, IconTabsRequestSixtyFourDpRowHeight) {
 // Verifies the two badge placement modes from the tabs design: label-inline
 // badges and icon-overlap badges both stay within the tab surface.
 TEST(Material3Tabs, BadgedTabsPlaceBadgeWithinTabBounds) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
@@ -848,7 +848,7 @@ TEST(Material3Tabs, BadgedTabsPlaceBadgeWithinTabBounds) {
 // Label-only badges sit inline with the text rather than at the top edge of
 // the tab. The label and badge form one centered content cluster.
 TEST(Material3Tabs, LabelOnlyBadgeIsCenteredAndSeparatedFromText) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
@@ -875,7 +875,7 @@ TEST(Material3Tabs, LabelOnlyBadgeIsCenteredAndSeparatedFromText) {
 // Verifies that tab foreground content is centered in the band above the
 // indicator rather than across the full tab surface.
 TEST(Material3Tabs, CoreContentBoundsExcludeIndicatorBand) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 

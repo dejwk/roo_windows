@@ -72,7 +72,7 @@ class ContainerMargins : public testing::Test {
     EXPECT_EQ(height, widget.measured.height());
   }
 
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env;
   ApplicationContext context;
 };

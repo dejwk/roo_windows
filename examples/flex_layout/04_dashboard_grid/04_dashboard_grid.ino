@@ -144,7 +144,7 @@ class DashboardGrid : public FlexLayout {
   MetricCard uv_;
 };
 
-roo_scheduler::Scheduler scheduler;
+roo_scheduler::SchedulingService scheduler;
 Environment env(scheduler);
 Application app(&env, display);
 DashboardGrid dashboard_grid(app.context());

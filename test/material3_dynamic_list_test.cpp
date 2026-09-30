@@ -1244,7 +1244,7 @@ TEST_F(DynamicListTest, WidthAndPolicyChangesReusePreparedRows) {
 // Verifies the current theme and a specialized parent background reach dynamic
 // rows and their gap surfaces after invalidation, without replacing the pool.
 TEST(DynamicListTheme, UsesUpdatedThemeAndParentBackground) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Material3Theme material = DefaultTheme().material3Theme();
   material.components.list.segmentedContainer = ColorToken::kSurfaceContainer;
   Theme theme = DefaultTheme();

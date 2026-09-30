@@ -2,9 +2,9 @@
 #include "gtest/gtest.h"
 #include "roo_display.h"
 #include "roo_display/core/offscreen.h"
-#include "roo_windows/core/surface_widget.h"
 #include "roo_scheduler.h"
 #include "roo_windows.h"
+#include "roo_windows/core/surface_widget.h"
 #include "roo_windows/material3/checkbox/checkbox.h"
 
 namespace roo_windows {
@@ -72,7 +72,7 @@ class Material3CheckboxGoldenTest : public testing::Test {
   roo::byte raster_[kWidth * kHeight * 2];
   roo_display::OffscreenDevice<roo_display::Argb4444> offscreen_;
   roo_display::Display display_;
-  roo_scheduler::Scheduler scheduler_;
+  roo_scheduler::SchedulingService scheduler_;
   Environment env_;
 };
 

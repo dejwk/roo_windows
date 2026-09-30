@@ -8,13 +8,13 @@ namespace roo_windows {
 /// Shared bootstrap configuration borrowed by `Application` and its runtime
 /// `ApplicationContext`.
 ///
-/// Carries references to a `roo_scheduler::Scheduler` (used for animations and
-/// deferred work), the active visual `Theme`, and the `KeyboardColorTheme`. The
-/// environment is normally held by the `Application` and outlives the runtime
-/// context and widgets that consume those services.
+/// Carries references to a `roo_scheduler::SchedulingService` (used for
+/// animations and deferred work), the active visual `Theme`, and the
+/// `KeyboardColorTheme`. The environment is normally held by the `Application`
+/// and outlives the runtime context and widgets that consume those services.
 class Environment {
  public:
-  Environment(roo_scheduler::Scheduler& scheduler,
+  Environment(roo_scheduler::SchedulingService& scheduler,
               const Theme& theme = DefaultTheme(),
               const KeyboardColorTheme& kb_theme = DefaultKeyboardColorTheme())
       : scheduler_(scheduler), theme_(theme), kb_theme_(kb_theme) {}
@@ -24,11 +24,14 @@ class Environment {
   /// Returns the on-screen keyboard color theme.
   const KeyboardColorTheme& keyboardColorTheme() const { return kb_theme_; }
 
-  /// Returns the scheduler used for animations and deferred work.
-  roo_scheduler::Scheduler& scheduler() const { return scheduler_; }
+  /// Returns scheduling and cancellation access for animations and deferred
+  /// work.
+  roo_scheduler::SchedulerClient& scheduler() const { return scheduler_; }
 
  private:
-  roo_scheduler::Scheduler& scheduler_;
+  friend class Application;
+
+  roo_scheduler::SchedulingService& scheduler_;
   const Theme& theme_;
   const KeyboardColorTheme& kb_theme_;
 };

@@ -7,8 +7,8 @@
 #include "roo_icons/outlined/24/alert.h"
 #include "roo_scheduler.h"
 #include "roo_windows/core/application.h"
-#include "roo_windows/core/surface_widget.h"
 #include "roo_windows/core/environment.h"
+#include "roo_windows/core/surface_widget.h"
 #include "roo_windows/material3/dialog/basic_dialog.h"
 #include "roo_windows/material3/dialog/full_screen_dialog.h"
 #include "roo_windows/material3/typography.h"
@@ -19,8 +19,7 @@ namespace {
 
 class Backdrop final : public SurfaceWidget {
  public:
-  explicit Backdrop(ApplicationContext& context)
-      : SurfaceWidget(context) {}
+  explicit Backdrop(ApplicationContext& context) : SurfaceWidget(context) {}
 
   Color background() const override { return Color(0xFFE8E4DC); }
   void paint(PaintContext& ctx) const override { ctx.clear(); }
@@ -50,7 +49,7 @@ class Material3DialogGoldenTest : public testing::Test {
   roo::byte raster_[kWidth * kHeight * 2] = {};
   roo_display::OffscreenDevice<roo_display::Argb4444> offscreen_;
   roo_display::Display display_;
-  roo_scheduler::Scheduler scheduler_;
+  roo_scheduler::SchedulingService scheduler_;
   Environment environment_;
   Application app_;
   Backdrop backdrop_;

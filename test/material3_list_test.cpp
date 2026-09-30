@@ -310,7 +310,7 @@ TEST(Material3List, PolicyDefaultsMatchDesign) {
 // Verifies that the convenience init builders populate only descriptor data,
 // without requiring any row widget behavior.
 TEST(Material3List, StandardListItemInitPresetsPopulateDescriptorData) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
   TestWidget leading(context);
@@ -347,7 +347,7 @@ TEST(Material3List, StandardListItemInitPresetsPopulateDescriptorData) {
 // Verifies that StandardListItem is construction-time configured and mirrors
 // the stable borrowed widgets from its init descriptor.
 TEST(Material3List, StandardListItemMirrorsInitDescriptor) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
   TestWidget leading(context);
@@ -377,7 +377,7 @@ TEST(Material3List, StandardListItemMirrorsInitDescriptor) {
 // Verifies that phase 8 convenience items keep text data lightweight while
 // exposing only the stable leading visual they own.
 TEST(Material3List, ConvenienceItemsExposeCompactListItemState) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
 
@@ -410,7 +410,7 @@ TEST(Material3List, ConvenienceItemsExposeCompactListItemState) {
 // Verifies that convenience items bind through the existing ListEntry slot
 // contract without introducing any new row abstraction.
 TEST(Material3List, ConvenienceItemsBindThroughListEntry) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
   TestListEntry entry(context);
@@ -439,7 +439,7 @@ TEST(Material3List, ConvenienceItemsBindThroughListEntry) {
 // Verifies that ListRow still bridges inline-owned items when the item type
 // needs the row's ApplicationContext to build its owned leading visual.
 TEST(Material3List, ListRowConstructsContextAwareConvenienceItems) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
 
@@ -460,7 +460,7 @@ TEST(Material3List, ListRowConstructsContextAwareConvenienceItems) {
 // Verifies that rows become clickable only when the bound item exposes
 // invocation behavior.
 TEST(Material3List, ListEntryClickabilityDependsOnBoundItemInvocation) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
 
@@ -484,7 +484,7 @@ TEST(Material3List, ListEntryClickabilityDependsOnBoundItemInvocation) {
 // Verifies that navigation convenience items keep callback storage in opt-in
 // item types while exposing a stable leading icon.
 TEST(Material3List, NavigationConvenienceItemsExposeInvokeSurface) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
 
@@ -518,7 +518,7 @@ TEST(Material3List, NavigationConvenienceItemsExposeInvokeSurface) {
 // Verifies that row click delegation and direct item invocation follow the
 // same callback path for navigation convenience rows.
 TEST(Material3List, NavigationRowsDelegateRowClickToItemInvokePath) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
   TestListRow<AvatarNavigationListItem> row(context, "DW", "Assigned owner",
@@ -537,7 +537,7 @@ TEST(Material3List, NavigationRowsDelegateRowClickToItemInvokePath) {
 // Verifies that row invocation is routed solely through the click hook, even
 // for direct unit-test tap-up activation.
 TEST(Material3List, NavigationRowsInvokeOnceThroughClickHook) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
   TestListRow<AvatarNavigationListItem> row(context, "DW", "Assigned owner",
@@ -556,7 +556,7 @@ TEST(Material3List, NavigationRowsInvokeOnceThroughClickHook) {
 // Verifies that Phase 10 selection convenience items expose semantic state
 // APIs and support configurable leading/trailing control placement.
 TEST(Material3List, SelectionConvenienceItemsExposeSemanticStateAndPlacement) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
 
@@ -597,7 +597,7 @@ TEST(Material3List, SelectionConvenienceItemsExposeSemanticStateAndPlacement) {
 // Verifies that selection convenience rows are clickable without requiring a
 // callback and that row press toggles/selects the embedded affordance state.
 TEST(Material3List, SelectionRowsDelegateRowClickToAffordanceState) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
 
@@ -626,7 +626,7 @@ TEST(Material3List, SelectionRowsDelegateRowClickToAffordanceState) {
 // Verifies that checkbox and radio affordance taps trigger the same
 // invoke callback path used by row clicks.
 TEST(Material3List, SelectionAffordanceTapUsesSameInvokeCallbackPath) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
 
@@ -648,7 +648,7 @@ TEST(Material3List, SelectionAffordanceTapUsesSameInvokeCallbackPath) {
 // Verifies that the Phase 1 widgets can be constructed with safe default
 // state before row layout, child binding, and expansion behavior are added.
 TEST(Material3List, BaselineClassesConstructWithSafeDefaults) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
 
@@ -681,7 +681,7 @@ TEST(Material3List, BaselineClassesConstructWithSafeDefaults) {
 // Verifies that ExpandablePanel owns a single optional body child, reports
 // collapsed vs expanded measured height, and allows replacing content.
 TEST(Material3List, ExpandablePanelAttachesContentAndResolvesHeight) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
   TestExpandablePanel panel(context);
@@ -882,7 +882,7 @@ TEST_F(Material3ListRenderTest,
 // currently visible animated height, preventing child spill beyond panel
 // bounds while expanding.
 TEST(Material3List, ExpandablePanelClipsChildLayoutToVisibleHeight) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
   TestExpandablePanel panel(context);
@@ -1181,7 +1181,7 @@ TEST_F(Material3ExpandableRippleTest,
 // Verifies that binding a standard item attaches the stable borrowed slot
 // widgets plus row-owned text labels, and clearing the item detaches them.
 TEST(Material3List, ListEntryBindsAndClearsStableSlotChildren) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
   TestWidget leading(context, Dimensions(20, 20));
@@ -1213,7 +1213,7 @@ TEST(Material3List, ListEntryBindsAndClearsStableSlotChildren) {
 // Verifies that a measured and laid-out row positions leading and trailing
 // widgets according to the default Material 3 row padding and alignment.
 TEST(Material3List, ListEntryMeasuresAndLaysOutSlots) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
   TestWidget leading(context, Dimensions(20, 20));
@@ -1239,7 +1239,7 @@ TEST(Material3List, ListEntryMeasuresAndLaysOutSlots) {
 // Verifies that a truncated supporting label does not exclude the trailing
 // portion of its row surface from the row-owned press overlay.
 TEST(Material3List, TruncatedSupportingLabelKeepsPaintBoundsInsideTextSlot) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
   TestListRow<NavigationListItem> row(
@@ -1258,7 +1258,7 @@ TEST(Material3List, TruncatedSupportingLabelKeepsPaintBoundsInsideTextSlot) {
 // Verifies that the const suggested-minimum query stays on the cheap,
 // non-measuring path and does not trigger child measure side effects.
 TEST(Material3List, ListEntrySuggestedMinimumDoesNotMeasureBoundSlots) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
   CountingMeasureWidget leading(context, Dimensions(10, 8), Dimensions(40, 30));
@@ -1285,7 +1285,7 @@ TEST(Material3List, ListEntrySuggestedMinimumDoesNotMeasureBoundSlots) {
 // Verifies that refreshFromItem rereads lightweight descriptor state while
 // preserving the already attached slot widget identity and row-owned labels.
 TEST(Material3List, ListEntryRefreshesMutableTextWithoutReplacingSlots) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
   MutableListItem item("A");
@@ -1306,7 +1306,7 @@ TEST(Material3List, ListEntryRefreshesMutableTextWithoutReplacingSlots) {
 // Verifies that one-line truncate policies keep the cheap label slot and do
 // not replace the text child when only text content changes.
 TEST(Material3List, OneLineTruncateRefreshKeepsExistingTextWidget) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
   MutablePolicyListItem item("Headline", "");
@@ -1331,7 +1331,7 @@ TEST(Material3List, OneLineTruncateRefreshKeepsExistingTextWidget) {
 // Verifies that changing text policy class through refresh swaps the slot
 // widget from one-line label mode to block-text mode.
 TEST(Material3List, RefreshSwitchesTextWidgetClassWhenPolicyClassChanges) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
   MutablePolicyListItem item("Headline", "");
@@ -1358,7 +1358,7 @@ TEST(Material3List, RefreshSwitchesTextWidgetClassWhenPolicyClassChanges) {
 // Verifies that max-lines policy affects measured row height for standard
 // supporting text without requiring custom caller-provided text widgets.
 TEST(Material3List, TextPolicyMaxLinesChangesMeasuredRowHeight) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
   MutablePolicyListItem item(
@@ -1388,7 +1388,7 @@ TEST(Material3List, TextPolicyMaxLinesChangesMeasuredRowHeight) {
 // list-provided row position and selection state, while baseline rows stay
 // square.
 TEST(Material3List, ListEntryResolvesShapeFromVariantPositionAndSelection) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
   TestListEntry entry(context);
@@ -1449,7 +1449,7 @@ TEST(Material3List, ListEntryResolvesShapeFromVariantPositionAndSelection) {
 // Verifies that ListRow owns exactly one inline item, binds it immediately,
 // and exposes the same row contracts through the inherited ListEntry surface.
 TEST(Material3List, ListRowOwnsAndBindsItsInlineItem) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
   TestStandardListRow row(
@@ -1470,7 +1470,7 @@ TEST(Material3List, ListRowOwnsAndBindsItsInlineItem) {
 // Verifies that List continues to accept borrowed and adopted ListRow
 // instances because the bridge adds ownership glue, not a second row model.
 TEST(Material3List, ListAcceptsBorrowedAndAdoptedListRows) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
   TestList list(context);
@@ -1598,7 +1598,7 @@ TEST_F(Material3ListRenderTest, ExpressiveInsetDividerPaintUsesGapSpace) {
 // Verifies that List keeps borrowed entries borrowed, adopts unique_ptr rows,
 // and detaches or destroys them correctly on clear().
 TEST(Material3List, ListClearsBorrowedAndAdoptedEntriesWithCorrectOwnership) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
   TestList list(context);
@@ -1627,7 +1627,7 @@ TEST(Material3List, ListClearsBorrowedAndAdoptedEntriesWithCorrectOwnership) {
 // Verifies that List recomputes first, middle, last, and single row position
 // roles as rows are added and list-level policies change.
 TEST(Material3List, ListPropagatesPositionVariantStyleAndSegmentedGap) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
   TestList list(context);
@@ -1669,7 +1669,7 @@ TEST(Material3List, ListPropagatesPositionVariantStyleAndSegmentedGap) {
 }
 
 TEST(Material3List, SegmentedListSkipsGoneRowsWhenResolvingPositions) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
   TestList list(context);
@@ -1762,7 +1762,7 @@ TEST_F(Material3ListRenderTest, TrailingTextAndOverlineInheritListColors) {
 }
 
 TEST(Material3List, ListEntryResolvesFlatSegmentedAndSelectedFills) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
   TestListEntry entry(context);
@@ -1786,7 +1786,7 @@ TEST(Material3List, ListEntryResolvesFlatSegmentedAndSelectedFills) {
 // Verifies standard and segmented unselected rows select independent shared
 // list roles, while expressive selection retains its accent surface.
 TEST(Material3List, UsesIndependentThemedUnselectedRoles) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Material3Theme material = DefaultTheme().material3Theme();
   material.components.list.standardContainer = ColorToken::kSurfaceContainerLow;
   material.components.list.segmentedContainer =
@@ -1812,7 +1812,7 @@ TEST(Material3List, UsesIndependentThemedUnselectedRoles) {
 // Verifies that selection policy resolves the list-owned selected state and
 // divider visibility from stored per-entry selection hints.
 TEST(Material3List, ListResolvesSelectionAndDividerContext) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
   TestList list(context);
@@ -1873,7 +1873,7 @@ TEST(Material3List, ListResolvesSelectionAndDividerContext) {
 // between rows that are explicitly divided, and preserve that same separator
 // when a selected-selected divider is suppressed.
 TEST(Material3List, ListAddsSmallGapBetweenSeparatedExpressiveRows) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
   TestList list(context);
@@ -1918,7 +1918,7 @@ TEST(Material3List, ListAddsSmallGapBetweenSeparatedExpressiveRows) {
 // is disabled, and shrink back to a divider-thickness separator when dividers
 // are on.
 TEST(Material3List, ListGapResolutionDependsOnDividerPolicy) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
   TestList list(context);
@@ -1975,7 +1975,7 @@ class RetainedHeadlineRow : public TestListRow<HeadlineListItem> {
 
 // Verifies empty recycled text and released views preserve the prepared widget.
 TEST(Material3List, PreparedTextRetainsStorageAcrossEmptyBindings) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment environment(scheduler);
   ApplicationContext context(scheduler, environment.theme(),
                              environment.keyboardColorTheme());
@@ -1997,7 +1997,7 @@ TEST(Material3List, PreparedTextRetainsStorageAcrossEmptyBindings) {
 
 // Verifies long eager lists keep 24-bit vertical positions through layout.
 TEST(Material3ListGeometry, HeightAboveSigned16Bit) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment environment(scheduler);
   ApplicationContext context(scheduler, environment.theme(),
                              environment.keyboardColorTheme());

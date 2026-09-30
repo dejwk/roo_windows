@@ -5,9 +5,9 @@
 #include "roo_display/core/offscreen.h"
 #include "roo_scheduler.h"
 #include "roo_windows/core/application.h"
-#include "roo_windows/core/widget.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/panel.h"
+#include "roo_windows/core/widget.h"
 #include "roo_windows/material3/menu/menu.h"
 
 namespace roo_windows::material3 {
@@ -153,7 +153,7 @@ class Material3MenuTest : public testing::Test {
   roo::byte raster_[320 * 240 * 2] = {};
   roo_display::OffscreenDevice<roo_display::Argb4444> device_;
   roo_display::Display display_;
-  roo_scheduler::Scheduler scheduler_;
+  roo_scheduler::SchedulingService scheduler_;
   Environment environment_;
   Application app_;
   TestPanel content_;

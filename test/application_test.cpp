@@ -1,18 +1,44 @@
 #include "roo_windows/core/application.h"
 
+#include <type_traits>
+#include <utility>
+
 #include "gtest/gtest.h"
 #include "roo_display.h"
 #include "roo_display/core/offscreen.h"
 #include "roo_scheduler.h"
-#include "roo_windows/core/widget.h"
 #include "roo_windows/core/destination.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/navigation_host.h"
 #include "roo_windows/core/transient_presentation.h"
+#include "roo_windows/core/widget.h"
 #include "roo_windows/widgets/text_field.h"
 
 namespace roo_windows {
 namespace {
+
+static_assert(
+    std::is_same<decltype(std::declval<const Environment&>().scheduler()),
+                 roo_scheduler::SchedulerClient&>::value,
+    "Environment exposes scheduling without dispatch");
+static_assert(std::is_same<decltype(std::declval<const ApplicationContext&>()
+                                        .scheduler()),
+                           roo_scheduler::SchedulerClient&>::value,
+              "Widget contexts expose scheduling without dispatch");
+
+// Verifies detached contexts can submit deferred work through the restricted
+// interface while the owning service controls execution.
+TEST(ApplicationTest, ContextUsesRestrictedScheduler) {
+  roo_scheduler::SchedulingService scheduler;
+  Environment env(scheduler);
+  ApplicationContext context(env.scheduler(), env.theme(),
+                             env.keyboardColorTheme());
+  int calls = 0;
+  context.scheduler().scheduleNow([&] { ++calls; });
+  EXPECT_EQ(0, calls);
+  scheduler.executeEligibleTasks();
+  EXPECT_EQ(1, calls);
+}
 
 class TestWidget : public Widget {
  public:
@@ -53,8 +79,7 @@ class TestDestination : public Destination {
 class TextInputDestination : public Destination {
  public:
   explicit TextInputDestination(ApplicationContext& context)
-      : field(context, font_body1(), "", roo_display::kLeft,
-              TextField::NONE) {}
+      : field(context, font_body1(), "", roo_display::kLeft, TextField::NONE) {}
 
   Widget& getContents() override { return field; }
 
@@ -81,7 +106,7 @@ TEST(Application, StartIsSingleUse) {
   roo_display::OffscreenDevice<roo_display::Argb4444> device(
       16, 16, raster, roo_display::Argb4444());
   roo_display::Display display(device);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment environment(scheduler);
   EmptyKeySource keys;
   Application app(&environment, display, keys, false);
@@ -100,7 +125,7 @@ TEST(Application, RequestBackUsesExplicitTargetTask) {
   roo_display::OffscreenDevice<roo_display::Argb4444> device(
       64, 64, raster, roo_display::Argb4444());
   roo_display::Display display(device);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment environment(scheduler);
 
   Application app(&environment, display);
@@ -134,7 +159,7 @@ TEST(Application, RequestBackPrioritizesTransientPresentation) {
   roo_display::OffscreenDevice<roo_display::Argb4444> device(
       64, 64, raster, roo_display::Argb4444());
   roo_display::Display display(device);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment environment(scheduler);
 
   Application app(&environment, display);
@@ -164,7 +189,7 @@ TEST(Application, TextInputEmitterTargetsTheActiveEditor) {
   roo_display::OffscreenDevice<roo_display::Argb4444> device(
       64, 64, raster, roo_display::Argb4444());
   roo_display::Display display(device);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment environment(scheduler);
 
   Application app(&environment, display);
@@ -195,7 +220,7 @@ TEST(Application, TextInputActivationReplacesThePreviousEditor) {
   roo_display::OffscreenDevice<roo_display::Argb4444> device(
       64, 64, raster, roo_display::Argb4444());
   roo_display::Display display(device);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment environment(scheduler);
 
   Application app(&environment, display);
@@ -224,7 +249,7 @@ TEST(Application, TextInputEmitterOutlivesItsDestination) {
   roo_display::OffscreenDevice<roo_display::Argb4444> device(
       16, 16, raster, roo_display::Argb4444());
   roo_display::Display display(device);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment environment(scheduler);
   TextInputEmitter emitter;
   {

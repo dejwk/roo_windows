@@ -5,10 +5,10 @@
 #include "roo_display/core/offscreen.h"
 #include "roo_scheduler.h"
 #include "roo_windows/core/application.h"
-#include "roo_windows/core/widget.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/panel.h"
 #include "roo_windows/core/text_input.h"
+#include "roo_windows/core/widget.h"
 #include "roo_windows/material3/dialog/basic_dialog.h"
 #include "roo_windows/material3/dialog/dialog_scaffold.h"
 #include "roo_windows/material3/dialog/full_screen_dialog.h"
@@ -147,8 +147,7 @@ class InlineBodyDialog final : public BasicDialog {
   class InlineBody final : public Widget {
    public:
     InlineBody(ApplicationContext& context, bool& detached_before_delete)
-        : Widget(context),
-          detached_before_delete_(detached_before_delete) {}
+        : Widget(context), detached_before_delete_(detached_before_delete) {}
 
     ~InlineBody() override { detached_before_delete_ = parent() == nullptr; }
 
@@ -222,7 +221,7 @@ class TestDestination final : public Destination {
 
 // Verifies basic and full-screen dialogs select independent shared defaults.
 TEST(Material3DialogTheme, UsesIndependentBasicAndFullScreenSurfaceSlots) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Material3Theme material = DefaultTheme().material3Theme();
   material.components.dialog.basicContainer = ColorToken::kSurfaceContainerLow;
   material.components.dialog.fullScreenContainer =
@@ -264,7 +263,7 @@ class Material3DialogTest : public ::testing::Test {
   roo::byte raster_[320 * 240 * 2] = {};
   roo_display::OffscreenDevice<roo_display::Argb4444> device_;
   roo_display::Display display_;
-  roo_scheduler::Scheduler scheduler_;
+  roo_scheduler::SchedulingService scheduler_;
   Environment environment_;
   Application app_;
   TestPanel task_content_;

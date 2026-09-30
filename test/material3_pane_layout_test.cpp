@@ -1,8 +1,8 @@
 #include "gtest/gtest.h"
 #include "roo_scheduler.h"
-#include "roo_windows/core/widget.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/theme.h"
+#include "roo_windows/core/widget.h"
 #include "roo_windows/material3/layout_scaffold/layout_scaffold.h"
 
 namespace roo_windows::material3 {
@@ -52,7 +52,7 @@ PaneSpec AllBreakpoints(int16_t minimum, int16_t preferred) {
 // Verifies compact presentation follows the caller-selected pane rather than
 // using an implicit list/detail navigation policy.
 TEST(Material3PaneLayout, ShowsOnlyTheSelectedPaneOnCompactWidths) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   ProbeWidget leading(context);
@@ -79,7 +79,7 @@ TEST(Material3PaneLayout, ShowsOnlyTheSelectedPaneOnCompactWidths) {
 // Verifies a breakpoint-eligible supporting pane docks beside main and leaves
 // the policy-scaled gutter between the two tracks.
 TEST(Material3PaneLayout, DocksSupportingPaneBesideMain) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   ProbeWidget main(context);
@@ -100,7 +100,7 @@ TEST(Material3PaneLayout, DocksSupportingPaneBesideMain) {
 // Verifies all three panes retain canonical logical order, then collapse in
 // reverse priority while the active main pane remains available.
 TEST(Material3PaneLayout, LaysOutThreePanesThenCollapsesTrailingFirst) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   ProbeWidget leading(context);
@@ -127,7 +127,7 @@ TEST(Material3PaneLayout, LaysOutThreePanesThenCollapsesTrailingFirst) {
 // Verifies disabling simultaneous panes forces the selected pane to fill the
 // local rectangle, even when other panes remain attached.
 TEST(Material3PaneLayout, ShortHeightCallerOverrideForcesSinglePane) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   ProbeWidget leading(context);
@@ -146,7 +146,7 @@ TEST(Material3PaneLayout, ShortHeightCallerOverrideForcesSinglePane) {
 // Verifies leading and trailing remain logical identities in RTL and hidden
 // panes clear focus before receiving empty bounds.
 TEST(Material3PaneLayout, MirrorsLogicalSidesAndClearsHiddenPaneFocus) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   ProbeWidget leading(context);
@@ -175,7 +175,7 @@ TEST(Material3PaneLayout, MirrorsLogicalSidesAndClearsHiddenPaneFocus) {
 // Verifies clearing the selected slot preserves its logical selection and
 // produces an intentionally empty presentation until the caller chooses one.
 TEST(Material3PaneLayout, ClearingActivePaneDoesNotChooseReplacement) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   ProbeWidget leading(context);

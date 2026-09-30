@@ -179,7 +179,7 @@ class HorizontalPageHostRenderTest : public testing::Test {
   roo::byte raster_[kWidth * kHeight * 2];
   CountingOffscreenDevice offscreen_;
   Display display_;
-  roo_scheduler::Scheduler scheduler_;
+  roo_scheduler::SchedulingService scheduler_;
   Environment env_;
   Application app_;
 };
@@ -424,7 +424,7 @@ TEST(HorizontalPageHostRender, RevealedStripRepaintsWithoutBlitSupport) {
   roo::byte raster[120 * 60 * 2];
   NoBlitOffscreenDevice offscreen(120, 60, raster, Argb4444());
   Display display(offscreen);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   Application app(&env, display);
 

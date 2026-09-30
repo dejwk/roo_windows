@@ -10,10 +10,10 @@
 #include "roo_scheduler.h"
 #include "roo_testing/system/timer.h"
 #include "roo_windows/core/application.h"
-#include "roo_windows/core/widget.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/panel.h"
 #include "roo_windows/core/text_input.h"
+#include "roo_windows/core/widget.h"
 #include "roo_windows/widgets/text_field.h"
 #include "roo_windows_render_test_support.h"
 
@@ -68,8 +68,7 @@ class TestPanel : public Panel {
 
 class FocusableWidget : public Widget {
  public:
-  explicit FocusableWidget(ApplicationContext& context)
-      : Widget(context) {}
+  explicit FocusableWidget(ApplicationContext& context) : Widget(context) {}
 
   bool isFocusable() const override { return true; }
 
@@ -249,8 +248,7 @@ class ManualTouchDevice : public roo_display::TouchDevice {
 
 class GestureSpyWidget : public Widget {
  public:
-  explicit GestureSpyWidget(ApplicationContext& context)
-      : Widget(context) {}
+  explicit GestureSpyWidget(ApplicationContext& context) : Widget(context) {}
 
   bool supportsTap() const override { return tap_enabled; }
 
@@ -333,7 +331,7 @@ class HostTest : public ::testing::Test {
   roo::byte raster_[64 * 48 * 2] = {};
   roo_display::OffscreenDevice<roo_display::Argb4444> device_;
   roo_display::Display display_;
-  roo_scheduler::Scheduler scheduler_;
+  roo_scheduler::SchedulingService scheduler_;
   Environment environment_;
   // Declared before Application so dynamically-created task content outlives
   // the Task that borrows it during Application teardown.
@@ -1062,7 +1060,7 @@ TEST(TransientSurfaceHost, WindowShutdownRejectsReentrantAdmission) {
   roo_display::OffscreenDevice<roo_display::Argb4444> device(
       16, 16, raster, roo_display::Argb4444());
   roo_display::Display display(device);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment environment(scheduler);
   TestRegistration active;
   TestRegistration reopened;
@@ -1111,7 +1109,7 @@ TEST(TransientSurfaceHost, EmptyWindowRejectsSurface) {
   roo_display::OffscreenDevice<roo_display::Argb4444> device(
       0, 0, raster, roo_display::Argb4444());
   roo_display::Display display(device);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment environment(scheduler);
   TestRegistration registration;
   FocusScope scope;
@@ -1145,7 +1143,7 @@ TEST(GestureDetector, DisplayCoverageCancelsRetainedDrag) {
       kWidth, kHeight, raster, roo_display::Argb4444());
   ManualTouchDevice touch(kWidth, kHeight);
   roo_display::Display display(device, touch);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
   TestPanel root(context);
@@ -1182,7 +1180,7 @@ TEST(GestureDetector, DisplayCoverageDoesNotCancelSuccessfulTerminalTap) {
       kWidth, kHeight, raster, roo_display::Argb4444());
   ManualTouchDevice touch(kWidth, kHeight);
   roo_display::Display display(device, touch);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
   TestPanel root(context);
@@ -1217,7 +1215,7 @@ TEST(GestureDetector, SubtreeCleanupCancelsBeforeParentLinksChange) {
       kWidth, kHeight, raster, roo_display::Argb4444());
   ManualTouchDevice touch(kWidth, kHeight);
   roo_display::Display display(device, touch);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
   TestPanel root(context);
@@ -1249,7 +1247,7 @@ TEST(TransientSurfaceHost, CancellationMutationFailsRepeatedPreflight) {
       kWidth, kHeight, raster, roo_display::Argb4444());
   ManualTouchDevice touch(kWidth, kHeight);
   roo_display::Display display(device, touch);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment environment(scheduler);
   TestRegistration registration;
   FocusScope scope;

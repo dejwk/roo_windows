@@ -60,8 +60,8 @@ class Application {
   /// Repeated starts CHECK-fail.
   void start();
 
-  /// Starts this application and enters `env().scheduler().run()`.
-  /// Does not return under normal scheduler operation.
+  /// Starts this application and enters the environment's scheduling service
+  /// loop. Does not return under normal scheduler operation.
   void run();
 
   /// Lays out and paints all dirty items without polling or dispatching new

@@ -39,7 +39,7 @@ static_assert(sizeof(EmptyContainer) == sizeof(Container),
 
 // Verifies kNone preserves the generic container fallback without a parent.
 TEST(Material3ContainerTest, DetachedContainerUsesFrameworkSurface) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context(env.scheduler(), env.theme(),
                              env.keyboardColorTheme());
@@ -51,7 +51,7 @@ TEST(Material3ContainerTest, DetachedContainerUsesFrameworkSurface) {
 // Verifies inheritance uses the actual parent fill, including alpha, even when
 // that fill differs from the parent's semantic color role.
 TEST(Material3ContainerTest, NoneInheritsActualParentBackgroundAndRole) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context(env.scheduler(), env.theme(),
                              env.keyboardColorTheme());
@@ -66,7 +66,7 @@ TEST(Material3ContainerTest, NoneInheritsActualParentBackgroundAndRole) {
 // Verifies an owned role follows both theme and role changes without caching,
 // and switching back to kNone restores the parent's custom fill.
 TEST(Material3ContainerTest, OwnedRoleUsesCurrentThemeAndOverridesParentFill) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Material3Theme material = DefaultTheme().material3Theme();
   Theme theme = DefaultTheme();
   theme.material3_theme = &material;

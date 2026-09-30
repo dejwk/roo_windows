@@ -73,7 +73,7 @@ class SettingsShellTest : public testing::Test {
   roo::byte raster_[240 * 320 * 2]{};
   roo_display::OffscreenDevice<roo_display::Argb4444> device_;
   roo_display::Display display_;
-  roo_scheduler::Scheduler scheduler_;
+  roo_scheduler::SchedulingService scheduler_;
   Environment env_;
   std::unique_ptr<Application> app_;
   SettingsShell shell_;

@@ -8,8 +8,8 @@
 #include "roo_display/core/offscreen.h"
 #include "roo_scheduler.h"
 #include "roo_windows/core/application.h"
-#include "roo_windows/core/widget.h"
 #include "roo_windows/core/environment.h"
+#include "roo_windows/core/widget.h"
 
 namespace roo_windows {
 namespace test {
@@ -90,7 +90,7 @@ TEST(NavigationHost, PushPopAndClearBorrowDestinationContents) {
   roo_display::OffscreenDevice<roo_display::Argb4444> device(
       16, 16, raster, roo_display::Argb4444());
   roo_display::Display display(device);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment environment(scheduler);
 
   TestDestination* first = nullptr;
@@ -126,7 +126,7 @@ TEST(NavigationHost, BackRoutesDestinationThenHistoryThenTask) {
   roo_display::OffscreenDevice<roo_display::Argb4444> device(
       16, 16, raster, roo_display::Argb4444());
   roo_display::Display display(device);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment environment(scheduler);
 
   TestDestination* first = nullptr;
@@ -165,7 +165,7 @@ TEST(NavigationHost, ReentrantDestinationBackPerformsOnlyOneStep) {
   roo_display::OffscreenDevice<roo_display::Argb4444> device(
       16, 16, raster, roo_display::Argb4444());
   roo_display::Display display(device);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment environment(scheduler);
 
   TestDestination* next = nullptr;
@@ -193,7 +193,7 @@ TEST(NavigationHost, DestinationLifecycleFollowsHistoryAndCurrentContent) {
   roo_display::OffscreenDevice<roo_display::Argb4444> device(
       16, 16, raster, roo_display::Argb4444());
   roo_display::Display display(device);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment environment(scheduler);
 
   std::vector<char> events;
@@ -221,7 +221,7 @@ TEST(NavigationHost, RemovedCallbackFollowsReentrantStop) {
   roo_display::OffscreenDevice<roo_display::Argb4444> device(
       16, 16, raster, roo_display::Argb4444());
   roo_display::Display display(device);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment environment(scheduler);
 
   Application app_(&environment, display);
@@ -257,7 +257,7 @@ TEST(NavigationHost, RootUsesInlineStorageAndOverflowCapacityIsRetained) {
   roo_display::OffscreenDevice<roo_display::Argb4444> device(
       16, 16, raster, roo_display::Argb4444());
   roo_display::Display display(device);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment environment(scheduler);
   Application app(&environment, display);
   NavigationHost& navigation = app.addTaskFullScreen().navigation();
@@ -296,7 +296,7 @@ TEST(NavigationHost, RootCanRedirectDuringStartWithoutAllocatingHistory) {
   roo_display::OffscreenDevice<roo_display::Argb4444> device(
       16, 16, raster, roo_display::Argb4444());
   roo_display::Display display(device);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment environment(scheduler);
   Application app(&environment, display);
   NavigationHost& navigation = app.addTaskFullScreen().navigation();
@@ -323,7 +323,7 @@ TEST(NavigationHost, TaskTeardownDrainsHistoryAfterReentrantRemoval) {
   roo_display::OffscreenDevice<roo_display::Argb4444> device(
       16, 16, raster, roo_display::Argb4444());
   roo_display::Display display(device);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment environment(scheduler);
   auto app = std::make_unique<Application>(&environment, display);
   NavigationHost& navigation = app->addTaskFullScreen().navigation();

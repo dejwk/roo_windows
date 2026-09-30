@@ -4,11 +4,11 @@
 #include "roo_display.h"
 #include "roo_display/core/offscreen.h"
 #include "roo_scheduler.h"
+#include "roo_windows.h"
 #include "roo_windows/core/margins_mixin.h"
 #include "roo_windows/core/padding_mixin.h"
 #include "roo_windows/core/surface_widget.h"
 #include "roo_windows/core/widget.h"
-#include "roo_windows.h"
 
 namespace roo_windows::test_support {
 
@@ -66,10 +66,7 @@ class MutableShapeColorBoxWidget : public SurfaceWidget {
  public:
   MutableShapeColorBoxWidget(ApplicationContext& context,
                              roo_display::Color color, Dimensions dims)
-      : SurfaceWidget(context),
-        color_(color),
-        dims_(dims),
-        rounded_(false) {}
+      : SurfaceWidget(context), color_(color), dims_(dims), rounded_(false) {}
 
   roo_display::Color background() const override { return color_; }
 
@@ -173,7 +170,7 @@ class RooWindowsRenderTest : public testing::Test {
   roo::byte raster_[kWidth * kHeight * 2];
   roo_display::OffscreenDevice<roo_display::Argb4444> offscreen_;
   roo_display::Display display_;
-  roo_scheduler::Scheduler scheduler_;
+  roo_scheduler::SchedulingService scheduler_;
   Environment env_;
   Application app_;
 };
@@ -208,7 +205,7 @@ class RooWindowsRenderTestSized : public testing::Test {
   roo::byte raster_[kWidth * kHeight * 2];
   roo_display::OffscreenDevice<roo_display::Argb4444> offscreen_;
   roo_display::Display display_;
-  roo_scheduler::Scheduler scheduler_;
+  roo_scheduler::SchedulingService scheduler_;
   Environment env_;
   Application app_;
 };

@@ -38,7 +38,7 @@ class SpacedRow : public MarginsMixin<Row> {
 // Verifies a parent's preferred-height constraint preserves row margins instead
 // of squeezing them into the fixed row height.
 TEST(ListLayoutLifetime, PreferredHeightIncludesRowMargins) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment environment(scheduler);
   ApplicationContext context(scheduler, environment.theme(),
                              environment.keyboardColorTheme());
@@ -66,7 +66,7 @@ class PaddedList : public ListLayout {
 // Verifies overridden padding controls measurement, row bounds, and viewport
 // selection even when the base class stores a different padding value.
 TEST(ListLayoutLifetime, GeometryUsesVirtualPadding) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment environment(scheduler);
   ApplicationContext context(scheduler, environment.theme(),
                              environment.keyboardColorTheme());
@@ -95,7 +95,7 @@ TEST(ListLayoutLifetime, GeometryUsesVirtualPadding) {
 // Verifies a populated row pool detaches before destruction; under ASan this
 // catches Panel reading row ownership flags after the pool has freed its rows.
 TEST(ListLayoutLifetime, DestroysPopulatedPoolAfterNavigationClear) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment environment(scheduler);
   roo::byte pixels[240 * 320 * 2] = {};
   roo_display::OffscreenDevice<roo_display::Argb4444> device(
@@ -139,7 +139,7 @@ class InspectableList : public ListLayout {
 // Verifies empty/offscreen ranges never fabricate a binding and shrink releases
 // every old binding while retaining the viewport-sized allocation budget.
 TEST(ListLayoutLifetime, EmptyOffscreenShrinkAndRetainedCapacity) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment environment(scheduler);
   roo::byte pixels[240 * 320 * 2] = {};
   roo_display::OffscreenDevice<roo_display::Argb4444> device(
@@ -186,7 +186,7 @@ TEST(ListLayoutLifetime, EmptyOffscreenShrinkAndRetainedCapacity) {
 
 // Verifies checked extents reject overflow rather than compressing row heights.
 TEST(ListLayoutLifetime, RejectsUnrepresentableContentExtent) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment environment(scheduler);
   ApplicationContext context(scheduler, environment.theme(),
                              environment.keyboardColorTheme());

@@ -145,7 +145,7 @@ class HorizontalPageHostDemo : public FlexLayout {
 
 }  // namespace
 
-roo_scheduler::Scheduler scheduler;
+roo_scheduler::SchedulingService scheduler;
 Environment env(scheduler);
 Application app(&env, display);
 HorizontalPageHostDemo demo(app.context());

@@ -144,7 +144,7 @@ class LogSearch : public FlexLayout {
 
 }  // namespace
 
-roo_scheduler::Scheduler scheduler;
+roo_scheduler::SchedulingService scheduler;
 Environment env(scheduler);
 Application app(&env, display);
 LogSearch log_search(app.context());

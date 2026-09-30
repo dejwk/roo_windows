@@ -12,13 +12,13 @@
 #include "roo_icons/outlined/24/action.h"
 #include "roo_scheduler.h"
 #include "roo_windows/core/application.h"
-#include "roo_windows/core/widget.h"
 #include "roo_windows/core/canvas.h"
 #include "roo_windows/core/click_animation.h"
 #include "roo_windows/core/clipper.h"
 #include "roo_windows/core/container.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/paint_context.h"
+#include "roo_windows/core/widget.h"
 #include "roo_windows/material3/badge/badge.h"
 #include "roo_windows/material3/navigation_rail/navigation_rail.h"
 #include "roo_windows/widgets/blank.h"
@@ -62,7 +62,7 @@ void ExpectDestinationPaintsEveryPixel(NavigationRailLayout layout,
                             roo_display::Box(0, 0, kWidth - 1, kHeight - 1),
                             untouched);
 
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   NavigationRailDestination destination(context, "Inbox",
@@ -162,7 +162,7 @@ TEST(Material3NavigationRail, PublicTypesStayWithinPhaseOneSizeBudget) {
 
 // Verifies collapsed and expanded persistent rails choose independent slots.
 TEST(Material3NavigationRail, UsesThemedContainerRolesForBothLayouts) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Material3Theme material = DefaultTheme().material3Theme();
   material.components.navigationRail.collapsedContainer =
       ColorToken::kSurfaceContainerLow;
@@ -182,7 +182,7 @@ TEST(Material3NavigationRail, UsesThemedContainerRolesForBothLayouts) {
 }
 
 TEST(Material3NavigationRail, DestinationDefaultsAndSetters) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   const MonoIcon& icon = ic_outlined_24_action_done();
@@ -214,7 +214,7 @@ TEST(Material3NavigationRail, DestinationDefaultsAndSetters) {
 }
 
 TEST(Material3NavigationRail, DestinationMeasuresForBothLayouts) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   NavigationRailDestination destination(context, "Inbox",
@@ -234,7 +234,7 @@ TEST(Material3NavigationRail, DestinationMeasuresForBothLayouts) {
 }
 
 TEST(Material3NavigationRail, ExpandedContentHugsIconAndLabel) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   NavigationRailDestination destination(context, "Inbox",
@@ -263,7 +263,7 @@ TEST(Material3NavigationRail, DestinationPaintSettlesEveryPixelExactlyOnce) {
 }
 
 TEST(Material3NavigationRail, BadgedDestinationCapsValuesAndStaysInTarget) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   BadgedNavigationRailDestination destination(
@@ -295,7 +295,7 @@ TEST(Material3NavigationRail, BadgedDestinationCapsValuesAndStaysInTarget) {
 }
 
 TEST(Material3NavigationRail, CollapsedTextBadgesUseMaterialIconPlacement) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   NavigationRail rail(context);
@@ -314,7 +314,7 @@ TEST(Material3NavigationRail, CollapsedTextBadgesUseMaterialIconPlacement) {
 }
 
 TEST(Material3NavigationRail, ExpandedBadgesMirrorBesideTheLabelInRtl) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   NavigationRail rail(context);
@@ -343,7 +343,7 @@ TEST(Material3NavigationRail, ExpandedBadgesMirrorBesideTheLabelInRtl) {
 }
 
 TEST(Material3NavigationRail, RailOwnsSelectionAndReselection) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   TestNavigationRail rail(context);
@@ -381,7 +381,7 @@ TEST(Material3NavigationRail,
   roo_display::OffscreenDevice<roo_display::Argb4444> offscreen(
       kWidth, kHeight, raster, roo_display::Argb4444());
   roo_display::Display display(offscreen);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   Application app(&env, display);
 
@@ -417,7 +417,7 @@ TEST(Material3NavigationRail, TouchReleaseDefersSelectionUntilClickCompletes) {
   roo_display::OffscreenDevice<roo_display::Argb4444> offscreen(
       kWidth, kHeight, raster, roo_display::Argb4444());
   roo_display::Display display(offscreen);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   Application app(&env, display);
 
@@ -473,7 +473,7 @@ TEST(Material3NavigationRail,
   roo_display::OffscreenDevice<roo_display::Argb4444> offscreen(
       kWidth, kHeight, raster, roo_display::Argb4444());
   roo_display::Display display(offscreen);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   Application app(&env, display);
 
@@ -522,7 +522,7 @@ TEST(Material3NavigationRail,
   roo_display::OffscreenDevice<roo_display::Argb4444> offscreen(
       kWidth, kHeight, raster, roo_display::Argb4444());
   roo_display::Display display(offscreen);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   QueuedKeySource keys;
   Application app(&env, display, keys, false);
@@ -579,7 +579,7 @@ TEST(Material3NavigationRail,
   roo_display::OffscreenDevice<roo_display::Argb4444> offscreen(
       kWidth, kHeight, raster, roo_display::Argb4444());
   roo_display::Display display(offscreen);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   Application app(&env, display);
 
@@ -616,7 +616,7 @@ TEST(Material3NavigationRail,
 }
 
 TEST(Material3NavigationRail, RailCapsDestinationsAndRetainsHeaderOnClear) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   NavigationRail rail(context);
@@ -653,7 +653,7 @@ TEST(Material3NavigationRail, RailCapsDestinationsAndRetainsHeaderOnClear) {
 }
 
 TEST(Material3NavigationRail, RailLayoutsHeaderAndDestinationGroupByMode) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   NavigationRail rail(context);
@@ -706,7 +706,7 @@ TEST(Material3NavigationRail, RailLayoutsHeaderAndDestinationGroupByMode) {
 }
 
 TEST(Material3NavigationRail, CollapsedWidthDoesNotDependOnDestinationState) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   NavigationRail rail(context);
@@ -733,7 +733,7 @@ TEST(Material3NavigationRail, CollapsedWidthDoesNotDependOnDestinationState) {
 }
 
 TEST(Material3NavigationRail, ArrowKeysMoveFocusWithoutChangingSelection) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   TestNavigationRail rail(context);

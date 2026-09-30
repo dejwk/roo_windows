@@ -42,7 +42,7 @@ class ToggleIconButtonAnimationTest
 
 // Verifies that the default state retains the required unselected icon.
 TEST(Material3ToggleIconButton, DefaultsUseTheUnselectedIconAndState) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   ToggleIconButton button(context, ic_outlined_24_action_done());
@@ -56,7 +56,7 @@ TEST(Material3ToggleIconButton, DefaultsUseTheUnselectedIconAndState) {
 
 // Verifies that selection switches to the optional selected icon.
 TEST(Material3ToggleIconButton, SelectedIconAndStateCanBeChanged) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   ToggleIconButton button(context, ic_outlined_24_action_done());
@@ -73,7 +73,7 @@ TEST(Material3ToggleIconButton, SelectedIconAndStateCanBeChanged) {
 
 // Verifies that callbacks observe the state committed by a click.
 TEST(Material3ToggleIconButton, ClickTogglesBeforeTheCallback) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   ToggleIconButton button(context, ic_outlined_24_action_done());
@@ -229,7 +229,7 @@ TEST_F(ToggleIconButtonAnimationTest, DetachedButtonSnapsWithoutResume) {
 
 // Verifies that disabled controls reject direct activation.
 TEST(Material3ToggleIconButton, DisabledClickDoesNotToggleOrNotify) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   ToggleIconButton button(context, ic_outlined_24_action_done());
@@ -245,7 +245,7 @@ TEST(Material3ToggleIconButton, DisabledClickDoesNotToggleOrNotify) {
 
 // Verifies selected tokens and the outlined border's selected removal.
 TEST(Material3ToggleIconButton, SelectedStyleTokensAndOutlinedBorderChange) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   const ColorScheme& colors = env.theme().material3Theme().color;
@@ -269,7 +269,7 @@ TEST(Material3ToggleIconButton, SelectedStyleTokensAndOutlinedBorderChange) {
 // Verifies the unselected filled button reports and paints its shared slot,
 // while selected variants retain their fixed accent roles.
 TEST(Material3ToggleIconButton, FilledUnselectedUsesComponentTheme) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Material3Theme material = DefaultTheme().material3Theme();
   material.components.toggleIconButton.filledUnselectedContainer =
       ColorToken::kSurfaceContainerLow;
@@ -288,7 +288,7 @@ TEST(Material3ToggleIconButton, FilledUnselectedUsesComponentTheme) {
 
 // Verifies selection inverts the configured resting shape family.
 TEST(Material3ToggleIconButton, SelectionInvertsRestingShape) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   ToggleIconButton round_off(context, ic_outlined_24_action_done());
@@ -308,7 +308,7 @@ TEST(Material3ToggleIconButton, SelectionInvertsRestingShape) {
 
 // Verifies icon bounds stay stable across state and the RAM budget holds.
 TEST(Material3ToggleIconButton, StableIconSlotAndStorageBudget) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   ToggleIconButton button(context, ic_outlined_24_action_done(),

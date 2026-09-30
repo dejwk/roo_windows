@@ -18,7 +18,7 @@ ApplicationContext MakeContext(Environment& env) {
 // Verifies that the checkbox lets its point overlay escape a tight structural
 // parent by default.
 TEST(Material3Checkbox, IsParentUnclippedByDefault) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
@@ -31,7 +31,7 @@ TEST(Material3Checkbox, IsParentUnclippedByDefault) {
 // geometric center of its laid-out bounds, so press ripples expand from the
 // box's middle rather than the top-left corner.
 TEST(Material3Checkbox, UsesCenteredPointOverlay) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
@@ -48,7 +48,7 @@ TEST(Material3Checkbox, UsesCenteredPointOverlay) {
 // Verifies that the checkbox advertises the Material 3 prescribed 18x18 dp
 // minimum dimensions, used by parent layouts during measurement.
 TEST(Material3Checkbox, ReportsMaterial3MinimumSize) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
@@ -63,7 +63,7 @@ TEST(Material3Checkbox, ReportsMaterial3MinimumSize) {
 // measures itself at its natural 18x18 dp footprint without inflating to fill
 // the unspecified parent.
 TEST(Material3Checkbox, ReportsNaturalMeasureAsEighteenByEighteen) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
@@ -80,7 +80,7 @@ TEST(Material3Checkbox, ReportsNaturalMeasureAsEighteenByEighteen) {
 // that after layout its content bounds coincide with its laid-out bounds,
 // so callers can predict the painted region from layout dimensions alone.
 TEST(Material3Checkbox, UsesZeroInsetsAndMeasuredContentBounds) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
@@ -101,7 +101,7 @@ TEST(Material3Checkbox, UsesZeroInsetsAndMeasuredContentBounds) {
 // outline color) and kPrimary while indeterminate or on, so theming picks up
 // the selected accent for both filled states.
 TEST(Material3Checkbox, EffectiveContainerRoleTracksSelectionState) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 

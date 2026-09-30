@@ -8,16 +8,15 @@
 #include "roo_scheduler.h"
 #include "roo_windows/containers/scrollable_panel.h"
 #include "roo_windows/core/application.h"
-#include "roo_windows/core/widget.h"
 #include "roo_windows/core/environment.h"
+#include "roo_windows/core/widget.h"
 
 namespace roo_windows {
 namespace {
 
 class FocusableWidget : public Widget {
  public:
-  explicit FocusableWidget(ApplicationContext& context)
-      : Widget(context) {}
+  explicit FocusableWidget(ApplicationContext& context) : Widget(context) {}
 
   /// Reports a stable test size so Application refresh attaches layout bounds.
   Dimensions getSuggestedMinimumDimensions() const override {
@@ -64,7 +63,7 @@ TEST(Task, DirectContentIsBorrowedAndHandlesBack) {
   roo_display::OffscreenDevice<roo_display::Argb4444> device(
       16, 16, raster, roo_display::Argb4444());
   roo_display::Display display(device);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment environment(scheduler);
   bool called = false;
   DirectWidget* contents = nullptr;
@@ -100,7 +99,7 @@ TEST(Task, CompositeContentMayBeDestroyedAfterApplication) {
   roo_display::OffscreenDevice<roo_display::Argb4444> device(
       16, 16, raster, roo_display::Argb4444());
   roo_display::Display display(device);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment environment(scheduler);
   bool child_destroyed = false;
   SimpleScrollablePanel* contents = nullptr;
@@ -111,8 +110,7 @@ TEST(Task, CompositeContentMayBeDestroyedAfterApplication) {
         app.context(), child_destroyed);
     child = owned_child.get();
     child->setOnInteractiveChange([]() {});
-    contents =
-        new SimpleScrollablePanel(app.context(), std::move(owned_child));
+    contents = new SimpleScrollablePanel(app.context(), std::move(owned_child));
     app.addTaskFullScreen(*contents);
     ASSERT_TRUE(app.refresh());
     ASSERT_TRUE(child->requestFocus());
@@ -130,7 +128,7 @@ TEST(Task, FocusDoesNotCrossTaskBoundaries) {
   roo_display::OffscreenDevice<roo_display::Argb4444> device(
       32, 16, raster, roo_display::Argb4444());
   roo_display::Display display(device);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment environment(scheduler);
   Application app(&environment, display);
   FocusableWidget first_contents(app.context());
@@ -152,7 +150,7 @@ TEST(Task, KeySourceConnectionIsExclusive) {
   roo_display::OffscreenDevice<roo_display::Argb4444> device(
       16, 16, raster, roo_display::Argb4444());
   roo_display::Display display(device);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment environment(scheduler);
   Application app(&environment, display);
   DirectWidget first_contents(app.context());
@@ -177,7 +175,7 @@ TEST(Task, WidgetConvenienceRootResumesAndCanBeReplacedOrRemoved) {
   roo_display::OffscreenDevice<roo_display::Argb4444> device(
       16, 16, raster, roo_display::Argb4444());
   roo_display::Display display(device);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment environment(scheduler);
   auto app = std::make_unique<Application>(&environment, display);
   DirectWidget content(app->context());

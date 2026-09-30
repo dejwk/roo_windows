@@ -73,10 +73,10 @@ class Material3ToggleIconButtonGoldenTest : public testing::Test {
       bool animate_selection) {
     Application app(&env_, display_);
     AddBackdrop(app);
-    ToggleIconButton* button = AddButton(
-        app, 100, 80, IconButtonStyle::kFilled, !animate_selection,
-        ButtonSize::kMedium, ButtonShape::kRound, true,
-        &ic_outlined_48_action_favorite());
+    ToggleIconButton* button =
+        AddButton(app, 100, 80, IconButtonStyle::kFilled, !animate_selection,
+                  ButtonSize::kMedium, ButtonShape::kRound, true,
+                  &ic_outlined_48_action_favorite());
     EXPECT_TRUE(app.refresh());
     if (animate_selection) {
       button->setSelected(true);
@@ -90,7 +90,7 @@ class Material3ToggleIconButtonGoldenTest : public testing::Test {
   roo::byte raster_[kWidth * kHeight * 2];
   roo_display::OffscreenDevice<roo_display::Argb4444> offscreen_;
   roo_display::Display display_;
-  roo_scheduler::Scheduler scheduler_;
+  roo_scheduler::SchedulingService scheduler_;
   Environment env_;
 };
 

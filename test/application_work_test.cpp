@@ -5,8 +5,8 @@
 #include "roo_display/core/offscreen.h"
 #include "roo_testing/system/timer.h"
 #include "roo_windows/core/application.h"
-#include "roo_windows/core/widget.h"
 #include "roo_windows/core/transient_surface_host.h"
+#include "roo_windows/core/widget.h"
 
 namespace roo_windows {
 namespace test {
@@ -150,7 +150,7 @@ class ApplicationWorkTest : public testing::Test {
   roo_display::OffscreenDevice<roo_display::Argb4444> device_{
       32, 32, raster_, roo_display::Argb4444()};
   roo_display::Display display_{device_};
-  roo_scheduler::Scheduler scheduler_;
+  roo_scheduler::SchedulingService scheduler_;
   Environment environment_{scheduler_};
   WorkKeys keys_;
   Application app_{&environment_, display_, keys_, false};

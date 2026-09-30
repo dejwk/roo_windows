@@ -47,7 +47,7 @@ TEST(SharedSchedulerDrive, StartedApplicationsEachReceiveTheirCallback) {
       16, 16, second_raster, roo_display::Argb4444());
   roo_display::Display first_display(first_device);
   roo_display::Display second_display(second_device);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment environment(scheduler);
   OneKeySource first_keys;
   OneKeySource second_keys;
@@ -71,7 +71,7 @@ TEST(SharedSchedulerDrive, KeyboardCanTargetAnotherApplicationEditor) {
       64, 64, destination_raster, roo_display::Argb4444());
   roo_display::Display source_display(source_device);
   roo_display::Display destination_display(destination_device);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment environment(scheduler);
 
   Application source(&environment, source_display);

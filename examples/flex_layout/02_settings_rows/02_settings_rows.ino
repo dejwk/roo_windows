@@ -150,7 +150,7 @@ class SettingsScreen : public FlexLayout {
   SettingRow brightness_;
 };
 
-roo_scheduler::Scheduler scheduler;
+roo_scheduler::SchedulingService scheduler;
 Environment env(scheduler);
 Application app(&env, display);
 SettingsScreen settings_screen(app.context());

@@ -51,7 +51,7 @@ class TouchSensor {
   /// Starts worker acquisition or schedules the first single-threaded poll now.
   /// The scheduler must outlive acquisition. Start/stop and single-threaded
   /// scheduler dispatch must be serialized by the caller.
-  void start(roo_scheduler::Scheduler& scheduler);
+  void start(roo_scheduler::SchedulerClient& scheduler);
 
   /// Quiesces acquisition, drops queued events, and resets sample history.
   void stop();
@@ -79,7 +79,7 @@ class TouchSensor {
     void execute(roo_scheduler::ExecutionID id) override;
 
     TouchSensor& sensor_;
-    roo_scheduler::Scheduler* scheduler_ = nullptr;
+    roo_scheduler::SchedulerClient* scheduler_ = nullptr;
     roo_scheduler::ExecutionID id_ = -1;
   };
 #endif

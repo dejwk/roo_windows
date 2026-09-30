@@ -297,7 +297,7 @@ class SimpleScrollablePanel : public Container,
   // a scroll bar interaction.
   bool scroll_bar_gesture_;
 
-  roo_scheduler::Scheduler& scheduler_;
+  roo_scheduler::SchedulerClient& scheduler_;
   roo_scheduler::ExecutionID hide_notification_id_;
 
   // Whether the 'down' event has been confirmed as a touch of the scroll bar in

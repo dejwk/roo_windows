@@ -18,7 +18,7 @@ TEST(Material3TextFieldGolden, VariantsAndStates) {
       roo_display::OffscreenDevice<roo_display::Argb4444> device(
           280, height, raster.data(), roo_display::Argb4444());
       roo_display::Display display(device);
-      roo_scheduler::Scheduler scheduler;
+      roo_scheduler::SchedulingService scheduler;
       Environment env(scheduler);
       Application app(&env, display);
       TextField field(
@@ -73,7 +73,7 @@ TEST(Material3TextFieldGolden, SecureMaskAndReveal) {
       roo_display::OffscreenDevice<roo_display::Argb4444> device(
           240, height, raster.data(), roo_display::Argb4444());
       roo_display::Display display(device);
-      roo_scheduler::Scheduler scheduler;
+      roo_scheduler::SchedulingService scheduler;
       Environment env(scheduler);
       Application app(&env, display);
       SecureTextField field(app.context(), "Password",

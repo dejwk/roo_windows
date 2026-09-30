@@ -15,8 +15,8 @@
 #include "roo_scheduler.h"
 #include "roo_windows/core/animation_registry.h"
 #include "roo_windows/core/application.h"
-#include "roo_windows/core/widget.h"
 #include "roo_windows/core/environment.h"
+#include "roo_windows/core/widget.h"
 
 namespace roo_windows::test {
 
@@ -49,7 +49,7 @@ class TestApplication {
   roo::byte raster_[16 * 16 * 2] = {};
   roo_display::OffscreenDevice<roo_display::Argb4444> device_;
   roo_display::Display display_;
-  roo_scheduler::Scheduler scheduler_;
+  roo_scheduler::SchedulingService scheduler_;
   Environment environment_;
   Application app_;
 };

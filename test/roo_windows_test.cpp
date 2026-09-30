@@ -204,7 +204,7 @@ TEST(Windows, BasicCompilation) {
   roo::byte raster[320 * 240 * 2];
   OffscreenDevice<Argb4444> offscreen(320, 240, raster, Argb4444());
   Display display(offscreen);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   Application app(&env, display);
 }
@@ -215,7 +215,7 @@ TEST(Windows, ApplicationContextExposesEnvironmentServices) {
   roo::byte raster[320 * 240 * 2];
   OffscreenDevice<Argb4444> offscreen(320, 240, raster, Argb4444());
   Display display(offscreen);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   Application app(&env, display);
 
@@ -230,7 +230,7 @@ TEST(Windows, ApplicationContextExposesEnvironmentServices) {
 // Verifies that focus is application-owned, updates widget state, and moves
 // cleanly between eligible attached widgets.
 TEST(Windows, FocusManagerTransfersFocusBetweenAttachedWidgets) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context(scheduler, env.theme(), env.keyboardColorTheme());
   ExposedPanel panel(context);
@@ -256,7 +256,7 @@ TEST(Windows, FocusManagerTransfersFocusBetweenAttachedWidgets) {
 // Verifies that reverse traversal honors Shift+Tab semantics and wraps to the
 // final eligible descendant when the current target is first in tree order.
 TEST(Windows, FocusManagerMovesFocusBackwardsAndWraps) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context(scheduler, env.theme(), env.keyboardColorTheme());
   ExposedPanel panel(context);
@@ -280,7 +280,7 @@ TEST(Windows, FocusManagerMovesFocusBackwardsAndWraps) {
 // Verifies that directional traversal prefers candidates overlapping the
 // orthogonal axis, then uses the nearest forward edge deterministically.
 TEST(Windows, FocusManagerMovesFocusByGeometry) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context(scheduler, env.theme(), env.keyboardColorTheme());
   ExposedPanel panel(context);
@@ -307,7 +307,7 @@ TEST(Windows, TextFieldEditsFromHardwareKeys) {
   roo::byte raster[320 * 240 * 2] = {};
   OffscreenDevice<Argb4444> offscreen(320, 240, raster, Argb4444());
   Display display(offscreen);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
 
   Application app(&env, display);
@@ -337,7 +337,7 @@ TEST(Windows, TextFieldEditsFromHardwareKeys) {
 // Verifies that hiding, disabling, and detaching a focused subtree clear
 // focus before its parent link or visibility state becomes invalid.
 TEST(Windows, FocusManagerClearsInvalidFocusedDescendants) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context(scheduler, env.theme(), env.keyboardColorTheme());
   ExposedPanel panel(context);
@@ -365,7 +365,7 @@ TEST(Windows, FocusManagerClearsInvalidFocusedDescendants) {
 // Verifies scope entry prefers an explicitly selected descendant, contains
 // focus requests, remembers presenter focus, and restores base focus on exit.
 TEST(Windows, FocusManagerEntersContainsAndRestoresPresenterScope) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context(scheduler, env.theme(), env.keyboardColorTheme());
   PreferredFocusPanel base(context);
@@ -409,7 +409,7 @@ TEST(Windows, FocusManagerEntersContainsAndRestoresPresenterScope) {
 // Verifies an empty scope remains active without focus and an invalid
 // remembered address falls back to the root's fresh preferred target.
 TEST(Windows, FocusManagerAcceptsEmptyScopeAndValidatesRememberedAddress) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context(scheduler, env.theme(), env.keyboardColorTheme());
   ExposedPanel base(context);
@@ -448,7 +448,7 @@ TEST(Windows, FocusManagerAcceptsEmptyScopeAndValidatesRememberedAddress) {
 // Verifies a root preference is advisory: normal focus eligibility may reject
 // it while the presenter scope still activates successfully without focus.
 TEST(Windows, FocusManagerAllowsIneligiblePreferredTarget) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context(scheduler, env.theme(), env.keyboardColorTheme());
   ExposedPanel base(context);
@@ -471,7 +471,7 @@ TEST(Windows, FocusManagerAllowsIneligiblePreferredTarget) {
 // Verifies restoration scans the live base tree before consulting a saved
 // address that was removed while presenter focus covered the task.
 TEST(Windows, FocusManagerFallsBackWhenSavedBaseTargetWasRemoved) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context(scheduler, env.theme(), env.keyboardColorTheme());
   PreferredFocusPanel base(context);
@@ -502,7 +502,7 @@ TEST(Windows, FocusManagerFallsBackWhenSavedBaseTargetWasRemoved) {
 // Verifies preflight permits only an inactive incoming same-owner replacement
 // scope and rejects an unrelated nested presenter scope.
 TEST(Windows, FocusManagerPreflightsSinglePresenterScopeReplacement) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context(scheduler, env.theme(), env.keyboardColorTheme());
   ExposedPanel base(context);
@@ -526,7 +526,7 @@ TEST(Windows, WidgetEventDispatcherStoresAndDispatchesHandlers) {
   roo::byte raster[320 * 240 * 2];
   OffscreenDevice<Argb4444> offscreen(320, 240, raster, Argb4444());
   Display display(offscreen);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   Application app(&env, display);
   DispatcherTestWidget widget(app.context());
@@ -561,7 +561,7 @@ TEST(Windows, WidgetStoresInteractiveChangeHandlersInDispatcher) {
   roo::byte raster[320 * 240 * 2];
   OffscreenDevice<Argb4444> offscreen(320, 240, raster, Argb4444());
   Display display(offscreen);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   Application app(&env, display);
   DispatcherTestWidget widget(app.context());
@@ -588,7 +588,7 @@ TEST(Windows, WidgetMoveTransfersInteractiveChangeHandler) {
   roo::byte raster[320 * 240 * 2];
   OffscreenDevice<Argb4444> offscreen(320, 240, raster, Argb4444());
   Display display(offscreen);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   Application app(&env, display);
   DispatcherTestWidget widget(app.context());
@@ -632,7 +632,7 @@ TEST(Windows, WidgetDestructorClearsDispatcherHandlers) {
   roo::byte raster[320 * 240 * 2];
   OffscreenDevice<Argb4444> offscreen(320, 240, raster, Argb4444());
   Display display(offscreen);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   Application app(&env, display);
   WidgetEventDispatcher& dispatcher = app.context().widgetEvents();
@@ -655,7 +655,7 @@ TEST(Windows, WidgetDestructorClearsDispatcherHandlers) {
 // allowing a caller-owned widget with a registered handler to be destroyed
 // after the context's runtime services are gone.
 TEST(Windows, WidgetMayBeDestroyedAfterStandaloneContext) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   DispatcherTestWidget* widget = nullptr;
   {

@@ -37,7 +37,7 @@ TEST(Material3MenuRow, TokenTablesCoverAllVisualFamilies) {
 // Verifies expressive menu rows use their own shared default rather than the
 // list's segmented-row slot, while selected rows retain their fixed accent.
 TEST(Material3MenuRow, UsesIndependentMenuSurfaceDefaults) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Material3Theme material = DefaultTheme().material3Theme();
   material.components.list.segmentedContainer =
       ColorToken::kSurfaceContainerHigh;
@@ -105,7 +105,7 @@ TEST(Material3MenuRow, TrailingPayloadAllocatesAndReleasesByUse) {
 }
 
 TEST(Material3MenuRow, BindingReflectsStateAndReservesTrailingLane) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
   StandardMenuItemInit plain_init;
@@ -146,7 +146,7 @@ class DestructionItem : public MenuItem {
 };
 
 TEST(Material3MenuRow, InlineItemIsUnboundBeforeItsDestructorRuns) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
   bool destroyed = false;

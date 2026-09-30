@@ -27,7 +27,8 @@ class ScrollConnection;
 class ApplicationContext {
  public:
   /// Creates a context borrowing the supplied scheduler and themes.
-  ApplicationContext(roo_scheduler::Scheduler& scheduler, const Theme& theme,
+  ApplicationContext(roo_scheduler::SchedulerClient& scheduler,
+                     const Theme& theme,
                      const KeyboardColorTheme& keyboard_color_theme);
 
   /// Invalidates outstanding widget handles before runtime services are
@@ -40,8 +41,10 @@ class ApplicationContext {
   ApplicationContext(ApplicationContext&&) = delete;
   ApplicationContext& operator=(ApplicationContext&&) = delete;
 
-  /// Returns the scheduler used for animations and deferred work.
-  roo_scheduler::Scheduler& scheduler() const;
+  /// Returns scheduling and cancellation access for animations and deferred
+  /// work. Dispatch methods are available only to the application runtime. UI
+  /// callbacks must return without blocking or driving nested dispatch.
+  roo_scheduler::SchedulerClient& scheduler() const;
 
   /// Returns the active visual theme.
   const Theme& theme() const;
@@ -101,7 +104,7 @@ class ApplicationContext {
     ~Lifetime() = default;
   };
 
-  roo_scheduler::Scheduler& scheduler_;
+  roo_scheduler::SchedulerClient& scheduler_;
   const Theme& theme_;
   const KeyboardColorTheme& keyboard_color_theme_;
   WidgetEventDispatcher widget_events_;

@@ -90,7 +90,8 @@ constexpr material3::SliderStyle QuietHoursStyle() {
   material3::SliderStyle style;
   style.size = material3::SliderSize::kLarge;
   style.tick_mode = material3::SliderTickMode::kShowTicks;
-  // No need for the bubble since we're showing the selected range in a separate label.
+  // No need for the bubble since we're showing the selected range in a separate
+  // label.
   style.value_indicator = material3::SliderValueIndicatorBehavior::kHidden;
   return style;
 }
@@ -195,7 +196,7 @@ class QuietHours : public FlexLayout {
 
 }  // namespace
 
-roo_scheduler::Scheduler scheduler;
+roo_scheduler::SchedulingService scheduler;
 Environment env(scheduler);
 #ifdef ROO_TESTING
 Application app(&env, display, emulator_keys, true);

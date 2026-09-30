@@ -3,8 +3,8 @@
 #include "gtest/gtest.h"
 #include "roo_scheduler.h"
 #include "roo_windows/containers/scrollable_panel.h"
-#include "roo_windows/core/widget.h"
 #include "roo_windows/core/environment.h"
+#include "roo_windows/core/widget.h"
 #include "roo_windows/material3/slider/slider.h"
 #include "roo_windows/widgets/divider.h"
 
@@ -84,7 +84,7 @@ class TestExactSizeWidget : public Widget {
 // onLayout (regression test for the case where the child was sized to the
 // pre-stretch cross size).
 TEST(FlexLayout, StretchUsesFinalLineCrossSizeAfterAlignContent) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment bootstrap(scheduler);
   ApplicationContext context = MakeContext(bootstrap);
 
@@ -114,7 +114,7 @@ TEST(FlexLayout, StretchUsesFinalLineCrossSizeAfterAlignContent) {
 // children by the configured padding on both sides, so a divider/slider
 // children land at offsetLeft==padding and span (width - 2*padding).
 TEST(FlexLayout, PaddedColumnShrinksMatchParentWidthChildren) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment bootstrap(scheduler);
   ApplicationContext context = MakeContext(bootstrap);
 
@@ -145,7 +145,7 @@ TEST(FlexLayout, PaddedColumnShrinksMatchParentWidthChildren) {
 // padding to its match-parent-width children.
 TEST(FlexLayout,
      ScrollablePanelRespectsNestedPaddedColumnWhenContentFillsWidth) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment bootstrap(scheduler);
   ApplicationContext context = MakeContext(bootstrap);
 
@@ -186,7 +186,7 @@ TEST(FlexLayout,
 // divider/slider widths stay clamped to the panel width minus padding.
 TEST(FlexLayout,
      ScrollablePanelKeepsMatchParentSiblingsBoundedWithWideExactSibling) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment bootstrap(scheduler);
   ApplicationContext context = MakeContext(bootstrap);
 
@@ -227,7 +227,7 @@ TEST(FlexLayout,
 // outer column padding still bounds divider/slider/row widths.
 TEST(FlexLayout,
      ScrollablePanelKeepsMatchParentSiblingsBoundedWithWideNestedRow) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment bootstrap(scheduler);
   ApplicationContext context = MakeContext(bootstrap);
 
@@ -278,7 +278,7 @@ TEST(FlexLayout,
 // inherit the correct content area, with each slider clamped to the panel
 // width minus the combined padding of both the outer column and its row.
 TEST(FlexLayout, SliderExampleNestedColumnsHaveCorrectPadding) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment bootstrap(scheduler);
   ApplicationContext context = MakeContext(bootstrap);
 

@@ -5,8 +5,8 @@
 #include "roo_display/core/offscreen.h"
 #include "roo_scheduler.h"
 #include "roo_windows/core/application.h"
-#include "roo_windows/core/widget.h"
 #include "roo_windows/core/environment.h"
+#include "roo_windows/core/widget.h"
 
 namespace roo_windows {
 namespace {
@@ -172,7 +172,7 @@ class DialogTest : public ::testing::Test {
   roo::byte raster_[64 * 64 * 2] = {};
   roo_display::OffscreenDevice<roo_display::Argb4444> device_;
   roo_display::Display display_;
-  roo_scheduler::Scheduler scheduler_;
+  roo_scheduler::SchedulingService scheduler_;
   Environment environment_;
   // Declared before Application so the borrowed task content outlives it.
   std::unique_ptr<TestContent> task_content_;

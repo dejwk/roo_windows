@@ -71,7 +71,7 @@ void InitDisplay() {
 #include "roo_windows/keyboard/layout/pl_pl.h"
 #include "roo_windows/material3/text_field/text_field.h"
 
-roo_scheduler::Scheduler scheduler;
+roo_scheduler::SchedulingService scheduler;
 Environment env(scheduler);
 Application app(&env, display);
 FlexLayout form(app.context(), FlexDirection::kColumn);

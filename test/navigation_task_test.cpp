@@ -6,10 +6,10 @@
 #include "roo_display/shape/basic.h"
 #include "roo_scheduler.h"
 #include "roo_windows/core/application.h"
-#include "roo_windows/core/widget.h"
 #include "roo_windows/core/destination.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/navigation_host.h"
+#include "roo_windows/core/widget.h"
 #include "roo_windows/material3/button/navigation.h"
 
 namespace roo_windows {
@@ -128,7 +128,7 @@ class NavigationTaskTest : public ::testing::Test {
   roo::byte raster_[64 * 64 * 2] = {};
   roo_display::OffscreenDevice<Argb4444> device_{64, 64, raster_, Argb4444()};
   Display display_;
-  roo_scheduler::Scheduler scheduler_;
+  roo_scheduler::SchedulingService scheduler_;
   Environment environment_{scheduler_};
   Application app_;
   Task& task_;

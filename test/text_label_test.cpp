@@ -93,7 +93,7 @@ class TextLabelRenderTest : public testing::Test {
   roo::byte raster_[kWidth * kHeight * 2];
   OffscreenDevice<Argb4444> offscreen_;
   Display display_;
-  roo_scheduler::Scheduler scheduler_;
+  roo_scheduler::SchedulingService scheduler_;
   Environment env_;
   Application app_;
 };
@@ -137,7 +137,7 @@ class TextLabelGoldenTest : public testing::Test {
   roo::byte raster_[kWidth * kHeight * 2];
   OffscreenDevice<Argb4444> offscreen_;
   Display display_;
-  roo_scheduler::Scheduler scheduler_;
+  roo_scheduler::SchedulingService scheduler_;
   Environment env_;
 };
 
@@ -169,7 +169,7 @@ class RecordingPanel : public Panel {
 // advance for the configured text horizontally and the font's full line
 // height (ascent - descent + linegap) vertically.
 TEST(TextLabel, SuggestedMinimumDimensionsMatchFontMetrics) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment bootstrap(scheduler);
   ApplicationContext context = MakeContext(bootstrap);
   const auto& font = material2::text_style_body2();
@@ -186,7 +186,7 @@ TEST(TextLabel, SuggestedMinimumDimensionsMatchFontMetrics) {
 // translated by the gravity-resolved alignment offset, rather than the full
 // layout rectangle.
 TEST(TextLabel, ContentBoundsFollowDrawableInkExtents) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment bootstrap(scheduler);
   ApplicationContext context = MakeContext(bootstrap);
   const auto& font = material2::text_style_body2();
@@ -217,7 +217,7 @@ TEST(TextLabel, ContentBoundsFollowDrawableInkExtents) {
 // for both owning and string-view labels. Descent does not pull the requested
 // center toward the baseline.
 TEST(TextLabel, MiddleGravityCentersAscentForBothLabelKinds) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment bootstrap(scheduler);
   ApplicationContext context = MakeContext(bootstrap);
   const TextStyle& style = material2::text_style_subtitle1();
@@ -242,7 +242,7 @@ TEST(TextLabel, MiddleGravityCentersAscentForBothLabelKinds) {
 // Verifies that an empty TextLabel (both std::string and string_view flavors)
 // reports zero ink insets, so an empty label doesn't claim any visual area.
 TEST(TextLabel, EmptyTextHasZeroInkInsets) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment bootstrap(scheduler);
   ApplicationContext context = MakeContext(bootstrap);
   const auto& font = material2::text_style_body2();
@@ -259,7 +259,7 @@ TEST(TextLabel, EmptyTextHasZeroInkInsets) {
 // the parent: only the new ink region needs painting and there is nothing to
 // erase beneath, so the panel records no invalidation regions.
 TEST(TextLabel, EmptyToNonEmptyDoesNotInvalidateParentBeneath) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment bootstrap(scheduler);
   ApplicationContext context = MakeContext(bootstrap);
   RecordingPanel panel(context);
@@ -280,7 +280,7 @@ TEST(TextLabel, EmptyToNonEmptyDoesNotInvalidateParentBeneath) {
 // exactly the previous (smaller) visual rect on the parent; the new larger
 // rect is repainted by the label itself.
 TEST(TextLabel, TextChangeInvalidatesOnlyOldVisualBounds) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment bootstrap(scheduler);
   ApplicationContext context = MakeContext(bootstrap);
   RecordingPanel panel(context);
@@ -303,7 +303,7 @@ TEST(TextLabel, TextChangeInvalidatesOnlyOldVisualBounds) {
 // dimensions does not trigger a layout request, avoiding needless layout
 // passes for incremental value updates (e.g., '72%' -> '73%').
 TEST(TextLabel, SameMeasuredSizeTextChangeDoesNotRequestLayout) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment bootstrap(scheduler);
   ApplicationContext context = MakeContext(bootstrap);
   const auto& font = material2::text_style_body2();
@@ -327,7 +327,7 @@ TEST(TextLabel, SameMeasuredSizeTextChangeDoesNotRequestLayout) {
 // text swap to a string of the same measured dimensions does not request a
 // new layout pass.
 TEST(StringViewLabel, SameMeasuredSizeTextChangeDoesNotRequestLayout) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment bootstrap(scheduler);
   ApplicationContext context = MakeContext(bootstrap);
   const auto& font = material2::text_style_body2();

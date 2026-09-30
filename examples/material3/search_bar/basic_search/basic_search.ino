@@ -127,7 +127,7 @@ class EquipmentSearch : public FlexLayout {
 
 }  // namespace
 
-roo_scheduler::Scheduler scheduler;
+roo_scheduler::SchedulingService scheduler;
 Environment env(scheduler);
 Application app(&env, display);
 EquipmentSearch equipment_search(app.context());

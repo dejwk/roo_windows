@@ -85,7 +85,7 @@ using namespace roo_windows;
 
 #include "roo_windows/widgets/text_label.h"
 
-roo_scheduler::Scheduler scheduler;
+roo_scheduler::SchedulingService scheduler;
 Environment env(scheduler);
 Application app(&env, display);
 TextLabel label(app.context(), "Hello World!", material2::text_style_caption(),

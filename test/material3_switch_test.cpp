@@ -25,7 +25,7 @@ ApplicationContext MakeContext(Environment& env) {
 // Verifies that the switch lets its thumb-centered point overlay escape a
 // tight structural parent by default.
 TEST(Material3Switch, IsParentUnclippedByDefault) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
@@ -81,7 +81,7 @@ class SwitchAnimationTest
 // the thumb center and that the focus point tracks the thumb as the switch
 // toggles between off (left) and on (right) positions.
 TEST(Material3Switch, UsesThumbCenteredPointOverlay) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
@@ -105,7 +105,7 @@ TEST(Material3Switch, UsesThumbCenteredPointOverlay) {
 // Verifies that the switch reports the Material 3 prescribed minimum size
 // (52x32 dp) for layout, independent of its current on/off state.
 TEST(Material3Switch, ReportsMaterial3MinimumSize) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
@@ -120,7 +120,7 @@ TEST(Material3Switch, ReportsMaterial3MinimumSize) {
 // state: surfaceContainerHighest while off (so the track reads as a neutral
 // inset) and primary while on (so the track adopts the selected accent).
 TEST(Material3Switch, EffectiveContainerRoleTracksState) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
@@ -136,7 +136,7 @@ TEST(Material3Switch, EffectiveContainerRoleTracksState) {
 // Verifies the unselected track role is shared while the selected track
 // remains the fixed primary accent.
 TEST(Material3Switch, UnselectedTrackUsesComponentTheme) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Material3Theme material = DefaultTheme().material3Theme();
   material.components.switchControl.unselectedTrack =
       ColorToken::kSurfaceContainerLow;

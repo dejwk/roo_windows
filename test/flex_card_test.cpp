@@ -18,7 +18,7 @@ ApplicationContext MakeContext(Environment& env) {
 // seeds its container role, resting elevation, corner radius, and outline
 // width to the values prescribed by the Material 3 spec.
 TEST(FlexCard, ConstructorSeedsStyleDefaults) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
@@ -51,7 +51,7 @@ TEST(FlexCard, ConstructorSeedsStyleDefaults) {
 // updates every style-derived value (container role, elevation, outline
 // width, corner radius) to the new style's defaults.
 TEST(FlexCard, StyleChangeUpdatesNonOverriddenValues) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
@@ -70,7 +70,7 @@ TEST(FlexCard, StyleChangeUpdatesNonOverriddenValues) {
 // role, elevation, outline width, corner radius) persist across a subsequent
 // setStyle() call, so the user's customizations are not silently reset.
 TEST(FlexCard, OverridesPersistAcrossStyleChanges) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
@@ -97,7 +97,7 @@ TEST(FlexCard, OverridesPersistAcrossStyleChanges) {
 // defaults of the currently-selected style, even if those defaults differ
 // from the originally-configured style.
 TEST(FlexCard, ClearOverrideRecomputesFromCurrentStyle) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 

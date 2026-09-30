@@ -23,7 +23,7 @@ void CheckPicker(const char* name, int width, int height, DatePickerMode mode,
   roo_display::OffscreenDevice<roo_display::Argb4444> device(
       width, height, raster.data(), roo_display::Argb4444());
   roo_display::Display display(device);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment environment(scheduler);
   Application app(&environment, display);
   Panel content(app.context());

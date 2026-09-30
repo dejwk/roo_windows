@@ -68,7 +68,7 @@ class Material3ButtonClickAnimationTest : public testing::Test {
   roo::byte raster_[kWidth * kHeight * 2];
   roo_display::OffscreenDevice<roo_display::Argb4444> offscreen_;
   roo_display::Display display_;
-  roo_scheduler::Scheduler scheduler_;
+  roo_scheduler::SchedulingService scheduler_;
   Environment env_;
   Application app_;
 };
@@ -95,7 +95,7 @@ class FinalFrameRecordingButton : public Button {
 // Verifies that a default button comes up with the intended Material 3 visual
 // variant and geometry selectors, while preserving the supplied label.
 TEST(Material3Button, DefaultVariantIsFilled) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
@@ -111,7 +111,7 @@ TEST(Material3Button, DefaultVariantIsFilled) {
 // Verifies that Material 3 buttons always opt into click handling even before
 // a callback is installed, so pressed-state affordances are available.
 TEST(Material3Button, IsClickableEvenWithoutCallback) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
@@ -122,7 +122,7 @@ TEST(Material3Button, IsClickableEvenWithoutCallback) {
 // Verifies that the default small button resolves to the expected 40 dp
 // natural height once content size and default padding are combined.
 TEST(Material3Button, ReportsMinimumHeightOfFortyDp) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
@@ -133,7 +133,7 @@ TEST(Material3Button, ReportsMinimumHeightOfFortyDp) {
 // Verifies direct measurement includes the button's Material padding rather
 // than returning only its foreground content dimensions.
 TEST(Material3Button, MeasuresPaddedNaturalDimensions) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
@@ -148,7 +148,7 @@ TEST(Material3Button, MeasuresPaddedNaturalDimensions) {
 // Verifies that the default small-button layout uses the reduced 16 dp side
 // padding for both text-only and icon-bearing configurations.
 TEST(Material3Button, DefaultHorizontalPaddingIsSixteenDpPerSide) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
@@ -165,7 +165,7 @@ TEST(Material3Button, DefaultHorizontalPaddingIsSixteenDpPerSide) {
 // Verifies that changing the size preset feeds through to the measured natural
 // height instead of leaving the button on a single hard-coded geometry bucket.
 TEST(Material3Button, SizeControlsNaturalHeight) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
@@ -187,7 +187,7 @@ TEST(Material3Button, SizeControlsNaturalHeight) {
 // Verifies that the small-button padding selector only affects the small size;
 // larger size presets must ignore it and use their own tokenized padding.
 TEST(Material3Button, SmallPaddingModeOnlyAffectsSmallButtons) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
@@ -206,7 +206,7 @@ TEST(Material3Button, SmallPaddingModeOnlyAffectsSmallButtons) {
 // Verifies that square buttons use the size-specific resting corner radii from
 // the Material 3 table rather than one fixed radius for all sizes.
 TEST(Material3Button, SquareShapeUsesSizeSpecificCornerRadius) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
@@ -226,7 +226,7 @@ TEST(Material3Button, SquareShapeUsesSizeSpecificCornerRadius) {
 // Verifies that each button variant resolves to the intended container role so
 // inherited surface decoration follows the Material 3 semantics.
 TEST(Material3Button, ContainerRoleMatchesVariant) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
@@ -252,7 +252,7 @@ TEST(Material3Button, ContainerRoleMatchesVariant) {
 
 // Verifies only the elevated variant reads the shared neutral button slot.
 TEST(Material3Button, ElevatedContainerUsesComponentTheme) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Material3Theme material = DefaultTheme().material3Theme();
   material.components.button.elevatedContainer =
       ColorToken::kSurfaceContainerHigh;
@@ -271,7 +271,7 @@ TEST(Material3Button, ElevatedContainerUsesComponentTheme) {
 // Verifies that only the outlined variant advertises a non-zero outline width
 // to the surface pipeline.
 TEST(Material3Button, OutlinedVariantHasOutline) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
@@ -285,7 +285,7 @@ TEST(Material3Button, OutlinedVariantHasOutline) {
 // Verifies that elevated buttons surface a non-zero resting elevation while
 // other standard button variants remain flat at rest.
 TEST(Material3Button, ElevatedVariantHasNonzeroRestingElevation) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
@@ -299,7 +299,7 @@ TEST(Material3Button, ElevatedVariantHasNonzeroRestingElevation) {
 // Verifies that disabling an elevated button drops its advertised elevation,
 // matching the Material 3 disabled-state treatment.
 TEST(Material3Button, DisabledElevatedVariantDropsElevation) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
@@ -335,7 +335,7 @@ TEST_F(Material3ButtonClickAnimationTest, DisabledTextUsesResolvedPaletteOnce) {
 // Verifies that adding a leading icon expands the measured width, proving that
 // icon slot and gap geometry participate in sizing.
 TEST(Material3Button, IconChangesNaturalWidth) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
@@ -453,7 +453,7 @@ TEST_F(Material3ButtonClickAnimationTest,
 // Verifies that every mode works for both shapes, including changes while
 // pressed.
 TEST(Material3Button, ShapeMorphControlsPressedGeometry) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   Button button(context, "Save", ButtonVariant::kOutlined);

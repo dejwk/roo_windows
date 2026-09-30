@@ -146,7 +146,7 @@ class SurfaceRoleDemo : public material3::FlexCard {
   TextLabel detail_;
 };
 
-roo_scheduler::Scheduler scheduler;
+roo_scheduler::SchedulingService scheduler;
 Environment environment(scheduler, ApplicationTheme());
 #ifdef ROO_TESTING
 Application app(&environment, display, emulator_keys, true);

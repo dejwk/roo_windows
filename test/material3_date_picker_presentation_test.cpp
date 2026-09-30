@@ -71,7 +71,7 @@ class DatePickerPresentation : public testing::Test {
   roo::byte raster_[480 * 640 * 2] = {};
   roo_display::OffscreenDevice<roo_display::Argb4444> device_;
   roo_display::Display display_;
-  roo_scheduler::Scheduler scheduler_;
+  roo_scheduler::SchedulingService scheduler_;
   Environment environment_;
   Application app_;
   TestPanel content_;

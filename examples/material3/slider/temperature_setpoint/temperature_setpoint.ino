@@ -80,8 +80,8 @@ void initDisplay() {
 #include "roo_windows/containers/flex_layout.h"
 #include "roo_windows/material3/slider/slider.h"
 #include "roo_windows/material3/typography.h"
-#include "roo_windows/widgets/text_label.h"
 #include "roo_windows/widgets/text_block.h"
+#include "roo_windows/widgets/text_label.h"
 
 namespace {
 
@@ -158,7 +158,7 @@ class TemperatureSetpoint : public FlexLayout {
 
 }  // namespace
 
-roo_scheduler::Scheduler scheduler;
+roo_scheduler::SchedulingService scheduler;
 Environment env(scheduler);
 #ifdef ROO_TESTING
 Application app(&env, display, emulator_keys, true);

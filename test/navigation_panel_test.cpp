@@ -16,7 +16,7 @@ ApplicationContext MakeContext(Environment& env) {
 }
 
 TEST(NavigationPanel, Material3RailSelectionChangesVisiblePage) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   Blank home(context, Dimensions(24, 24));

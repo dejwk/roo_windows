@@ -5,12 +5,12 @@
 #include "roo_display/core/offscreen.h"
 #include "roo_scheduler.h"
 #include "roo_windows/core/application.h"
-#include "roo_windows/core/widget.h"
 #include "roo_windows/core/destination.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/navigation_host.h"
 #include "roo_windows/core/panel.h"
 #include "roo_windows/core/transient_presentation.h"
+#include "roo_windows/core/widget.h"
 #include "roo_windows/material3/tabs/tabs.h"
 #include "roo_windows/widgets/text_field.h"
 
@@ -51,8 +51,7 @@ class QueuedKeySource : public KeySource {
 
 class FocusableBackWidget : public Widget {
  public:
-  explicit FocusableBackWidget(ApplicationContext& context)
-      : Widget(context) {}
+  explicit FocusableBackWidget(ApplicationContext& context) : Widget(context) {}
 
   bool isFocusable() const override { return true; }
   Dimensions getSuggestedMinimumDimensions() const override {
@@ -62,8 +61,7 @@ class FocusableBackWidget : public Widget {
 
 class KeyRecordingWidget : public Widget {
  public:
-  explicit KeyRecordingWidget(ApplicationContext& context)
-      : Widget(context) {}
+  explicit KeyRecordingWidget(ApplicationContext& context) : Widget(context) {}
 
   bool isFocusable() const override { return true; }
   Dimensions getSuggestedMinimumDimensions() const override {
@@ -189,7 +187,7 @@ TEST(KeySource, ApplicationDrainsAtMostSixteenEventsPerTick) {
   roo_display::OffscreenDevice<roo_display::Argb4444> device(
       16, 16, raster, roo_display::Argb4444());
   roo_display::Display display(device);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment environment(scheduler);
   std::vector<KeyEvent> events(17, {KeyPhase::kDown, KeyCode::kTab, 0, 0});
   QueuedKeySource keys(std::move(events));
@@ -213,7 +211,7 @@ TEST(KeySource, ApplicationStopsAtTheFirstPartialBatch) {
   roo_display::OffscreenDevice<roo_display::Argb4444> device(
       16, 16, raster, roo_display::Argb4444());
   roo_display::Display display(device);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment environment(scheduler);
   QueuedKeySource keys({{KeyPhase::kUp, KeyCode::kEnter, 0, 0}});
   Application app(&environment, display, keys, false);
@@ -231,7 +229,7 @@ TEST(KeySource, RoutesEachSourceToItsDeclaredTask) {
   roo_display::OffscreenDevice<roo_display::Argb4444> device(
       32, 16, raster, roo_display::Argb4444());
   roo_display::Display display(device);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment environment(scheduler);
   Application app(&environment, display);
   KeyRecordingWidget first_contents(app.context());
@@ -262,7 +260,7 @@ TEST(KeySource, PresenterScopeKeyBubblingIncludesExplicitRoot) {
   roo_display::OffscreenDevice<roo_display::Argb4444> device(
       32, 16, raster, roo_display::Argb4444());
   roo_display::Display display(device);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment environment(scheduler);
   Application app(&environment, display);
   FocusableBackWidget contents(app.context());
@@ -297,7 +295,7 @@ TEST(KeySource, EmptyPresenterScopeSuppressesLegacyContextFocusFallback) {
   roo_display::OffscreenDevice<roo_display::Argb4444> device(
       32, 16, raster, roo_display::Argb4444());
   roo_display::Display display(device);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment environment(scheduler);
   Application app(&environment, display);
   FocusableBackWidget contents(app.context());
@@ -333,7 +331,7 @@ TEST(KeySource, PresenterScopeTabTraversalUsesExplicitRoot) {
   roo_display::OffscreenDevice<roo_display::Argb4444> device(
       32, 16, raster, roo_display::Argb4444());
   roo_display::Display display(device);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment environment(scheduler);
   Application app(&environment, display);
   FocusableBackWidget contents(app.context());
@@ -370,7 +368,7 @@ TEST(KeySource, ReadySourceWakesItsDestinationApplication) {
   roo_display::OffscreenDevice<roo_display::Argb4444> device(
       16, 16, raster, roo_display::Argb4444());
   roo_display::Display display(device);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment environment(scheduler);
   Application app(&environment, display);
   KeyRecordingWidget contents(app.context());
@@ -397,7 +395,7 @@ TEST(KeySource, HardwareTextInputKeepsProgrammaticallyEditedFieldFocused) {
   roo_display::OffscreenDevice<roo_display::Argb4444> device(
       64, 64, raster, roo_display::Argb4444());
   roo_display::Display display(device);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment environment(scheduler);
 
   Application app(&environment, display);
@@ -427,7 +425,7 @@ TEST(KeySource, HardwareEscapeUsesFocusedTask) {
   roo_display::OffscreenDevice<roo_display::Argb4444> device(
       32, 32, raster, roo_display::Argb4444());
   roo_display::Display display(device);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment environment(scheduler);
   QueuedKeySource keys({{KeyPhase::kDown, KeyCode::kEscape, 0, 0}});
 
@@ -454,7 +452,7 @@ TEST(KeySource, HardwareBackDismissesTransientWithoutFocus) {
   roo_display::OffscreenDevice<roo_display::Argb4444> device(
       32, 32, raster, roo_display::Argb4444());
   roo_display::Display display(device);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment environment(scheduler);
   QueuedKeySource keys({{KeyPhase::kDown, KeyCode::kBack, 0, 0}});
   Application app(&environment, display, keys, false);
@@ -477,7 +475,7 @@ TEST(KeySource, UnhandledRootEscapeCancelsFocusedEditor) {
   roo_display::OffscreenDevice<roo_display::Argb4444> device(
       64, 32, raster, roo_display::Argb4444());
   roo_display::Display display(device);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment environment(scheduler);
   QueuedKeySource keys({{KeyPhase::kDown, KeyCode::kEscape, 0, 0}});
 
@@ -505,7 +503,7 @@ TEST(KeySource, UnhandledRootEscapeFromFocusedTabBubblesToTabHost) {
   roo_display::OffscreenDevice<roo_display::Argb4444> device(
       64, 32, raster, roo_display::Argb4444());
   roo_display::Display display(device);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment environment(scheduler);
   QueuedKeySource keys({{KeyPhase::kDown, KeyCode::kEscape, 0, 0}});
 

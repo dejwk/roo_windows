@@ -381,7 +381,7 @@ TEST(ProgressAcceptanceTest, BoundedWritesAndCoherentContinuation) {
   roo::byte raster[260 * 120 * 2] = {};
   ProgressDisplay device(raster);
   roo_display::Display display(device);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   Application app(&env, display);
   AnimatedProgress<LinearProgressIndicator> linear(app.context());
@@ -440,7 +440,7 @@ TEST(ProgressAcceptanceTest, DialogAndNavigationOwnership) {
   roo::byte raster[260 * 120 * 2] = {};
   ProgressDisplay device(raster);
   roo_display::Display display(device);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   Application app(&env, display);
   AnimatedProgress<LinearProgressIndicator> root_indicator(app.context());

@@ -9,8 +9,8 @@
 #include "roo_display.h"
 #include "roo_display/core/offscreen.h"
 #include "roo_testing/system/timer.h"
-#include "roo_windows/core/widget.h"
 #include "roo_windows/core/gesture_detector.h"
+#include "roo_windows/core/widget.h"
 
 namespace {
 thread_local bool g_track_touch_allocations = false;
@@ -33,7 +33,9 @@ void* operator new[](size_t size, const std::nothrow_t& tag) noexcept {
   return ::operator new(size, tag);
 }
 void operator delete(void* p, const std::nothrow_t&) noexcept { std::free(p); }
-void operator delete[](void* p, const std::nothrow_t&) noexcept { std::free(p); }
+void operator delete[](void* p, const std::nothrow_t&) noexcept {
+  std::free(p);
+}
 void operator delete(void* ptr) noexcept { std::free(ptr); }
 void operator delete[](void* ptr) noexcept { std::free(ptr); }
 void operator delete(void* ptr, size_t) noexcept { std::free(ptr); }
@@ -259,7 +261,7 @@ class TouchReadinessTest : public testing::Test {
       64, 64, raster_, roo_display::Argb4444()};
   MutableTouchDevice touch_;
   roo_display::Display display_{offscreen_, touch_};
-  roo_scheduler::Scheduler scheduler_;
+  roo_scheduler::SchedulingService scheduler_;
   TouchSensor sensor_{display_};
 };
 
@@ -585,7 +587,7 @@ class GestureDeadlineTest : public testing::TestWithParam<int> {
       64, 64, raster_, roo_display::Argb4444()};
   DeadlineTouchDevice touch_;
   roo_display::Display display_{offscreen_, touch_};
-  roo_scheduler::Scheduler scheduler_;
+  roo_scheduler::SchedulingService scheduler_;
   ApplicationContext context_{scheduler_, DefaultTheme(),
                               DefaultKeyboardColorTheme()};
   DeadlinePanel root_{context_};

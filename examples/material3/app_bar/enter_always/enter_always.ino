@@ -162,7 +162,7 @@ class HeatingDetails : public FlexLayout {
 
 }  // namespace
 
-roo_scheduler::Scheduler scheduler;
+roo_scheduler::SchedulingService scheduler;
 Environment env(scheduler);
 Application app(&env, display);
 HeatingDetails heating_details(app.context());

@@ -5,9 +5,9 @@
 #include "roo_display/core/offscreen.h"
 #include "roo_scheduler.h"
 #include "roo_windows/core/application.h"
-#include "roo_windows/core/widget.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/panel.h"
+#include "roo_windows/core/widget.h"
 #include "roo_windows/dialogs/dialog.h"
 #include "roo_windows_render_test_support.h"
 
@@ -104,7 +104,7 @@ TEST(TransientPresentationPin, RegistrationOwnsAndReleasesPins) {
   roo_display::OffscreenDevice<roo_display::Argb4444> device(
       32, 32, raster, roo_display::Argb4444());
   roo_display::Display display(device);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment environment(scheduler);
   Application app(&environment, display);
   int destroyed = 0;
@@ -138,7 +138,7 @@ TEST(TransientPresentationPin, AnchorTeardownDeletesActivePin) {
   roo_display::OffscreenDevice<roo_display::Argb4444> device(
       32, 32, raster, roo_display::Argb4444());
   roo_display::Display display(device);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment environment(scheduler);
   int destroyed = 0;
   {
@@ -422,7 +422,7 @@ TEST(TransientPresentationPin, WindowTeardownDeletesAllPins) {
   roo_display::OffscreenDevice<roo_display::Argb4444> device(
       32, 32, raster, roo_display::Argb4444());
   roo_display::Display display(device);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment environment(scheduler);
   MutablePinState states[4];
   {

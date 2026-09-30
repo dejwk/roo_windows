@@ -26,7 +26,7 @@ static_assert(sizeof(FlexCard) == sizeof(FlexLayout) + 8,
 // Verifies each card style resolves its live surface role from the shared
 // component theme and owns that fill instead of inheriting its parent's color.
 TEST(Material3CardThemeTest, UsesThemeRolesForOwnedCardAndChildSurfaces) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Material3Theme material = DefaultTheme().material3Theme();
   material.components.card.elevatedContainer = ColorToken::kSurfaceContainer;
   material.components.card.filledContainer = ColorToken::kSurfaceContainerLow;
@@ -65,7 +65,7 @@ TEST(Material3CardThemeTest, UsesThemeRolesForOwnedCardAndChildSurfaces) {
 // Verifies explicit card roles take precedence and clearing restores the live
 // component default, including after a style change.
 TEST(Material3CardThemeTest, PreservesOverridesAndRestoresLiveThemeDefaults) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Material3Theme material = DefaultTheme().material3Theme();
   material.components.card.filledContainer = ColorToken::kSurfaceContainerLow;
   material.components.card.outlinedContainer =

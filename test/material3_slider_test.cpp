@@ -163,7 +163,7 @@ class Material3SliderAppTest : public testing::Test {
   roo::byte raster_[kWidth * kHeight * 2];
   roo_display::OffscreenDevice<roo_display::Argb4444> offscreen_;
   roo_display::Display display_;
-  roo_scheduler::Scheduler scheduler_;
+  roo_scheduler::SchedulingService scheduler_;
   Environment env_;
   Application app_;
   Slider* slider_;
@@ -459,7 +459,7 @@ Rect ResolveRangeIndicatorBoundsForTest(const RangeSlider& slider, float value,
 // Verifies that the slider contributes no default padding or margins, so its
 // visual geometry is controlled entirely by its own layout and paint logic.
 TEST(Material3Slider, UsesZeroDefaultInsets) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
 
@@ -472,7 +472,7 @@ TEST(Material3Slider, UsesZeroDefaultInsets) {
 // Verifies that Material 3 sliders disable the generic overlay path and that
 // the overlay focus point follows the thumb center across the full travel.
 TEST(Material3Slider, UsesNoOverlayAndHandleCenteredFocus) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
 
@@ -499,7 +499,7 @@ TEST(Material3Slider, UsesNoOverlayAndHandleCenteredFocus) {
 // Verifies that the default slider advertises the Material 3 minimum touch
 // target size rather than a tighter visual-only bound.
 TEST(Material3Slider, ReportsMaterial3MinimumSize) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
 
@@ -513,7 +513,7 @@ TEST(Material3Slider, ReportsMaterial3MinimumSize) {
 // Verifies that horizontal sloppy-touch bounds expand mainly along the primary
 // axis so drags are easier to keep engaged near the track ends.
 TEST(Material3Slider, HorizontalSloppyTouchBoundsExtendPrimaryAxis) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
 
@@ -531,7 +531,7 @@ TEST(Material3Slider, HorizontalSloppyTouchBoundsExtendPrimaryAxis) {
 // Verifies that the vertical range slider reports the same sloppy-touch region
 // in local and parent coordinates, with only the expected translation applied.
 TEST(Material3Slider, VerticalRangeSliderSloppyBoundsTrackParentOverride) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
 
@@ -554,7 +554,7 @@ TEST(Material3Slider, VerticalRangeSliderSloppyBoundsTrackParentOverride) {
 // Verifies that an unconstrained measure resolves to the slider's default
 // Material 3 square footprint instead of collapsing to zero.
 TEST(Material3Slider, ReportsNaturalMeasureAsFortyFourByFortyFour) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
 
@@ -570,7 +570,7 @@ TEST(Material3Slider, ReportsNaturalMeasureAsFortyFourByFortyFour) {
 // Verifies the preferred-size contract for the default horizontal slider:
 // match parent on the main axis and exact sizing on the cross axis.
 TEST(Material3Slider, ReportsMatchParentPreferredWidthAndExactHeight) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
 
@@ -586,7 +586,7 @@ TEST(Material3Slider, ReportsMatchParentPreferredWidthAndExactHeight) {
 // Verifies that selecting a larger size preset updates all sizing surfaces,
 // including suggested minimums, measured size, and preferred size.
 TEST(Material3Slider, SizePresetUpdatesMeasuredAndPreferredDimensions) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
 
@@ -612,7 +612,7 @@ TEST(Material3Slider, SizePresetUpdatesMeasuredAndPreferredDimensions) {
 // Verifies that a vertical slider swaps the sizing policy so the preset drives
 // the exact width while the height stays match-parent.
 TEST(Material3Slider, VerticalSizePresetUsesExactWidthFromPreset) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
 
@@ -634,7 +634,7 @@ TEST(Material3Slider, VerticalSizePresetUsesExactWidthFromPreset) {
 // handle rather than from the slider's outer edge.
 TEST(Material3SliderValueIndicator,
      VerticalIndicatorAnchorsToCenteredHandleInWideSlider) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
 
@@ -677,7 +677,7 @@ TEST(Material3SliderValueIndicator,
 // Verifies that the slider's container visuals resolve against the primary
 // color role, which drives its track and thumb color selection.
 TEST(Material3Slider, EffectiveContainerRoleIsPrimary) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
 
@@ -690,7 +690,7 @@ TEST(Material3Slider, EffectiveContainerRoleIsPrimary) {
 // Verifies that pressed-state feedback is rendered directly by the slider and
 // does not opt into the framework overlay or click-animation paths.
 TEST(Material3Slider, PressStateDoesNotUseOverlayOrClickAnimation) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
 
@@ -703,7 +703,7 @@ TEST(Material3Slider, PressStateDoesNotUseOverlayOrClickAnimation) {
 
 // Verifies that a unit-range slider preserves the supplied semantic value.
 TEST(Material3Slider, UnitRangeConstructorPreservesValue) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
 
@@ -717,7 +717,7 @@ TEST(Material3Slider, UnitRangeConstructorPreservesValue) {
 
 // Verifies that the semantic constructor preserves the requested domain value.
 TEST(Material3Slider, SemanticConstructorPreservesValue) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
 
@@ -731,7 +731,7 @@ TEST(Material3Slider, SemanticConstructorPreservesValue) {
 // Verifies that setting a semantic value outside the configured range clamps it
 // to the nearest endpoint.
 TEST(Material3Slider, SetValueClampsIntoConfiguredDomain) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
 
@@ -744,7 +744,7 @@ TEST(Material3Slider, SetValueClampsIntoConfiguredDomain) {
 // Verifies that discrete sliders snap their initial semantic value to the
 // nearest valid step.
 TEST(Material3Slider, DiscreteConstructorSnapsInitialValue) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
 
@@ -756,7 +756,7 @@ TEST(Material3Slider, DiscreteConstructorSnapsInitialValue) {
 // Verifies that a programmatic semantic value update on a discrete slider uses
 // the same nearest-step snapping logic as construction.
 TEST(Material3Slider, SetValueSnapsToNearestDiscreteStep) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
 
@@ -769,7 +769,7 @@ TEST(Material3Slider, SetValueSnapsToNearestDiscreteStep) {
 // Verifies that replacing the semantic range clamps the current value into the
 // new domain instead of leaving an out-of-range selection behind.
 TEST(Material3Slider, SetRangeClampsCurrentValueIntoNewDomain) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
 
@@ -784,7 +784,7 @@ TEST(Material3Slider, SetRangeClampsCurrentValueIntoNewDomain) {
 // Verifies that an invalid range update is rejected atomically and leaves the
 // slider's previous range and value untouched.
 TEST(Material3Slider, InvalidRangeIsRejectedWithoutChangingState) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
 
@@ -799,7 +799,7 @@ TEST(Material3Slider, InvalidRangeIsRejectedWithoutChangingState) {
 // Verifies that constructing a slider with an invalid range fails fast instead
 // of creating a partially initialized widget with inconsistent invariants.
 TEST(Material3Slider, InvalidConstructorRangeFailsFast) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
 
@@ -814,7 +814,7 @@ TEST(Material3Slider, InvalidConstructorRangeFailsFast) {
 // Verifies that changing to a discrete step that does not tile the range is
 // rejected, preserving the existing discrete configuration.
 TEST(Material3Slider, IncompatibleDiscreteStepIsRejected) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
 
@@ -830,7 +830,7 @@ TEST(Material3Slider, IncompatibleDiscreteStepIsRejected) {
 // Verifies that negative discrete step sizes are rejected outright rather than
 // silently normalizing them into some other interpretation.
 TEST(Material3Slider, NegativeStepIsRejected) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
 
@@ -843,7 +843,7 @@ TEST(Material3Slider, NegativeStepIsRejected) {
 // Verifies that the centered variant changes only paint semantics, not the
 // current semantic value.
 TEST(Material3Slider, CenteredVariantPreservesValue) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
 
@@ -857,7 +857,7 @@ TEST(Material3Slider, CenteredVariantPreservesValue) {
 // Verifies that switching variants updates centered-vs-standard semantics
 // without perturbing the current semantic value.
 TEST(Material3Slider, SetVariantUpdatesSemanticVariantOnly) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
 
@@ -1250,7 +1250,7 @@ TEST_F(Material3SliderRenderTest,
 // Verifies that centered discrete sliders still apply nearest-step snapping to
 // semantic values even though the visual fill is centered around the midpoint.
 TEST(Material3Slider, CenteredDiscreteVariantStillSnapsValues) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
 
@@ -1264,7 +1264,7 @@ TEST(Material3Slider, CenteredDiscreteVariantStillSnapsValues) {
 // Verifies that a programmatic value change triggers only the value-change hook
 // and does not emit interaction lifecycle callbacks meant for user gestures.
 TEST(Material3Slider, ProgrammaticValueChangeFiresOnlyValueChangeHook) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
 
@@ -1280,7 +1280,7 @@ TEST(Material3Slider, ProgrammaticValueChangeFiresOnlyValueChangeHook) {
 // Verifies that the range-slider constructor orders the endpoints and snaps
 // both initial values onto the discrete grid before exposing them.
 TEST(Material3RangeSlider, ConstructorOrdersAndSnapsInitialValues) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
 
@@ -1295,7 +1295,7 @@ TEST(Material3RangeSlider, ConstructorOrdersAndSnapsInitialValues) {
 // Verifies that programmatic range-slider updates clamp, snap, and reorder the
 // supplied endpoints into a valid in-domain selection.
 TEST(Material3RangeSlider, SetValuesClampsSnapsAndOrdersIntoDomain) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
 
@@ -1309,7 +1309,7 @@ TEST(Material3RangeSlider, SetValuesClampsSnapsAndOrdersIntoDomain) {
 // Verifies that changing the range-slider domain clamps both thumbs into the
 // new range rather than preserving now-invalid endpoint values.
 TEST(Material3RangeSlider, SetRangeClampsExistingValuesIntoNewDomain) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
 
@@ -1325,7 +1325,7 @@ TEST(Material3RangeSlider, SetRangeClampsExistingValuesIntoNewDomain) {
 // Verifies that an invalid range update on the range slider is rejected
 // atomically and leaves the previous state intact.
 TEST(Material3RangeSlider, InvalidRangeIsRejectedWithoutChangingState) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
 
@@ -1341,7 +1341,7 @@ TEST(Material3RangeSlider, InvalidRangeIsRejectedWithoutChangingState) {
 // Verifies that impossible range-slider discrete domains fail fast at
 // construction time instead of leaving broken separation invariants.
 TEST(Material3RangeSlider, InvalidConstructorRangeFailsFast) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
 
@@ -1356,7 +1356,7 @@ TEST(Material3RangeSlider, InvalidConstructorRangeFailsFast) {
 // Verifies that programmatic two-thumb updates surface as a single value-change
 // callback with no active thumb, not as a user interaction sequence.
 TEST(Material3RangeSlider, ProgrammaticSetValuesFiresOnlyValueChangeHook) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
 
@@ -1375,7 +1375,7 @@ TEST(Material3RangeSlider, ProgrammaticSetValuesFiresOnlyValueChangeHook) {
 // Verifies that minimum thumb separation is enforced after discrete snapping,
 // potentially pushing one endpoint farther than the raw requested values.
 TEST(Material3RangeSlider, MinimumSeparationIsEnforcedInDiscreteMode) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
 
@@ -1391,7 +1391,7 @@ TEST(Material3RangeSlider, MinimumSeparationIsEnforcedInDiscreteMode) {
 // Verifies that negative minimum-separation values are rejected without
 // mutating the existing separation constraint.
 TEST(Material3RangeSlider, NegativeMinimumSeparationIsRejected) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
 
@@ -1404,7 +1404,7 @@ TEST(Material3RangeSlider, NegativeMinimumSeparationIsRejected) {
 // Verifies that the range slider, like the single slider, owns its pressed
 // visuals and avoids generic overlay or click-animation behavior.
 TEST(Material3RangeSlider, PressStateDoesNotUseOverlayOrClickAnimation) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
 
@@ -1418,7 +1418,7 @@ TEST(Material3RangeSlider, PressStateDoesNotUseOverlayOrClickAnimation) {
 // Verifies that the range slider's extra-large preset feeds through all size
 // reporting surfaces, not just the paint metrics.
 TEST(Material3RangeSlider, SizePresetUpdatesMeasuredAndPreferredDimensions) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
 
@@ -1498,7 +1498,7 @@ TEST_F(Material3SliderAppTest,
 // Verifies that vertical orientation swaps the preferred-size contract so the
 // main axis becomes match-parent and the cross axis becomes exact.
 TEST(Material3SliderOrientation, VerticalPreferredSizeSwapsMajorAxis) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
 
@@ -2723,7 +2723,7 @@ class FmtSlider : public Slider {
 // Verifies the default value-indicator formatter keeps ordinary numeric values
 // compact while still producing a sentinel string for non-finite values.
 TEST(Material3SliderValueIndicator, DefaultFormatLabelFormatsCompactly) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
   Slider slider(context);
@@ -2738,7 +2738,7 @@ TEST(Material3SliderValueIndicator, DefaultFormatLabelFormatsCompactly) {
 // Verifies that subclasses can override value-indicator label formatting and
 // that the custom formatter is used verbatim.
 TEST(Material3SliderValueIndicator, CustomFormatLabelIsCalled) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
   FmtSlider slider(context);
@@ -2749,7 +2749,7 @@ TEST(Material3SliderValueIndicator, CustomFormatLabelIsCalled) {
 // Verifies that the range slider reuses the default numeric label formatting
 // path for value indicators when no custom formatter is supplied.
 TEST(Material3RangeSliderValueIndicator, FormatLabelDefault) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
   RangeSlider slider(context, SliderRange{0.0f, 10.0f}, 0.0f, 10.0f);
@@ -2761,7 +2761,7 @@ TEST(Material3RangeSliderValueIndicator, FormatLabelDefault) {
 // transient paint bounds until some thumb is actually active.
 TEST(Material3RangeSliderValueIndicator,
      TransientPaintBoundsUnchangedWithoutActivity) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
   SliderStyle s{};
@@ -2848,7 +2848,7 @@ TEST_F(Material3SliderRenderTest, RangeAlwaysIndicatorRequiresActiveThumb) {
 // Verifies both slider variants remain ordinary clipped children when value
 // indicators are enabled; only their pins escape the ancestor chain.
 TEST(Material3SliderValueIndicator, PinIndicatorsDoNotChangeParentClipMode) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
   SliderStyle style{};

@@ -86,7 +86,7 @@ void initDisplay() {
 #include "roo_windows/material3/dialog/basic_dialog.h"
 #include "roo_windows/widgets/button.h"
 
-roo_scheduler::Scheduler scheduler;
+roo_scheduler::SchedulingService scheduler;
 Environment env(scheduler);
 Application app(&env, display);
 

@@ -111,8 +111,7 @@ class Material3NavigationBarGoldenTest : public testing::Test {
     destination->setEnabled(!disabled);
     destination->setFocused(focused);
     destination->setPressed(pressed);
-    const int16_t height =
-        Scaled(64);
+    const int16_t height = Scaled(64);
     app.add(std::move(destination),
             roo_display::Box(x, y, x + width - 1, y + height - 1));
   }
@@ -130,8 +129,7 @@ class Material3NavigationBarGoldenTest : public testing::Test {
     } else {
       destination->setBadgeValue(1000);
     }
-    const int16_t height =
-        Scaled(64);
+    const int16_t height = Scaled(64);
     app.add(std::move(destination),
             roo_display::Box(x, y, x + width - 1, y + height - 1));
   }
@@ -139,7 +137,7 @@ class Material3NavigationBarGoldenTest : public testing::Test {
   roo::byte raster_[kWidth * kHeight * 2];
   roo_display::OffscreenDevice<roo_display::Argb4444> offscreen_;
   roo_display::Display display_;
-  roo_scheduler::Scheduler scheduler_;
+  roo_scheduler::SchedulingService scheduler_;
   Environment env_;
 };
 

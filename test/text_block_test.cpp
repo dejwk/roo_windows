@@ -53,7 +53,7 @@ class RecordingPanel : public Panel {
 // narrow AtMost width yields a measured height greater than a single line's
 // height, confirming the wrap actually grew the layout vertically.
 TEST(TextBlock, WordWrapIncreasesHeightWithNarrowWidth) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment bootstrap(scheduler);
   ApplicationContext context = MakeContext(bootstrap);
   TextBlock block(context, "word word word word", material2::text_style_body2(),
@@ -69,7 +69,7 @@ TEST(TextBlock, WordWrapIncreasesHeightWithNarrowWidth) {
 // text stays at exactly one line height even when the width spec is narrower
 // than the text's natural advance.
 TEST(TextBlock, NoWrapKeepsSingleLineHeight) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment bootstrap(scheduler);
   ApplicationContext context = MakeContext(bootstrap);
   TextBlock block(context, "word word word word", material2::text_style_body2(),
@@ -84,7 +84,7 @@ TEST(TextBlock, NoWrapKeepsSingleLineHeight) {
 // Verifies that setMaxLines(N) caps the measured height to at most N line
 // heights, even if the wrapped text would otherwise span more lines.
 TEST(TextBlock, MaxLinesLimitsMeasuredHeight) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment bootstrap(scheduler);
   ApplicationContext context = MakeContext(bootstrap);
   TextBlock block(context, "word word word word word word",
@@ -102,7 +102,7 @@ TEST(TextBlock, MaxLinesLimitsMeasuredHeight) {
 // content bounds reflect the actual glyph ink extents (clamped to include
 // the bounding rectangle) rather than the nominal advance rectangle.
 TEST(TextBlock, SingleLineContentBoundsReflectFontInk) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment bootstrap(scheduler);
   ApplicationContext context = MakeContext(bootstrap);
   const auto& font = material2::text_style_body2();
@@ -127,7 +127,7 @@ TEST(TextBlock, SingleLineContentBoundsReflectFontInk) {
 // content bounds fall back to conservative font-level bounds (covering all
 // glyphs and rsb overhang) instead of the previous laid-out extents.
 TEST(TextBlock, PendingWrappedLayoutUsesConservativeFontBounds) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment bootstrap(scheduler);
   ApplicationContext context = MakeContext(bootstrap);
   const auto& font = material2::text_style_body2();
@@ -150,7 +150,7 @@ TEST(TextBlock, PendingWrappedLayoutUsesConservativeFontBounds) {
 // and, once re-laid-out, shifts the content bounds inward by the padding on
 // both the left and top edges.
 TEST(TextBlock, SetPaddingRequestsLayoutAndUpdatesContentBounds) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment bootstrap(scheduler);
   ApplicationContext context = MakeContext(bootstrap);
   const auto& font = material2::text_style_body2();
@@ -182,7 +182,7 @@ TEST(TextBlock, SetPaddingRequestsLayoutAndUpdatesContentBounds) {
 // not request invalidation from the parent panel: the new ink is repainted
 // by the block itself with nothing to erase beneath.
 TEST(TextBlock, EmptyToNonEmptyDoesNotInvalidateParentBeneath) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment bootstrap(scheduler);
   ApplicationContext context = MakeContext(bootstrap);
   RecordingPanel panel(context);
@@ -270,7 +270,7 @@ class TextBlockGoldenTest : public testing::Test {
   roo::byte raster_[kWidth * kHeight * 2];
   roo_display::OffscreenDevice<roo_display::Argb4444> offscreen_;
   roo_display::Display display_;
-  roo_scheduler::Scheduler scheduler_;
+  roo_scheduler::SchedulingService scheduler_;
   Environment env_;
 };
 

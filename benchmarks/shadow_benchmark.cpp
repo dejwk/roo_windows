@@ -131,7 +131,7 @@ class BenchmarkScene {
  private:
   std::vector<roo::byte> raster_;
   roo_display::OffscreenDevice<roo_display::Argb4444> offscreen_;
-  roo_scheduler::Scheduler scheduler_;
+  roo_scheduler::SchedulingService scheduler_;
   Environment env_;
   Application app_;
   DecoratedWidget* card_;

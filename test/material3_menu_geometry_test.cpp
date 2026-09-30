@@ -83,7 +83,7 @@ class TrackingEntry final : public MenuEntry {
 };
 
 TEST(Material3MenuGeometry, GroupsDetachBorrowedAndDeleteAdoptedRows) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
   bool adopted_destroyed = false;
@@ -100,7 +100,7 @@ TEST(Material3MenuGeometry, GroupsDetachBorrowedAndDeleteAdoptedRows) {
 }
 
 TEST(Material3MenuGeometry, PanelCoercesHeightToPersistentScrolling) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
   internal::MenuPanel panel(context);
@@ -120,7 +120,7 @@ TEST(Material3MenuGeometry, PanelCoercesHeightToPersistentScrolling) {
 }
 
 TEST(Material3MenuGeometry, PanelIncludesCanonicalContentMargins) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
   internal::MenuPanel panel(context);
@@ -146,7 +146,7 @@ TEST(Material3MenuGeometry, PanelIncludesCanonicalContentMargins) {
 }
 
 TEST(Material3MenuGeometry, ScrollingCoercesExpressiveGapsToDividers) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
   internal::MenuPanel panel(context);
@@ -172,7 +172,7 @@ TEST(Material3MenuGeometry, ScrollingCoercesExpressiveGapsToDividers) {
 }
 
 TEST(Material3MenuGeometry, OverlayRemainsTransparent) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
   internal::MenuOverlay overlay(context);

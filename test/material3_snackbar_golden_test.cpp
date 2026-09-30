@@ -35,7 +35,7 @@ TEST(Material3SnackbarGolden, Configurations) {
     roo_display::OffscreenDevice<roo_display::Argb4444> device(
         c.width, 240, raster.data(), roo_display::Argb4444());
     roo_display::Display display(device);
-    roo_scheduler::Scheduler scheduler;
+    roo_scheduler::SchedulingService scheduler;
     Environment env(scheduler);
     Application app(&env, display);
     SnackbarHost host(app.context());

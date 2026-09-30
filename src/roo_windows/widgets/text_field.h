@@ -6,11 +6,11 @@
 #include "roo_display/ui/tile.h"
 #include "roo_scheduler.h"
 #include "roo_time.h"
-#include "roo_windows/keyboard/keyboard.h"
 #include "roo_windows/config.h"
-#include "roo_windows/core/widget.h"
 #include "roo_windows/core/panel.h"
+#include "roo_windows/core/widget.h"
 #include "roo_windows/internal/text_edit_target.h"
+#include "roo_windows/keyboard/keyboard.h"
 
 namespace roo_windows {
 
@@ -100,7 +100,8 @@ class VisibilityToggle : public Widget {
 /// avoids paying for it on every `TextField` instance.
 class TextFieldEditor {
  public:
-  TextFieldEditor(Application& application, roo_scheduler::Scheduler& scheduler)
+  TextFieldEditor(Application& application,
+                  roo_scheduler::SchedulerClient& scheduler)
       : application_(application),
         scheduler_(scheduler),
         blinking_cursor_is_on_(false),
@@ -195,7 +196,7 @@ class TextFieldEditor {
   void changed();
 
   Application& application_;
-  roo_scheduler::Scheduler& scheduler_;
+  roo_scheduler::SchedulerClient& scheduler_;
   bool blinking_cursor_is_on_;
   roo_scheduler::SingletonTask last_glyph_hider_;
 

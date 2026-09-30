@@ -50,7 +50,7 @@
         "dejwk/roo_logging": ">=1.5.11",
         "dejwk/roo_icons": ">=1.2.5",
         "dejwk/roo_io": ">=2.4.0",
-        "dejwk/roo_scheduler": ">=2.2.1",
+        "dejwk/roo_scheduler": ">=2.3.0",
         "dejwk/roo_time": ">=2.0.1"
     }
 }

@@ -3,8 +3,8 @@
 #include "roo_display/core/offscreen.h"
 #include "roo_testing/system/timer.h"
 #include "roo_windows/core/application.h"
-#include "roo_windows/core/widget.h"
 #include "roo_windows/core/environment.h"
+#include "roo_windows/core/widget.h"
 
 namespace roo_windows::test {
 struct ApplicationWorkTestAccess {
@@ -125,7 +125,7 @@ class ClickFrameTest : public testing::Test {
       32, 32, raster_, roo_display::Argb4444()};
   ManualTouchDevice touch_{32, 32};
   roo_display::Display display_{device_, touch_};
-  roo_scheduler::Scheduler scheduler_;
+  roo_scheduler::SchedulingService scheduler_;
   Environment environment_{scheduler_};
   CountingKeys keys_;
   Application app_{&environment_, display_, keys_, false};

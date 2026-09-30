@@ -11,8 +11,8 @@
 #include "roo_scheduler.h"
 #include "roo_time.h"
 #include "roo_windows/core/application.h"
-#include "roo_windows/core/widget.h"
 #include "roo_windows/core/environment.h"
+#include "roo_windows/core/widget.h"
 
 namespace roo_windows {
 namespace test {
@@ -56,15 +56,14 @@ class TestApplication {
   roo::byte raster_[32 * 32 * 2] = {};
   roo_display::OffscreenDevice<roo_display::Argb4444> device_;
   roo_display::Display display_;
-  roo_scheduler::Scheduler scheduler_;
+  roo_scheduler::SchedulingService scheduler_;
   Environment environment_;
   Application app_;
 };
 
 class RecordingWidget : public Widget {
  public:
-  explicit RecordingWidget(ApplicationContext& context)
-      : Widget(context) {}
+  explicit RecordingWidget(ApplicationContext& context) : Widget(context) {}
 
   struct Frame {
     AnimationTag tag;
@@ -136,7 +135,7 @@ class GrowingWidget final : public RecordingWidget {
 // Verifies a standalone context rejects registration because no application
 // can supply frame opportunities.
 TEST(AnimationRegistry, StandaloneContextHasNoFrameDriver) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
   RecordingWidget widget(context);

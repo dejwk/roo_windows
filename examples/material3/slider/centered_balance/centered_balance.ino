@@ -80,8 +80,8 @@ void initDisplay() {
 #include "roo_windows/containers/flex_layout.h"
 #include "roo_windows/material3/slider/slider.h"
 #include "roo_windows/material3/typography.h"
-#include "roo_windows/widgets/text_label.h"
 #include "roo_windows/widgets/text_block.h"
+#include "roo_windows/widgets/text_label.h"
 
 namespace {
 
@@ -136,8 +136,7 @@ class CenteredBalance : public FlexLayout {
   /// Creates the signed balance control lesson.
   explicit CenteredBalance(ApplicationContext& context)
       : FlexLayout(context, FlexDirection::kColumn),
-        title_(context, "Balance",
-               material3::text_style_title_large()),
+        title_(context, "Balance", material3::text_style_title_large()),
         guidance_(context,
                   "Zero is neutral; the active track grows from center",
                   material3::text_style_body_medium(), kTop | kLeft),
@@ -160,7 +159,7 @@ class CenteredBalance : public FlexLayout {
 
 }  // namespace
 
-roo_scheduler::Scheduler scheduler;
+roo_scheduler::SchedulingService scheduler;
 Environment env(scheduler);
 #ifdef ROO_TESTING
 Application app(&env, display, emulator_keys, true);

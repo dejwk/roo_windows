@@ -63,7 +63,7 @@ class ClickableProbeWidget : public ProbeWidget {
 // Verifies surface-state changes keep the fill and descendant interaction roles
 // consistent while the embedded search entry retains its distinct surface.
 TEST(Material3AppBar, SurfaceRolesFollowFlatAndScrolledStates) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   TestAppBar app_bar(context);
@@ -113,7 +113,7 @@ TEST(Material3AppBar, SurfaceRolesFollowFlatAndScrolledStates) {
 // Verifies each app-bar and search surface reads its independent live theme
 // slot instead of sharing a literal role with another panel variant.
 TEST(Material3AppBar, UsesIndependentComponentThemeSlots) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Material3Theme material = DefaultTheme().material3Theme();
   material.components.appBar.flatContainer = ColorToken::kSurfaceContainerLow;
   material.components.appBar.scrolledContainer =
@@ -152,7 +152,7 @@ TEST(Material3AppBar, UsesIndependentComponentThemeSlots) {
 
 // Verifies the Phase-1 defaults preserve the proposed public surface.
 TEST(Material3AppBar, DefaultsMatchThePhaseOneSurface) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   AppBar app_bar(context);
@@ -170,7 +170,7 @@ TEST(Material3AppBar, DefaultsMatchThePhaseOneSurface) {
 
 // Verifies public configuration uses the expected compact, non-owning state.
 TEST(Material3AppBar, StoresNonOwningTextAndSurfaceConfiguration) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   AppBar app_bar(context);
@@ -198,7 +198,7 @@ TEST(Material3AppBar, StoresNonOwningTextAndSurfaceConfiguration) {
 
 // Verifies all child APIs remain bounded fixed slots and support clearing.
 TEST(Material3AppBar, ChildSlotsAreBoundedAndClearable) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   TestAppBar app_bar(context);
@@ -228,7 +228,7 @@ TEST(Material3AppBar, ChildSlotsAreBoundedAndClearable) {
 // The full-width shell stays 64dp high. Its embedded entry fills the central
 // strip only up to 720dp and leaves outer action slots outside search hit area.
 TEST(Material3AppBar, SearchAppBarUsesAdaptiveEmbeddedLaneAndRestrictedHits) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   TestSearchAppBar search_app_bar(context);
@@ -268,7 +268,7 @@ TEST(Material3AppBar, SearchAppBarUsesAdaptiveEmbeddedLaneAndRestrictedHits) {
 // Verifies the standalone entry follows its 56dp row token, prefers the
 // Material minimum width, and still accepts a narrow parent constraint.
 TEST(Material3AppBar, StandaloneSearchBarMeasuresWithinItsAdaptiveWidthRange) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   SearchBar search_bar(context);
@@ -287,7 +287,7 @@ TEST(Material3AppBar, StandaloneSearchBarMeasuresWithinItsAdaptiveWidthRange) {
 // Passive presentation glyphs and text do not consume the search activation,
 // while a caller-supplied interactive child keeps its own tap target.
 TEST(Material3AppBar, SearchBarsRoutePassiveAndInteractiveSlotsCorrectly) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   SearchBar search_bar(context);
@@ -332,7 +332,7 @@ TEST(Material3AppBar, SearchBarsRoutePassiveAndInteractiveSlotsCorrectly) {
 // Flexible bars select their Material subtitle height so title and subtitle
 // retain complete line boxes below the upper control row.
 TEST(Material3AppBar, TitleVariantsUseFixedShellHeightsAndSubtitleRules) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   TestAppBar app_bar(context);
@@ -361,7 +361,7 @@ TEST(Material3AppBar, TitleVariantsUseFixedShellHeightsAndSubtitleRules) {
 // Verifies the title has 4dp gaps to action slots, while trailing slots
 // remain adjacent and the outer padding stays 4dp for every slot combination.
 TEST(Material3AppBar, TitleLaneReservesLeadingAndTrailingActionSlots) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   for (AppBarTitleAlignment alignment :
@@ -407,7 +407,7 @@ TEST(Material3AppBar, TitleLaneReservesLeadingAndTrailingActionSlots) {
 // Material's expanded medium and large bars use a control row followed by a
 // separate title row. Small bars retain their compact, single-row layout.
 TEST(Material3AppBar, FlexibleVariantsPlaceControlsAboveTitleStack) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   TestAppBar app_bar(context, AppBarVariant::kMediumFlexible);
@@ -435,7 +435,7 @@ TEST(Material3AppBar, FlexibleVariantsPlaceControlsAboveTitleStack) {
 // Verifies smaller action surfaces stay centered without moving the title or
 // losing the expanded touch target at the edges of their reserved slots.
 TEST(Material3AppBar, CentersSmallActionsAndPreservesSlotTouchTargets) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   for (AppBarVariant variant :
@@ -488,7 +488,7 @@ TEST(Material3AppBar, CentersSmallActionsAndPreservesSlotTouchTargets) {
 }
 
 TEST(Material3AppBar, SmallTitleUsesTheStandardInsetWithoutNavigation) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   TestAppBar app_bar(context);

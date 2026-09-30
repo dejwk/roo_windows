@@ -6,9 +6,9 @@
 #include "roo_display/core/offscreen.h"
 #include "roo_scheduler.h"
 #include "roo_windows/core/application.h"
-#include "roo_windows/core/widget.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/panel.h"
+#include "roo_windows/core/widget.h"
 
 namespace roo_windows {
 namespace {
@@ -24,8 +24,7 @@ class TestWidget final : public Widget {
 
 class ObservingWidget final : public Widget {
  public:
-  explicit ObservingWidget(ApplicationContext& context)
-      : Widget(context) {}
+  explicit ObservingWidget(ApplicationContext& context) : Widget(context) {}
 
   bool observePresentation() {
     return context().presentations().observe(*this);
@@ -56,7 +55,7 @@ TEST(PresentationRegistry, QueryClassifiesVisibleAndHiddenAncestors) {
   roo_display::OffscreenDevice<roo_display::Argb4444> device(
       16, 16, raster, roo_display::Argb4444());
   roo_display::Display display(device);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment environment(scheduler);
   Application app(&environment, display);
 
@@ -85,7 +84,7 @@ TEST(PresentationRegistry, QueryClassifiesDetachedWidget) {
   roo_display::OffscreenDevice<roo_display::Argb4444> device(
       16, 16, raster, roo_display::Argb4444());
   roo_display::Display display(device);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment environment(scheduler);
   Application app(&environment, display);
   TestWidget widget(app.context());
@@ -100,7 +99,7 @@ TEST(PresentationRegistry, QueryClassifiesExpiredContextAsDetached) {
   roo_display::OffscreenDevice<roo_display::Argb4444> device(
       16, 16, raster, roo_display::Argb4444());
   roo_display::Display display(device);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment environment(scheduler);
   std::unique_ptr<TestWidget> widget;
   {
@@ -122,7 +121,7 @@ TEST(PresentationRegistry, QueryKeepsIndependentApplicationsIndependent) {
       16, 16, second_raster, roo_display::Argb4444());
   roo_display::Display first_display(first_device);
   roo_display::Display second_display(second_device);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment environment(scheduler);
   Application first(&environment, first_display);
   Application second(&environment, second_display);
@@ -146,7 +145,7 @@ TEST(PresentationRegistry, ObservedWidgetReceivesCoalescedChanges) {
   roo_display::OffscreenDevice<roo_display::Argb4444> device(
       16, 16, raster, roo_display::Argb4444());
   roo_display::Display display(device);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment environment(scheduler);
   Application app(&environment, display);
 

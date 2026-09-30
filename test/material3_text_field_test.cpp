@@ -393,7 +393,7 @@ TEST(Material3TextFieldPaint, SinglePassAndAssistiveRemovalOnColoredAncestor) {
   std::vector<roo::byte> pixels(280 * 180 * 2);
   FieldDisplay device(pixels.data());
   roo_display::Display display(device);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   Application app(&env, display);
   SecureTextField field(app.context(), "Password", TextFieldVariant::kOutlined);

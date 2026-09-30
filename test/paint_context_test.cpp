@@ -5,9 +5,9 @@
 #include "roo_display/core/offscreen.h"
 #include "roo_scheduler.h"
 #include "roo_windows.h"
-#include "roo_windows/core/surface_widget.h"
 #include "roo_windows/core/clipper.h"
 #include "roo_windows/core/overlay_spec.h"
+#include "roo_windows/core/surface_widget.h"
 
 using namespace roo_display;
 using namespace roo_windows;
@@ -96,7 +96,7 @@ class PaintContextTest : public testing::Test {
   roo::byte raster_[kWidth * kHeight * 2];
   OffscreenDevice<Argb4444> offscreen_;
   Display display_;
-  roo_scheduler::Scheduler scheduler_;
+  roo_scheduler::SchedulingService scheduler_;
   Environment env_;
   Application app_;
 };

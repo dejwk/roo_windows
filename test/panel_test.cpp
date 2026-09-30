@@ -45,7 +45,7 @@ class TrackedChild : public Blank {
 template <typename T>
 class PanelLifetimeTest : public testing::Test {
  protected:
-  roo_scheduler::Scheduler scheduler_;
+  roo_scheduler::SchedulingService scheduler_;
   Environment env_{scheduler_};
   ApplicationContext context_{env_.scheduler(), env_.theme(),
                               env_.keyboardColorTheme()};
@@ -81,7 +81,7 @@ TYPED_TEST(PanelLifetimeTest, DetachesBorrowedAndDestroysOwnedChildren) {
 
 // Verifies explicit early cleanup remains safe when the base destructor runs.
 TEST(PanelLifetime, ExplicitCleanupIsIdempotent) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context(env.scheduler(), env.theme(),
                              env.keyboardColorTheme());
@@ -104,7 +104,7 @@ TEST(PanelLifetime, ExplicitCleanupIsIdempotent) {
 // their storage. ASan also checks nested layouts and member-owned heap
 // children.
 TEST(PanelLifetime, CompositeMembersDetachBeforeDestruction) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context(env.scheduler(), env.theme(),
                              env.keyboardColorTheme());
@@ -146,7 +146,7 @@ class TestDestination : public Destination {
 // Verifies both navigation item variants detach inline children, including the
 // nested column, while their borrowed labels are still alive.
 TEST(PanelLifetime, NavigationItemMembersDetachBeforeDestruction) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   roo::byte pixels[32 * 32 * 2] = {};
   roo_display::OffscreenDevice<roo_display::Argb4444> device(

@@ -4,8 +4,8 @@
 #include "roo_scheduler.h"
 #include "roo_testing/system/timer.h"
 #include "roo_windows/core/application.h"
-#include "roo_windows/core/widget.h"
 #include "roo_windows/core/environment.h"
+#include "roo_windows/core/widget.h"
 
 namespace roo_windows {
 namespace {
@@ -17,7 +17,7 @@ TEST(DisplayWindow, OwnsDisplayLocalRuntimeAndCompatibilityForwarders) {
   roo_display::OffscreenDevice<roo_display::Argb4444> device(
       32, 24, raster, roo_display::Argb4444());
   roo_display::Display display(device);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment environment(scheduler);
   Application app(&environment, display);
 
@@ -70,7 +70,7 @@ TEST(DisplayWindow, TouchPollWakesApplication) {
       32, 24, raster, roo_display::Argb4444());
   CountingTouchDevice touch;
   roo_display::Display display(device, touch);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment environment(scheduler);
   DispatchCountingSource keys;
   {
@@ -116,7 +116,7 @@ TEST(DisplayWindow, DisabledTouchNeverPolls) {
       32, 24, raster, roo_display::Argb4444());
   CountingTouchDevice touch;
   roo_display::Display display(device, touch);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment environment(scheduler);
   DispatchCountingSource keys;
   Application app(&environment, display, keys, false);
@@ -147,7 +147,7 @@ TEST(DisplayWindow, GestureDeadlineWakesWithoutNewTouch) {
       32, 24, raster, roo_display::Argb4444());
   CountingTouchDevice touch;
   roo_display::Display display(device, touch);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment environment(scheduler);
   DispatchCountingSource keys;
   std::unique_ptr<Application> app(
@@ -202,7 +202,7 @@ TEST(DisplayWindow, IdleSensorPollsDoNotDispatchOrPaintApplication) {
       32, 24, raster, roo_display::Argb4444());
   CountingTouchDevice touch;
   roo_display::Display display(device, touch);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment environment(scheduler);
   DispatchCountingSource keys;
   Application app(&environment, display, keys, true);

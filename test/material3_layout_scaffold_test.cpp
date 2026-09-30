@@ -73,7 +73,7 @@ TEST(Material3LayoutScaffold, ResolvesExactScaledBreakpointBoundaries) {
 
 // Verifies the scaffold role follows the application-owned component slot.
 TEST(Material3LayoutScaffold, UsesThemedContainerRole) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Material3Theme material = DefaultTheme().material3Theme();
   material.components.layoutScaffold.container = ColorToken::kSurface;
   Theme theme = DefaultTheme();
@@ -168,7 +168,7 @@ TEST(Material3LayoutScaffold, ClampsOversizedSpansAtFinalColumn) {
 // Verifies full-width bars, safety insets, rails, and body/chrome geometry
 // resolve together without forcing the ruler margin into the body.
 TEST(Material3LayoutScaffold, PlacesChromeAndPublishesBodyGeometry) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   ProbeWidget top(context, 1, 10);
@@ -201,7 +201,7 @@ TEST(Material3LayoutScaffold, PlacesChromeAndPublishesBodyGeometry) {
 // Verifies every slot measures inside its margins and reserves chrome margins
 // before placing the body, with physical margins preserved in both directions.
 TEST(Material3LayoutScaffold, RespectsAllSlotMargins) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   ProbeWidget top(context, 1, 10);
@@ -253,7 +253,7 @@ TEST(Material3LayoutScaffold, RespectsAllSlotMargins) {
 // Verifies margins compose with safety insets and padding, including negative
 // margins that intentionally expand a child's allocation.
 TEST(Material3LayoutScaffold, CombinesBodyMarginsWithPaddingAndSafetyInsets) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   ProbeWidget body(context, 1, 1);
@@ -279,7 +279,7 @@ TEST(Material3LayoutScaffold, CombinesBodyMarginsWithPaddingAndSafetyInsets) {
 // Verifies oversized margins clamp measurement to zero, clear old child bounds,
 // and reserve no space for chrome excluded by its breakpoint range.
 TEST(Material3LayoutScaffold, HandlesExhaustedAndHiddenSlotsWithMargins) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   ProbeWidget top(context, 10, 10);
@@ -312,7 +312,7 @@ TEST(Material3LayoutScaffold, HandlesExhaustedAndHiddenSlotsWithMargins) {
 // Verifies zero defaults, changes after layout, unchanged-value no-ops,
 // and both token overloads through the public padding API.
 TEST(Material3LayoutScaffold, UpdatesStoredPaddingAndRequestsLayout) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   ProbeWidget body(context, 1, 1);
@@ -347,7 +347,7 @@ TEST(Material3LayoutScaffold, UpdatesStoredPaddingAndRequestsLayout) {
 // Verifies padding and safety insets combine for every slot in both passes,
 // including published geometry and mirrored rails.
 TEST(Material3LayoutScaffold, AppliesPaddingToMeasurementAndLayout) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   ProbeWidget top(context, 1, 10);
@@ -392,7 +392,7 @@ TEST(Material3LayoutScaffold, AppliesPaddingToMeasurementAndLayout) {
 // Verifies excessive padding clears previously laid-out slots and metrics,
 // and that the scaffold recovers when space becomes available again.
 TEST(Material3LayoutScaffold, ClearsSlotsWhenPaddingConsumesAvailableSpace) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   ProbeWidget top(context, 1, 10);
@@ -422,7 +422,7 @@ TEST(Material3LayoutScaffold, ClearsSlotsWhenPaddingConsumesAvailableSpace) {
 // Verifies a scaffold retains the outer breakpoint for ruler tokens after its
 // rails narrow the body below that breakpoint.
 TEST(Material3LayoutScaffold, UsesOuterBreakpointForBodyRulerMetrics) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   ProbeWidget leading(context, 500, 1);
@@ -442,7 +442,7 @@ TEST(Material3LayoutScaffold, UsesOuterBreakpointForBodyRulerMetrics) {
 // Verifies excluded chrome becomes gone, clears focus, receives empty bounds,
 // and returns body space when the breakpoint changes.
 TEST(Material3LayoutScaffold, ExcludesChromeByBreakpointWithoutReplacingIt) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   ProbeWidget bottom(context, 1, 12);
@@ -470,7 +470,7 @@ TEST(Material3LayoutScaffold, ExcludesChromeByBreakpointWithoutReplacingIt) {
 // Verifies logical rails mirror in RTL while physical safety insets remain on
 // their caller-specified sides.
 TEST(Material3LayoutScaffold, MirrorsRailsForRtl) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   ProbeWidget leading(context, 20, 1);
@@ -493,7 +493,7 @@ TEST(Material3LayoutScaffold, MirrorsRailsForRtl) {
 
 // Verifies fixed slots detach borrowed children and clear body geometry.
 TEST(Material3LayoutScaffold, ClearsBorrowedSlotsAndEmptyBodyGeometry) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   ProbeWidget top(context, 1, 10);

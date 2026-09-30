@@ -116,7 +116,7 @@ class ChipBar : public FlexLayout {
   SimpleButton chips_[8];
 };
 
-roo_scheduler::Scheduler scheduler;
+roo_scheduler::SchedulingService scheduler;
 Environment env(scheduler);
 Application app(&env, display);
 ChipBar chip_bar(app.context());

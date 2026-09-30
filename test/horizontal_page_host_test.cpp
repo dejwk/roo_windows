@@ -4,8 +4,8 @@
 
 #include "gtest/gtest.h"
 #include "roo_scheduler.h"
-#include "roo_windows/core/widget.h"
 #include "roo_windows/core/environment.h"
+#include "roo_windows/core/widget.h"
 
 namespace roo_windows {
 namespace {
@@ -94,7 +94,7 @@ Rect SlotBoundsForPage(const Widget* page) {
 // Verifies that the host auto-selects the first page and keeps the current
 // page plus immediate neighbor attached in phase 2.
 TEST(HorizontalPageHost, AdjacentAttachmentTracksSelection) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment bootstrap(scheduler);
   ApplicationContext context = MakeContext(bootstrap);
 
@@ -136,7 +136,7 @@ TEST(HorizontalPageHost, AdjacentAttachmentTracksSelection) {
 // Verifies out-of-range programmatic selection is rejected without changing
 // current index.
 TEST(HorizontalPageHost, RejectsInvalidSelection) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment bootstrap(scheduler);
   ApplicationContext context = MakeContext(bootstrap);
 
@@ -151,7 +151,7 @@ TEST(HorizontalPageHost, RejectsInvalidSelection) {
 // Verifies exact viewport measurement reports the viewport size and only
 // measures the currently active page.
 TEST(HorizontalPageHost, ExactMeasureUsesViewportAndCurrentPageOnly) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment bootstrap(scheduler);
   ApplicationContext context = MakeContext(bootstrap);
 
@@ -179,7 +179,7 @@ TEST(HorizontalPageHost, ExactMeasureUsesViewportAndCurrentPageOnly) {
 // Verifies non-exact measurement scans all stored pages and resolves to a
 // single viewport size that fits the largest page.
 TEST(HorizontalPageHost, WrapMeasureUsesLargestPage) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment bootstrap(scheduler);
   ApplicationContext context = MakeContext(bootstrap);
 
@@ -202,7 +202,7 @@ TEST(HorizontalPageHost, WrapMeasureUsesLargestPage) {
 
 // Verifies layout assigns the selected page to the full local viewport rect.
 TEST(HorizontalPageHost, LayoutFillsViewportWithSelectedPage) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment bootstrap(scheduler);
   ApplicationContext context = MakeContext(bootstrap);
 
@@ -229,7 +229,7 @@ TEST(HorizontalPageHost, LayoutFillsViewportWithSelectedPage) {
 // Verifies drag updates fractional page position and lays out current and next
 // pages at the expected offsets for partial reveal.
 TEST(HorizontalPageHost, DragRepositionsCurrentAndAdjacentPages) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment bootstrap(scheduler);
   ApplicationContext context = MakeContext(bootstrap);
 
@@ -254,7 +254,7 @@ TEST(HorizontalPageHost, DragRepositionsCurrentAndAdjacentPages) {
 // Verifies drag target notifications move selector surfaces, such as tabs,
 // before the page has fully settled.
 TEST(HorizontalPageHost, DragUpdatesTargetIndexAtSettleThreshold) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment bootstrap(scheduler);
   ApplicationContext context = MakeContext(bootstrap);
 
@@ -295,7 +295,7 @@ TEST(HorizontalPageHost, DragUpdatesTargetIndexAtSettleThreshold) {
 // Verifies edge drag resistance at the first page uses capped scroll-panel
 // style damping beyond the boundary.
 TEST(HorizontalPageHost, EdgeResistanceDampsOutOfRangeDrag) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment bootstrap(scheduler);
   ApplicationContext context = MakeContext(bootstrap);
 
@@ -318,7 +318,7 @@ TEST(HorizontalPageHost, EdgeResistanceDampsOutOfRangeDrag) {
 // Verifies edge resistance is applied from accumulated raw drag distance, not
 // from the previously damped visual page position.
 TEST(HorizontalPageHost, EdgeResistanceAccumulatesRawDrag) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment bootstrap(scheduler);
   ApplicationContext context = MakeContext(bootstrap);
 

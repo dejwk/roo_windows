@@ -10,13 +10,13 @@
 #include "roo_icons/outlined/24/action.h"
 #include "roo_scheduler.h"
 #include "roo_windows/core/application.h"
-#include "roo_windows/core/widget.h"
 #include "roo_windows/core/canvas.h"
 #include "roo_windows/core/clipper.h"
 #include "roo_windows/core/container.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/key_source.h"
 #include "roo_windows/core/paint_context.h"
+#include "roo_windows/core/widget.h"
 #include "roo_windows/material3/badge/badge.h"
 #include "roo_windows/material3/navigation_bar/navigation_bar.h"
 
@@ -52,7 +52,7 @@ void ExpectDestinationFadeStaysWithinIndicator(NavigationBarLayout layout) {
   roo_display::OffscreenDevice<roo_display::Argb4444> offscreen(
       kWidth, kHeight, raster, roo_display::Argb4444());
   roo_display::Display display(offscreen);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   Application app(&env, display);
 
@@ -112,7 +112,7 @@ void ExpectDestinationPaintsEveryPixel(NavigationBarLayout layout,
   display.output().fillRect(roo_display::BlendingMode::kSource, paint_bounds,
                             untouched);
 
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   NavigationBarDestination destination(context, "Inbox",
@@ -209,7 +209,7 @@ TEST(Material3NavigationBar, PublicTypesStayWithinPhaseOneSizeBudget) {
 // Verifies the bar surface and destination interaction background share the
 // application-owned navigation-bar role.
 TEST(Material3NavigationBar, UsesThemedContainerRole) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Material3Theme material = DefaultTheme().material3Theme();
   material.components.navigationBar.container =
       ColorToken::kSurfaceContainerHigh;
@@ -226,7 +226,7 @@ TEST(Material3NavigationBar, UsesThemedContainerRole) {
 // Verifies that base destinations preserve their non-owning text and icon
 // references while defaulting to the compact vertical layout and no selection.
 TEST(Material3NavigationBar, DestinationDefaultsAndSetters) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   const MonoIcon& icon = ic_outlined_24_action_done();
@@ -261,7 +261,7 @@ TEST(Material3NavigationBar, DestinationDefaultsAndSetters) {
 // Verifies that destination measurement follows the compact stacked and
 // medium inline geometry contracts without storing separate layout metrics.
 TEST(Material3NavigationBar, DestinationMeasuresForBothLayouts) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   NavigationBarDestination destination(context, "Inbox",
@@ -285,7 +285,7 @@ TEST(Material3NavigationBar, DestinationMeasuresForBothLayouts) {
 // anchor for the later badge phase and derive selection through the bar-only
 // state hook rather than a public per-destination selection API.
 TEST(Material3NavigationBar, SelectionStateAndIconAnchorFollowLayout) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   NavigationBarDestination destination(context, "Inbox",
@@ -311,7 +311,7 @@ TEST(Material3NavigationBar, SelectionStateAndIconAnchorFollowLayout) {
 // Locks the compact flexible-bar metric stack to the Jetpack Material 3
 // arrangement: 6 top + 32 indicator + 4 gap + 16 label + 6 bottom.
 TEST(Material3NavigationBar, VerticalDestinationUsesShortBarMetricStack) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   NavigationBarDestination destination(context, "Inbox",
@@ -329,7 +329,7 @@ TEST(Material3NavigationBar, VerticalDestinationUsesShortBarMetricStack) {
 // The medium start-icon arrangement centers a 40 dp indicator around the
 // content cluster and gives that cluster 16 dp of indicator padding per side.
 TEST(Material3NavigationBar, HorizontalDestinationUsesInlineIndicatorMetrics) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   NavigationBarDestination destination(context, "Inbox",
@@ -363,7 +363,7 @@ TEST(Material3NavigationBar, DestinationFadeStaysWithinIndicatorInBothLayouts) {
 // Verifies that the opt-in badge subclass reuses the shared inline helper,
 // caps numeric values, and keeps icon-corner geometry inside both targets.
 TEST(Material3NavigationBar, BadgedDestinationCapsValueAndStaysWithinBounds) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   BadgedNavigationBarDestination destination(context, "Inbox",
@@ -401,7 +401,7 @@ TEST(Material3NavigationBar, BadgedDestinationCapsValueAndStaysWithinBounds) {
 // Verifies that the bar owns selection, auto-selects its first destination,
 // and distinguishes a new activation from an explicit reselection.
 TEST(Material3NavigationBar, BarOwnsSelectionAndReselection) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   TestNavigationBar bar(context);
@@ -441,7 +441,7 @@ TEST(Material3NavigationBar, TouchReleaseSettlesIntoSelectedPill) {
   roo_display::OffscreenDevice<roo_display::Argb4444> offscreen(
       kWidth, kHeight, raster, roo_display::Argb4444());
   roo_display::Display display(offscreen);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   Application app(&env, display);
 
@@ -483,7 +483,7 @@ TEST(Material3NavigationBar, TouchReleaseSettlesIntoSelectedPill) {
 // Verifies the five-destination cap and that clear detaches every destination
 // while restoring the empty-bar selection sentinel.
 TEST(Material3NavigationBar, BarCapsAndClearsDestinations) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   NavigationBar bar(context);
@@ -513,7 +513,7 @@ TEST(Material3NavigationBar, BarCapsAndClearsDestinations) {
 // Verifies equal compact segments, fixed-width centered horizontal items, and
 // the equal-width fallback when the horizontal preferred width cannot fit.
 TEST(Material3NavigationBar, BarLayoutsDestinationsByMode) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   NavigationBar bar(context);
@@ -550,7 +550,7 @@ TEST(Material3NavigationBar, BarLayoutsDestinationsByMode) {
 // Verifies Left/Right traversal moves keyboard focus without selecting the
 // focused destination, leaving Enter and Space to the framework activation.
 TEST(Material3NavigationBar, ArrowKeysMoveFocusWithoutChangingSelection) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   TestNavigationBar bar(context);
@@ -586,7 +586,7 @@ TEST(Material3NavigationBar, WrappedFocusRestoresEveryDestination) {
   roo_display::OffscreenDevice<roo_display::Argb4444> offscreen(
       kWidth, kHeight, raster, roo_display::Argb4444());
   roo_display::Display display(offscreen);
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   Application app(&env, display);
 

@@ -35,8 +35,9 @@ struct Emulator {
         second_display(second_flex),
         first_touch(first_flex, FakeXpt2046Spi::Calibration(
                                     269, 249, 3829, 3684, true, false, false)),
-        second_touch(second_flex, FakeXpt2046Spi::Calibration(
-                                      269, 249, 3829, 3684, true, false, false)) {
+        second_touch(second_flex,
+                     FakeXpt2046Spi::Calibration(269, 249, 3829, 3684, true,
+                                                 false, false)) {
     FakeEsp32().attachSpiDevice(first_display, 4, 5, 6);
     FakeEsp32().gpio.attachOutput(7, first_display.cs());
     FakeEsp32().gpio.attachOutput(2, first_display.dc());
@@ -95,12 +96,12 @@ void initDisplays() {
 #include "roo_windows/containers/aligned_layout.h"
 #include "roo_windows/core/destination.h"
 #include "roo_windows/core/navigation_host.h"
-#include "roo_windows/widgets/text_label.h"
 #include "roo_windows/widgets/text_field.h"
+#include "roo_windows/widgets/text_label.h"
 
 using namespace roo_windows;
 
-roo_scheduler::Scheduler scheduler;
+roo_scheduler::SchedulingService scheduler;
 Environment env(scheduler);
 
 class EditorDestination : public Destination {
@@ -108,8 +109,7 @@ class EditorDestination : public Destination {
   explicit EditorDestination(ApplicationContext& context)
       : contents(context),
         field(context, font_body1(), "Type here",
-              roo_display::kLeft | roo_display::kMiddle,
-              TextField::UNDERLINE) {
+              roo_display::kLeft | roo_display::kMiddle, TextField::UNDERLINE) {
     contents.add(field, roo_display::kLeft | roo_display::kTop);
   }
 

@@ -85,7 +85,7 @@ class LabelDestination : public Destination {
   TextLabel label_;
 };
 
-roo_scheduler::Scheduler scheduler;
+roo_scheduler::SchedulingService scheduler;
 Environment env(scheduler);
 Application app(&env, display);
 

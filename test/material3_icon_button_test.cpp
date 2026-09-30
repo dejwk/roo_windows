@@ -65,14 +65,14 @@ class Material3IconButtonRenderTest : public testing::Test {
   roo::byte raster_[kWidth * kHeight * 2];
   roo_display::OffscreenDevice<roo_display::Argb4444> offscreen_;
   roo_display::Display display_;
-  roo_scheduler::Scheduler scheduler_;
+  roo_scheduler::SchedulingService scheduler_;
   Environment env_;
   Application app_;
 };
 
 // Verifies that the constructor selects the documented Material 3 defaults.
 TEST(Material3IconButton, DefaultsAreFilledSmallRoundAndUniform) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
@@ -88,7 +88,7 @@ TEST(Material3IconButton, DefaultsAreFilledSmallRoundAndUniform) {
 
 // Verifies that size and width tokens determine the visible container bounds.
 TEST(Material3IconButton, SizeAndWidthResolveContainerDimensions) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   IconButton button(context, ic_outlined_24_action_done());
@@ -108,7 +108,7 @@ TEST(Material3IconButton, SizeAndWidthResolveContainerDimensions) {
 
 // Verifies that each style exposes its intended surface and outline semantics.
 TEST(Material3IconButton, StylesExposeExpectedSurfaceSemantics) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
@@ -131,7 +131,7 @@ TEST(Material3IconButton, StylesExposeExpectedSurfaceSemantics) {
 
 // Verifies that square buttons use the configured size's corner token.
 TEST(Material3IconButton, SquareShapeUsesSizeSpecificCornerRadius) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   IconButton button(context, ic_outlined_24_action_done());
@@ -146,7 +146,7 @@ TEST(Material3IconButton, SquareShapeUsesSizeSpecificCornerRadius) {
 
 // Verifies that badge hosts can reuse centered icon-slot geometry directly.
 TEST(Material3IconButton, IconBoundsStayCenteredInTheVisualContainer) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   IconButton button(context, ic_outlined_24_action_done());
@@ -179,7 +179,7 @@ TEST_F(Material3IconButtonRenderTest, FilledButtonPaintsTheEntireContainer) {
 // Verifies that callback-free buttons remain activatable and storage stays
 // compact.
 TEST(Material3IconButton, IsClickableAndFitsItsStorageBudget) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   IconButton button(context, ic_outlined_24_action_done());
@@ -193,7 +193,7 @@ TEST(Material3IconButton, IsClickableAndFitsItsStorageBudget) {
 // Verifies that every mode works for both shapes, including changes while
 // pressed.
 TEST(Material3IconButton, ShapeMorphControlsPressedGeometry) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   IconButton button(context, ic_outlined_24_action_done(),

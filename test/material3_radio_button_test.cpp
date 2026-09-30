@@ -17,7 +17,7 @@ ApplicationContext MakeContext(Environment& env) {
 // Verifies that the radio button lets its point overlay escape a tight
 // structural parent by default.
 TEST(Material3RadioButton, IsParentUnclippedByDefault) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
@@ -29,7 +29,7 @@ TEST(Material3RadioButton, IsParentUnclippedByDefault) {
 // Verifies that the radio button contributes zero padding and zero margins,
 // so its laid-out bounds map directly to its visual footprint.
 TEST(Material3RadioButton, UsesZeroDefaultInsets) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
@@ -50,7 +50,7 @@ TEST(Material3RadioButton, UsesZeroDefaultInsets) {
 // geometric center of its bounds, ensuring press ripples emanate from the
 // dot rather than the top-left corner.
 TEST(Material3RadioButton, UsesCenteredPointOverlay) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
@@ -67,7 +67,7 @@ TEST(Material3RadioButton, UsesCenteredPointOverlay) {
 // Verifies that the radio button advertises the Material 3 prescribed 20x20
 // dp minimum dimensions used by parent layouts during measurement.
 TEST(Material3RadioButton, ReportsMaterial3MinimumSize) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
@@ -82,7 +82,7 @@ TEST(Material3RadioButton, ReportsMaterial3MinimumSize) {
 // kPrimary while on, so the rendered ring and dot pick up the selected
 // accent color.
 TEST(Material3RadioButton, EffectiveContainerRoleTracksSelectionState) {
-  roo_scheduler::Scheduler scheduler;
+  roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
