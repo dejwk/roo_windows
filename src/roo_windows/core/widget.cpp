@@ -9,6 +9,7 @@
 #include "roo_windows/core/panel.h"
 #include "roo_windows/core/press_overlay.h"
 #include "roo_windows/core/rtti.h"
+#include "roo_windows/core/scroll_connection.h"
 #include "roo_windows/core/task.h"
 #include "roo_windows/material3/theme.h"
 
@@ -43,10 +44,12 @@ Widget::Widget(Widget&& other)
       live_context != nullptr) {
     live_context->animations().clearTarget(other);
   }
+  internal::ScrollConnectionRegistry::Disconnect(other);
   context().widgetEvents().moveHandlers(other, *this);
 }
 
 Widget::~Widget() {
+  internal::ScrollConnectionRegistry::Disconnect(*this);
   if (ApplicationContext* live_context = tryContext();
       live_context != nullptr) {
     live_context->animations().clearTarget(*this);

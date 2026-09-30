@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="370" viewBox="0 0 760 370">
+<rect width="760" height="370" fill="white"/>
+<g font-family="sans-serif" font-size="14" fill="#172033">
+<text x="28" y="25" font-size="18">One upward drag of 60 px</text>
+
+<text x="28" y="53">Expanded: c = 0, content y = 0</text>
+<rect x="28" y="70" width="190" height="240" fill="#eef4f9" stroke="#526579"/>
+<rect x="28" y="70" width="190" height="112" fill="#ccd5f3" stroke="#526579"/>
+<text x="38" y="94">Bar 112 px</text>
+<text x="38" y="206">Viewport 128 px</text>
+<line x1="28" y1="262" x2="218" y2="262" stroke="#b33d22" stroke-width="2"/>
+<text x="228" y="267">marker 192</text>
+<text x="402" y="53">Collapsed: c = 48, content y = -12</text>
+<rect x="402" y="70" width="190" height="240" fill="#eef4f9" stroke="#526579"/>
+<rect x="402" y="70" width="190" height="64" fill="#ccd5f3" stroke="#526579"/>
+<text x="412" y="94">Bar 64 px</text>
+<text x="412" y="158">Viewport 176 px</text>
+<line x1="402" y1="202" x2="592" y2="202" stroke="#b33d22" stroke-width="2"/>
+<text x="602" y="207">marker 132</text>
+<text x="28" y="344">Marker coordinates exclude the diagram header: 192 − 132 = 60 px.</text></g></svg>

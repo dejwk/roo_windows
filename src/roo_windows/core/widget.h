@@ -842,6 +842,7 @@ class Widget {
   }
 
  private:
+  friend class internal::ScrollConnectionRegistry;
   friend class AnimationRegistry;
   friend class PresentationRegistry;
   friend class TransientPresentationSlot;

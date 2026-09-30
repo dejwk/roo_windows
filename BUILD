@@ -1223,3 +1223,16 @@ cc_test(
         "@roo_testing//:arduino_gtest_main",
     ],
 )
+
+cc_test(
+    name = "scroll_connection_test",
+    srcs = ["test/scroll_connection_test.cpp", "test/roo_windows_render_test_support.h"],
+    linkstatic = 1,
+    deps = [":roo_windows", "@roo_testing//:arduino_gtest_main"],
+)
+
+cc_library(
+    name = "scroll_connection_size_probe",
+    srcs = ["benchmarks/scroll_connection_size_probe.cpp"],
+    deps = [":roo_windows"],
+)

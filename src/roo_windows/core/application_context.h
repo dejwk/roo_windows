@@ -14,6 +14,9 @@ namespace roo_windows {
 
 class Application;
 class Widget;
+namespace internal {
+class ScrollConnectionRegistry;
+}
 
 /// Bundles application-scoped runtime services shared by widgets.
 ///
@@ -66,6 +69,13 @@ class ApplicationContext {
   /// Returns the application-owned keyboard-focus service.
   const FocusManager& focus() const { return focus_; }
 
+  /// Creates the optional scroll service on first registration.
+  internal::ScrollConnectionRegistry& scrollConnections();
+  /// Returns the service without allocating it.
+  internal::ScrollConnectionRegistry* scrollConnectionsIfPresent() const {
+    return scroll_connections_.get();
+  }
+
  private:
   friend class AnimationRegistry;
   friend class Application;
@@ -96,6 +106,7 @@ class ApplicationContext {
   WidgetEventDispatcher widget_events_;
   FocusManager focus_;
   PresentationRegistry presentations_;
+  std::unique_ptr<internal::ScrollConnectionRegistry> scroll_connections_;
   AnimationRegistry animations_;
   Application* frame_driver_ = nullptr;
   Lifetime* lifetime_;

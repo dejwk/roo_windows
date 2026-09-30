@@ -1,5 +1,7 @@
 #include "roo_windows/core/application_context.h"
 
+#include "roo_windows/core/scroll_connection.h"
+
 namespace roo_windows {
 
 ApplicationContext::ApplicationContext(
@@ -11,6 +13,13 @@ ApplicationContext::ApplicationContext(
       presentations_(*this),
       animations_(*this),
       lifetime_(new Lifetime(*this)) {}
+
+internal::ScrollConnectionRegistry& ApplicationContext::scrollConnections() {
+  if (scroll_connections_ == nullptr)
+    scroll_connections_ =
+        std::make_unique<internal::ScrollConnectionRegistry>();
+  return *scroll_connections_;
+}
 
 ApplicationContext::~ApplicationContext() {
   animations_.stop();

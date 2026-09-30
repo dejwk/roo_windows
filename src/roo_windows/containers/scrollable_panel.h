@@ -7,6 +7,7 @@
 #include "roo_windows/containers/scroll_motion_controller.h"
 #include "roo_windows/core/application_context.h"
 #include "roo_windows/core/panel.h"
+#include "roo_windows/core/scroll_connection.h"
 #include "roo_windows/core/widget.h"
 #include "roo_windows/core/widget_event_dispatcher.h"
 
@@ -62,6 +63,9 @@ class SimpleScrollablePanel : public Container,
  public:
   enum class Direction { kVertical = 0, kHorizontal = 1, kBoth = 2 };
 
+  /// Returns the configured scroll axis policy.
+  Direction direction() const { return direction_; }
+
   SimpleScrollablePanel(ApplicationContext& context, WidgetRef contents,
                         Direction direction = Direction::kVertical)
       : SimpleScrollablePanel(context, direction) {
@@ -85,6 +89,7 @@ class SimpleScrollablePanel : public Container,
   }
 
   ~SimpleScrollablePanel() override {
+    internal::ScrollConnectionRegistry::Disconnect(*this);
     cancelMotion();
     cancelHideScrollBarUpdate();
     setContentsInternal(WidgetRef(),
@@ -311,6 +316,7 @@ class ScrollableBlitPanel : public SimpleScrollablePanel {
       : SimpleScrollablePanel(context, direction), blit_cache_(context) {}
 
   ~ScrollableBlitPanel() override {
+    internal::ScrollConnectionRegistry::Disconnect(*this);
     // Detach the member wrapper before it is destroyed and before the base
     // destructor consults its content pointer. The wrapper then releases any
     // adopted child while both objects are still alive.
