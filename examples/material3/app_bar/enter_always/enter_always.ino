@@ -113,6 +113,8 @@ class HeatingDetails : public FlexLayout {
     // supporting context. Use the large variant when even more emphasis is
     // appropriate; medium fits this landscape device comfortably.
     app_bar_.setTitle("Solar heating");
+    // The title stays vertically centered along its collapse path; supplemental
+    // text fades into the surface. Tracking softens the compact-font switch.
     app_bar_.setSubtitle("Equipment details");
     app_bar_.setLeading(back_);
     app_bar_.setTrailing(0, more_);

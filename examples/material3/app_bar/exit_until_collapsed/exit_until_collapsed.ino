@@ -112,6 +112,7 @@ class HeatingDetails : public FlexLayout {
     // Flexible variants make room for both a hierarchical title and useful
     // supporting context. Use the large variant when even more emphasis is
     // appropriate; medium fits this landscape device comfortably.
+    // Compact-title tracking relaxes over the second half of collapse.
     app_bar_.setTitle("Solar heating");
     app_bar_.setSubtitle("Equipment details");
     app_bar_.setLeading(back_);

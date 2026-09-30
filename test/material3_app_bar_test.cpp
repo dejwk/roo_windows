@@ -4,8 +4,8 @@
 #include "gtest/gtest.h"
 #include "roo_icons/outlined/24/navigation.h"
 #include "roo_scheduler.h"
-#include "roo_windows/core/widget.h"
 #include "roo_windows/core/environment.h"
+#include "roo_windows/core/widget.h"
 #include "roo_windows/material3/app_bar/app_bar.h"
 #include "roo_windows/material3/app_bar/app_bar_tokens.h"
 #include "roo_windows/material3/button/icon_button.h"
@@ -419,15 +419,15 @@ TEST(Material3AppBar, FlexibleVariantsPlaceControlsAboveTitleStack) {
   app_bar.measure(WidthSpec::Exactly(320), HeightSpec::Unspecified(0));
   app_bar.layout(Rect(0, 0, 319, Scaled(112) - 1));
 
-  EXPECT_EQ(Scaled(4), leading.offsetTop());
-  EXPECT_EQ(Scaled(4), trailing.offsetTop());
+  EXPECT_EQ(Scaled(8), leading.offsetTop());
+  EXPECT_EQ(Scaled(8), trailing.offsetTop());
   EXPECT_EQ(Scaled(16), app_bar.childAt(0).offsetLeft());
   EXPECT_GE(app_bar.childAt(0).offsetTop(), Scaled(48) + 2 * Scaled(4));
 
   app_bar.setVariant(AppBarVariant::kLargeFlexible);
   app_bar.measure(WidthSpec::Exactly(320), HeightSpec::Unspecified(0));
   app_bar.layout(Rect(0, 0, 319, Scaled(152) - 1));
-  EXPECT_EQ(Scaled(4), leading.offsetTop());
+  EXPECT_EQ(Scaled(8), leading.offsetTop());
   EXPECT_EQ(Scaled(16), app_bar.childAt(0).offsetLeft());
   EXPECT_GE(app_bar.childAt(0).offsetTop(), Scaled(48) + 2 * Scaled(4));
 }
@@ -459,7 +459,7 @@ TEST(Material3AppBar, CentersSmallActionsAndPreservesSlotTouchTargets) {
       Dimensions measured =
           bar.measure(WidthSpec::Exactly(320), HeightSpec::Unspecified(0));
       bar.layout(Rect(0, 0, 319, measured.height() - 1));
-      const int16_t slot_y = Scaled(variant == AppBarVariant::kSmall ? 8 : 4);
+      const int16_t slot_y = Scaled(8);
       const int16_t inset = (Scaled(48) - action_size) / 2;
       EXPECT_EQ(action_size, back.width());
       EXPECT_EQ(action_size, back.height());

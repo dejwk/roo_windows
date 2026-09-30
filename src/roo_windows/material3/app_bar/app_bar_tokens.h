@@ -35,7 +35,8 @@ inline constexpr SearchEntryTokens kEmbeddedSearchEntryTokens = {56, 12, 4,
                                                                  720};
 
 inline constexpr int16_t kActionTapTargetDp = 48;
-// The control strip has 4dp outer padding. Single-row titles have a 4dp
+// The control strip has 4dp horizontal padding; its 48dp action slots sit
+// 8dp below the top of a normal 64dp row. Single-row titles have a 4dp
 // gap to adjacent action slots. The 16dp title inset applies without a
 // navigation control and to the separate title row of flexible bars.
 inline constexpr int16_t kAppBarEdgeInsetDp = 4;

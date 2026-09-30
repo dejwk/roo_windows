@@ -17,6 +17,24 @@
 namespace roo_windows::material3 {
 namespace {
 
+class CenteredTitleLabel : public roo_display::StringViewLabel {
+ public:
+  CenteredTitleLabel(const roo_display::StringViewLabel& label, bool horizontal)
+      : StringViewLabel(label), horizontal_(horizontal) {}
+  roo_display::Box anchorExtents() const override {
+    roo_display::Box advance = StringViewLabel::anchorExtents();
+    roo_display::Box ink = extents();
+    // Match ordinary TextLabel: center the ascent band, excluding descent.
+    // Centering a word's full ink lifts its main body whenever it has a g/p/y.
+    return roo_display::Box(horizontal_ ? ink.xMin() : advance.xMin(),
+                            -font().metrics().ascent(),
+                            horizontal_ ? ink.xMax() : advance.xMax(), 0);
+  }
+
+ private:
+  bool horizontal_;
+};
+
 void CheckTrailingIndex(uint8_t index) {
   CHECK(index < 2) << "Material 3 app-bar trailing index must be 0 or 1";
 }
@@ -63,23 +81,99 @@ Dimensions internal::AppBarText::getSuggestedMinimumDimensions() const {
   const TextStyle& style =
       text_style_ == nullptr ? text_style_body_medium() : *text_style_;
   return Dimensions(style.font()
-                        .getHorizontalStringMetrics(text_, style.fontOptions())
+                        .getHorizontalStringMetrics(text_, fontOptions(style))
                         .advance(),
                     style.lineHeight());
 }
 
+roo_display::Font::Options internal::AppBarTitle::fontOptions(
+    const TextStyle& style) const {
+  roo_display::Font::Options options = style.fontOptions();
+  if (parent() == nullptr) return options;
+  auto connection = internal::FindAppBarConnection(*parent());
+  if (connection == nullptr || connection->limit() == 0 ||
+      connection->collapse() * 2 < connection->limit() ||
+      connection->collapse() == connection->limit()) {
+    return options;
+  }
+  const AppBar& bar = static_cast<const AppBar&>(*parent());
+  const TextStyle& expanded = bar.expandedTitleTextStyle();
+  const TextStyle& compact = text_style_title_large();
+  auto large = expanded.font().getHorizontalStringMetrics(
+      text(), expanded.fontOptions());
+  auto small =
+      compact.font().getHorizontalStringMetrics(text(), compact.fontOptions());
+  auto current = style.font().getHorizontalStringMetrics(text(), options);
+  auto unit_options = options;
+  unit_options.setTrackingPx(options.trackingPx() + 1);
+  auto unit = style.font().getHorizontalStringMetrics(text(), unit_options);
+  // Measuring a one-pixel increment counts actual rendered glyph boundaries,
+  // including UTF-8 and font fallback. A single glyph has no tracking span.
+  int advance_step = unit.advance() - current.advance();
+  int ink_step =
+      unit.screen_extents().width() - current.screen_extents().width();
+  if (advance_step <= 0 || ink_step <= 0) return options;
+  // The expanded font keeps its natural width. At the switch choose the
+  // widest compact tracking that fits, then interpolate back to normal over
+  // the compact half. Round to nearest so a one-pixel maximum is visible for
+  // half that interval rather than disappearing immediately after the switch.
+  int max_extra = std::max(
+      0, std::min(
+             (large.advance() - small.advance()) / advance_step,
+             (large.screen_extents().width() - small.screen_extents().width()) /
+                 ink_step));
+  YDim start = (connection->limit() + 1) / 2;
+  YDim span = connection->limit() - start;
+  if (span == 0) return options;
+  int extra =
+      (max_extra * (connection->limit() - connection->collapse()) + span / 2) /
+      span;
+  return options.setTrackingPx(options.trackingPx() + extra);
+}
+
+roo_display::Color internal::AppBarText::textColor(
+    roo_display::Color background) const {
+  return use_on_surface_variant_
+             ? theme().material3Theme().color.onSurfaceVariant
+             : theme().material3Theme().color.onSurface;
+}
+
+roo_display::Color internal::AppBarSubtitle::textColor(
+    roo_display::Color background) const {
+  roo_display::Color foreground = AppBarText::textColor(background);
+  if (parent() == nullptr) return foreground;
+  auto connection = internal::FindAppBarConnection(*parent());
+  if (connection == nullptr || connection->limit() == 0 ||
+      connection->collapse() == 0) {
+    return foreground;
+  }
+  // Fade to the painted surface before the subtitle leaves the title stack
+  // at half collapse. Use the retained scroll sample, without opacity state.
+  YDim remaining =
+      std::max<YDim>(0, connection->limit() - 2 * connection->collapse());
+  uint8_t alpha =
+      (255 * remaining + connection->limit() / 2) / connection->limit();
+  return roo_display::AlphaBlend(background, foreground.withA(alpha));
+}
+
 void internal::AppBarText::paint(PaintContext& ctx) const {
+  paintText(ctx, false);
+}
+
+void internal::AppBarText::paintText(PaintContext& ctx, bool center_ink) const {
   if (text_.empty()) return;
   const TextStyle& style =
       text_style_ == nullptr ? text_style_body_medium() : *text_style_;
-  ctx.canvas().drawTiled(
-      roo_display::StringViewLabel(
-          text_, style.font(),
-          use_on_surface_variant_
-              ? theme().material3Theme().color.onSurfaceVariant
-              : theme().material3Theme().color.onSurface,
-          style.fontOptions()),
-      bounds(), alignment_);
+  roo_display::StringViewLabel label(text_, style.font(),
+                                     textColor(ctx.canvas().bgcolor()),
+                                     fontOptions(style));
+  if (center_ink) {
+    ctx.canvas().drawTiled(
+        CenteredTitleLabel(label, alignment_.h() == roo_display::kCenter),
+        bounds(), alignment_);
+  } else {
+    ctx.canvas().drawTiled(label, bounds(), alignment_);
+  }
 }
 
 AppBar::AppBar(ApplicationContext& context, AppBarVariant variant)
@@ -126,8 +220,13 @@ const internal::AppBarVariantTokens& AppBar::tokens() const {
 const TextStyle& AppBar::titleTextStyle() const {
   auto connection = internal::FindAppBarConnection(*this);
   if (connection != nullptr && connection->limit() > 0 &&
-      connection->collapse() * 2 >= connection->limit())
+      connection->collapse() * 2 >= connection->limit()) {
     return text_style_title_large();
+  }
+  return expandedTitleTextStyle();
+}
+
+const TextStyle& AppBar::expandedTitleTextStyle() const {
   switch (variant_) {
     case AppBarVariant::kSmall:
       return text_style_title_large();
@@ -355,17 +454,24 @@ void AppBar::onLayout(bool changed, const Rect& rect) {
   const int16_t action_size = Scaled(internal::kActionTapTargetDp);
   const int16_t width = std::max<int16_t>(0, rect.width());
   auto connection = internal::FindAppBarConnection(*this);
+  title_widget_.setAlignment(
+      (title_alignment_ == AppBarTitleAlignment::kCentered
+           ? roo_display::kCenter
+           : roo_display::kLeft) |
+      roo_display::kMiddle);
   const YDim collapse = connection == nullptr ? 0 : connection->collapse();
   const int16_t height = std::max<int16_t>(0, rect.height() + collapse);
   const bool single_row = variant_ == AppBarVariant::kSmall;
   int16_t left = std::min<int16_t>(edge, width);
   int16_t right = std::max<int16_t>(left, width - edge);
 
-  // Flexible bars reserve a 56dp control row at the top. Their title stack is
-  // intentionally in a separate row below it, matching MediumTopAppBar and
-  // LargeTopAppBar in Android's Material 3 implementation.
+  // Flexible bars retain the compact bar's action row throughout collapse:
+  // a 48dp slot with 8dp above and below. Only the title changes position.
+  const int16_t action_row_height =
+      single_row ? height
+                 : Scaled(internal::kSmallAppBarTokens.container_height_dp);
   const int16_t action_y =
-      single_row ? std::max<int16_t>(0, (height - action_size) / 2) : edge;
+      std::max<int16_t>(0, (action_row_height - action_size) / 2);
   auto layout_action = [action_size, action_y](Widget* child, int16_t x) {
     if (child == nullptr) return;
     // Keep the action slot fixed while allowing a smaller visual surface.
@@ -441,7 +547,7 @@ void AppBar::onLayout(bool changed, const Rect& rect) {
       Widget& child = getChild(i);
       child.layout(child.parent_bounds().translate(0, -collapse));
     }
-  } else if (collapse > 0) {
+  } else if (!single_row && connection != nullptr && connection->limit() > 0) {
     float t = static_cast<float>(collapse) / connection->limit();
     int16_t compact_left =
         leading_ == nullptr ? title_inset : edge + action_size + Scaled(4);
@@ -450,8 +556,56 @@ void AppBar::onLayout(bool changed, const Rect& rect) {
                           (ChildCount(trailing_) > 0 ? Scaled(4) : 0));
     int16_t title_left = left + (compact_left - left) * t;
     int16_t title_right = right + (compact_right - right) * t;
-    int16_t compact_top = (Scaled(64) - title_height) / 2;
-    int16_t top = stack_top + (compact_top - stack_top) * t;
+    if (title_alignment_ == AppBarTitleAlignment::kLeading) {
+      const TextStyle& expanded = expandedTitleTextStyle();
+      const TextStyle& compact = text_style_title_large();
+      const TextStyle& current = titleTextStyle();
+      int expanded_width = std::min<int>(
+          right - left,
+          expanded.font()
+              .getHorizontalStringMetrics(title(), expanded.fontOptions())
+              .screen_extents()
+              .width());
+      int compact_width = std::min<int>(
+          compact_right - compact_left,
+          compact.font()
+              .getHorizontalStringMetrics(title(), compact.fontOptions())
+              .screen_extents()
+              .width());
+      int current_width =
+          std::min<int>(title_right - title_left,
+                        current.font()
+                            .getHorizontalStringMetrics(
+                                title(), title_widget_.fontOptions(current))
+                            .screen_extents()
+                            .width());
+      int expanded_center_x = 2 * left + expanded_width - 1;
+      int compact_center_x = 2 * compact_left + compact_width - 1;
+      int center_x =
+          expanded_center_x + (compact_center_x - expanded_center_x) *
+                                  collapse / connection->limit();
+      title_left = (center_x - current_width + 1) / 2;
+      title_right = title_left + current_width;
+      // Leading endpoints use a continuous center path in between, so the
+      // typography switch contracts on both sides rather than at one edge.
+      title_widget_.setAlignment(roo_display::kCenter | roo_display::kMiddle);
+    }
+    // Both endpoint centers are independent of the currently selected font
+    // and subtitle visibility. Changing typography must not move the path.
+    int16_t expanded_title_height =
+        std::min<int16_t>(expandedTitleTextStyle().lineHeight(), lane_height);
+    int16_t expanded_subtitle_height =
+        subtitle_widget_.text().empty()
+            ? 0
+            : std::min<int16_t>(text_style_body_medium().lineHeight(),
+                                lane_height - expanded_title_height);
+    int32_t expanded_center = 2 * (lane_bottom - expanded_subtitle_height) -
+                              expanded_title_height - 1;
+    int32_t compact_center = Scaled(64) - 1;
+    // Work in doubled coordinates to retain half-pixel box centers.
+    int32_t center = expanded_center + (compact_center - expanded_center) *
+                                           collapse / connection->limit();
+    int16_t top = (center - title_height + 1) / 2;
     title_widget_.layout(
         Rect(title_left, top, title_right - 1, top + title_height - 1));
   }

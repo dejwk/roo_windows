@@ -29,7 +29,7 @@ namespace internal {
 // The entry-only search surface needs a bounded, non-interactive text child.
 // It deliberately keeps only a view: editable query state belongs to the
 // later focused-search work, not to this shell component.
-class AppBarText final : public Widget {
+class AppBarText : public Widget {
  public:
   explicit AppBarText(ApplicationContext& context) : Widget(context) {}
 
@@ -48,11 +48,35 @@ class AppBarText final : public Widget {
   Dimensions getSuggestedMinimumDimensions() const override;
   void paint(PaintContext& ctx) const override;
 
+ protected:
+  void paintText(PaintContext& ctx, bool center_ink) const;
+  virtual roo_display::Font::Options fontOptions(const TextStyle& style) const {
+    return style.fontOptions();
+  }
+  virtual roo_display::Color textColor(roo_display::Color background) const;
+
  private:
   roo::string_view text_;
   const TextStyle* text_style_ = nullptr;
   roo_display::Alignment alignment_ = roo_display::kLeft | roo_display::kMiddle;
   bool use_on_surface_variant_ = false;
+};
+
+// Title centering follows the ascent band, matching ordinary text labels.
+class AppBarTitle final : public AppBarText {
+ public:
+  using AppBarText::AppBarText;
+  void paint(PaintContext& ctx) const override { paintText(ctx, true); }
+  roo_display::Font::Options fontOptions(const TextStyle& style) const override;
+};
+
+// Supplemental text fades without storing an opacity on every text child.
+class AppBarSubtitle final : public AppBarText {
+ public:
+  using AppBarText::AppBarText;
+
+ protected:
+  roo_display::Color textColor(roo_display::Color background) const override;
 };
 
 }  // namespace internal
@@ -129,12 +153,14 @@ class AppBar : public Material3Container {
   void onLayout(bool changed, const Rect& rect) override;
 
  private:
+  friend class internal::AppBarTitle;
   const TextStyle& titleTextStyle() const;
+  const TextStyle& expandedTitleTextStyle() const;
   const internal::AppBarVariantTokens& tokens() const;
   int16_t containerHeightDp() const;
   void replaceSlot(Widget*& slot, WidgetRef widget);
-  internal::AppBarText title_widget_;
-  internal::AppBarText subtitle_widget_;
+  internal::AppBarTitle title_widget_;
+  internal::AppBarSubtitle subtitle_widget_;
   Widget* leading_;
   Widget* trailing_[2];
   AppBarVariant variant_;
