@@ -13,12 +13,12 @@ struct CardTheme {
 
 /// Selects the Material surface used by a page-level layout scaffold.
 struct LayoutScaffoldTheme {
-  ColorToken container = ColorToken::kSurfaceContainerLowest;
+  ColorToken container = ColorToken::kSurface;
 };
 
 /// Selects flat and scrolled title app-bar surfaces.
 struct AppBarTheme {
-  ColorToken flatContainer = ColorToken::kSurfaceContainerLowest;
+  ColorToken flatContainer = ColorToken::kSurface;
   ColorToken scrolledContainer = ColorToken::kSurfaceContainer;
 };
 
@@ -29,7 +29,7 @@ struct SearchBarTheme {
 
 /// Selects outer and embedded surfaces for a search app bar.
 struct SearchAppBarTheme {
-  ColorToken flatContainer = ColorToken::kSurfaceContainerLowest;
+  ColorToken flatContainer = ColorToken::kSurface;
   ColorToken scrolledContainer = ColorToken::kSurfaceContainer;
   ColorToken flatSearchContainer = ColorToken::kSurfaceContainer;
   ColorToken scrolledSearchContainer = ColorToken::kSurfaceContainerHighest;
