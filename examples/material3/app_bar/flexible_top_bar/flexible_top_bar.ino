@@ -132,12 +132,9 @@ class HeatingDetails : public FlexLayout {
     // The bar stays outside the scrolling viewport. Content origins become
     // negative when scrolling down; positive top overscroll stays flat.
     // The initial origin is zero, matching the bar's default flat surface.
-    scroller_.setOnScrollPositionChanged([this](ScrollPosition,
-                                                ScrollPosition current) {
-      app_bar_.setSurfaceState(current.y < 0
-                                   ? material3::AppBarSurfaceState::kScrolled
-                                   : material3::AppBarSurfaceState::kFlat);
-    });
+    CHECK(app_bar_.setScrollBehavior(
+              scroller_, material3::AppBarScrollBehavior::kPinned) ==
+          ScrollConnectionStatus::kSuccess);
 
     add(app_bar_);
     add(scroller_, {.flex_grow = 1});

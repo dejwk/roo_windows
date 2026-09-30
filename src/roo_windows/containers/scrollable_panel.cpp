@@ -101,6 +101,11 @@ void SimpleScrollablePanel::notifyScrollPositionChanged(
   ScrollPosition current = getScrollPosition();
   if (previous.x == current.x && previous.y == current.y) return;
   onScrollPositionChanged();
+  auto connection = internal::ScrollConnectionRegistry::Find(*this);
+  if (connection != nullptr) {
+    internal::ScrollConnection::Dispatch dispatch(connection);
+    connection->onPositionChanged(previous, current, ScrollSource::kGeometry);
+  }
   context().widgetEvents().dispatchScrollPositionChange(*this, previous,
                                                         current);
 }

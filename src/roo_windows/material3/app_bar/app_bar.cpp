@@ -101,6 +101,7 @@ AppBar::AppBar(ApplicationContext& context, AppBarVariant variant)
 }
 
 AppBar::~AppBar() {
+  roo_windows::internal::ScrollConnectionRegistry::Disconnect(*this);
   for (Widget* slot : trailing_) {
     if (slot) detachChild(slot);
   }
@@ -164,6 +165,27 @@ void AppBar::setTitleAlignment(AppBarTitleAlignment alignment) {
   subtitle_widget_.setAlignment(text_alignment);
   invalidateInterior();
   requestLayout();
+}
+
+AppBarSurfaceState AppBar::surfaceState() const {
+  auto connection = internal::FindAppBarConnection(*this);
+  return connection == nullptr
+             ? surface_state_
+             : (connection->scrolled() ? AppBarSurfaceState::kScrolled
+                                       : AppBarSurfaceState::kFlat);
+}
+
+ScrollConnectionStatus AppBar::setScrollBehavior(
+    SimpleScrollablePanel& panel, AppBarScrollBehavior behavior) {
+  return internal::ConnectAppBar(context(), *this, panel, behavior, false);
+}
+
+ScrollConnectionStatus AppBar::clearScrollBehavior() {
+  return internal::ClearAppBarConnection(context(), *this);
+}
+
+bool AppBar::hasScrollBehavior() const {
+  return internal::FindAppBarConnection(*this) != nullptr;
 }
 
 void AppBar::setSurfaceState(AppBarSurfaceState state) {
@@ -238,7 +260,7 @@ Widget& AppBar::getChild(int idx) {
 
 ColorToken AppBar::containerRole() const {
   const AppBarTheme& app_bar = theme().material3Theme().components.appBar;
-  return surface_state_ == AppBarSurfaceState::kFlat
+  return surfaceState() == AppBarSurfaceState::kFlat
              ? app_bar.flatContainer
              : app_bar.scrolledContainer;
 }
@@ -561,11 +583,33 @@ SearchAppBar::SearchAppBar(ApplicationContext& context)
 }
 
 SearchAppBar::~SearchAppBar() {
+  roo_windows::internal::ScrollConnectionRegistry::Disconnect(*this);
   for (Widget* slot : trailing_) {
     if (slot) detachChild(slot);
   }
   if (leading_) detachChild(leading_);
   detachChild(&search_entry_);
+}
+
+AppBarSurfaceState SearchAppBar::surfaceState() const {
+  auto connection = internal::FindAppBarConnection(*this);
+  return connection == nullptr
+             ? surface_state_
+             : (connection->scrolled() ? AppBarSurfaceState::kScrolled
+                                       : AppBarSurfaceState::kFlat);
+}
+
+ScrollConnectionStatus SearchAppBar::setScrollBehavior(
+    SimpleScrollablePanel& panel, AppBarScrollBehavior behavior) {
+  return internal::ConnectAppBar(context(), *this, panel, behavior, true);
+}
+
+ScrollConnectionStatus SearchAppBar::clearScrollBehavior() {
+  return internal::ClearAppBarConnection(context(), *this);
+}
+
+bool SearchAppBar::hasScrollBehavior() const {
+  return internal::FindAppBarConnection(*this) != nullptr;
 }
 
 void SearchAppBar::setSurfaceState(AppBarSurfaceState state) {
@@ -632,7 +676,7 @@ Widget& SearchAppBar::getChild(int idx) {
 ColorToken SearchAppBar::containerRole() const {
   const SearchAppBarTheme& app_bar =
       theme().material3Theme().components.searchAppBar;
-  return surface_state_ == AppBarSurfaceState::kFlat
+  return surfaceState() == AppBarSurfaceState::kFlat
              ? app_bar.flatContainer
              : app_bar.scrolledContainer;
 }
@@ -646,11 +690,14 @@ void SearchAppBar::EmbeddedSearchBar::setSurfaceState(
 
 ::roo_windows::material3::ColorToken
 SearchAppBar::EmbeddedSearchBar::containerRole() const {
+  AppBarSurfaceState state =
+      parent() == nullptr
+          ? surface_state_
+          : static_cast<const SearchAppBar*>(parent())->surfaceState();
   const SearchAppBarTheme& app_bar =
       theme().material3Theme().components.searchAppBar;
-  return surface_state_ == AppBarSurfaceState::kFlat
-             ? app_bar.flatSearchContainer
-             : app_bar.scrolledSearchContainer;
+  return state == AppBarSurfaceState::kFlat ? app_bar.flatSearchContainer
+                                            : app_bar.scrolledSearchContainer;
 }
 
 const internal::SearchEntryTokens&

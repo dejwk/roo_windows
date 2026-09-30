@@ -8,6 +8,7 @@
 #include "roo_windows/core/text_style.h"
 #include "roo_windows/core/widget.h"
 #include "roo_windows/core/widget_ref.h"
+#include "roo_windows/material3/app_bar/app_bar_scroll_behavior.h"
 #include "roo_windows/material3/app_bar/app_bar_tokens.h"
 #include "roo_windows/material3/container.h"
 #include "roo_windows/widgets/icon.h"
@@ -82,7 +83,16 @@ class AppBar : public Material3Container {
   void setSurfaceState(AppBarSurfaceState state);
 
   /// Returns the configured surface state.
-  AppBarSurfaceState surfaceState() const { return surface_state_; }
+  AppBarSurfaceState surfaceState() const;
+
+  /// Connects without replacing the panel's application callback. Failed
+  /// registration preserves the previous binding; endpoints share a context.
+  ScrollConnectionStatus setScrollBehavior(SimpleScrollablePanel& panel,
+                                           AppBarScrollBehavior behavior);
+  /// Restores expanded geometry and the manually selected surface state.
+  ScrollConnectionStatus clearScrollBehavior();
+  /// Returns whether this bar has an active connection.
+  bool hasScrollBehavior() const;
 
   /// Returns the surface role for the current flat or scrolled state.
   ColorToken containerRole() const override;
@@ -192,7 +202,16 @@ class SearchAppBar : public Material3Container {
   void setSurfaceState(AppBarSurfaceState state);
 
   /// Returns the configured outer app-bar surface state.
-  AppBarSurfaceState surfaceState() const { return surface_state_; }
+  AppBarSurfaceState surfaceState() const;
+
+  /// Connects without replacing the panel's application callback. Failed
+  /// registration preserves the previous binding; endpoints share a context.
+  ScrollConnectionStatus setScrollBehavior(SimpleScrollablePanel& panel,
+                                           AppBarScrollBehavior behavior);
+  /// Restores expanded geometry and the manually selected surface state.
+  ScrollConnectionStatus clearScrollBehavior();
+  /// Returns whether this bar has an active connection.
+  bool hasScrollBehavior() const;
 
   /// Returns the surface role for the current flat or scrolled state.
   ColorToken containerRole() const override;

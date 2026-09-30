@@ -1236,3 +1236,10 @@ cc_library(
     srcs = ["benchmarks/scroll_connection_size_probe.cpp"],
     deps = [":roo_windows"],
 )
+
+cc_test(
+    name = "app_bar_scroll_behavior_test",
+    srcs = ["test/app_bar_scroll_behavior_test.cpp", "test/roo_windows_render_test_support.h"],
+    linkstatic = 1,
+    deps = [":roo_windows", "@roo_testing//:arduino_gtest_main"],
+)

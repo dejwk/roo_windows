@@ -7,6 +7,7 @@
 
 namespace roo_windows {
 class Widget;
+class ApplicationContext;
 class SimpleScrollablePanel;
 
 /// Outcome of connecting or disconnecting a scroll participant.
