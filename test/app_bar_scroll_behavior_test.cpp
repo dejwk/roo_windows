@@ -193,6 +193,119 @@ TEST_F(AppBarScrollBehaviorTest, FixedHeightAndRepeatedBinding) {
   EXPECT_TRUE(connection->canScroll());
 }
 
+// Verifies reverse input reaches the content top before expanding the bar,
+// including a single delta split between content and bar.
+TEST_F(MovingAppBarTest, ExitUntilCollapsedExpandsOnlyAtTop) {
+  install(AppBarScrollBehavior::kExitUntilCollapsed);
+  panel_->onDragStart(0, 0);
+  panel_->onDrag(0, 0, 0, -60);
+  EXPECT_EQ(64, bar_->height());
+  EXPECT_EQ(-12, panel_->getScrollPosition().y);
+  panel_->onDrag(0, 0, 0, 10);
+  EXPECT_EQ(64, bar_->height());
+  EXPECT_EQ(-2, panel_->getScrollPosition().y);
+  panel_->onDrag(0, 0, 0, 10);
+  EXPECT_EQ(72, bar_->height());
+  EXPECT_EQ(0, panel_->getScrollPosition().y);
+  panel_->onDragFinished(0, 0);
+  ASSERT_TRUE(refresh());
+  delay(200);
+  ASSERT_TRUE(refresh());
+  EXPECT_EQ(64, bar_->height());
+  panel_->scrollToTop();
+  ASSERT_TRUE(refresh());
+  EXPECT_EQ(112, bar_->height());
+}
+
+// Verifies the small exit-until-collapsed variant keeps its compact height.
+TEST_F(MovingAppBarTest, SmallExitUntilCollapsedIsPinned) {
+  install(AppBarScrollBehavior::kExitUntilCollapsed, AppBarVariant::kSmall);
+  panel_->onDragStart(0, 0);
+  panel_->onDrag(0, 0, 0, -60);
+  ASSERT_TRUE(refresh());
+  EXPECT_EQ(64, bar_->height());
+  EXPECT_EQ(-60, panel_->getScrollPosition().y);
+}
+
+// Verifies clearing a live binding restores geometry, stops fling and preserves
+// the content's legal position, while unsupported rebind leaves it intact.
+TEST_F(MovingAppBarTest, ClearDuringMotionAndUnsupportedSearchPolicy) {
+  install();
+  panel_->onDragStart(0, 0);
+  panel_->onDrag(0, 0, 0, -60);
+  panel_->onFling(0, 0, 0, -1200);
+  EXPECT_EQ(ScrollConnectionStatus::kSuccess, bar_->clearScrollBehavior());
+  ASSERT_TRUE(refresh());
+  EXPECT_EQ(112, bar_->height());
+  EXPECT_FALSE(panel_->moving());
+  SearchAppBar search(context());
+  EXPECT_EQ(ScrollConnectionStatus::kSuccess,
+            search.setScrollBehavior(*panel_, AppBarScrollBehavior::kPinned));
+  EXPECT_EQ(ScrollConnectionStatus::kUnsupportedBehavior,
+            search.setScrollBehavior(
+                *panel_, AppBarScrollBehavior::kExitUntilCollapsed));
+  EXPECT_TRUE(search.hasScrollBehavior());
+}
+
+// Verifies replacing wrapped content resets the bar even though the wrapper
+// retains its identity, and callbacks can still remove their own registration.
+TEST_F(AppBarScrollBehaviorTest, WrappedReplacementResetsBehavior) {
+  ScrollablePanel panel(context());
+  panel.setContents(std::make_unique<ColorBoxWidget>(
+      context(), roo_display::color::White, Dimensions(320, 600)));
+  AppBar bar(context(), AppBarVariant::kMediumFlexible);
+  ASSERT_EQ(ScrollConnectionStatus::kSuccess,
+            bar.setScrollBehavior(panel, AppBarScrollBehavior::kEnterAlways));
+  auto connection = material3::internal::FindAppBarConnection(bar);
+  connection->onPreScroll(-30);
+  EXPECT_EQ(30, connection->collapse());
+  panel.setContents(std::make_unique<ColorBoxWidget>(
+      context(), roo_display::color::White, Dimensions(320, 100)));
+  EXPECT_EQ(0, connection->collapse());
+}
+
+// Verifies app callbacks remain removable during delivery while binding
+// mutations are rejected until the active scroll transaction finishes.
+TEST_F(MovingAppBarTest, CallbackCanRemoveItselfButCannotRebindDuringDispatch) {
+  install();
+  ScrollConnectionStatus cleared = ScrollConnectionStatus::kSuccess;
+  ScrollConnectionStatus rebound = ScrollConnectionStatus::kSuccess;
+  panel_->setOnScrollPositionChanged([&](ScrollPosition, ScrollPosition) {
+    cleared = bar_->clearScrollBehavior();
+    rebound = bar_->setScrollBehavior(*panel_, AppBarScrollBehavior::kPinned);
+    panel_->setOnScrollPositionChanged(nullptr);
+  });
+  panel_->onDragStart(0, 0);
+  panel_->onDrag(0, 0, 0, -60);
+  EXPECT_EQ(ScrollConnectionStatus::kBusy, cleared);
+  EXPECT_EQ(ScrollConnectionStatus::kBusy, rebound);
+  EXPECT_TRUE(bar_->hasScrollBehavior());
+}
+
+// Verifies a kinetic overshoot springs back without expanding the compact bar
+// and releases the motion channel after the legal endpoint is applied.
+TEST_F(MovingAppBarTest, FlingAndSpringReachExactEndpoint) {
+  install();
+  panel_->onDragStart(0, 0);
+  panel_->onDrag(0, 0, 0, -60);
+  panel_->onFling(0, 0, 0, -1200);
+  panel_->onDragFinished(0, -1200);
+  ASSERT_TRUE(refresh());
+  delay(800);
+  ASSERT_TRUE(refresh());
+  // The replacement spring track anchors on its first sampled frame.
+  delay(20);
+  ASSERT_TRUE(refresh());
+  delay(600);
+  ASSERT_TRUE(refresh());
+  EXPECT_EQ(64, bar_->height());
+  EXPECT_FALSE(panel_->moving());
+  Margins margins = panel_->contents()->getMargins();
+  EXPECT_EQ(panel_->height() - margins.top() - margins.bottom() -
+                panel_->contents()->height(),
+            panel_->getScrollPosition().y);
+}
+
 // Verifies initial synchronization, independent callbacks and manual
 // restoration.
 TEST_F(AppBarScrollBehaviorTest, PinnedCoexistsWithPositionCallback) {

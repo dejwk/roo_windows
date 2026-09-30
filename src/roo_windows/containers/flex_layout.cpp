@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <vector>
 
+#include "roo_windows/core/scroll_connection.h"
+
 namespace roo_windows {
 
 // ---------------------------------------------------------------------------
@@ -30,6 +32,40 @@ struct FlexLine {
   int16_t main_size;   // sum of items' main sizes + margins + gaps
   int16_t cross_size;  // tallest item (cross size + margins)
 };
+
+struct Item {
+  int index;
+  int16_t main;
+  int16_t cross;
+  int16_t mms;  // Margins: main-start/end, cross-start/end.
+  int16_t mme;
+  int16_t mcs;
+  int16_t mce;
+};
+
+struct Line {
+  int begin;
+  int end;
+  int16_t main_size;   // sum of items + margins + gaps
+  int16_t cross_size;  // max item cross + margins
+};
+
+// A scrolling context retains these workspaces after first layout. A plain
+// context keeps the historical local-vector path and allocates no registry.
+struct FlexScratch {
+  std::vector<ItemLayout> measure_items;
+  std::vector<FlexLine> measure_lines;
+  std::vector<Item> layout_items;
+  std::vector<Line> layout_lines;
+};
+
+FlexScratch* GetFlexScratch(ApplicationContext& context, Widget& layout) {
+  auto* registry = context.scrollConnectionsIfPresent();
+  if (registry == nullptr) return nullptr;
+  std::shared_ptr<void>& scratch = registry->flexScratch(layout);
+  if (scratch == nullptr) scratch = std::make_shared<FlexScratch>();
+  return static_cast<FlexScratch*>(scratch.get());
+}
 
 // Distribute 'extra' pixels among 'count' slots, returning the size for slot
 // 'i' (0-based), taking into account integer rounding (largest slots first).
@@ -369,9 +405,17 @@ Dimensions FlexLayout::onMeasure(WidthSpec width_spec, HeightSpec height_spec) {
   int16_t gap_cross = crossAxisGap();
 
   // We build ItemLayout entries and FlexLine boundaries.
-  std::vector<ItemLayout> items;
+  FlexScratch* scratch = GetFlexScratch(context(), *this);
+  std::vector<ItemLayout> local_items;
+  std::vector<FlexLine> local_lines;
+  std::vector<ItemLayout>& items =
+      scratch == nullptr ? local_items : scratch->measure_items;
+  std::vector<FlexLine>& lines =
+      scratch == nullptr ? local_lines : scratch->measure_lines;
+  items.clear();
+  lines.clear();
   items.reserve(count);
-  std::vector<FlexLine> lines;
+  lines.reserve(count);
 
   // -------------------------------------------------------------------------
   // Pass 1: measure every item to its flex-basis size.
@@ -726,13 +770,17 @@ void FlexLayout::onLayout(bool changed, const Rect& rect) {
 
   // Rebuild the same items/lines structure as in onMeasure.
   // (All measurements are already cached in child_measures_.)
-  struct Item {
-    int index;
-    int16_t main, cross;
-    int16_t mms, mme, mcs, mce;  // margins: main-start/end, cross-start/end
-  };
-  std::vector<Item> items;
+  FlexScratch* scratch = GetFlexScratch(context(), *this);
+  std::vector<Item> local_items;
+  std::vector<Line> local_lines;
+  std::vector<Item>& items =
+      scratch == nullptr ? local_items : scratch->layout_items;
+  std::vector<Line>& lines =
+      scratch == nullptr ? local_lines : scratch->layout_lines;
+  items.clear();
+  lines.clear();
   items.reserve(count);
+  lines.reserve(count);
 
   for (int i = 0; i < count; ++i) {
     Widget& w = child_at(i);
@@ -751,12 +799,6 @@ void FlexLayout::onLayout(bool changed, const Rect& rect) {
   }
 
   // Break into lines (same logic as onMeasure).
-  struct Line {
-    int begin, end;
-    int16_t main_size;   // sum of items + margins + gaps
-    int16_t cross_size;  // max item cross + margins
-  };
-  std::vector<Line> lines;
   {
     int n = (int)items.size();
     int start = 0;

@@ -47,6 +47,7 @@ ScrollConnectionStatus ScrollConnectionRegistry::install(
 
 ScrollConnectionStatus ScrollConnectionRegistry::remove(Widget& endpoint,
                                                         bool destroying) {
+  if (destroying) flex_scratch_.erase(&endpoint);
   auto connection = find(endpoint);
   if (connection == nullptr) return ScrollConnectionStatus::kSuccess;
   if (!destroying && connection->dispatch_depth_ != 0)

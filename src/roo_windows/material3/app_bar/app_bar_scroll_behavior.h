@@ -6,8 +6,12 @@
 namespace roo_windows::material3 {
 /// Selects how an app bar responds to its connected panel.
 enum class AppBarScrollBehavior : uint8_t {
+  /// Keeps geometry fixed and follows the content surface state.
   kPinned,
+  /// Collapses on forward scrolling and expands immediately on reversal.
   kEnterAlways,
+  /// Expands only after content returns to the top. Small bars stay pinned;
+  /// SearchAppBar rejects this policy.
   kExitUntilCollapsed
 };
 namespace internal {
@@ -28,6 +32,8 @@ class AppBarScrollConnection : public roo_windows::internal::ScrollConnection {
   /// Returns the expanded-to-collapsed travel.
   YDim limit() const { return limit_; }
   YDim onPreScroll(YDim available) override;
+  YDim onPostScroll(YDim available) override;
+  YDim viewportTravel() const override { return collapse_; }
   bool canScroll() const override { return limit_ > 0 && !constrained_; }
   void cancel() override;
   void finish() override;
@@ -46,7 +52,6 @@ class AppBarScrollConnection : public roo_windows::internal::ScrollConnection {
   bool constrained_ = false;
   bool warned_ = false;
 
- private:
   AppBarScrollBehavior behavior_;
   bool scrolled_ = false;
 };

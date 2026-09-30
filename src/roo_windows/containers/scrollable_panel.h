@@ -236,6 +236,7 @@ class SimpleScrollablePanel : public Container,
   void onDragFinished(XDim x, YDim y) override;
 
   DragAxis dragAxis() const override {
+    if (direction_ == Direction::kBoth) return DragAxis::kBoth;
     return direction_ == Direction::kVertical ? DragAxis::kVertical
                                               : DragAxis::kHorizontal;
   }
@@ -332,8 +333,17 @@ class ScrollableBlitPanel : public SimpleScrollablePanel {
   /// Wraps `new_contents` in the internal `BlitCacheContainer` and installs
   /// it as the panel's scrolled content.
   void setContents(WidgetRef new_contents) {
+    bool replaced = blit_cache_.child() != new_contents.get();
     blit_cache_.setChild(std::move(new_contents));
     SimpleScrollablePanel::setContents(WidgetRef(blit_cache_));
+    auto connection = internal::ScrollConnectionRegistry::Find(*this);
+    if (replaced && connection != nullptr) {
+      cancelMotion();
+      motion_ = scroll_motion::State();
+      connection->kinetic = false;
+      connection->cancel();
+      connection->reset();
+    }
   }
 
  private:

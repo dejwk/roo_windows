@@ -53,6 +53,8 @@ class ScrollConnection {
   virtual YDim onPostScroll(YDim available) { return 0; }
   /// Returns whether the connection has vertical travel.
   virtual bool canScroll() const { return false; }
+  /// Returns pixels of viewport growth contributed by this participant.
+  virtual YDim viewportTravel() const { return 0; }
   /// Cancels optional participant motion on new input or suspension.
   virtual void cancel() {}
   /// Settles the participant after content motion ends.
@@ -95,6 +97,16 @@ class ScrollConnection {
 /// Sparse per-context ownership; no storage is added to individual widgets.
 class ScrollConnectionRegistry {
  public:
+  /// Creates empty indexes; buckets are allocated only on registration.
+  ScrollConnectionRegistry() : owners_(0), panels_(0), flex_scratch_(0) {}
+
+  /// Reuses FlexLayout workspace while coordinated scrolling triggers layout.
+  /// The layout allocates its concrete scratch on initial measurement; Widget
+  /// teardown releases it. Kept opaque to avoid a core-to-container dependency.
+  std::shared_ptr<void>& flexScratch(Widget& layout) {
+    return flex_scratch_[&layout];
+  }
+
   /// Installs after validating both endpoints; failure preserves existing
   /// links.
   ScrollConnectionStatus install(std::shared_ptr<ScrollConnection> connection);
@@ -113,6 +125,8 @@ class ScrollConnectionRegistry {
                                         std::shared_ptr<ScrollConnection>>;
   Map owners_;
   Map panels_;
+  roo_collections::FlatSmallHashMap<const Widget*, std::shared_ptr<void>>
+      flex_scratch_;
 };
 }  // namespace internal
 }  // namespace roo_windows

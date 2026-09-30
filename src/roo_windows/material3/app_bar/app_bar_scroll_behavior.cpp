@@ -70,8 +70,16 @@ YDim AppBarScrollConnection::consume(YDim available) {
 }
 
 YDim AppBarScrollConnection::onPreScroll(YDim available) {
-  return behavior_ == AppBarScrollBehavior::kEnterAlways ? consume(available)
-                                                         : 0;
+  if (behavior_ == AppBarScrollBehavior::kEnterAlways ||
+      (behavior_ == AppBarScrollBehavior::kExitUntilCollapsed && available < 0))
+    return consume(available);
+  return 0;
+}
+
+YDim AppBarScrollConnection::onPostScroll(YDim available) {
+  return behavior_ == AppBarScrollBehavior::kExitUntilCollapsed && available > 0
+             ? consume(available)
+             : 0;
 }
 
 void AppBarScrollConnection::cancel() {
@@ -91,6 +99,9 @@ void AppBarScrollConnection::finish() {
       panel().presentationState() != PresentationState::kPresented)
     return;
   YDim target = collapse_ * 2 >= limit_ ? limit_ : 0;
+  if (behavior_ == AppBarScrollBehavior::kExitUntilCollapsed &&
+      panel().getScrollPosition().y < 0)
+    target = limit_;
   AnimationSpec spec =
       AnimationSpec::Value(collapse_, target, roo_time::Millis(150));
   spec.easing.kind = EasingKind::kCubicBezier;
@@ -115,7 +126,7 @@ ScrollConnectionStatus ConnectAppBar(ApplicationContext& context, Widget& bar,
                                      SimpleScrollablePanel& panel,
                                      AppBarScrollBehavior behavior,
                                      bool search) {
-  if (behavior == AppBarScrollBehavior::kExitUntilCollapsed)
+  if (search && behavior == AppBarScrollBehavior::kExitUntilCollapsed)
     return ScrollConnectionStatus::kUnsupportedBehavior;
   auto old = FindAppBarConnection(bar);
   if (old != nullptr && old->isDispatching())

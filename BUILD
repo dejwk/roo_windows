@@ -1244,3 +1244,10 @@ cc_test(
     linkstatic = 1,
     deps = [":roo_windows", ":test_golden_utils", "@roo_testing//:arduino_gtest_main"],
 )
+
+cc_test(
+    name = "scroll_connection_resource_test",
+    srcs = ["test/scroll_connection_resource_test.cpp", "test/roo_windows_render_test_support.h"],
+    linkstatic = 1,
+    deps = [":roo_windows", "@roo_testing//:arduino_gtest_main"],
+)

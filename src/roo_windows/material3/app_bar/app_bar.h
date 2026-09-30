@@ -79,10 +79,10 @@ class AppBar : public Material3Container {
   /// Returns the configured title alignment.
   AppBarTitleAlignment titleAlignment() const { return title_alignment_; }
 
-  /// Changes the surface state and repaints the app-bar surface.
+  /// Sets the manual surface preference, used while no behavior is connected.
   void setSurfaceState(AppBarSurfaceState state);
 
-  /// Returns the configured surface state.
+  /// Returns the effective surface state, including a connected behavior.
   AppBarSurfaceState surfaceState() const;
 
   /// Connects without replacing the panel's application callback. Failed

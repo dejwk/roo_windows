@@ -20,6 +20,7 @@ class ProbeWidget : public Widget {
 
 class DragPanel : public SimpleScrollablePanel {
  public:
+  using SimpleScrollablePanel::dragAxis;
   using SimpleScrollablePanel::onDrag;
   using SimpleScrollablePanel::onDragStart;
   using SimpleScrollablePanel::SimpleScrollablePanel;
@@ -62,6 +63,26 @@ TEST_F(ScrollConnectionTest, SignedConsumptionAndCallbackCoexistence) {
   EXPECT_EQ(38, connection->amount);
   EXPECT_EQ(-12, panel.getScrollPosition().y);
   EXPECT_EQ(1, calls);
+}
+
+// Verifies a vertical participant leaves horizontal drag movement intact.
+TEST_F(ScrollConnectionTest, BothAxesPreserveHorizontalMovement) {
+  ProbeWidget owner(context());
+  DragPanel panel(context(), SimpleScrollablePanel::Direction::kBoth);
+  ColorBoxWidget content(context(), roo_display::color::White,
+                         Dimensions(600, 600));
+  panel.setContents(content);
+  panel.measure(WidthSpec::Exactly(100), HeightSpec::Exactly(200));
+  panel.layout(Rect(0, 0, 99, 199));
+  auto connection = std::make_shared<DistanceConsumer>(owner, panel);
+  ASSERT_EQ(ScrollConnectionStatus::kSuccess,
+            context().scrollConnections().install(connection));
+  EXPECT_EQ(DragAxis::kBoth, panel.dragAxis());
+  panel.onDragStart(0, 0);
+  panel.onDrag(0, 0, -20, -60);
+  EXPECT_EQ(-20, panel.getScrollPosition().x);
+  EXPECT_EQ(-12, panel.getScrollPosition().y);
+  EXPECT_EQ(48, connection->amount);
 }
 
 // Verifies a connection remains scrollable even when all body content fits.

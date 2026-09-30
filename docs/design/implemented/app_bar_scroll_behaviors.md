@@ -1,6 +1,6 @@
 # App bar scroll behaviors
 
-Status: in progress. Phase 1 ownership is implemented; behavior and coordinated motion remain in progress.
+Status: implemented. All five implementation stages are complete. Validation results and resource limits are recorded below.
 
 ## Objective
 
@@ -17,8 +17,8 @@ Project terminology follows the [design glossary](../glossary.md).
 - [SimpleScrollablePanel](../../../src/roo_windows/containers/scrollable_panel.h) owns content motion, keyboard scrolling, scrollbar interaction, and a motion animation channel. `ScrollablePanel` currently aliases its blit-cache variant.
 - [ScrollPosition](../../../src/roo_windows/core/scroll_position.h) reports the content origin excluding margins. Downward progress through content produces negative `y`; top overscroll can produce positive `y`.
 - [WidgetEventDispatcher](../../../src/roo_windows/core/widget_event_dispatcher.h) stores the optional position callback outside the widget. Notifications carry previous and current positions. The virtual `onScrollPositionChanged()` hook remains available.
-- [AppBar](../../../src/roo_windows/material3/app_bar/app_bar.h) has small, medium-flexible, and large-flexible variants, plus a flat/scrolled surface state. Flexible variants currently have expanded layouts, not collapse transitions.
-- [Scroll motion](../../../src/roo_windows/containers/scroll_motion_controller.h) includes drag resistance, fling, and spring-back. Panel layout currently calls `update()`, whose programmatic scroll path cancels motion. That is incompatible with a viewport resizing on each collapse frame.
+- [AppBar](../../../src/roo_windows/material3/app_bar/app_bar.h) has small, medium-flexible, and large-flexible variants, plus a flat/scrolled surface state. Before this change, flexible variants had expanded layouts without collapse transitions.
+- [Scroll motion](../../../src/roo_windows/containers/scroll_motion_controller.h) includes drag resistance, fling, and spring-back. Before this change, panel layout called `update()`, whose programmatic scroll path cancels motion. That is incompatible with a viewport resizing on each collapse frame.
 - [AnimationRegistry](../../../src/roo_windows/core/animation_registry.h) owns animation scheduling. Geometry and appearance are applied before painting; paint does not drive animation.
 
 Compose exposes pinned, enter-always, and exit-until-collapsed behavior through a scroll behavior and nested-scroll connection. This proposal adopts that vocabulary and user interaction pattern, with explicit roo_windows contracts below; it does not promise identical Android physics. [Android app-bar documentation](https://developer.android.com/develop/ui/compose/components/app-bars)
@@ -29,7 +29,7 @@ Compose exposes pinned, enter-always, and exit-until-collapsed behavior through 
 2. Support stationary surface changes, immediate expansion on reverse scrolling, and expansion only at the content's top.
 3. Content and bar motion stay continuous through dragging, flinging, changing viewport height, and release settlement.
 4. Ordinary position observers continue to receive actual content changes, including programmatic movement and layout correction.
-5. Unconnected bars and panels incur no new instance fields. Optional state is paid for by connected screens. Frame processing allocates no memory.
+5. Unconnected bars and panels incur no new instance fields. Optional state is paid for by connected screens. Connection dispatch and repeated drag/layout processing allocate no memory after initial layout. Existing glyph-paint allocations are outside this guarantee; see the measurements below.
 6. Destroying, hiding, detaching, rebinding, or changing the geometry of either endpoint has defined behavior.
 7. Existing scrolling, dialogs using the virtual hook, hit testing, and direct rendering remain correct.
 8. Each implementation stage includes tests and consumer documentation or an example for its new functionality.
@@ -141,29 +141,36 @@ Hiding or detaching either endpoint cancels kinetic and settlement tracks, clamp
 
 No fields are added to AppBar, SearchAppBar, SimpleScrollablePanel, or Widget. ApplicationContext gains one lazy-registry pointer: typically 4 bytes on the ESP32 target, 8 on the host. An unused context allocates no registry.
 
-The following private-state sketch makes optional costs visible. Exact packing is an implementation measurement, not an ABI promise:
+The registry stores one shared `AppBarScrollConnection` in two indexes, keyed by
+bar and panel. The connection itself stores endpoint pointers, dispatch depth,
+raw drag coordinates, the last kinetic sample, input source, motion flags,
+collapse amount and limit, behavior, and surface/constraint flags. This combines
+the originally sketched record and derived state into one allocation. The
+connection payload is 48 bytes on ESP32-C3 and 64 bytes on the host, excluding
+the shared control block, indexes, presentation observation, and animation tracks.
 
-```cpp
-struct ConnectionRecord {
-  Widget* visual_owner;
-  SimpleScrollablePanel* panel;
-  std::unique_ptr<ScrollConnection> connection;
-  // Shared ownership control block and map entries live outside this payload.
-};
+Let `B` be live bindings, ordinarily 1–3 per context. Lookup is expected O(1),
+worst-case O(B); registration can rehash. Index capacity is retained after removal.
+A fresh host registration measured 8 allocations and 478 retained bytes,
+including first registry creation and compact-font initialization. This is not
+a per-binding target RAM figure; the original 80–128 byte total estimate omitted
+shared registry/font/observer costs. An unused context allocates no registry.
 
-class AppBarScrollConnection : public ScrollConnection {
-  YDim collapse_px_;
-  YDim collapse_limit_px_;
-  YDim last_kinetic_sample_y_;
-  AppBarScrollBehavior behavior_;
-  uint8_t flags_;  // Dispatch, geometry reconciliation, constraint warning.
-  // The record supplies endpoint identity; do not duplicate endpoint pointers.
-};
-```
+Coordinated scrolling repeatedly measures its parent layout. FlexLayout formerly
+allocated temporary vectors each time. Contexts with a scroll registry now keep
+four reusable vectors per measured FlexLayout in a third registry index. These
+hold measure/layout items and lines; they are initialized on first layout and
+released when that layout is destroyed. This adds no FlexLayout instance field.
+For `F` such layouts with `N` total child entries, retained scratch is O(F + N),
+and grows when the tree grows. It remains cached after the last binding is
+cleared. Contexts that never connect a bar keep the existing local-vector path.
+Layout work remains proportional to the affected subtree. The compact title font
+is initialized during attachment to avoid loading it on the first collapse frame.
 
-On a 32-bit target, the record's listed fields occupy about 12 bytes and the derived connection's listed fields plus vptr about 20 bytes before allocator overhead. Two pointer/shared-pointer map entries add roughly 24 bytes of payload per binding. Budget approximately 80–128 bytes per binding including control blocks and table slack, excluding active animation tracks. These are planning estimates; measure actual target sizes in phase 1 and publish them with the implementation.
-
-Let `B` be live bindings, ordinarily 1–3 per context. Registration allocates and has expected constant lookup cost, with linear worst-case rehashing. Frame lookup is expected O(1), worst-case O(B) for the hash table; it visits one connection, not every binding. Two maps retain capacity after removal according to the existing container policy. Registry storage is O(B) capacity, and layout work remains proportional to the affected widget subtree. Dispatch and settled idle state allocate nothing. Report compiled-size change as well as RAM; no custom hashtable or generalized observer framework is warranted.
+Dispatch and repeated layout allocate nothing for an initialized, unchanged
+widget tree. Starting animation tracks can allocate registry storage. Painting
+text still creates existing roo_display glyph streams; this feature does not
+make the entire rendering pipeline allocation-free.
 
 ## Proposed API
 
@@ -269,7 +276,7 @@ Proposed commit message: **App bar scroll behaviors phase 5: add expansion at th
 
 Complete exit-until-collapsed behavior and validate lifecycle, geometry, and callback compatibility across the supported app-bar family.
 
-Validation: behavior tests, both new examples, `material3_dialog_test`, and relevant focus-reveal and scaffold tests. Confirm no frame allocations, no lost fling velocity during collapse, and no animation track remaining after settlement. Mark the design implemented only after all requirements pass.
+Validation: behavior tests, both new examples, `material3_dialog_test`, and relevant focus-reveal and scaffold tests. Confirm no connection dispatch or repeated drag/layout allocations, no lost fling velocity during collapse, and no animation track remaining after settlement. Mark the design implemented only after all requirements pass.
 
 ## Testing Plan
 
@@ -311,6 +318,64 @@ Chains support multiple ancestors and nested consumers, but require ordering, ve
 
 General nested-scroll chains, multiple bars following one panel, public custom connections, continuous typography/color interpolation, velocity-directed snapping, animated programmatic scroll coordination, and saved/restored collapse state are outside this scope.
 
-## Implementation measurements
+## Implementation measurements and validation
 
-Phase 1 ESP32-C3 ABI probe (`benchmarks/scroll_connection_size_probe.cpp`, riscv32-esp-elf-g++ with C++17, exceptions and RTTI disabled): Widget 24 bytes, SimpleScrollablePanel 168, AppBar 148, SearchAppBar 204, all unchanged. ApplicationContext grows from 208 to 216 bytes: one 4-byte pointer plus 4 bytes of aggregate alignment padding. This measured padding is an explicit exception to the one-pointer total-size estimate; no additional runtime field is introduced. Ownership and existing widget tests pass.
+The ESP32-C3 ABI probe uses C++17 with exceptions and RTTI disabled:
+
+| Type | Before | After |
+| --- | ---: | ---: |
+| Widget | 24 | 24 |
+| SimpleScrollablePanel | 168 | 168 |
+| AppBar | 148 | 148 |
+| SearchAppBar | 204 | 204 |
+| ApplicationContext | 208 | 216 |
+| AppBarScrollConnection | absent | 48 |
+
+Sizes are bytes. Context growth is one 4-byte pointer plus 4 bytes of alignment
+padding, an explicit exception to the original one-pointer total-size estimate.
+The host resource tests measure initial registration and verify zero allocations
+in 1,000 dispatch iterations and repeated drag/layout operations under both
+LayoutScaffold and FlexLayout. Full repaint was measured separately: the
+nine-character title allocates nine existing glyph streams per frame.
+
+Reproduce the ABI and object-code probes with:
+
+```sh
+python3 tools/scroll_connection_size_probe.py \
+  --compiler ~/.platformio/packages/toolchain-riscv32-esp/bin/riscv32-esp-elf-g++ \
+  --library-root ~/Documents/Arduino/roo \
+  --output /tmp/scroll_sizes.o --code-size
+```
+
+For a pre-change archive, add `--source-root /path/to/archive`. The selected
+objects (connection, context, widget, panel, FlexLayout, app bar and Material
+behavior) total 72,969 text bytes with `-Os`, versus 54,271 before: +18,698.
+This includes template instantiations before linker deduplication/dead stripping,
+and parsing-only benchmark platform/logging stubs. It is an object-code cost
+indicator, not a linked firmware-size delta.
+
+Validation from the canonical library repository:
+
+```sh
+bazel test //:scroll_connection_test //:app_bar_scroll_behavior_test \
+  //:scroll_connection_resource_test //:roo_windows_test \
+  //:scroll_motion_controller_test //:scrollable_panel_animation_test \
+  //:animation_registry_test //:material3_dialog_test \
+  //:material3_layout_scaffold_test //:text_field_keyboard_avoidance_test \
+  //:flex_layout_test --test_output=errors
+bazel test --config=asan //:scroll_connection_test \
+  //:app_bar_scroll_behavior_test //:flex_layout_test --test_output=errors
+bazel build //examples/material3/app_bar/basic_top_bar:basic_top_bar \
+  //examples/material3/app_bar/enter_always:enter_always \
+  //examples/material3/app_bar/exit_until_collapsed:exit_until_collapsed
+```
+
+The eleven focused/regression targets and all three AddressSanitizer targets pass. All three example targets build. New expanded, midpoint and collapsed
+render goldens pass. Existing `material3_app_bar_test` and
+`material3_app_bar_golden_test` also ran: their flat-surface expectations conflict
+with the independently committed SurfaceBright theme change; their expectations
+and existing goldens were preserved. The behavior suite covers conservation,
+reverse input, kinetic continuation and exact spring endpoints, release settling,
+programmatic reset, fixed constraints, search/small variants, callback coexistence,
+reentrant binding rejection, hide/clear/replacement, and registration lifetimes.
+Physical-display and interactive emulator gesture checks remain unperformed.

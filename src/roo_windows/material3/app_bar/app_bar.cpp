@@ -188,9 +188,14 @@ ScrollConnectionStatus AppBar::setScrollBehavior(
   if (status == ScrollConnectionStatus::kSuccess) {
     auto connection = internal::FindAppBarConnection(*this);
     if (connection == previous) return status;
+    // Resolve the compact font at attachment, not on a drag frame.
+    (void)text_style_title_large();
     connection->measureHeight(
         Scaled(containerHeightDp()),
-        variant_ == AppBarVariant::kSmall ? 0 : Scaled(64),
+        variant_ == AppBarVariant::kSmall &&
+                connection->behavior() == AppBarScrollBehavior::kEnterAlways
+            ? 0
+            : Scaled(64),
         HeightSpec::Unspecified(0));
     connection->onPositionChanged({}, panel.getScrollPosition(),
                                   ScrollSource::kProgrammatic);
@@ -304,11 +309,15 @@ Dimensions AppBar::onMeasure(WidthSpec width, HeightSpec height) {
   const int16_t container_height = Scaled(containerHeightDp());
   auto connection = internal::FindAppBarConnection(*this);
   YDim resolved_height =
-      connection == nullptr
-          ? height.resolveSize(container_height)
-          : connection->measureHeight(
-                container_height,
-                variant_ == AppBarVariant::kSmall ? 0 : Scaled(64), height);
+      connection == nullptr ? height.resolveSize(container_height)
+                            : connection->measureHeight(
+                                  container_height,
+                                  variant_ == AppBarVariant::kSmall &&
+                                          connection->behavior() ==
+                                              AppBarScrollBehavior::kEnterAlways
+                                      ? 0
+                                      : Scaled(64),
+                                  height);
   title_widget_.setTextStyle(titleTextStyle());
   bool subtitle_visible = tokens().supports_subtitle &&
                           !subtitle_widget_.text().empty() &&
@@ -675,6 +684,8 @@ ScrollConnectionStatus SearchAppBar::setScrollBehavior(
   if (status == ScrollConnectionStatus::kSuccess) {
     auto connection = internal::FindAppBarConnection(*this);
     if (connection == previous) return status;
+    // Resolve the compact font at attachment, not on a drag frame.
+    (void)text_style_title_large();
     connection->measureHeight(Scaled(64), 0, HeightSpec::Unspecified(0));
     connection->onPositionChanged({}, panel.getScrollPosition(),
                                   ScrollSource::kProgrammatic);

@@ -546,11 +546,13 @@ void SimpleScrollablePanel::applyConnectedDelta(
     connection.applying = false;
     return;
   }
+  YDim original_travel = connection.viewportTravel();
   YDim pre = connection.onPreScroll(dy);
   DCHECK(pre >= std::min<YDim>(0, dy) && pre <= std::max<YDim>(0, dy));
   YDim remaining = dy - pre;
   // Removing bar height adds the same amount to the remaining body viewport.
-  YDim min_y = std::min<YDim>(0, geometry.minY() - pre);
+  YDim min_y = std::min<YDim>(
+      0, geometry.minY() + connection.viewportTravel() - original_travel);
   YDim legal = std::max(min_y, std::min<YDim>(0, connection.raw.y + remaining));
   YDim consumed = legal - connection.raw.y;
   // Existing overscroll must be unwound before another participant consumes.
@@ -561,8 +563,12 @@ void SimpleScrollablePanel::applyConnectedDelta(
          post <= std::max<YDim>(0, available));
   connection.raw.x += dx;
   connection.raw.y += remaining - post;
+  YDim planned_travel = connection.viewportTravel();
   if (getMainWindow() != nullptr && (pre != 0 || post != 0))
     getMainWindow()->updateLayout();
+  // Parent constraints can reject some of the requested bar travel. Return
+  // that distance to content instead of swallowing part of the gesture.
+  connection.raw.y += connection.viewportTravel() - planned_travel;
   geometry = motionGeometry();
   applyScrollResult(motion_.resolveDrag(geometry, current.x, current.y,
                                         connection.raw.x, connection.raw.y));

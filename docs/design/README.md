@@ -14,6 +14,7 @@ Status was audited against the source tree and tests on 2026-09-12. “Dependenc
 
 | Design | Dependency status |
 | --- | --- |
+| [App bar scroll behaviors](implemented/app_bar_scroll_behaviors.md) | Pinned, enter-always and exit-until-collapsed connections, coordinated motion, examples, lifecycle and resource coverage are implemented. Glyph-paint allocation remains upstream work; physical gesture checks remain manual. |
 | [Date pickers](implemented/material3_date_pickers_design.md) | Modal calendar/input, internal month/year modes, docked field with exclusive calendar focus, compact promotion, example and focused resource/behavior/golden tests are implemented. Simultaneous source editing and upstream allocation-free glyph paint remain future work. |
 | [Compact keyboard layouts and long-press alternatives](implemented/keyboard_binary_layout_design.md) | Generated en-US/pl-PL assets, validated byte reader, binary-search lookup, circular action faces, and long-press selection are implemented. Host regressions and ESP32-C3 build/resource checks pass; physical touchscreen checks remain manual. |
 | App bars/search surfaces | The component family, focused unit and golden coverage, example, and adaptive scaffold integration are implemented. Focused/expanded search remains separate future work. |
@@ -77,7 +78,6 @@ Status was audited against the source tree and tests on 2026-09-12. “Dependenc
 
 | Design | Dependency status |
 | --- | --- |
-| [App bar scroll behaviors](proposed/app_bar_scroll_behaviors.md) | Position callbacks, app bars, and animation scheduling exist. Sparse connections, coordinated scrolling, and built-in behaviors are proposed. |
 | Button groups | Buttons and icon buttons are implemented; no group implementation exists. |
 | Click delivery policy | Click-animation lifecycle and settlement are implemented; widget-selected semantic delivery timing is not. |
 | Display runtime Phase 7 task-bounded transient coverage | Phase 6 input is implemented. Phase 7 is reconciled as task-bounded attachment of the one shared window host layer, retaining one active-presentation authority and explicit interaction owner; the extension remains unimplemented. |
