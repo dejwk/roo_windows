@@ -79,7 +79,7 @@ TEST(Material3ThemeTest, InitializesCompactComponentSurfaceDefaults) {
             material.components.card.filledContainer);
   EXPECT_EQ(material3::ColorToken::kSurface,
             material.components.card.outlinedContainer);
-  EXPECT_EQ(material3::ColorToken::kSurfaceContainerLowest,
+  EXPECT_EQ(material3::ColorToken::kSurface,
             material.components.layoutScaffold.container);
   EXPECT_EQ(material3::ColorToken::kSurface,
             material.components.appBar.flatContainer);

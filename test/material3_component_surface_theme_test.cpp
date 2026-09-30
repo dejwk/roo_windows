@@ -87,7 +87,7 @@ TEST(Material3ComponentSurfaceThemeTest,
   SetDistinctNeutralSurfacePalette(light, 10);
   SetDistinctNeutralSurfacePalette(dark, 80);
   constexpr std::array<ColorToken, 27> kDefaultRoles = {
-      ColorToken::kSurfaceContainerLowest,
+      ColorToken::kSurface,
       ColorToken::kSurface,
       ColorToken::kSurfaceContainer,
       ColorToken::kSurfaceContainerHigh,

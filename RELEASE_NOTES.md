@@ -1,3 +1,18 @@
+# roo_windows 1.8.0
+
+- Added Material 3 modal and docked date pickers with calendar and text input, date bounds, locale support, and layouts for 240-pixel portrait displays.
+- Added dynamic Material 3 lists with recycled rows, prepared text, single-selection models, and composition with static entries.
+- Added pinned, enter-always, and exit-until-collapsed app-bar scroll behaviors; improved typography, action placement, and subtitle colors.
+- Added `Material3Theme::components` for shared surface colors across cards, panels, navigation, lists, menus, and filled controls. Preserves per-card overrides and component foreground behavior, with 27 bytes of shared storage (28 after target alignment) and no per-widget growth.
+- Added navigation and semantic Back buttons, optional button shape morphing, and keyboard dismissal when tapping outside the editor and keyboard.
+- Improved container margin handling, asymmetric spacing, scaffold padding, background inheritance, and list/menu colors. Reduced unnecessary redraws and preserved blit caches during height-only changes.
+- Fixed empty-canvas crashes, borrowed-widget and recycled-row teardown, disabled-button double dimming, and gesture cancellation when widgets are hidden or disabled.
+- **API changes:** removed `BasicWidget` and `BasicSurfaceWidget` in favor of explicit padding/margin mixins; removed implicit spacing from several layouts and cards. `Environment` now accepts `roo_scheduler::SchedulingService` and exposes `SchedulerClient`.
+- Updated dependencies to `roo_display` 3.3.1, `roo_io` 2.4.0, `roo_scheduler` 2.3.0, `roo_time` 2.0.1, `roo_collections` 1.4.8, `roo_logging` 1.5.11, and `roo_testing` 2.3.0. Updated vendored testing tools with ESP-IDF target detection and an Arduino/ESP-IDF test runner.
+- Expanded examples, rendering regression coverage, and resource benchmarks.
+
+---
+
 # roo_windows 1.7.0
 
 - Added `Material3Theme::components`, a compact shared surface-role policy for
