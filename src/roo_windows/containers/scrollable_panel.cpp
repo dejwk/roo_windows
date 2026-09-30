@@ -68,6 +68,43 @@ Dimensions VerticalScrollBar::getSuggestedMinimumDimensions() const {
   return Dimensions(Scaled(6), Scaled(6));
 }
 
+void SimpleScrollablePanel::setContentsInternal(WidgetRef new_contents,
+                                                bool notify) {
+  if (contents_ != nullptr && contents() == new_contents.get() &&
+      contents()->isOwnedByParent() == new_contents.is_owned()) {
+    return;
+  }
+  ScrollPosition previous = getScrollPosition();
+  cancelMotion();
+  cancelHideScrollBarUpdate();
+  motion_ = scroll_motion::State();
+  scroll_bar_.setVisibility(Visibility::kInvisible);
+  if (contents_ != nullptr) {
+    detachChild(contents_);
+    detachChild(&scroll_bar_);
+  }
+  contents_ = new_contents.get();
+  if (contents_ != nullptr) {
+    attachChild(std::move(new_contents));
+    attachChild(scroll_bar_);
+  }
+  if (notify) notifyScrollPositionChanged(previous);
+}
+
+void SimpleScrollablePanel::setOnScrollPositionChanged(ScrollHandler handler) {
+  context().widgetEvents().setScrollPositionChangeHandler(*this,
+                                                          std::move(handler));
+}
+
+void SimpleScrollablePanel::notifyScrollPositionChanged(
+    ScrollPosition previous) {
+  ScrollPosition current = getScrollPosition();
+  if (previous.x == current.x && previous.y == current.y) return;
+  onScrollPositionChanged();
+  context().widgetEvents().dispatchScrollPositionChange(*this, previous,
+                                                        current);
+}
+
 void SimpleScrollablePanel::scrollTo(XDim x, YDim y) {
   Widget* c = contents();
   if (c == nullptr) return;
@@ -366,8 +403,9 @@ void SimpleScrollablePanel::applyScrollResult(
   const XDim new_x = visual_x + m.left();
   const YDim new_y = visual_y + m.top();
   if (c->offsetLeft() == new_x && c->offsetTop() == new_y) return;
+  ScrollPosition previous = currentScrollPosition();
   c->moveTo(c->bounds().translate(new_x, new_y));
-  onScrollPositionChanged();
+  notifyScrollPositionChanged(previous);
 }
 
 bool SimpleScrollablePanel::onInterceptTouchEvent(const TouchEvent& event) {

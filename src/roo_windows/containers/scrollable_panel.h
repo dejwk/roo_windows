@@ -8,6 +8,7 @@
 #include "roo_windows/core/application_context.h"
 #include "roo_windows/core/panel.h"
 #include "roo_windows/core/widget.h"
+#include "roo_windows/core/widget_event_dispatcher.h"
 
 namespace roo_windows {
 
@@ -86,27 +87,13 @@ class SimpleScrollablePanel : public Container,
   ~SimpleScrollablePanel() override {
     cancelMotion();
     cancelHideScrollBarUpdate();
-    clearContents();  // Delete if owned.
+    setContentsInternal(WidgetRef(),
+                        false);  // Delete if owned, without events.
   }
 
+  /// Replaces the content and reports any resulting change of scroll origin.
   void setContents(WidgetRef new_contents) {
-    if (contents_ != nullptr && contents() == new_contents.get() &&
-        contents()->isOwnedByParent() == new_contents.is_owned()) {
-      return;
-    }
-    cancelMotion();
-    cancelHideScrollBarUpdate();
-    motion_ = scroll_motion::State();
-    scroll_bar_.setVisibility(Visibility::kInvisible);
-    if (contents_ != nullptr) {
-      detachChild(contents_);
-      detachChild(&scroll_bar_);
-    }
-    contents_ = new_contents.get();
-    if (contents_ != nullptr) {
-      attachChild(std::move(new_contents));
-      attachChild(scroll_bar_);
-    }
+    setContentsInternal(std::move(new_contents), true);
   }
 
   void clearContents() { setContents(WidgetRef()); }
@@ -190,10 +177,21 @@ class SimpleScrollablePanel : public Container,
   /// Snaps to the bottom edge of the content.
   void scrollToBottom();
 
-  struct ScrollPosition {
-    XDim x;
-    YDim y;
-  };
+  /// Content-origin coordinates; retained here for source compatibility.
+  using ScrollPosition = roo_windows::ScrollPosition;
+
+  /// Handler receiving the previous and newly applied content origins.
+  using ScrollHandler = WidgetEventDispatcher::ScrollHandler;
+
+  /// Reacts to position changes from scrolling, layout, or content replacement.
+  /// Runs synchronously after the virtual hook, only when coordinates change.
+  /// Registration does not emit an initial event; use getScrollPosition().
+  /// An empty handler disconnects. Captured objects must outlive registration.
+  /// Register and scroll on the UI thread. Handlers may change registrations,
+  /// but must not destroy the panel or recursively change its scroll position.
+  /// Storage is application-owned; registration may allocate, dispatch does
+  /// not.
+  void setOnScrollPositionChanged(ScrollHandler handler);
 
   ScrollPosition getScrollPosition() const {
     if (contents() == nullptr) return {0, 0};
@@ -265,6 +263,10 @@ class SimpleScrollablePanel : public Container,
   scroll_motion::Geometry motionGeometry() const;
   ScrollPosition currentScrollPosition() const;
   void applyScrollResult(const scroll_motion::Result& result);
+  void notifyScrollPositionChanged(ScrollPosition previous);
+
+  friend class ScrollableBlitPanel;
+  void setContentsInternal(WidgetRef new_contents, bool notify);
   bool containsDescendant(const Widget& descendant) const;
 
   Direction direction_;
@@ -312,7 +314,7 @@ class ScrollableBlitPanel : public SimpleScrollablePanel {
     // Detach the member wrapper before it is destroyed and before the base
     // destructor consults its content pointer. The wrapper then releases any
     // adopted child while both objects are still alive.
-    SimpleScrollablePanel::clearContents();
+    setContentsInternal(WidgetRef(), false);
     blit_cache_.clearChild();
   }
 

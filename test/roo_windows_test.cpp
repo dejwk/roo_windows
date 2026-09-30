@@ -606,6 +606,28 @@ TEST(Windows, WidgetMoveTransfersInteractiveChangeHandler) {
   EXPECT_EQ(1, call_count);
 }
 
+// Verifies scroll-only registrations migrate even without an interactive
+// handler.
+TEST_F(RooWindowsRenderTest, WidgetMoveTransfersScrollHandler) {
+  DispatcherTestWidget original(context());
+  WidgetEventDispatcher& dispatcher = context().widgetEvents();
+  int calls = 0;
+  dispatcher.setScrollPositionChangeHandler(
+      original, [&](ScrollPosition previous, ScrollPosition current) {
+        EXPECT_EQ(-10, previous.y);
+        EXPECT_EQ(-20, current.y);
+        ++calls;
+      });
+  DispatcherTestWidget moved(std::move(original));
+  EXPECT_FALSE(dispatcher.hasScrollPositionChangeHandler(original));
+  EXPECT_TRUE(dispatcher.hasScrollPositionChangeHandler(moved));
+  dispatcher.dispatchScrollPositionChange(original, {0, -10}, {0, -20});
+  dispatcher.dispatchScrollPositionChange(moved, {0, -10}, {0, -20});
+  EXPECT_EQ(1, calls);
+  dispatcher.clearHandlers(moved);
+  EXPECT_FALSE(dispatcher.hasScrollPositionChangeHandler(moved));
+}
+
 TEST(Windows, WidgetDestructorClearsDispatcherHandlers) {
   roo::byte raster[320 * 240 * 2];
   OffscreenDevice<Argb4444> offscreen(320, 240, raster, Argb4444());
@@ -619,10 +641,13 @@ TEST(Windows, WidgetDestructorClearsDispatcherHandlers) {
   auto* widget = new (storage) DispatcherTestWidget(app.context());
   widget->setOnInteractiveChange([]() {});
   EXPECT_TRUE(dispatcher.hasInteractiveChangeHandler(*widget));
+  dispatcher.setScrollPositionChangeHandler(
+      *widget, [](ScrollPosition, ScrollPosition) {});
   widget->~DispatcherTestWidget();
 
   auto* replacement = new (storage) DispatcherTestWidget(app.context());
   EXPECT_FALSE(dispatcher.hasInteractiveChangeHandler(*replacement));
+  EXPECT_FALSE(dispatcher.hasScrollPositionChangeHandler(*replacement));
   replacement->~DispatcherTestWidget();
 }
 

@@ -1,5 +1,6 @@
 // Learning goal: use a flexible top app bar to establish hierarchy on a
-// detail screen. Tap Back or More to see actions flow into the screen state.
+// detail screen and change its surface as equipment details scroll underneath.
+// Scroll the body; return to the top to restore the flat surface.
 
 // *************** EMULATOR SETUP BEGIN
 
@@ -74,6 +75,7 @@ void initDisplay() {
 // *************** EXAMPLE STARTS HERE
 
 #include "roo_windows/containers/flex_layout.h"
+#include "roo_windows/containers/scrollable_panel.h"
 #include "roo_windows/material3/app_bar/app_bar.h"
 #include "roo_windows/material3/button/navigation.h"
 #include "roo_windows/material3/typography.h"
@@ -95,11 +97,18 @@ class HeatingDetails : public FlexLayout {
         app_bar_(context, material3::AppBarVariant::kMediumFlexible),
         back_(context),
         more_(context, ic_outlined_24_navigation_more_vert()),
+        scroller_(context),
         content_(context, FlexDirection::kColumn),
         status_(context, "Collector 41.8 °C",
                 material3::text_style_title_medium()),
         feedback_(context, "Heating is adding 3.2 °C per hour",
-                  material3::text_style_body_medium()) {
+                  material3::text_style_body_medium()),
+        pump_(context, "Circulation pump: running",
+              material3::text_style_body_large()),
+        target_(context, "Target water temperature: 28 °C",
+                material3::text_style_body_large()),
+        schedule_(context, "Heating schedule: 08:00–18:00",
+                  material3::text_style_body_large()) {
     // Flexible variants make room for both a hierarchical title and useful
     // supporting context. Use the large variant when even more emphasis is
     // appropriate; medium fits this landscape device comfortably.
@@ -115,9 +124,23 @@ class HeatingDetails : public FlexLayout {
     content_.setGap(Scaled(6));
     content_.add(status_);
     content_.add(feedback_);
+    content_.add(pump_);
+    content_.add(target_);
+    content_.add(schedule_);
+    scroller_.setContents(content_);
+
+    // The bar stays outside the scrolling viewport. Content origins become
+    // negative when scrolling down; positive top overscroll stays flat.
+    // The initial origin is zero, matching the bar's default flat surface.
+    scroller_.setOnScrollPositionChanged([this](ScrollPosition,
+                                                ScrollPosition current) {
+      app_bar_.setSurfaceState(current.y < 0
+                                   ? material3::AppBarSurfaceState::kScrolled
+                                   : material3::AppBarSurfaceState::kFlat);
+    });
 
     add(app_bar_);
-    add(content_, {.flex_grow = 1});
+    add(scroller_, {.flex_grow = 1});
   }
 
   // The task handles Back here because this standalone demo has one screen.
@@ -130,9 +153,13 @@ class HeatingDetails : public FlexLayout {
   material3::AppBar app_bar_;
   material3::BackButton back_;
   ActionIcon more_;
+  ScrollablePanel scroller_;
   FlexLayout content_;
   TextLabel status_;
   TextLabel feedback_;
+  TextLabel pump_;
+  TextLabel target_;
+  TextLabel schedule_;
 };
 
 }  // namespace

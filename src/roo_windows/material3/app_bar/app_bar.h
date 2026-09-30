@@ -240,13 +240,13 @@ class SearchAppBar : public Material3Container {
   };
 
   void replaceSlot(Widget*& slot, WidgetRef widget);
+  Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
+  void onLayout(bool changed, const Rect& rect) override;
+
   EmbeddedSearchBar search_entry_;
   Widget* leading_;
   Widget* trailing_[2];
   AppBarSurfaceState surface_state_;
-
-  Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
-  void onLayout(bool changed, const Rect& rect) override;
 };
 
 }  // namespace roo_windows::material3
