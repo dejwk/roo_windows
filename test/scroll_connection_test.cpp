@@ -18,6 +18,69 @@ class ProbeWidget : public Widget {
   }
 };
 
+class DragPanel : public SimpleScrollablePanel {
+ public:
+  using SimpleScrollablePanel::onDrag;
+  using SimpleScrollablePanel::onDragStart;
+  using SimpleScrollablePanel::SimpleScrollablePanel;
+};
+
+class DistanceConsumer : public ScrollConnection {
+ public:
+  using ScrollConnection::ScrollConnection;
+  YDim amount = 0;
+  YDim onPreScroll(YDim available) override {
+    YDim next = std::max<YDim>(0, std::min<YDim>(48, amount - available));
+    YDim consumed = amount - next;
+    amount = next;
+    return consumed;
+  }
+  bool canScroll() const override { return true; }
+};
+
+// Verifies the connection consumes a prefix, callbacks report content only,
+// and reversing expands the connection before moving content.
+TEST_F(ScrollConnectionTest, SignedConsumptionAndCallbackCoexistence) {
+  ProbeWidget owner(context());
+  DragPanel panel(context());
+  ColorBoxWidget content(context(), roo_display::color::White,
+                         Dimensions(100, 600));
+  panel.setContents(content);
+  panel.measure(WidthSpec::Exactly(100), HeightSpec::Exactly(200));
+  panel.layout(Rect(0, 0, 99, 199));
+  auto connection = std::make_shared<DistanceConsumer>(owner, panel);
+  context().scrollConnections().install(connection);
+  int calls = 0;
+  panel.setOnScrollPositionChanged(
+      [&](ScrollPosition, ScrollPosition) { ++calls; });
+  panel.onDragStart(0, 0);
+  panel.onDrag(0, 0, 0, -60);
+  EXPECT_EQ(48, connection->amount);
+  EXPECT_EQ(-12, panel.getScrollPosition().y);
+  EXPECT_EQ(1, calls);
+  panel.onDrag(0, 0, 0, 10);
+  EXPECT_EQ(38, connection->amount);
+  EXPECT_EQ(-12, panel.getScrollPosition().y);
+  EXPECT_EQ(1, calls);
+}
+
+// Verifies a connection remains scrollable even when all body content fits.
+TEST_F(ScrollConnectionTest, ShortContentStillConsumesBarTravel) {
+  ProbeWidget owner(context());
+  DragPanel panel(context());
+  ColorBoxWidget content(context(), roo_display::color::White,
+                         Dimensions(100, 20));
+  panel.setContents(content);
+  panel.measure(WidthSpec::Exactly(100), HeightSpec::Exactly(200));
+  panel.layout(Rect(0, 0, 99, 199));
+  auto connection = std::make_shared<DistanceConsumer>(owner, panel);
+  context().scrollConnections().install(connection);
+  panel.onDragStart(0, 0);
+  panel.onDrag(0, 0, 0, -20);
+  EXPECT_EQ(20, connection->amount);
+  EXPECT_EQ(0, panel.getScrollPosition().y);
+}
+
 // Verifies both endpoint indexes, busy protection, and atomic failed rebinding.
 TEST_F(ScrollConnectionTest, RegistrationAndDispatchLifetime) {
   ProbeWidget owner(context());

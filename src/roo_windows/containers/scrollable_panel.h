@@ -268,6 +268,10 @@ class SimpleScrollablePanel : public Container,
   scroll_motion::Geometry motionGeometry() const;
   ScrollPosition currentScrollPosition() const;
   void applyScrollResult(const scroll_motion::Result& result);
+  void applyConnectedDelta(internal::ScrollConnection& connection, XDim dx,
+                           YDim dy);
+  void finishConnectedMotion(internal::ScrollConnection& connection);
+  static scroll_motion::Geometry FreeMotionGeometry(Direction direction);
   void notifyScrollPositionChanged(ScrollPosition previous);
 
   friend class ScrollableBlitPanel;

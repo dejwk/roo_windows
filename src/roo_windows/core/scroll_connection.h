@@ -53,6 +53,14 @@ class ScrollConnection {
   /// Resets participant state after replacing content.
   virtual void reset() {}
 
+  // Connected motion samples and raw drag coordinates. Ordinary panels retain
+  // their existing State and pay no extra instance cost for coordination.
+  ScrollPosition trajectory = {0, 0};
+  ScrollPosition raw = {0, 0};
+  ScrollSource source = ScrollSource::kGeometry;
+  bool kinetic = false;
+  bool applying = false;
+
   /// Guards dispatch against public rebind/clear while retaining the record.
   class Dispatch {
    public:

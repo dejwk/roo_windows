@@ -112,6 +112,12 @@ class State {
   /// active.
   bool isAnimating() const;
 
+  /// Resolves raw drag coordinates with the same resistance as ordinary input.
+  Result resolveDrag(const Geometry& geometry, XDim current_x, YDim current_y,
+                     XDim raw_x, YDim raw_y) const {
+    return scrollToDraggedRaw(geometry, current_x, current_y, raw_x, raw_y);
+  }
+
   /// Snaps to the requested content origin after clamping it to scroll bounds.
   Result scrollTo(const Geometry& geometry, XDim current_x, YDim current_y,
                   XDim target_x, YDim target_y);

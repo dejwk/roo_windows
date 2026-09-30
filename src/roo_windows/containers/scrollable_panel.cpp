@@ -88,7 +88,16 @@ void SimpleScrollablePanel::setContentsInternal(WidgetRef new_contents,
     attachChild(std::move(new_contents));
     attachChild(scroll_bar_);
   }
-  if (notify) notifyScrollPositionChanged(previous);
+  if (notify) {
+    auto connection = internal::ScrollConnectionRegistry::Find(*this);
+    if (connection != nullptr) {
+      connection->kinetic = false;
+      connection->cancel();
+      connection->reset();
+      connection->raw = getScrollPosition();
+    }
+    notifyScrollPositionChanged(previous);
+  }
 }
 
 void SimpleScrollablePanel::setOnScrollPositionChanged(ScrollHandler handler) {
@@ -104,7 +113,7 @@ void SimpleScrollablePanel::notifyScrollPositionChanged(
   auto connection = internal::ScrollConnectionRegistry::Find(*this);
   if (connection != nullptr) {
     internal::ScrollConnection::Dispatch dispatch(connection);
-    connection->onPositionChanged(previous, current, ScrollSource::kGeometry);
+    connection->onPositionChanged(previous, current, connection->source);
   }
   context().widgetEvents().dispatchScrollPositionChange(*this, previous,
                                                         current);
@@ -114,9 +123,23 @@ void SimpleScrollablePanel::scrollTo(XDim x, YDim y) {
   Widget* c = contents();
   if (c == nullptr) return;
   cancelMotion();
+  auto connection = internal::ScrollConnectionRegistry::Find(*this);
+  internal::ScrollConnection::Dispatch dispatch(connection);
+  if (connection != nullptr) {
+    connection->cancel();
+    connection->kinetic = false;
+    connection->source = ScrollSource::kProgrammatic;
+  }
   ScrollPosition current = currentScrollPosition();
   applyScrollResult(
       motion_.scrollTo(motionGeometry(), current.x, current.y, x, y));
+  if (connection != nullptr) {
+    // Home must also expand a bar when the content was already at zero.
+    connection->onPositionChanged(current, getScrollPosition(),
+                                  ScrollSource::kProgrammatic);
+    connection->raw = getScrollPosition();
+    connection->source = ScrollSource::kGeometry;
+  }
 }
 
 void SimpleScrollablePanel::scrollToBottom() {
@@ -278,7 +301,16 @@ void SimpleScrollablePanel::onLayout(bool changed, const Rect& rect) {
   c->layout(bounds);
   scroll_bar_.layout(
       Rect(rect.width() - Scaled(6), 0, rect.width() - 1, rect.height() - 1));
-  update();
+  auto connection = internal::ScrollConnectionRegistry::Find(*this);
+  if (connection == nullptr) {
+    update();
+  } else if (!connection->applying) {
+    ScrollPosition current = currentScrollPosition();
+    scroll_motion::Geometry geometry = motionGeometry();
+    applyScrollResult({geometry.clampX(current.x), geometry.clampY(current.y),
+                       true, false, false});
+    connection->raw = getScrollPosition();
+  }
 }
 
 void SimpleScrollablePanel::execute(roo_scheduler::EventID id) {
@@ -452,6 +484,12 @@ void SimpleScrollablePanel::onDragStart(XDim x, YDim y) {
   (void)y;
   cancelMotion();
   cancelHideScrollBarUpdate();
+  auto connection = internal::ScrollConnectionRegistry::Find(*this);
+  if (connection != nullptr) {
+    connection->cancel();
+    connection->kinetic = false;
+    connection->raw = getScrollPosition();
+  }
   if (contents() != nullptr) {
     ScrollPosition current = currentScrollPosition();
     applyScrollResult(motion_.onDown(motionGeometry(), current.x, current.y));
@@ -486,6 +524,65 @@ void SimpleScrollablePanel::onSingleTapUp(XDim x, YDim y) {
   scheduleHideScrollBarUpdate();
 }
 
+scroll_motion::Geometry SimpleScrollablePanel::FreeMotionGeometry(
+    Direction direction) {
+  // Max fling displacement is < 42k pixels; vertical coordinates have 24 bits.
+  // Horizontal coordinates retain the existing 16-bit range.
+  return {-30000, 30000, -1000000, 1000000, AxisForDirection(direction)};
+}
+
+void SimpleScrollablePanel::applyConnectedDelta(
+    internal::ScrollConnection& connection, XDim dx, YDim dy) {
+  internal::ScrollConnection::Dispatch dispatch(
+      internal::ScrollConnectionRegistry::Find(*this));
+  connection.applying = true;
+  ScrollPosition current = getScrollPosition();
+  scroll_motion::Geometry geometry = motionGeometry();
+  if (geometry.isInOvershoot(current.x, current.y)) {
+    connection.raw.x += dx;
+    connection.raw.y += dy;
+    applyScrollResult(motion_.resolveDrag(geometry, current.x, current.y,
+                                          connection.raw.x, connection.raw.y));
+    connection.applying = false;
+    return;
+  }
+  YDim pre = connection.onPreScroll(dy);
+  DCHECK(pre >= std::min<YDim>(0, dy) && pre <= std::max<YDim>(0, dy));
+  YDim remaining = dy - pre;
+  // Removing bar height adds the same amount to the remaining body viewport.
+  YDim min_y = std::min<YDim>(0, geometry.minY() - pre);
+  YDim legal = std::max(min_y, std::min<YDim>(0, connection.raw.y + remaining));
+  YDim consumed = legal - connection.raw.y;
+  // Existing overscroll must be unwound before another participant consumes.
+  YDim available = remaining - consumed;
+  if ((available < 0) != (remaining < 0)) available = 0;
+  YDim post = connection.onPostScroll(available);
+  DCHECK(post >= std::min<YDim>(0, available) &&
+         post <= std::max<YDim>(0, available));
+  connection.raw.x += dx;
+  connection.raw.y += remaining - post;
+  if (getMainWindow() != nullptr && (pre != 0 || post != 0))
+    getMainWindow()->updateLayout();
+  geometry = motionGeometry();
+  applyScrollResult(motion_.resolveDrag(geometry, current.x, current.y,
+                                        connection.raw.x, connection.raw.y));
+  connection.applying = false;
+}
+
+void SimpleScrollablePanel::finishConnectedMotion(
+    internal::ScrollConnection& connection) {
+  connection.kinetic = false;
+  cancelMotion();
+  motion_ = scroll_motion::State();
+  ScrollPosition current = getScrollPosition();
+  auto spring = motion_.onTouchUp(motionGeometry(), current.x, current.y, 0);
+  applyScrollResult(spring);
+  if (spring.needs_tick)
+    startMotionTrack();
+  else
+    connection.finish();
+}
+
 void SimpleScrollablePanel::onDrag(XDim x, YDim y, XDim dx, YDim dy) {
   (void)x;
   (void)y;
@@ -494,7 +591,10 @@ void SimpleScrollablePanel::onDrag(XDim x, YDim y, XDim dx, YDim dy) {
     return;
   }
   scroll_motion::Geometry geometry = motionGeometry();
-  if (!geometry.canScroll()) return;
+  auto connection = internal::ScrollConnectionRegistry::Find(*this);
+  if (!geometry.canScroll() &&
+      (connection == nullptr || !connection->canScroll()))
+    return;
   if (scroll_bar_gesture_) {
     if (is_scroll_bar_scrolled_) {
       // Calculate the difference in pixels between the minimum and maximum
@@ -509,6 +609,11 @@ void SimpleScrollablePanel::onDrag(XDim x, YDim y, XDim dx, YDim dy) {
       // The new y might be out of range, but that's ok - scrollBy will trim it.
       scrollBy(0, y_shift);
     }
+  } else if (connection != nullptr) {
+    internal::ScrollConnection::Dispatch dispatch(connection);
+    connection->source = ScrollSource::kDrag;
+    applyConnectedDelta(*connection, dx, dy);
+    connection->source = ScrollSource::kGeometry;
   } else {
     ScrollPosition current = currentScrollPosition();
     applyScrollResult(motion_.onDrag(geometry, current.x, current.y, dx, dy));
@@ -530,6 +635,23 @@ void SimpleScrollablePanel::onFling(XDim x, YDim y, XDim vx, YDim vy) {
   }
   ScrollPosition current = currentScrollPosition();
   cancelMotion();
+  auto connection = internal::ScrollConnectionRegistry::Find(*this);
+  if (connection != nullptr &&
+      !motionGeometry().isInOvershoot(current.x, current.y)) {
+    connection->cancel();
+    connection->raw = current;
+    connection->trajectory = {0, 0};
+    scroll_motion::Result free =
+        motion_.onFling(FreeMotionGeometry(direction_), 0, 0, vx, vy, 0);
+    connection->kinetic = free.needs_tick;
+    // The legacy kick is already included in the first trajectory sample.
+    connection->source = ScrollSource::kKinetic;
+    applyConnectedDelta(*connection, free.x, free.y);
+    connection->trajectory = {free.x, free.y};
+    connection->source = ScrollSource::kGeometry;
+    if (connection->kinetic) startMotionTrack();
+    return;
+  }
   scroll_motion::Result result =
       motion_.onFling(motionGeometry(), current.x, current.y, vx, vy, 0);
   applyScrollResult(result);
@@ -541,6 +663,8 @@ void SimpleScrollablePanel::onDragFinished(XDim vx, YDim vy) {
   (void)vy;
   scroll_bar_gesture_ = false;
   is_scroll_bar_scrolled_ = false;
+  auto connection = internal::ScrollConnectionRegistry::Find(*this);
+  if (connection != nullptr && connection->kinetic) return;
   if (contents() != nullptr) {
     ScrollPosition current = currentScrollPosition();
     cancelMotion();
@@ -555,6 +679,7 @@ void SimpleScrollablePanel::onDragFinished(XDim vx, YDim vy) {
       scheduleHideScrollBarUpdate();
     }
   }
+  if (connection != nullptr && !motion_.isAnimating()) connection->finish();
 }
 
 void SimpleScrollablePanel::onAnimationFrame(AnimationTag tag,
@@ -566,6 +691,23 @@ void SimpleScrollablePanel::onAnimationFrame(AnimationTag tag,
   // Fling admission already applies the legacy 20 ms kick. Keep the zero-time
   // sample from momentarily undoing that immediate visual response.
   if (sample.elapsed.inMicros() == 0) return;
+  auto connection = internal::ScrollConnectionRegistry::Find(*this);
+  internal::ScrollConnection::Dispatch dispatch(connection);
+  if (connection != nullptr && connection->kinetic) {
+    auto free =
+        motion_.tick(FreeMotionGeometry(direction_), connection->trajectory.x,
+                     connection->trajectory.y, sample.elapsed.inMillis());
+    connection->source = ScrollSource::kKinetic;
+    applyConnectedDelta(*connection, free.x - connection->trajectory.x,
+                        free.y - connection->trajectory.y);
+    connection->trajectory = {free.x, free.y};
+    connection->source = ScrollSource::kGeometry;
+    ScrollPosition current = getScrollPosition();
+    if (!free.needs_tick ||
+        motionGeometry().isInOvershoot(current.x, current.y))
+      finishConnectedMotion(*connection);
+    return;
+  }
   ScrollPosition current = currentScrollPosition();
   scroll_motion::Result result = motion_.tick(
       motionGeometry(), current.x, current.y,
@@ -574,6 +716,7 @@ void SimpleScrollablePanel::onAnimationFrame(AnimationTag tag,
   if (result.needs_tick) return;
 
   cancelMotion();
+  if (connection != nullptr) connection->finish();
   if (scroll_bar_presence_ ==
       VerticalScrollBar::Presence::kShownWhenScrolling) {
     deadline_hide_scrollbar_ = roo_time::Uptime::Now() + kDelayHideScrollbar;
@@ -586,6 +729,11 @@ void SimpleScrollablePanel::onPresentationChanged(
   if (change.state == PresentationState::kPresented &&
       !change.detached_since_delivery) {
     return;
+  }
+  auto connection = internal::ScrollConnectionRegistry::Find(*this);
+  if (connection != nullptr) {
+    connection->kinetic = false;
+    connection->cancel();
   }
   stopMotionAndClamp();
   cancelHideScrollBarUpdate();
