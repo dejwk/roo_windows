@@ -18,7 +18,7 @@ struct LayoutScaffoldTheme {
 
 /// Selects flat and scrolled title app-bar surfaces.
 struct AppBarTheme {
-  ColorToken flatContainer = ColorToken::kSurface;
+  ColorToken flatContainer = ColorToken::kSurfaceContainerLowest;
   ColorToken scrolledContainer = ColorToken::kSurfaceContainer;
 };
 
