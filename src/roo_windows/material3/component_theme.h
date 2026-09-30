@@ -29,7 +29,7 @@ struct SearchBarTheme {
 
 /// Selects outer and embedded surfaces for a search app bar.
 struct SearchAppBarTheme {
-  ColorToken flatContainer = ColorToken::kSurface;
+  ColorToken flatContainer = ColorToken::kSurfaceContainerLowest;
   ColorToken scrolledContainer = ColorToken::kSurfaceContainer;
   ColorToken flatSearchContainer = ColorToken::kSurfaceContainer;
   ColorToken scrolledSearchContainer = ColorToken::kSurfaceContainerHighest;
