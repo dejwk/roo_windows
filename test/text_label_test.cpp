@@ -7,6 +7,7 @@
 #include "roo_display.h"
 #include "roo_display/core/offscreen.h"
 #include "roo_display/ui/text_label.h"
+#include "roo_fonts/NotoSerif_Italic/40.h"
 #include "roo_scheduler.h"
 #include "roo_windows.h"
 #include "roo_windows/containers/flex_layout.h"
@@ -197,18 +198,13 @@ TEST(TextLabel, ContentBoundsFollowDrawableInkExtents) {
   constexpr int16_t kLabelHeight = 40;
   label.layout(Rect(0, 0, dims.width() - 1, kLabelHeight - 1));
 
-  auto metrics =
-      font.font().getHorizontalStringMetrics("abc", font.fontOptions());
-  const int16_t excess = font.lineGap() + font.descent();
-  const int16_t excess_floor_half =
-      excess >= 0 ? excess / 2 : -((-excess + 1) / 2);
-  const int16_t excess_ceil_half = excess - excess_floor_half;
-  Rect anchor_bounds(0, -(font.ascent() + font.lineGap()) + excess_floor_half,
-                     metrics.advance() - 1, -font.descent() + excess_ceil_half);
-  auto offset = ResolveAlignmentOffset(
-      label.bounds(), anchor_bounds, roo_display::kLeft | roo_display::kMiddle);
+  roo_display::StringViewLabel drawable("abc", font.font(), color::Black,
+                                        font.fontOptions());
+  auto offset =
+      ResolveAlignmentOffset(label.bounds(), Rect(drawable.anchorExtents()),
+                             roo_display::kLeft | roo_display::kMiddle);
   Rect expected =
-      Rect(metrics.screen_extents()).translate(offset.first, offset.second);
+      Rect(drawable.extents()).translate(offset.first, offset.second);
 
   EXPECT_EQ(expected, label.getContentBounds());
 }
@@ -232,11 +228,51 @@ TEST(TextLabel, MiddleGravityCentersAscentForBothLabelKinds) {
 
   auto metrics =
       style.font().getHorizontalStringMetrics("Wi-Fi", style.fontOptions());
-  const int16_t baseline = (kHeight - 1) / 2 + (style.ascent() + 1) / 2;
+  const int16_t baseline = (kHeight + style.ascent()) / 2;
   Rect expected = Rect(metrics.screen_extents()).translate(0, baseline);
 
   EXPECT_EQ(expected, owned.getContentBounds());
   EXPECT_EQ(expected, viewed.getContentBounds());
+}
+
+// Verifies both label kinds align using drawable anchors but retain actual
+// italic ink overhangs, clipping only at widget bounds. Style leading still
+// controls minimum height; tracking affects both alignment and ink metrics.
+TEST(TextLabel, OverhangingInkUsesDrawableExtentsForAllGravities) {
+  roo_scheduler::SchedulingService scheduler;
+  Environment bootstrap(scheduler);
+  ApplicationContext context = MakeContext(bootstrap);
+  for (int16_t leading : {0, 7}) {
+    TextStyle style(font_NotoSerif_Italic_40(), leading, 2);
+    roo_display::StringViewLabel drawable(kOverhangText, style.font(),
+                                          color::Black, style.fontOptions());
+    ASSERT_LT(drawable.extents().xMin(), drawable.anchorExtents().xMin());
+    for (HorizontalGravity horizontal :
+         {kGravityLeft, kGravityCenter, kGravityRight}) {
+      for (VerticalGravity vertical :
+           {kGravityTop, kGravityMiddle, kGravityBottom}) {
+        Gravity gravity = horizontal | vertical;
+        TextLabel owned(context, kOverhangText, style, gravity);
+        StringViewLabel viewed(context, kOverhangText, style, gravity);
+        owned.setPadding(PaddingSize::kNone);
+        viewed.setPadding(PaddingSize::kNone);
+        EXPECT_EQ(style.lineHeight(),
+                  owned.getSuggestedMinimumDimensions().height());
+        for (int width : {32, 140}) {
+          Rect bounds(0, 0, width - 1, 79);
+          owned.layout(bounds);
+          viewed.layout(bounds);
+          auto offset = ResolveAlignmentOffset(
+              bounds, Rect(drawable.anchorExtents()), gravity.asAlignment());
+          Rect expected = Rect::Intersect(
+              bounds,
+              Rect(drawable.extents()).translate(offset.first, offset.second));
+          EXPECT_EQ(expected, owned.getContentBounds());
+          EXPECT_EQ(expected, viewed.getContentBounds());
+        }
+      }
+    }
+  }
 }
 
 // Verifies that an empty TextLabel (both std::string and string_view flavors)

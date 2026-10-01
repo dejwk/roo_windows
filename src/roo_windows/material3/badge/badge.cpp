@@ -49,8 +49,8 @@ void MeasureTextBadge(roo::string_view text, int16_t& width, int16_t& height) {
                         style.fontOptions());
   Box extents = label.anchorExtents();
   width = std::max<int16_t>(kTextMinWidth, extents.width() + 2 * kTextPaddingH);
-  height = std::max<int16_t>(
-      kTextMinHeight, style.ascent() + 2 * kTextPaddingV);
+  height =
+      std::max<int16_t>(kTextMinHeight, style.ascent() + 2 * kTextPaddingV);
 }
 
 int16_t MaxCaptionCharacterSpan() {
@@ -80,8 +80,7 @@ int16_t ConservativeTextWidth() {
 
 int16_t ConservativeTextHeight() {
   return std::max<int16_t>(
-      kTextMinHeight,
-      2 * kTextPaddingV + text_style_label_small().ascent());
+      kTextMinHeight, 2 * kTextPaddingV + text_style_label_small().ascent());
 }
 
 uint8_t CornerRadius(const Rect& bounds) {
@@ -93,14 +92,14 @@ uint8_t CornerRadius(const Rect& bounds) {
 int16_t CornerInset(uint8_t radius) { return radius - (181 * radius) / 256; }
 
 Rect ResolveBadgeBounds(const Rect& anchor_bounds,
-                        roo_display::Alignment alignment,
-                        int16_t badge_width, int16_t badge_height) {
+                        roo_display::Alignment alignment, int16_t badge_width,
+                        int16_t badge_height) {
   if (anchor_bounds.empty() || badge_width <= 0 || badge_height <= 0) {
     return EmptyRect();
   }
   Rect badge_bounds(0, 0, badge_width - 1, badge_height - 1);
-  const auto offset = ResolveAlignmentOffset(anchor_bounds, badge_bounds,
-                                             alignment);
+  const auto offset =
+      ResolveAlignmentOffset(anchor_bounds, badge_bounds, alignment);
   return badge_bounds.translate(offset.first, offset.second);
 }
 
@@ -160,7 +159,8 @@ void Badge::setValue(unsigned int number) {
   setText(roo::string_view(buffer));
 }
 
-bool Badge::layout(const Rect& anchor_bounds, roo_display::Alignment alignment) {
+bool Badge::layout(const Rect& anchor_bounds,
+                   roo_display::Alignment alignment) {
   bounds_ = EmptyRect();
   valid_ = false;
   if (!visible() || anchor_bounds.empty()) return false;
@@ -215,17 +215,12 @@ void Badge::paint(PaintContext& ctx, const Theme& theme) const {
         const TextStyle& style = text_style_label_small();
         StringViewLabel label(text(), style.font(), text_color,
                               style.fontOptions());
-        // Center the baseline-to-ascent span, deliberately ignoring line
-        // leading and descenders. For even-sized spans this leaves equal
-        // whole-pixel padding above and below.
-        roo_display::VAlign vertical =
-            roo_display::kBaseline.toTop().shiftBy(
-                (bounds_.height() + style.ascent()) / 2);
         // drawTiled resolves the label and its badge-colored background in a
         // single pass. The sub-context clips that pass to the already-safe
         // inscribed rectangle while alignment remains relative to the full
         // badge bounds.
-        sub.drawTiled(label, bounds_, roo_display::kCenter | vertical);
+        sub.drawTiled(label, bounds_,
+                      roo_display::kCenter | roo_display::kMiddle);
       } else {
         sub.fillRect(inner, badge_color);
       }

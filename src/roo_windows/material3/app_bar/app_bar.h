@@ -33,23 +33,23 @@ class AppBarText : public Widget {
  public:
   explicit AppBarText(ApplicationContext& context) : Widget(context) {}
 
-  void setText(roo::string_view text) { text_ = text; }
+  void setText(roo::string_view text);
   roo::string_view text() const { return text_; }
 
   /// Chooses the Material typography used by this bounded presentation child.
-  void setTextStyle(const TextStyle& text_style) { text_style_ = &text_style; }
+  void setTextStyle(const TextStyle& text_style);
 
-  void setAlignment(roo_display::Alignment alignment) {
-    alignment_ = alignment;
-  }
+  void setAlignment(roo_display::Alignment alignment);
 
   void setUseOnSurfaceVariant(bool value) { use_on_surface_variant_ = value; }
+
+  /// Reports painted ink independently of the logical layout rectangle.
+  Insets getInkInsets() const override;
 
   Dimensions getSuggestedMinimumDimensions() const override;
   void paint(PaintContext& ctx) const override;
 
  protected:
-  void paintText(PaintContext& ctx, bool center_ink) const;
   virtual roo_display::Font::Options fontOptions(const TextStyle& style) const {
     return style.fontOptions();
   }
@@ -62,11 +62,10 @@ class AppBarText : public Widget {
   bool use_on_surface_variant_ = false;
 };
 
-// Title centering follows the ascent band, matching ordinary text labels.
+// Titles share advance-width and ascent alignment with other app-bar text.
 class AppBarTitle final : public AppBarText {
  public:
   using AppBarText::AppBarText;
-  void paint(PaintContext& ctx) const override { paintText(ctx, true); }
   roo_display::Font::Options fontOptions(const TextStyle& style) const override;
 };
 

@@ -8,52 +8,6 @@ namespace roo_windows {
 
 namespace {
 
-int16_t FloorHalf(int16_t value) {
-  return value >= 0 ? value / 2 : -((-value + 1) / 2);
-}
-
-int16_t CeilHalf(int16_t value) { return value - FloorHalf(value); }
-
-roo_display::Box StyledLabelAnchorExtents(const TextStyle& text_style,
-                                          int16_t advance) {
-  // Shift the traditional single-line anchor box so that its middle follows
-  // the middle of the ascent. Descent does not affect visual centering.
-  const int16_t excess = text_style.lineGap() + text_style.descent();
-  return roo_display::Box(
-      0, -(text_style.ascent() + text_style.lineGap()) + FloorHalf(excess),
-      advance - 1, -text_style.descent() + CeilHalf(excess));
-}
-
-class StyledStringViewLabel : public roo_display::Drawable {
- public:
-  StyledStringViewLabel(roo::string_view text, const TextStyle& text_style,
-                        roo_display::Color color)
-      : text_(text),
-        text_style_(text_style),
-        color_(color),
-        metrics_(text_style.font().getHorizontalStringMetrics(
-            text, text_style.fontOptions())) {}
-
-  roo_display::Box extents() const override {
-    return metrics_.screen_extents();
-  }
-
-  roo_display::Box anchorExtents() const override {
-    return StyledLabelAnchorExtents(text_style_, metrics_.advance());
-  }
-
- private:
-  void drawTo(const roo_display::Surface& surface) const override {
-    text_style_.font().drawHorizontalString(surface, text_.data(), text_.size(),
-                                            color_, text_style_.fontOptions());
-  }
-
-  roo::string_view text_;
-  const TextStyle& text_style_;
-  roo_display::Color color_;
-  roo_display::GlyphMetrics metrics_;
-};
-
 Dimensions MeasureLabelText(const TextStyle& text_style,
                             roo::string_view text) {
   auto metrics = text_style.font().getHorizontalStringMetrics(
@@ -77,17 +31,12 @@ Rect ResolveLabelContentBounds(const Rect& logical_bounds,
                                const TextStyle& text_style,
                                roo::string_view text,
                                roo_display::Alignment alignment) {
-  const auto& font = text_style.font();
-  auto metrics =
-      font.getHorizontalStringMetrics(text, text_style.fontOptions());
-  Rect anchor_bounds(StyledLabelAnchorExtents(text_style, metrics.advance()));
-  auto offset =
-      ResolveAlignmentOffset(logical_bounds, anchor_bounds, alignment);
-  // A constrained label may clip a long string. Its direct-paint exclusion
-  // must not extend into adjacent sibling or surface pixels.
-  return Rect::Intersect(
-      logical_bounds,
-      Rect(metrics.screen_extents()).translate(offset.first, offset.second));
+  roo_display::StringViewLabel label(text, text_style.font(),
+                                     roo_display::color::Transparent,
+                                     text_style.fontOptions());
+  auto offset = ResolveAlignmentOffset(logical_bounds,
+                                       Rect(label.anchorExtents()), alignment);
+  return Rect(label.extents()).translate(offset.first, offset.second);
 }
 
 }  // namespace
@@ -114,12 +63,17 @@ TextLabel::TextLabel(ApplicationContext& context, std::string value,
 void TextLabel::paint(PaintContext& ctx) const {
   roo_display::Color color =
       color_.a() == 0 ? parent()->defaultColor() : color_;
-  ctx.drawTiled(StyledStringViewLabel(value_, textStyle(), color), bounds(),
-                adjustAlignment(gravity_.asAlignment()));
+  roo_display::StringViewLabel label(value_, textStyle().font(), color,
+                                     textStyle().fontOptions());
+  auto offset = ResolveAlignmentOffset(bounds(), Rect(label.anchorExtents()),
+                                       adjustAlignment(gravity_.asAlignment()));
+  ctx.drawObject(
+      roo_display::Tile(&label, label.extents(), roo_display::kNoAlign),
+      offset.first, offset.second);
 }
 
 Insets TextLabel::getInkInsets() const {
-  if (value_.empty()) return Insets::Zero();
+  if (value_.empty()) return Insets(0, 0, bounds().width(), bounds().height());
   return InsetsFromContentBounds(
       bounds(),
       ResolveLabelContentBounds(bounds(), textStyle(), value_,
@@ -221,12 +175,17 @@ StringViewLabel::StringViewLabel(ApplicationContext& context,
 void StringViewLabel::paint(PaintContext& ctx) const {
   roo_display::Color color =
       color_.a() == 0 ? parent()->defaultColor() : color_;
-  ctx.drawTiled(StyledStringViewLabel(value_, textStyle(), color), bounds(),
-                adjustAlignment(gravity_.asAlignment()));
+  roo_display::StringViewLabel label(value_, textStyle().font(), color,
+                                     textStyle().fontOptions());
+  auto offset = ResolveAlignmentOffset(bounds(), Rect(label.anchorExtents()),
+                                       adjustAlignment(gravity_.asAlignment()));
+  ctx.drawObject(
+      roo_display::Tile(&label, label.extents(), roo_display::kNoAlign),
+      offset.first, offset.second);
 }
 
 Insets StringViewLabel::getInkInsets() const {
-  if (value_.empty()) return Insets::Zero();
+  if (value_.empty()) return Insets(0, 0, bounds().width(), bounds().height());
   return InsetsFromContentBounds(
       bounds(),
       ResolveLabelContentBounds(bounds(), textStyle(), value_,

@@ -3,8 +3,8 @@
 #include "roo_backport/string_view.h"
 #include "roo_display/color/color.h"
 #include "roo_display/font/font.h"
-#include "roo_windows/core/padding_mixin.h"
 #include "roo_windows/core/gravity.h"
+#include "roo_windows/core/padding_mixin.h"
 #include "roo_windows/core/panel.h"
 #include "roo_windows/core/text_style.h"
 
@@ -32,11 +32,10 @@ class TextLabel : public PaddingMixin<Widget> {
   /// applied within the widget bounds.
   void paint(PaintContext& ctx) const override;
 
-  /// Reports ink insets matching the rendered text rectangle within the
-  /// widget bounds (so partial redraws only touch the glyphs).
+  /// Reports rendered ink, including overhangs beyond logical widget bounds.
   Insets getInkInsets() const override;
 
-  /// Reports the font-measured width/height of the current string.
+  /// Reports the advance width and style line height.
   Dimensions getSuggestedMinimumDimensions() const override;
 
   const std::string& content() const { return value_; }
@@ -96,7 +95,7 @@ class StringViewLabel : public PaddingMixin<Widget> {
   /// Reports ink insets matching the rendered text rectangle.
   Insets getInkInsets() const override;
 
-  /// Reports the font-measured width/height of the current string.
+  /// Reports the advance width and style line height.
   Dimensions getSuggestedMinimumDimensions() const override;
 
   roo::string_view content() const { return value_; }

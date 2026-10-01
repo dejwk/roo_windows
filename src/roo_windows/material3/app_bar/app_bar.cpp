@@ -17,24 +17,6 @@
 namespace roo_windows::material3 {
 namespace {
 
-class CenteredTitleLabel : public roo_display::StringViewLabel {
- public:
-  CenteredTitleLabel(const roo_display::StringViewLabel& label, bool horizontal)
-      : StringViewLabel(label), horizontal_(horizontal) {}
-  roo_display::Box anchorExtents() const override {
-    roo_display::Box advance = StringViewLabel::anchorExtents();
-    roo_display::Box ink = extents();
-    // Match ordinary TextLabel: center the ascent band, excluding descent.
-    // Centering a word's full ink lifts its main body whenever it has a g/p/y.
-    return roo_display::Box(horizontal_ ? ink.xMin() : advance.xMin(),
-                            -font().metrics().ascent(),
-                            horizontal_ ? ink.xMax() : advance.xMax(), 0);
-  }
-
- private:
-  bool horizontal_;
-};
-
 void CheckTrailingIndex(uint8_t index) {
   CHECK(index < 2) << "Material 3 app-bar trailing index must be 0 or 1";
 }
@@ -158,23 +140,13 @@ roo_display::Color internal::AppBarSubtitle::textColor(
 }
 
 void internal::AppBarText::paint(PaintContext& ctx) const {
-  paintText(ctx, false);
-}
-
-void internal::AppBarText::paintText(PaintContext& ctx, bool center_ink) const {
   if (text_.empty()) return;
   const TextStyle& style =
       text_style_ == nullptr ? text_style_body_medium() : *text_style_;
   roo_display::StringViewLabel label(text_, style.font(),
                                      textColor(ctx.canvas().bgcolor()),
                                      fontOptions(style));
-  if (center_ink) {
-    ctx.canvas().drawTiled(
-        CenteredTitleLabel(label, alignment_.h() == roo_display::kCenter),
-        bounds(), alignment_);
-  } else {
-    ctx.canvas().drawTiled(label, bounds(), alignment_);
-  }
+  ctx.canvas().drawTiled(label, bounds(), alignment_);
 }
 
 AppBar::AppBar(ApplicationContext& context, AppBarVariant variant)

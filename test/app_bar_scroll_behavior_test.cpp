@@ -9,7 +9,6 @@
 #include "roo_windows/material3/button/icon_button.h"
 #include "roo_windows/material3/layout_scaffold/layout_scaffold.h"
 #include "roo_windows/material3/typography.h"
-#include "roo_windows/widgets/text_label.h"
 #include "roo_windows_render_test_support.h"
 
 namespace roo_windows {
@@ -383,15 +382,79 @@ TEST_F(MovingAppBarTest, CollapsedTitlePaintIsCentered) {
       test::CaptureRgb(offscreen_.raster(), 0, 0, 320, 240),
       "test/goldens/app_bar_scroll/collapsed_solar.ppm",
       "app_bar_collapsed_solar"));
-  // A normal middle-aligned label is the independent reference for baseline
-  // placement. Compare actual dark pixels, rather than child layout bounds.
-  auto reference = std::make_unique<TextLabel>(
-      context(), "Solar heating", text_style_title_large(),
-      roo_display::color::Black, kGravityLeft | kGravityMiddle);
-  app_.add(std::move(reference), roo_display::Box(0, 80, 319, 143));
-  ASSERT_TRUE(refresh());
-  EXPECT_EQ(DarkInkRows(offscreen_.raster(), 80),
+  const TextStyle& style = text_style_title_large();
+  const roo_display::Box ink =
+      style.font()
+          .getHorizontalStringMetrics("Solar heating", style.fontOptions())
+          .screen_extents();
+  const int baseline = (64 + style.ascent()) / 2;
+  EXPECT_EQ(std::make_pair(baseline + ink.yMin(), baseline + ink.yMax()),
             DarkInkRows(offscreen_.raster(), 0));
+}
+
+// Verifies half-ascent placement for odd/even line heights, different fonts,
+// and text with descenders, independently of the label alignment helper.
+TEST_F(AppBarScrollBehaviorTest, TitleBaselineUsesHalfAscent) {
+  auto title = std::make_unique<material3::internal::AppBarTitle>(context());
+  auto* title_ptr = title.get();
+  app_.add(std::move(title), roo_display::Box(0, 0, 239, 63));
+  for (const TextStyle* style :
+       {&text_style_title_large(), &text_style_headline_small(),
+        &text_style_headline_medium()}) {
+    title_ptr->setTextStyle(*style);
+    for (int height : {48, 49}) {
+      title_ptr->layout(Rect(0, 0, 239, height - 1));
+      for (const char* text : {"H", "gyp"}) {
+        SCOPED_TRACE(text);
+        SCOPED_TRACE(height);
+        SCOPED_TRACE(style->ascent());
+        title_ptr->setText(text);
+        title_ptr->invalidateInterior();
+        ASSERT_TRUE(refresh());
+        const roo_display::Box ink =
+            style->font()
+                .getHorizontalStringMetrics(text, style->fontOptions())
+                .screen_extents();
+        const int baseline = (height + style->ascent()) / 2;
+        EXPECT_EQ(std::make_pair(baseline + ink.yMin(), baseline + ink.yMax()),
+                  DarkInkRows(offscreen_.raster(), 0));
+      }
+    }
+  }
+}
+
+// Verifies centered titles use the same advance-width and ascent anchors as
+// ordinary app-bar text, including spaces that do not contribute any ink.
+TEST_F(AppBarScrollBehaviorTest, CenteredTitleMatchesStandardTextAlignment) {
+  auto title = std::make_unique<material3::internal::AppBarTitle>(context());
+  auto reference = std::make_unique<material3::internal::AppBarText>(context());
+  auto* title_ptr = title.get();
+  auto* reference_ptr = reference.get();
+  title_ptr->setAlignment(roo_display::kCenter | roo_display::kMiddle);
+  reference_ptr->setAlignment(roo_display::kCenter | roo_display::kMiddle);
+  app_.add(std::move(title), roo_display::Box(0, 0, 239, 63));
+  app_.add(std::move(reference), roo_display::Box(0, 64, 239, 127));
+  for (const TextStyle* style :
+       {&text_style_title_large(), &text_style_headline_medium()}) {
+    title_ptr->setTextStyle(*style);
+    reference_ptr->setTextStyle(*style);
+    for (const char* text : {" Wi-Fi", "gyp ", "Equipment"}) {
+      SCOPED_TRACE(text);
+      title_ptr->setText(text);
+      reference_ptr->setText(text);
+      ASSERT_TRUE(refresh());
+      for (int16_t y = 0; y < 64; ++y) {
+        int16_t reference_y = y + 64;
+        for (int16_t x = 0; x < 240; ++x) {
+          roo_display::Color actual;
+          roo_display::Color expected;
+          offscreen_.raster().readColors(&x, &y, 1, &actual);
+          offscreen_.raster().readColors(&x, &reference_y, 1, &expected);
+          ASSERT_EQ(expected, actual) << "pixel " << x << ", " << y;
+        }
+      }
+    }
+  }
 }
 
 // Verifies expanded, fading, half-collapsed and compact frames with a subtitle
