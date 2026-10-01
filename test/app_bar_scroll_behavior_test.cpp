@@ -2,6 +2,7 @@
 
 #include "golden_image.h"
 #include "gtest/gtest.h"
+#include "roo_display/ui/text_label.h"
 #include "roo_icons/outlined/24/navigation.h"
 #include "roo_windows/containers/flex_layout.h"
 #include "roo_windows/containers/scrollable_panel.h"
@@ -390,6 +391,30 @@ TEST_F(MovingAppBarTest, CollapsedTitlePaintIsCentered) {
   const int baseline = (64 + style.ascent()) / 2;
   EXPECT_EQ(std::make_pair(baseline + ink.yMin(), baseline + ink.yMax()),
             DarkInkRows(offscreen_.raster(), 0));
+  // Compare every pixel with an unclipped label at the intended baseline.
+  // Checking just the vertical ink rows cannot detect a clipped first glyph.
+  roo::byte reference_pixels[320 * 64 * 2];
+  roo_display::OffscreenDevice<roo_display::Argb4444> reference_device(
+      320, 64, reference_pixels, roo_display::Argb4444());
+  roo_display::Display reference_display(reference_device);
+  const roo_display::Color background = bar_->background();
+  reference_display.init(background);
+  {
+    roo_display::DrawingContext dc(reference_display);
+    dc.setBackgroundColor(background);
+    dc.draw(roo_display::StringViewLabel(
+                "Solar heating", style.font(),
+                context().theme().material3Theme().color.onSurface,
+                style.fontOptions()),
+            16, baseline);
+  }
+  for (int16_t y = 0; y < 64; ++y) {
+    for (int16_t x = 0; x < 320; ++x) {
+      roo_display::Color expected;
+      reference_device.raster().readColors(&x, &y, 1, &expected);
+      ASSERT_EQ(expected, pixelAt(x, y)) << "pixel " << x << ", " << y;
+    }
+  }
 }
 
 // Verifies half-ascent placement for odd/even line heights, different fonts,

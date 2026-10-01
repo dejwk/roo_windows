@@ -58,6 +58,30 @@ bool AppendInteractiveChildTouchTarget(Widget& child, XDim x, YDim y,
 
 }  // namespace
 
+void internal::AppBarText::setText(roo::string_view text) {
+  if (text_ == text) return;
+  Rect previous = getParentContentBounds();
+  text_ = text;
+  invalidateInterior();
+  notifyParentInvalidatedRegion(previous);
+}
+
+void internal::AppBarText::setTextStyle(const TextStyle& style) {
+  if (text_style_ == &style) return;
+  Rect previous = getParentContentBounds();
+  text_style_ = &style;
+  invalidateInterior();
+  notifyParentInvalidatedRegion(previous);
+}
+
+void internal::AppBarText::setAlignment(roo_display::Alignment alignment) {
+  if (alignment_ == alignment) return;
+  Rect previous = getParentContentBounds();
+  alignment_ = alignment;
+  invalidateInterior();
+  notifyParentInvalidatedRegion(previous);
+}
+
 Dimensions internal::AppBarText::getSuggestedMinimumDimensions() const {
   if (text_.empty()) return Dimensions(0, 0);
   const TextStyle& style =
@@ -139,6 +163,19 @@ roo_display::Color internal::AppBarSubtitle::textColor(
   return roo_display::AlphaBlend(background, foreground.withA(alpha));
 }
 
+Insets internal::AppBarText::getInkInsets() const {
+  if (text_.empty()) return Insets(0, 0, bounds().width(), bounds().height());
+  const TextStyle& style =
+      text_style_ == nullptr ? text_style_body_medium() : *text_style_;
+  roo_display::StringViewLabel label(
+      text_, style.font(), roo_display::color::Transparent, fontOptions(style));
+  auto offset =
+      ResolveAlignmentOffset(bounds(), Rect(label.anchorExtents()), alignment_);
+  Rect ink = Rect(label.extents()).translate(offset.first, offset.second);
+  return Insets(ink.xMin() - bounds().xMin(), ink.yMin() - bounds().yMin(),
+                bounds().xMax() - ink.xMax(), bounds().yMax() - ink.yMax());
+}
+
 void internal::AppBarText::paint(PaintContext& ctx) const {
   if (text_.empty()) return;
   const TextStyle& style =
@@ -146,7 +183,11 @@ void internal::AppBarText::paint(PaintContext& ctx) const {
   roo_display::StringViewLabel label(text_, style.font(),
                                      textColor(ctx.canvas().bgcolor()),
                                      fontOptions(style));
-  ctx.canvas().drawTiled(label, bounds(), alignment_);
+  auto offset =
+      ResolveAlignmentOffset(bounds(), Rect(label.anchorExtents()), alignment_);
+  ctx.drawObject(
+      roo_display::Tile(&label, label.extents(), roo_display::kNoAlign),
+      offset.first, offset.second);
 }
 
 AppBar::AppBar(ApplicationContext& context, AppBarVariant variant)
@@ -533,25 +574,18 @@ void AppBar::onLayout(bool changed, const Rect& rect) {
       const TextStyle& expanded = expandedTitleTextStyle();
       const TextStyle& compact = text_style_title_large();
       const TextStyle& current = titleTextStyle();
-      int expanded_width = std::min<int>(
-          right - left,
-          expanded.font()
-              .getHorizontalStringMetrics(title(), expanded.fontOptions())
-              .screen_extents()
-              .width());
-      int compact_width = std::min<int>(
-          compact_right - compact_left,
-          compact.font()
-              .getHorizontalStringMetrics(title(), compact.fontOptions())
-              .screen_extents()
-              .width());
+      const auto expanded_metrics = expanded.font().getHorizontalStringMetrics(
+          title(), expanded.fontOptions());
+      const auto compact_metrics = compact.font().getHorizontalStringMetrics(
+          title(), compact.fontOptions());
+      const auto current_metrics = current.font().getHorizontalStringMetrics(
+          title(), title_widget_.fontOptions(current));
+      int expanded_width =
+          std::min<int>(right - left, expanded_metrics.advance());
+      int compact_width = std::min<int>(compact_right - compact_left,
+                                        compact_metrics.advance());
       int current_width =
-          std::min<int>(title_right - title_left,
-                        current.font()
-                            .getHorizontalStringMetrics(
-                                title(), title_widget_.fontOptions(current))
-                            .screen_extents()
-                            .width());
+          std::min<int>(title_right - title_left, current_metrics.advance());
       int expanded_center_x = 2 * left + expanded_width - 1;
       int compact_center_x = 2 * compact_left + compact_width - 1;
       int center_x =

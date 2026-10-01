@@ -236,7 +236,7 @@ TEST(TextLabel, MiddleGravityCentersAscentForBothLabelKinds) {
 }
 
 // Verifies both label kinds align using drawable anchors but retain actual
-// italic ink overhangs, clipping only at widget bounds. Style leading still
+// italic ink overhangs outside widget bounds. Style leading still
 // controls minimum height; tracking affects both alignment and ink metrics.
 TEST(TextLabel, OverhangingInkUsesDrawableExtentsForAllGravities) {
   roo_scheduler::SchedulingService scheduler;
@@ -256,17 +256,16 @@ TEST(TextLabel, OverhangingInkUsesDrawableExtentsForAllGravities) {
         StringViewLabel viewed(context, kOverhangText, style, gravity);
         owned.setPadding(PaddingSize::kNone);
         viewed.setPadding(PaddingSize::kNone);
-        EXPECT_EQ(style.lineHeight(),
-                  owned.getSuggestedMinimumDimensions().height());
+        EXPECT_EQ(owned.getSuggestedMinimumDimensions().height(),
+                  style.lineHeight());
         for (int width : {32, 140}) {
           Rect bounds(0, 0, width - 1, 79);
           owned.layout(bounds);
           viewed.layout(bounds);
           auto offset = ResolveAlignmentOffset(
               bounds, Rect(drawable.anchorExtents()), gravity.asAlignment());
-          Rect expected = Rect::Intersect(
-              bounds,
-              Rect(drawable.extents()).translate(offset.first, offset.second));
+          Rect expected =
+              Rect(drawable.extents()).translate(offset.first, offset.second);
           EXPECT_EQ(expected, owned.getContentBounds());
           EXPECT_EQ(expected, viewed.getContentBounds());
         }
@@ -275,9 +274,35 @@ TEST(TextLabel, OverhangingInkUsesDrawableExtentsForAllGravities) {
   }
 }
 
+// Verifies logical sizing uses advance and line height while reported ink
+// retains negative bearings and descenders outside those logical bounds.
+TEST(TextLabel, LogicalSizeAndInkBoundsAreIndependent) {
+  roo_scheduler::SchedulingService scheduler;
+  Environment bootstrap(scheduler);
+  ApplicationContext context = MakeContext(bootstrap);
+  TextStyle style(font_NotoSerif_Italic_40(), 0, 2);
+  const auto metrics = style.font().getHorizontalStringMetrics(
+      kOverhangText, style.fontOptions());
+  for (HorizontalGravity h : {kGravityLeft, kGravityCenter, kGravityRight}) {
+    for (VerticalGravity v : {kGravityTop, kGravityMiddle, kGravityBottom}) {
+      TextLabel owned(context, kOverhangText, style, h | v);
+      StringViewLabel viewed(context, kOverhangText, style, h | v);
+      const Dimensions size = owned.getSuggestedMinimumDimensions();
+      EXPECT_EQ(metrics.advance(), size.width());
+      EXPECT_EQ(style.lineHeight(), size.height());
+      const Rect bounds(0, 0, size.width() - 1, size.height() - 1);
+      owned.layout(bounds);
+      viewed.layout(bounds);
+      EXPECT_EQ(metrics.width(), owned.getContentBounds().width());
+      EXPECT_EQ(metrics.height(), owned.getContentBounds().height());
+      EXPECT_EQ(owned.getContentBounds(), viewed.getContentBounds());
+    }
+  }
+}
+
 // Verifies that an empty TextLabel (both std::string and string_view flavors)
-// reports zero ink insets, so an empty label doesn't claim any visual area.
-TEST(TextLabel, EmptyTextHasZeroInkInsets) {
+// reports empty ink bounds, so it excludes no background pixels.
+TEST(TextLabel, EmptyTextHasNoInkBounds) {
   roo_scheduler::SchedulingService scheduler;
   Environment bootstrap(scheduler);
   ApplicationContext context = MakeContext(bootstrap);
@@ -287,8 +312,10 @@ TEST(TextLabel, EmptyTextHasZeroInkInsets) {
   StringViewLabel string_view_label(context, roo::string_view(), font,
                                     kGravityLeft | kGravityMiddle);
 
-  EXPECT_EQ(Insets::Zero(), label.getInkInsets());
-  EXPECT_EQ(Insets::Zero(), string_view_label.getInkInsets());
+  label.layout(Rect(0, 0, 79, 39));
+  string_view_label.layout(Rect(0, 0, 79, 39));
+  EXPECT_TRUE(label.getContentBounds().empty());
+  EXPECT_TRUE(string_view_label.getContentBounds().empty());
 }
 
 // Verifies that transitioning from empty to non-empty text avoids invalidating
@@ -383,6 +410,48 @@ TEST(StringViewLabel, SameMeasuredSizeTextChangeDoesNotRequestLayout) {
   label.setText(roo::string_view("73%"));
 
   EXPECT_FALSE(label.isLayoutRequested());
+}
+
+// Verifies overhanging ink is painted and excluded from the ancestor's
+// background pass, then fully erased when the label is cleared.
+TEST_F(TextLabelRenderTest, PaintAndClearInkOutsideLogicalBounds) {
+  TextStyle style(font_NotoSerif_Italic_40(), 0, 0);
+  auto label = std::make_unique<TextLabel>(context(), "j", style, color::Black,
+                                           kGravityLeft | kGravityMiddle);
+  TextLabel* label_ptr = label.get();
+  const Dimensions size = label->getSuggestedMinimumDimensions();
+  const Box logical(30, 4, 30 + size.width() - 1, 4 + size.height() - 1);
+  app_.add(std::move(label), logical);
+  ASSERT_TRUE(refresh());
+  ASSERT_LT(label_ptr->getContentBounds().xMin(), 0);
+
+  roo::byte reference_pixels[kWidth * kHeight * 2];
+  OffscreenDevice<Argb4444> reference_device(kWidth, kHeight, reference_pixels,
+                                             Argb4444());
+  Display reference_display(reference_device);
+  const Color background = context().theme().material3Theme().color.background;
+  reference_display.init(background);
+  {
+    DrawingContext dc(reference_display);
+    dc.setBackgroundColor(background);
+    dc.draw(roo_display::StringViewLabel("j", style.font(), color::Black), 30,
+            4 + (size.height() + style.ascent()) / 2);
+  }
+  for (int16_t y = 0; y < kHeight; ++y) {
+    for (int16_t x = 0; x < kWidth; ++x) {
+      Color expected;
+      reference_device.raster().readColors(&x, &y, 1, &expected);
+      ASSERT_EQ(expected, pixelAt(x, y)) << "pixel " << x << ", " << y;
+    }
+  }
+  label_ptr->clearText();
+  ASSERT_TRUE(refresh());
+  for (int16_t y = 0; y < kHeight; ++y) {
+    for (int16_t x = 0; x < kWidth; ++x) {
+      ASSERT_EQ(QuantizeToArgb4444(background), pixelAt(x, y))
+          << "cleared pixel " << x << ", " << y;
+    }
+  }
 }
 
 // Verifies that setText() and clearText() actually change rendered pixels:
