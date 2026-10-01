@@ -191,6 +191,55 @@ TEST_F(MovingAppBarTest, LargeTitleCenterIsContinuous) {
   VerifyTitleCenterPath(*bar_, *panel_);
 }
 
+// Verifies the subtitle stays below the moving title, sharing its leading
+// edge or center, throughout collapse and expansion in both flexible variants.
+TEST_F(MovingAppBarTest, SubtitleFollowsTitleDuringCollapseAndExpansion) {
+  install();
+  bar_->setTitle("Pool");
+  bar_->setSubtitle("Solar heating equipment");
+  bar_->setLeading(std::make_unique<IconButton>(
+      context(), ic_outlined_24_navigation_menu()));
+  for (AppBarVariant variant :
+       {AppBarVariant::kMediumFlexible, AppBarVariant::kLargeFlexible}) {
+    bar_->setVariant(variant);
+    for (AppBarTitleAlignment alignment :
+         {AppBarTitleAlignment::kLeading, AppBarTitleAlignment::kCentered}) {
+      bar_->setTitleAlignment(alignment);
+      panel_->scrollToTop();
+      ASSERT_TRUE(refresh());
+      Widget* title = static_cast<Widget&>(*bar_).focusChildAt(0);
+      Widget* subtitle = static_cast<Widget&>(*bar_).focusChildAt(1);
+      ASSERT_NE(nullptr, title);
+      ASSERT_NE(nullptr, subtitle);
+      const int travel = bar_->height() - 64;
+      const int subtitle_height = subtitle->height();
+      panel_->onDragStart(0, 0);
+      for (int step = 0; step <= 2 * travel; ++step) {
+        const int collapse = step <= travel ? step : 2 * travel - step;
+        SCOPED_TRACE(collapse);
+        EXPECT_EQ(collapse * 2 >= travel, subtitle->isGone());
+        if (!subtitle->isGone()) {
+          EXPECT_EQ(title->parent_bounds().yMax() + 1, subtitle->offsetTop());
+          EXPECT_EQ(subtitle_height, subtitle->height());
+          if (alignment == AppBarTitleAlignment::kLeading) {
+            EXPECT_EQ(title->offsetLeft(), subtitle->offsetLeft());
+            EXPECT_GT(subtitle->width(), title->width());
+          } else {
+            EXPECT_EQ(
+                title->parent_bounds().xMin() + title->parent_bounds().xMax(),
+                subtitle->parent_bounds().xMin() +
+                    subtitle->parent_bounds().xMax());
+          }
+        }
+        if (step < 2 * travel) {
+          panel_->onDrag(0, 0, 0, step < travel ? -1 : 1);
+        }
+      }
+      panel_->onDragFinished(0, 0);
+    }
+  }
+}
+
 // Tracking narrows the font-switch width gap without exceeding either the
 // larger font's advance or its ink width, and returns to normal at collapse.
 TEST_F(MovingAppBarTest, CompactTrackingIsBoundedAndSettles) {

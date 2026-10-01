@@ -480,7 +480,7 @@ void AppBar::onLayout(bool changed, const Rect& rect) {
   int16_t right = std::max<int16_t>(left, width - edge);
 
   // Flexible bars retain the compact bar's action row throughout collapse:
-  // a 48dp slot with 8dp above and below. Only the title changes position.
+  // a 48dp slot with 8dp above and below. The title stack changes position.
   const int16_t action_row_height =
       single_row ? height
                  : Scaled(internal::kSmallAppBarTokens.container_height_dp);
@@ -570,6 +570,7 @@ void AppBar::onLayout(bool changed, const Rect& rect) {
                           (ChildCount(trailing_) > 0 ? Scaled(4) : 0));
     int16_t title_left = left + (compact_left - left) * t;
     int16_t title_right = right + (compact_right - right) * t;
+    const int16_t subtitle_right = title_right;
     if (title_alignment_ == AppBarTitleAlignment::kLeading) {
       const TextStyle& expanded = expandedTitleTextStyle();
       const TextStyle& compact = text_style_title_large();
@@ -615,6 +616,13 @@ void AppBar::onLayout(bool changed, const Rect& rect) {
     int16_t top = (center - title_height + 1) / 2;
     title_widget_.layout(
         Rect(title_left, top, title_right - 1, top + title_height - 1));
+    if (show_subtitle) {
+      // Follow the title's moving anchor while retaining enough lane width
+      // for subtitles that are longer than the title.
+      subtitle_widget_.layout(Rect(title_left, top + title_height,
+                                   subtitle_right - 1,
+                                   top + title_height + subtitle_height - 1));
+    }
   }
 }
 
