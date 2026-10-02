@@ -32,7 +32,8 @@ class TextLabel : public PaddingMixin<Widget> {
   /// applied within the widget bounds.
   void paint(PaintContext& ctx) const override;
 
-  /// Reports rendered ink, including overhangs beyond logical widget bounds.
+  /// Reports rendered ink, preserving glyph overhangs when the text fits.
+  /// Text wider than the widget is clipped horizontally to its bounds.
   Insets getInkInsets() const override;
 
   /// Reports the advance width and style line height.
@@ -92,7 +93,8 @@ class StringViewLabel : public PaddingMixin<Widget> {
   /// gravity applied within the widget bounds.
   void paint(PaintContext& ctx) const override;
 
-  /// Reports ink insets matching the rendered text rectangle.
+  /// Reports rendered ink, preserving glyph overhangs when the text fits.
+  /// Text wider than the widget is clipped horizontally to its bounds.
   Insets getInkInsets() const override;
 
   /// Reports the advance width and style line height.

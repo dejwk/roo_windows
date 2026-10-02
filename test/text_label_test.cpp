@@ -258,7 +258,8 @@ TEST(TextLabel, OverhangingInkUsesDrawableExtentsForAllGravities) {
         viewed.setPadding(PaddingSize::kNone);
         EXPECT_EQ(owned.getSuggestedMinimumDimensions().height(),
                   style.lineHeight());
-        for (int width : {32, 140}) {
+        for (int width :
+             {static_cast<int>(drawable.anchorExtents().width()), 140}) {
           Rect bounds(0, 0, width - 1, 79);
           owned.layout(bounds);
           viewed.layout(bounds);
@@ -272,6 +273,57 @@ TEST(TextLabel, OverhangingInkUsesDrawableExtentsForAllGravities) {
       }
     }
   }
+}
+
+// Verifies both label kinds clip long text at each horizontal gravity, so
+// their ink and direct-paint exclusions cannot reach adjacent layout slots.
+TEST(TextLabel, ConstrainedTextClipsHorizontalInkForBothLabelKinds) {
+  roo_scheduler::SchedulingService scheduler;
+  Environment bootstrap(scheduler);
+  ApplicationContext context = MakeContext(bootstrap);
+  TextStyle style(font_NotoSerif_Italic_40(), 0, 2);
+  for (HorizontalGravity horizontal :
+       {kGravityLeft, kGravityCenter, kGravityRight}) {
+    TextLabel owned(context, kOverhangText, style, horizontal | kGravityMiddle);
+    StringViewLabel viewed(context, kOverhangText, style,
+                           horizontal | kGravityMiddle);
+    ASSERT_GT(owned.getSuggestedMinimumDimensions().width(), 32);
+    for (Widget* label :
+         {static_cast<Widget*>(&owned), static_cast<Widget*>(&viewed)}) {
+      label->layout(Rect(0, 0, 31, 79));
+      Rect ink = label->getContentBounds();
+      EXPECT_FALSE(ink.empty());
+      EXPECT_GE(ink.xMin(), 0);
+      EXPECT_LE(ink.xMax(), 31);
+    }
+  }
+}
+
+// Verifies actual painting of constrained owned and borrowed labels leaves
+// the background on both sides intact, including after clearing the text.
+TEST_F(TextLabelRenderTest, ConstrainedLabelsDoNotPaintOutsideTheirSlots) {
+  const TextStyle& style = material2::text_style_body2();
+  auto owned =
+      std::make_unique<TextLabel>(context(), "Long label text", style,
+                                  color::Black, kGravityLeft | kGravityMiddle);
+  auto viewed = std::make_unique<StringViewLabel>(
+      context(), "Long label text", style, color::Black,
+      kGravityRight | kGravityMiddle);
+  TextLabel* owned_ptr = owned.get();
+  StringViewLabel* viewed_ptr = viewed.get();
+  app_.add(std::move(owned), Box(30, 0, 49, 29));
+  app_.add(std::move(viewed), Box(30, 32, 49, 61));
+  ASSERT_TRUE(refresh());
+  const Color background =
+      QuantizeToArgb4444(context().theme().material3Theme().color.background);
+  EXPECT_TRUE(findNonBackground(30, 0, 49, 29, background).found);
+  EXPECT_TRUE(findNonBackground(30, 32, 49, 61, background).found);
+  EXPECT_FALSE(findNonBackground(0, 0, 29, 63, background).found);
+  EXPECT_FALSE(findNonBackground(50, 0, 95, 63, background).found);
+  owned_ptr->clearText();
+  viewed_ptr->clearText();
+  ASSERT_TRUE(refresh());
+  EXPECT_FALSE(findNonBackground(0, 0, 95, 63, background).found);
 }
 
 // Verifies logical sizing uses advance and line height while reported ink

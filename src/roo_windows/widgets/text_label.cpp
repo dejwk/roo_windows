@@ -1,5 +1,7 @@
 #include "roo_display/ui/text_label.h"
 
+#include <algorithm>
+
 #include "roo_backport/string_view.h"
 #include "roo_display/ui/string_printer.h"
 #include "roo_windows/widgets/text_label.h"
@@ -36,7 +38,14 @@ Rect ResolveLabelContentBounds(const Rect& logical_bounds,
                                      text_style.fontOptions());
   auto offset = ResolveAlignmentOffset(logical_bounds,
                                        Rect(label.anchorExtents()), alignment);
-  return Rect(label.extents()).translate(offset.first, offset.second);
+  Rect ink = Rect(label.extents()).translate(offset.first, offset.second);
+  // Preserve glyph bearings for text that fits. A constrained single-line
+  // label must not paint or exclude pixels in neighboring layout slots.
+  if (label.anchorExtents().width() > logical_bounds.width()) {
+    ink = Rect(std::max(ink.xMin(), logical_bounds.xMin()), ink.yMin(),
+               std::min(ink.xMax(), logical_bounds.xMax()), ink.yMax());
+  }
+  return ink;
 }
 
 }  // namespace
