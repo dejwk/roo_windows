@@ -1,3 +1,13 @@
+# roo_windows 1.8.1
+
+- Fixed text alignment and centering in labels, Material 3 app bars, and badges using improved `roo_display` text metrics.
+- Fixed clipped glyph overhangs and descenders, stale text after updates, and background repainting for empty labels.
+- Fixed app-bar subtitles to follow the title during collapse and expansion, preserving space for longer subtitles.
+- Expanded rendering regression tests for text alignment, glyph overhangs, and app-bar transitions.
+- Updated dependencies to `roo_display` 3.3.2, `roo_fonts_basic` 1.0.6, and `roo_testing` 2.3.1.
+
+---
+
 # roo_windows 1.8.0
 
 - Added Material 3 modal and docked date pickers with calendar and text input, date bounds, locale support, and layouts for 240-pixel portrait displays.

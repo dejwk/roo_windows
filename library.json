@@ -29,7 +29,7 @@
         "type": "git",
         "url": "https://github.com/dejwk/roo_windows"
     },
-    "version": "1.8.0",
+    "version": "1.8.1",
     "homepage": "https://github.com/dejwk/roo_windows",
     "frameworks": [
         "Arduino"
@@ -43,8 +43,8 @@
     ],
     "dependencies": {
         "dejwk/roo_collections": ">=1.4.8",
-        "dejwk/roo_display": ">=3.3.1",
-        "dejwk/roo_fonts_basic": ">=1.0.5",
+        "dejwk/roo_display": ">=3.3.2",
+        "dejwk/roo_fonts_basic": ">=1.0.6",
         "dejwk/roo_fonts_material": ">=1.1.2",
         "dejwk/roo_locale": ">=1.1.4",
         "dejwk/roo_logging": ">=1.5.11",
