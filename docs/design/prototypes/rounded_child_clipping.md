@@ -97,13 +97,35 @@ Pruning keeps the existing tail-folding strategy, with cheap conservative tests:
   corner survives.
 
 Output queries reject unrelated bounding boxes before reading row geometry.
-Streamed pixels use cached visible/excluded runs. Uniform rectangle fills emit
-visible rectangles over bands where spans stay constant, retaining tall side
-strips through the straight middle. Corner bands can still produce multiple
-display commands, but those fragments are emitted directly and never retained
-as exclusions. Sparse pixels query the same union. Queries scan active exclusion
-records and, for relevant masked records, their enclosing mask chains; they do
-not scan corner pixels to establish membership.
+Streamed pixels use cached visible/excluded runs. Sparse pixels query the same
+union. Uniform rectangle output uses recursive subtraction:
+
+1. Subtract all ordinary rectangle exclusions with the original recursive
+   splitting algorithm.
+2. For each remaining piece, find the next intersecting masked bounding box.
+   Split off up to four exterior rectangles and check them against later masks.
+3. Inside that bounding box, discard regions proven fully opaque. Otherwise,
+   read this mask's opaque interval row by row, skipping its constant middle
+   as one band. Combine consecutive equal clipped intervals before proceeding.
+4. Pass each surviving rectangle to the remaining masks. Emit it through the
+   shared buffered writer when no exclusions remain.
+
+![Four exterior rectangles and the corner regions inside masked bounds](figures/rounded_exclusion_subdivision.svg)
+
+The previous implementation also skipped horizontal runs, but each run searched
+the entire exclusion union. A small mask could split wide free regions into
+many bands. Recursive subtraction keeps those exterior regions intact, and
+only reads row geometry inside mask bounds. Every recursive call advances to
+the next exclusion; earlier exclusions are already absent from the piece.
+The pieces are disjoint, preserving one write per settled pixel. Antialiased
+pixels still use the boundary composition above.
+
+There is one buffered writer per input batch, outside the recursion. Pieces
+are passed directly down the call stack and never stored in an exclusion or
+scratch vector. Stack depth grows with intersecting exclusions; the scanline
+loop is iterative, so neither panel height nor corner radius adds stack levels.
+Empty clipped intervals coalesce too, so a fully unmasked region inside a
+bounding box can pass to later masks as one rectangle.
 
 Unchanged paint continuations retain descriptors and their geometry. A
 rectangular invalidation can split a descriptor's bounding box into at most four
@@ -169,10 +191,13 @@ size is not a net delta against the old decoration pool.
 The target compiler's `-Os -fstack-usage` report gives 128 bytes for
 `RoundedClipOutput::fillRect`, plus its callees. Its initial implementation used
 368 bytes; direct emission of coalesced runs removed the large temporary batch.
-The exclusion filter's `writeRects` and `fillRects` frames measure 512 and 384
+The exclusion filter's `writeRects` and `fillRects` frames measure 464 and 304
 bytes, respectively, versus 448 and 304 in the original rectangular filter.
-They include the existing buffered writers. These are individual function
-frames, not a complete worst-case paint stack measurement.
+They include the existing buffered writers. Recursive ordinary subtraction uses
+80 bytes per call; masked subtraction uses 96 bytes for colored rectangles and
+80 bytes for uniform fills. These are individual function frames, not a complete
+worst-case paint stack measurement. Intersecting exclusions can accumulate
+multiple frames; no row-sized temporary array or extra heap storage is used.
 
 Arena vectors also retain their pointer capacity. Radius 16 requires 836 bytes
 for its arrays, record, and replacement decoration, before the shared arena,
@@ -209,11 +234,12 @@ Three isolated runs using thread CPU time produced:
 
 | Run | Clipping off (µs/frame) | Clipping on (µs/frame) | Added CPU (µs/frame) |
 | ---: | ---: | ---: | ---: |
-| 1 | 101.94 | 113.28 | 11.34 |
-| 2 | 78.37 | 148.73 | 70.36 |
-| 3 | 74.53 | 116.68 | 42.15 |
+| 1 | 106.21 | 120.00 | 13.79 |
+| 2 | 98.88 | 124.73 | 25.85 |
+| 3 | 125.40 | 146.35 | 20.95 |
 
-The median times are about 78 and 117 µs/frame with compact masked exclusions.
+The median times are about 106 and 125 µs/frame with recursive masked subtraction
+and equal-span coalescing.
 Treat these as a small host characterization, not a stable performance guarantee;
 even CPU time varies with processor frequency and cache state. The test prints
 wall time separately.
@@ -261,10 +287,14 @@ six output paths against a coverage oracle, nested and asymmetric geometry,
 fractional outlines, disconnected intervals, conservative pruning, and resumed
 paints. They verify that 20 corner-crossing exclusions stay 20 shared descriptors
 at radii 8 through 64. A display-command test checks that two uniform side strips
-remain two tall rectangles. Blit tests compare incremental rendering with a
-complete repaint when masks belong to descendants or foreground siblings.
+remain two tall rectangles. Additional
+[subdivision tests](../../../test/masked_exclusion_subdivision_test.cpp) verify
+that large exterior regions stay whole, equal corner spans coalesce, and
+ordinary, overlapping, and nested masked exclusions preserve pixel colors and
+single writes across both rectangle output methods. Blit tests compare incremental
+rendering with a complete repaint when masks belong to descendants or foreground siblings.
 
-Validation completed for compact exclusions:
+Validation completed for recursive subtraction and span coalescing:
 
 - All 103 root regression test targets passed in the optimized build.
 - The masked-exclusion and rounded-clipping targets passed with AddressSanitizer.

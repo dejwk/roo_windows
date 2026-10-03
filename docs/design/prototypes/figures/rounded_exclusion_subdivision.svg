@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="740" height="390" viewBox="0 0 740 390">
+  <rect width="740" height="390" fill="white"/>
+  <g font-family="sans-serif" fill="#203040">
+    <text x="24" y="31" font-size="19">Subtract a rounded exclusion from a rectangle</text>
+    <!-- Scale: 6 units per pixel. Draw bounds [0,64) x [0,48), mask
+         bounds [20,44) x [12,36), corner radius 10. -->
+    <g fill="#eaf0f6">
+      <rect x="24" y="68" width="384" height="72"/>
+      <rect x="24" y="140" width="120" height="144"/>
+      <rect x="288" y="140" width="120" height="144"/>
+      <rect x="24" y="284" width="384" height="72"/>
+    </g>
+    <rect x="144" y="140" width="144" height="144" fill="#fff0bc"/>
+    <rect x="144" y="140" width="144" height="144" rx="60" fill="#456e9a"/>
+    <rect x="24" y="68" width="384" height="1.5" fill="#72869a"/>
+    <rect x="24" y="354.5" width="384" height="1.5" fill="#72869a"/>
+    <rect x="24" y="68" width="1.5" height="288" fill="#72869a"/>
+    <rect x="406.5" y="68" width="1.5" height="288" fill="#72869a"/>
+    <rect x="24" y="140" width="120" height="1.5" fill="#72869a"/>
+    <rect x="288" y="140" width="120" height="1.5" fill="#72869a"/>
+    <rect x="24" y="282.5" width="120" height="1.5" fill="#72869a"/>
+    <rect x="288" y="282.5" width="120" height="1.5" fill="#72869a"/>
+    <rect x="144" y="140" width="144" height="1.5" fill="#72869a"/>
+    <rect x="144" y="282.5" width="144" height="1.5" fill="#72869a"/>
+    <rect x="144" y="140" width="1.5" height="144" fill="#72869a"/>
+    <rect x="286.5" y="140" width="1.5" height="144" fill="#72869a"/>
+    <g font-size="16" text-anchor="middle">
+      <text x="216" y="109">top</text>
+      <text x="84" y="218">left</text>
+      <text x="348" y="218">right</text>
+      <text x="216" y="326">bottom</text>
+      <text x="216" y="207" fill="white">excluded</text>
+      <text x="216" y="228" fill="white">interior</text>
+    </g>
+    <g font-size="15">
+      <text x="439" y="100" font-weight="bold">Four exterior rectangles</text>
+      <text x="439" y="123">Check only later exclusions.</text>
+      <text x="439" y="181" font-weight="bold">Inside the mask bounds</text>
+      <text x="439" y="204">Read the mask's row spans.</text>
+      <text x="439" y="227">Keep the yellow corner regions.</text>
+      <text x="439" y="250">Merge equal spans before</text>
+      <text x="439" y="273">checking later exclusions.</text>
+      <text x="439" y="331">All emitted pieces are disjoint.</text>
+    </g>
+  </g>
+</svg>
