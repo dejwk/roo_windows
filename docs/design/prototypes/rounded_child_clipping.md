@@ -190,7 +190,7 @@ cross-compiler measured the following object sizes:
 | --- | ---: |
 | Nullable pointer in retained `ClipperState` | 4 |
 | Shared arena, allocated when rounded clipping is first used | 80 |
-| Record per retained rounded container | 76 |
+| Record per retained rounded container | 84 |
 | Replacement decoration per rounded container | 100 |
 | Raster wrapper for a child overlay that meets a clip edge | 24 |
 | Output adapter on the stack per active rounded scope | 40 |
@@ -212,7 +212,7 @@ They include the existing buffered writers. Recursive ordinary subtraction uses
 worst-case paint stack measurement. Intersecting exclusions can accumulate
 multiple frames; no row-sized temporary array or extra heap storage is used.
 
-Arena vectors also retain their pointer capacity. Radius 16 requires 836 bytes
+Arena vectors also retain their pointer capacity. Radius 16 requires 844 bytes
 for its arrays, record, and replacement decoration, before the shared arena,
 pointer slots, allocation metadata, and exclusion descriptors. `Widget`
 remains 24 bytes and `Container` 44 bytes on that ABI, unchanged from the base
@@ -231,12 +231,28 @@ added to `Widget` or `Container`. The union on the clipper output stack grows
 by 8 bytes; its filter remains 44 bytes. Ordinary exclusion records remain
 8 bytes and require no optional arena.
 
+Grouped continuation replaces the record's completion byte with a one-byte
+phase and adds a 32-bit child cursor. Alignment grows the target record from 76
+to 84 bytes, exactly the accepted 8-byte limit. `Widget` remains 24 bytes,
+`Container` 44 bytes, and `ClipperState` 240 bytes. The `Container` vtable grows
+from 440 to 444 bytes for the capability entry; every emitted derived-container
+vtable likewise carries one additional 4-byte slot.
+
+With `-Os`, the target `container.cpp` translation unit grows from 9,706 to
+10,995 text bytes. This is an object-file comparison before linker garbage
+collection, so it includes every traversal variant whether a final firmware
+uses it or not. The reusable
+[probe script](../../../benchmarks/rounded_child_clip_size_probe.sh) reports the
+object, vtable, function, and stack symbols.
+
 The arena and geometry/color arrays retain their peak capacities for reuse.
 First use or increased requirements can allocate. Reusing unchanged boundary
 geometry allocates nothing in the dedicated test. There is no full framebuffer,
 corner-square color buffer, or area-sized coverage mask.
 
 ## CPU and allocations
+
+### Rounded clipping baseline
 
 The resource test uses a 240×160 ARGB8888 memory display, a 192×128 panel with
 radius 16, and five rounded rows. It invalidates the whole panel for 200
@@ -278,6 +294,58 @@ bazel test //:rounded_child_clip_resource_test -c opt \
 
 The warning override is needed for an existing `roo_testing` Wi-Fi shim warning
 with this host GCC. It does not change the prototype code.
+
+### Grouped traversal
+
+The phase-3 resource matrix uses the same 240×160 memory display and a 192×128
+radius-16 owner, with 0, 8, or 32 four-pixel-high direct children. Each scenario
+warms ten frames, then measures five 400-frame thread-CPU batches. The table is
+the median result across three isolated test processes; each process already
+reports the median of its five batches. The pre-grouping column uses commit
+`bffbe0a7` with the same geometry and batching.
+
+| Children | Pre-grouping all clipped | Guaranteed clipped | Grouped all clipped | Grouped all unclipped | Grouped mixed |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 0 | 24.81 µs | 25.34 µs | 25.58 µs | 25.52 µs | 27.21 µs |
+| 8 | 25.67 µs | 27.19 µs | 28.04 µs | 18.52 µs | 23.90 µs |
+| 32 | 28.78 µs | 29.83 µs | 29.84 µs | 11.11 µs | 20.97 µs |
+
+The guaranteed-clipped path is 2.1%, 5.9%, and 3.6% above the pre-grouping
+branch for 0, 8, and 32 children. The grouped all-clipped path is 3.1%, 9.2%,
+and 3.7% above that branch. All-unclipped and mixed results are lower because
+some or all child output bypasses rounded boundary capture; they do not measure
+the filtered-loop cost in isolation. These host measurements exclude a display
+bus and are not ESP32 timing estimates.
+
+Every warmed scenario made zero allocations and requested zero heap bytes. The
+first all-clipped refresh made the same number of allocations as the
+pre-grouping branch and requested exactly 8 more bytes, matching the retained
+record growth. The resource test also proves, over 2,000 frames per scenario,
+one capability query per traversal, exactly `n` indexed paint visits on the
+guaranteed-clipped path, exactly `2n` on grouped paths, and exactly one paint per
+child. A real `MenuPanel` is checked to retain the guaranteed-clipped path.
+
+Target stack frames changed as follows:
+
+| Function | Pre-grouping | Grouped implementation |
+| --- | ---: | ---: |
+| `Container::paintChildren()` | 96 bytes | 16-byte dispatcher |
+| Non-rounded grouped child loop | included above | 112 bytes |
+| Rounded grouped child loop | included above | 144 bytes |
+| Exact touch search | 64 bytes | 96 bytes |
+| Sloppy touch search | 64 bytes | 96 bytes |
+| Reverse invalidation | 80 bytes | 96 bytes |
+
+These are individual `-fstack-usage` frames rather than a summed worst-case
+call chain. To reproduce the target ABI, code, and stack report with the local
+ESP32-C3 toolchain:
+
+```sh
+benchmarks/rounded_child_clip_size_probe.sh \
+  /path/to/riscv32-esp-elf-g++ \
+  /path/to/riscv32-esp-elf-nm \
+  /path/to/riscv32-esp-elf-size
+```
 
 ## Validation and limits
 

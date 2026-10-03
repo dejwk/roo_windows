@@ -1,20 +1,21 @@
 # Unclipped children above clipped siblings
 
-**Status: In progress; phases 1 and 2 implemented, resource validation pending.**
+**Status: Implemented; all three phases and resource acceptance are complete.**
 This extends the
 [sparse rounded child clipping prototype](../prototypes/rounded_child_clipping.md).
 It does not revive the [abandoned corner capture design](../abandoned/rounded_child_clipping_design.md).
 
 ## Objective
 
-Allow explicitly unclipped children to escape a rounded parent while retaining
-smooth boundaries, low RAM use, and one display write per settled pixel.
+Place explicitly unclipped children above clipped siblings in every container,
+while allowing them to escape a rounded parent with smooth boundaries, low RAM
+use, and one display write per settled pixel.
 
 ## Motivation
 
 A menu needs to clip its scrolling rows to its rounded outline, while an
 explicitly unclipped child can need to display an overhanging badge or control
-feedback. The prototype currently clips both kinds of child.
+feedback. Before this design, the prototype clipped both kinds of child.
 
 Requiring authors to insert every unclipped child above every clipped child
 would reject harmless arrangements of disjoint siblings. Instead, this design
@@ -31,7 +32,7 @@ explains how those records survive a deadline. Shared terminology is in the
 [design glossary](../glossary.md); widget contracts are in the
 [widget-authoring instructions](../../../.github/instructions/roo-windows-widget-authoring.instructions.md).
 
-Today, [`Container::paintChildren()`](../../../src/roo_windows/core/container.cpp)
+Before this design, [`Container::paintChildren()`](../../../src/roo_windows/core/container.cpp)
 visits children from highest index to lowest. `ParentClipMode::kUnclipped`
 skips the immediate parent's rectangular canvas clip. Ancestor clips remain
 in force. Some controls, including
@@ -230,8 +231,8 @@ In this reference image, left to right: the clipped group alone, an opaque
 unclipped foreground child, and the same child at 50% opacity. The
 [figure generator](figures/rounded_unclipped_children_figures.py) uses 16-by-16
 subpixel area samples and the formula above, then enlarges pixels without
-interpolation. This is an illustrative composition reference, not output from
-the unimplemented renderer change. Implementation tests use the existing
+interpolation. This is an illustrative composition reference, not captured
+renderer output. Implementation tests use the existing
 `Decoration` coverage routine for exact pixel expectations.
 
 ### Touch order and invalidation
@@ -250,11 +251,12 @@ exact-target-before-sloppy-target policy. Apply group order within each existing
 search stage; an unclipped child's sloppy area must not take precedence over a
 clipped child's exact target merely because the group is in front. An existing
 occlusion stop ends that search stage across both groups, rather than allowing
-the second loop to continue behind the blocker. This proposal changes sibling
+the second loop to continue behind the blocker. This design changes sibling
 precedence, not touch geometry or whether visual overflow is a touch target.
 
+Before this design,
 [`invalidateBeneathDescending()`](../../../src/roo_windows/core/container.cpp)
-currently walks ascending child indices until it finds the subject. It must use
+walked ascending child indices until it found the subject. It now uses
 the reverse effective paint order, including recursive descent to a subject
 inside a child subtree. Otherwise hiding an unclipped child can fail to repaint
 a clipped sibling underneath it whose raw index is higher.
@@ -468,6 +470,8 @@ place.
 
 ### 3. Verify resource costs and document the result
 
+**Implemented.**
+
 Proposed commit: `Validate grouped rounded child traversal costs`.
 
 Extend the existing
@@ -490,6 +494,14 @@ landing. Publish CPU and stack measurements without treating host time as an
 ESP32 display-bus result. Run the full library regression suite, then update this
 document and the status index to implemented.
 
+Validation: the 0/8/32-child matrix passes for the guaranteed-clipped,
+grouped-all-clipped, grouped-all-unclipped, and mixed paths. Warmed paints add
+no allocations; capability queries, child visits, and paint calls meet their
+exact bounds. Target `Widget`, `Container`, and `ClipperState` sizes are
+unchanged, while `RoundedClip` grows by the accepted 8 bytes. Target vtable,
+code, and stack figures and three-run host CPU medians are recorded in the
+[prototype report](../prototypes/rounded_child_clipping.md).
+
 ## Testing Plan
 
 Run from the canonical `roo_windows` repository, following its
@@ -509,10 +521,9 @@ and continuation starting directly in the clipped phase. Validate color
 equality and no duplicate settled device writes across the entire unchanged logical paint, including all attempts.
 An intentionally restarted paint represents a new scene and resets that count.
 
-Run focused targets in optimized and ASan configurations, then the repository
-regressions and example builds. Resource measurements validate the limits in
-Design Details; report them in the prototype document. This design document
-itself does not claim those future implementation tests have passed.
+Focused targets pass in optimized and ASan configurations, along with the
+repository regressions and example build. The prototype report records the
+resource measurements that validate the limits in Design Details.
 
 ## Caveats
 

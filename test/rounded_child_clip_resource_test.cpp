@@ -1,5 +1,5 @@
+#include <algorithm>
 #include <array>
-#include <chrono>
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
@@ -10,6 +10,7 @@
 #include "roo_windows.h"
 #include "roo_windows/core/panel.h"
 #include "roo_windows/core/rounded_clip.h"
+#include "roo_windows/material3/menu/menu_surface.h"
 
 namespace {
 bool tracking = false;
@@ -48,100 +49,227 @@ void operator delete[](void* p, const std::nothrow_t&) noexcept {
 namespace roo_windows {
 namespace {
 
-// Verifies clipping adds no warmed allocations and measures identical scene
-// construction and invalidation with clipping off/on.
-// Timings exclude display bus transfer; use -c opt for useful host comparisons.
-TEST(RoundedClipResources, CharacterizeRefresh) {
-  class PanelProbe : public Panel {
-   public:
-    PanelProbe(ApplicationContext& context, bool rounded)
-        : Panel(context), rounded_(rounded) {}
-    using Panel::add;
-    bool clipsChildrenToRoundedBounds() const override { return rounded_; }
-    Color background() const override { return Color(0xFFF4EAD0); }
-    BorderStyle getBorderStyle() const override { return BorderStyle(16, 0); }
+enum class GroupMode {
+  kGuaranteedClipped,
+  kGroupedAllClipped,
+  kGroupedAllUnclipped,
+  kGroupedMixed,
+};
 
-   private:
-    bool rounded_;
-  };
-  class Row : public SurfaceWidget {
-   public:
-    using SurfaceWidget::SurfaceWidget;
-    Dimensions getSuggestedMinimumDimensions() const override {
-      return Dimensions(192, 26);
+const char* GroupModeName(GroupMode mode) {
+  switch (mode) {
+    case GroupMode::kGuaranteedClipped:
+      return "guaranteed_clipped";
+    case GroupMode::kGroupedAllClipped:
+      return "grouped_all_clipped";
+    case GroupMode::kGroupedAllUnclipped:
+      return "grouped_all_unclipped";
+    case GroupMode::kGroupedMixed:
+      return "grouped_mixed";
+  }
+  std::abort();
+}
+
+class ResourceRow : public SurfaceWidget {
+ public:
+  using SurfaceWidget::SurfaceWidget;
+
+  Dimensions getSuggestedMinimumDimensions() const override {
+    return Dimensions(192, 4);
+  }
+
+  Color background() const override { return Color(0xFF3167B7); }
+
+  void paint(PaintContext& ctx) const override {
+    ++paint_calls;
+    ctx.clear();
+  }
+
+  mutable size_t paint_calls = 0;
+};
+
+class ResourcePanel : public Panel {
+ public:
+  ResourcePanel(ApplicationContext& context, bool grouped)
+      : Panel(context), grouped_(grouped) {}
+  using Panel::add;
+
+  bool clipsChildrenToRoundedBounds() const override { return true; }
+
+  bool mayHaveUnclippedChildren() const override {
+    ++capability_queries;
+    return grouped_;
+  }
+
+  Color background() const override { return Color(0xFFF4EAD0); }
+
+  BorderStyle getBorderStyle() const override { return BorderStyle(16, 0); }
+
+  void resetCounters() const {
+    capability_queries = 0;
+    child_visits = 0;
+  }
+
+  mutable size_t capability_queries = 0;
+  mutable size_t child_visits = 0;
+
+ protected:
+  void paintChildren(PaintContext& ctx) override {
+    counting_paint_visits_ = true;
+    Panel::paintChildren(ctx);
+    counting_paint_visits_ = false;
+  }
+
+  const Widget& getChild(int idx) const override {
+    if (counting_paint_visits_) ++child_visits;
+    return Panel::getChild(idx);
+  }
+
+  Widget& getChild(int idx) override {
+    if (counting_paint_visits_) ++child_visits;
+    return Panel::getChild(idx);
+  }
+
+ private:
+  bool grouped_;
+  mutable bool counting_paint_visits_ = false;
+};
+
+struct ResourceMetrics {
+  size_t allocations;
+  size_t allocated_bytes;
+  size_t capability_queries;
+  size_t child_visits;
+  size_t child_paints;
+  double median_cpu_us;
+};
+
+ResourceMetrics MeasureScenario(int child_count, GroupMode mode) {
+  constexpr int kBatchCount = 5;
+  constexpr int kFramesPerBatch = 400;
+  constexpr int kMeasuredFrames = kBatchCount * kFramesPerBatch;
+
+  std::array<roo::byte, 240 * 160 * 4> pixels{};
+  roo_display::OffscreenDevice<roo_display::Argb8888> device(
+      240, 160, pixels.data(), roo_display::Argb8888());
+  roo_display::Display display(device);
+  roo_scheduler::SchedulingService scheduler;
+  Environment env(scheduler);
+  Application app(&env, display);
+  EXPECT_TRUE(app.refresh());
+
+  const bool grouped = mode != GroupMode::kGuaranteedClipped;
+  auto panel = std::make_unique<ResourcePanel>(app.context(), grouped);
+  ResourcePanel* owner = panel.get();
+  std::array<ResourceRow*, 32> rows{};
+  for (int i = 0; i < child_count; ++i) {
+    auto row = std::make_unique<ResourceRow>(app.context());
+    rows[i] = row.get();
+    if (mode == GroupMode::kGroupedAllUnclipped ||
+        (mode == GroupMode::kGroupedMixed && i % 2 != 0)) {
+      row->setParentClipMode(ParentClipMode::kUnclipped);
     }
-    Color background() const override { return Color(0xFF3167B7); }
-    BorderStyle getBorderStyle() const override { return BorderStyle(8, 0); }
-    void paint(PaintContext& ctx) const override { ctx.clear(); }
-  };
-  size_t baseline_allocations = 0;
-  size_t baseline_bytes = 0;
-  for (bool rounded : {false, true}) {
-    std::array<roo::byte, 240 * 160 * 4> pixels{};
-    roo_display::OffscreenDevice<roo_display::Argb8888> device(
-        240, 160, pixels.data(), roo_display::Argb8888());
-    roo_display::Display display(device);
-    roo_scheduler::SchedulingService scheduler;
-    Environment env(scheduler);
-    Application app(&env, display);
-    ASSERT_TRUE(app.refresh());
-    auto panel = std::make_unique<PanelProbe>(app.context(), rounded);
-    PanelProbe* owner = panel.get();
-    for (int i = 0; i < 5; ++i) {
-      panel->add(std::make_unique<Row>(app.context()),
-                 Rect(0, i * 30 - 9, 191, i * 30 + 16));
-    }
-    app.add(std::move(panel), roo_display::Box(24, 16, 215, 143));
-    allocations = allocated_bytes = 0;
-    tracking = true;
-    const bool first = app.refresh();
-    tracking = false;
-    ASSERT_TRUE(first);
-    std::printf("rounded=%d first_refresh_new_calls=%zu requested_bytes=%zu\n",
-                rounded, allocations, allocated_bytes);
-    // Warm renderer vectors and deque capacities before the measured interval.
-    for (int i = 0; i < 10; ++i) {
-      owner->invalidateInterior();
-      ASSERT_TRUE(app.refresh());
-    }
-    allocations = allocated_bytes = 0;
+    panel->add(std::move(row), Rect(0, i * 4, 191, i * 4 + 3));
+  }
+  app.add(std::move(panel), roo_display::Box(24, 16, 215, 143));
+
+  allocations = 0;
+  allocated_bytes = 0;
+  tracking = true;
+  const bool first = app.refresh();
+  tracking = false;
+  EXPECT_TRUE(first);
+  std::printf(
+      "children=%d mode=%s first_refresh_new_calls=%zu "
+      "requested_bytes=%zu\n",
+      child_count, GroupModeName(mode), allocations, allocated_bytes);
+
+  // Warm renderer vectors and deque capacities before the measured interval.
+  for (int i = 0; i < 10; ++i) {
+    owner->invalidateInterior();
+    EXPECT_TRUE(app.refresh());
+  }
+  owner->resetCounters();
+  for (int i = 0; i < child_count; ++i) rows[i]->paint_calls = 0;
+
+  allocations = 0;
+  allocated_bytes = 0;
+  std::array<double, kBatchCount> cpu_us{};
+  tracking = true;
+  for (int batch = 0; batch < kBatchCount; ++batch) {
     timespec cpu_start{};
     timespec cpu_end{};
-    ASSERT_EQ(clock_gettime(CLOCK_THREAD_CPUTIME_ID, &cpu_start), 0);
-    const auto start = std::chrono::steady_clock::now();
-    tracking = true;
-    bool complete = true;
-    for (int i = 0; i < 200; ++i) {
+    EXPECT_EQ(clock_gettime(CLOCK_THREAD_CPUTIME_ID, &cpu_start), 0);
+    for (int frame = 0; frame < kFramesPerBatch; ++frame) {
       owner->invalidateInterior();
-      complete = app.refresh() && complete;
+      EXPECT_TRUE(app.refresh());
     }
-    tracking = false;
-    const auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(
-                             std::chrono::steady_clock::now() - start)
-                             .count();
-    ASSERT_EQ(clock_gettime(CLOCK_THREAD_CPUTIME_ID, &cpu_end), 0);
-    const double cpu_us = (cpu_end.tv_sec - cpu_start.tv_sec) * 1e6 +
-                          (cpu_end.tv_nsec - cpu_start.tv_nsec) / 1e3;
-    ASSERT_TRUE(complete);
-    if (rounded) {
-      EXPECT_LE(allocations, baseline_allocations);
-      EXPECT_LE(allocated_bytes, baseline_bytes);
-    } else {
-      baseline_allocations = allocations;
-      baseline_bytes = allocated_bytes;
+    EXPECT_EQ(clock_gettime(CLOCK_THREAD_CPUTIME_ID, &cpu_end), 0);
+    cpu_us[batch] = ((cpu_end.tv_sec - cpu_start.tv_sec) * 1e6 +
+                     (cpu_end.tv_nsec - cpu_start.tv_nsec) / 1e3) /
+                    kFramesPerBatch;
+  }
+  tracking = false;
+
+  size_t child_paints = 0;
+  for (int i = 0; i < child_count; ++i) {
+    child_paints += rows[i]->paint_calls;
+  }
+  std::sort(cpu_us.begin(), cpu_us.end());
+  const size_t expected_visits =
+      kMeasuredFrames * child_count * (grouped ? 2 : 1);
+  EXPECT_EQ(owner->capability_queries, static_cast<size_t>(kMeasuredFrames));
+  EXPECT_EQ(owner->child_visits, expected_visits);
+  EXPECT_EQ(child_paints, static_cast<size_t>(kMeasuredFrames * child_count));
+
+  ResourceMetrics metrics{
+      allocations,         allocated_bytes, owner->capability_queries,
+      owner->child_visits, child_paints,    cpu_us[kBatchCount / 2]};
+  std::printf(
+      "children=%d mode=%s median_cpu_us_per_frame=%.2f "
+      "new_calls_per_frame=%.2f requested_bytes_per_frame=%.2f "
+      "capability_queries=%zu child_visits=%zu child_paints=%zu\n",
+      child_count, GroupModeName(mode), metrics.median_cpu_us,
+      metrics.allocations / static_cast<double>(kMeasuredFrames),
+      metrics.allocated_bytes / static_cast<double>(kMeasuredFrames),
+      metrics.capability_queries, metrics.child_visits, metrics.child_paints);
+  return metrics;
+}
+
+// Verifies grouped traversal stays within its query/visit/paint bounds and
+// adds no allocations after warm-up for 0, 8, and 32 direct children.
+// Timings exclude display bus transfer; use -c opt for useful comparisons.
+TEST(RoundedClipResources, CharacterizeGroupedTraversal) {
+  for (int child_count : {0, 8, 32}) {
+    const ResourceMetrics baseline =
+        MeasureScenario(child_count, GroupMode::kGuaranteedClipped);
+    for (GroupMode mode :
+         {GroupMode::kGroupedAllClipped, GroupMode::kGroupedAllUnclipped,
+          GroupMode::kGroupedMixed}) {
+      const ResourceMetrics grouped = MeasureScenario(child_count, mode);
+      EXPECT_EQ(grouped.allocations, baseline.allocations);
+      EXPECT_EQ(grouped.allocated_bytes, baseline.allocated_bytes);
     }
-    std::printf(
-        "rounded=%d wall_us_per_frame=%.2f cpu_us_per_frame=%.2f "
-        "new_calls_per_frame=%.2f "
-        "requested_bytes_per_frame=%.2f\n",
-        rounded, elapsed / 200.0, cpu_us / 200.0, allocations / 200.0,
-        allocated_bytes / 200.0);
   }
   std::printf(
       "host_sizeof: clip=%zu output=%zu overlay=%zu decoration=%zu arena=%zu\n",
       sizeof(internal::RoundedClip), sizeof(internal::RoundedClipOutput),
       sizeof(internal::RoundedOverlay), sizeof(internal::RoundedDecoration),
       sizeof(internal::RoundedPaintState));
+}
+
+// Verifies the real fixed-child rounded component retains the single-scan
+// capability declaration measured by the synthetic baseline.
+TEST(RoundedClipResources, MenuPanelUsesGuaranteedClippedPath) {
+  std::array<roo::byte, 4> pixels{};
+  roo_display::OffscreenDevice<roo_display::Argb8888> device(
+      1, 1, pixels.data(), roo_display::Argb8888());
+  roo_display::Display display(device);
+  roo_scheduler::SchedulingService scheduler;
+  Environment env(scheduler);
+  Application app(&env, display);
+  material3::internal::MenuPanel panel(app.context());
+  EXPECT_FALSE(panel.mayHaveUnclippedChildren());
 }
 
 // Verifies the sparse boundary storage allocates nothing when reused for the
