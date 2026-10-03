@@ -145,6 +145,40 @@ TEST(Material3MenuGeometry, PanelIncludesCanonicalContentMargins) {
   panel.clearGroups();
 }
 
+// Verifies both variants put end padding inside the scrolling content while
+// the viewport reaches the panel edges for rounded clipping.
+TEST(Material3MenuGeometry, VerticalPaddingBelongsToScrollableContent) {
+  roo_scheduler::SchedulingService scheduler;
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
+  for (ListVariant variant :
+       {ListVariant::kBaseline, ListVariant::kExpressive}) {
+    internal::MenuPanel panel(context);
+    MenuPolicy policy;
+    policy.variant = variant;
+    panel.setPolicy(policy);
+    auto group = std::make_unique<MenuGroup>(context);
+    MenuGroup* rows = group.get();
+    for (int i = 0; i < 3; ++i) {
+      group->add(std::make_unique<MenuRow<StandardMenuItem>>(context));
+    }
+    panel.addGroup(std::move(group));
+    Dimensions size =
+        panel.measure(WidthSpec::Exactly(160), HeightSpec::Exactly(100));
+    panel.layout(Rect(0, 0, size.width() - 1, size.height() - 1));
+    ASSERT_TRUE(panel.isScrolling());
+    auto* viewport =
+        dynamic_cast<internal::MenuViewport*>(rows->parent()->parent());
+    ASSERT_NE(viewport, nullptr);
+    const int padding = Scaled(variant == ListVariant::kBaseline ? 0 : 4);
+    EXPECT_EQ(Rect(padding, 0, size.width() - padding - 1, size.height() - 1),
+              viewport->parent_bounds());
+    EXPECT_EQ(padding, rows->offsetTop());
+    EXPECT_EQ(rows->height() + 2 * padding, viewport->contents()->height());
+    EXPECT_EQ(0, viewport->contents()->offsetTop());
+  }
+}
+
 TEST(Material3MenuGeometry, ScrollingCoercesExpressiveGapsToDividers) {
   roo_scheduler::SchedulingService scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),

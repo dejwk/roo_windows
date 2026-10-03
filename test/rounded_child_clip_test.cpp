@@ -11,6 +11,7 @@
 #include "roo_windows.h"
 #include "roo_windows/core/panel.h"
 #include "roo_windows/core/rounded_clip.h"
+#include "roo_windows/material3/menu/menu_surface.h"
 
 namespace roo_windows {
 namespace {
@@ -250,6 +251,86 @@ TEST_F(RoundedClipTest, ScrollingRoundedSelectionOverPattern) {
     expectSingleWrite();
     saveFrame(position);
   }
+}
+
+// Verifies the production menu viewport exposes selected rows at its top
+// curve after scrolling, with fractional coverage and one final device write.
+TEST_F(RoundedClipTest, MenuScrollReachesAntialiasedPanelEdge) {
+  using namespace material3;
+  auto panel = std::make_unique<material3::internal::MenuPanel>(app_.context());
+  auto* menu_panel = panel.get();
+  auto group = std::make_unique<MenuGroup>(app_.context());
+  MenuGroup* rows = group.get();
+  StandardMenuItemInit init;
+  init.flags =
+      StandardMenuItemFlags::kSelectable | StandardMenuItemFlags::kSelected;
+  auto row = std::make_unique<MenuRow<StandardMenuItem>>(app_.context(), init);
+  MenuEntry* selected = row.get();
+  group->add(std::move(row));
+  panel->addGroup(std::move(group));
+  auto second_group = std::make_unique<MenuGroup>(app_.context());
+  second_group->add(
+      std::make_unique<MenuRow<StandardMenuItem>>(app_.context()));
+  panel->addGroup(std::move(second_group));
+  MenuPolicy policy;
+  policy.separator_mode = MenuSeparatorMode::kDivider;
+  panel->setPolicy(policy);
+  const Box bounds(16, 12, 79, 55);
+  app_.add(std::move(panel), bounds);
+  ASSERT_TRUE(app_.refresh());
+  auto* viewport = dynamic_cast<material3::internal::MenuViewport*>(
+      rows->parent()->parent());
+  ASSERT_NE(viewport, nullptr);
+  const Color background = menu_panel->background();
+  const BorderStyle border = menu_panel->getBorderStyle();
+  Decoration parent(bounds, menu_panel->getElevation(), OverlaySpec(), nullptr,
+                    background, border.corner_radii(), 0, background);
+  for (int offset : {0, 12, 20, 0}) {
+    SCOPED_TRACE(offset);
+    viewport->scrollTo(0, -offset);
+    device_.reset();
+    ASSERT_TRUE(app_.refresh());
+    const int top = bounds.yMin() + Scaled(4) - offset;
+    const int left = bounds.xMin() + Scaled(4);
+    Decoration child(Box(left, top, left + selected->width() - 1,
+                         top + selected->height() - 1),
+                     0, OverlaySpec(), nullptr, selected->background(),
+                     selected->getBorderStyle().corner_radii(), 0,
+                     selected->background());
+    int selected_boundary_pixels = 0;
+    // This strip used to be a stationary gutter. Stay left of text/checkmarks.
+    for (int16_t y = bounds.yMin(); y < bounds.yMin() + Scaled(4); ++y) {
+      for (int16_t x = bounds.xMin(); x < bounds.xMin() + Scaled(14); ++x) {
+        Color c;
+        child.readColors(&x, &y, 1, &c);
+        const Color expected =
+            AlphaBlend(Backdrop(x, y),
+                       parent.readWithContent(x, y, AlphaBlend(background, c)));
+        expectColor(pixel(x, y), expected, x, y);
+        const uint8_t coverage = roo_windows::internal::RoundedFillCoverage(
+            bounds, border.corner_radii(), 0, x, y);
+        if (coverage > 0 && coverage < 255 && c.a() > 0) {
+          ++selected_boundary_pixels;
+        }
+      }
+    }
+    if (offset > 0) {
+      EXPECT_GT(selected_boundary_pixels, 0);
+    }
+    if (offset == 20) {
+      const int y = top + selected->height();
+      const Color divider =
+          app_.context().theme().material3Theme().color.resolve(
+              ColorToken::kOutlineVariant);
+      expectColor(pixel(43, y), divider, 43, y);
+      expectColor(pixel(43, y - 1), selected->background(), 43, y - 1);
+    }
+    expectSingleWrite();
+  }
+  viewport->scrollToBottom();
+  EXPECT_EQ(viewport->height() - Scaled(4),
+            viewport->contents()->offsetTop() +
+                menu_panel->groupAt(1).parent_bounds().yMax() + 1);
 }
 
 // Verifies a clean clipped foreground is reconstructed once when its backdrop

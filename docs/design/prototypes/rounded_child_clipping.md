@@ -64,6 +64,14 @@ Material 3 `MenuPanel` opts in on this branch. An ordinary container opts in by
 overriding `clipsChildrenToRoundedBounds()`; its border supplies the radii and
 outline. No changes are needed to the children.
 
+Menus retain horizontal gutters, while their top and bottom padding scrolls
+with the rows. The viewport spans the panel's full height, allowing moving
+rows to reach its rounded edge. The initial prototype kept a stationary 4 dp
+inset around this viewport, which largely hid the new clipping in real menus,
+including **Add network → Security** in `roo_windows_wifi`. At the start and
+end of the list, the original padding remains visible. This layout adjustment
+adds no per-instance state.
+
 The [scrolling example](../../../examples/material3/menus/rounded_scrolling/rounded_scrolling.ino)
 uses selected Material rows over a patterned backdrop. Run from `roo_windows`:
 
