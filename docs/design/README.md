@@ -2,11 +2,12 @@
 
 Shared terminology is defined in the [Roo Windows design glossary](glossary.md).
 
-Design documents are filed by implementation status:
+Design documents are filed by status:
 
 - `implemented/`: the design's defined scope is implemented. Later extensions do not change that status.
 - `in_progress/`: a usable subset or prerequisite has landed, but part of the defined scope remains.
 - `proposed/`: none of the design's own scope is implemented. Existing prerequisites may still be available.
+- `abandoned/`: the design was set aside and is retained for reference.
 
 Status was audited against the source tree and tests on 2026-09-12. “Dependency status” distinguishes implemented prerequisites from proposed or partially implemented work; a design can be proposed even when all of its prerequisites are available.
 
@@ -93,3 +94,9 @@ Status was audited against the source tree and tests on 2026-09-12. “Dependenc
 | Time pickers | Buttons, icon buttons, basic dialogs, and shared back behavior are implemented; single-line text fields are implemented; picker-specific integration remains proposed. |
 | Toolbars | Buttons, icon buttons, and menus are implemented; FABs and toolbars are proposed. |
 | [Wi-Fi configuration UI](proposed/material3_wifi_configuration_design.md) | The `roo_wifi` 2.0 backend, including allocation-free saved-profile enumeration, has landed locally and `roo_windows_wifi` already declares it; publication still awaits its documented hardware gates. Material 3 fields, dialogs and navigation are implemented. UI presentation, legacy-consumer integration, forms and application-policy integration remain proposed. |
+
+## Abandoned
+
+| Design | Status |
+| --- | --- |
+| [Rounded container child clipping: corner capture alternative](abandoned/rounded_child_clipping_design.md) | Unimplemented. Set aside in favor of the [sparse rounded child clipping prototype](prototypes/rounded_child_clipping.md), which intercepts child output during a single traversal. |
