@@ -1,6 +1,7 @@
 #include "roo_windows/core/application_context.h"
 
 #include "roo_windows/core/scroll_connection.h"
+#include "roo_windows/keyboard/editor_destination.h"
 
 namespace roo_windows {
 
@@ -21,7 +22,15 @@ internal::ScrollConnectionRegistry& ApplicationContext::scrollConnections() {
   return *scroll_connections_;
 }
 
+EditorDestination& ApplicationContext::editorDestination() {
+  if (editor_destination_ == nullptr) {
+    editor_destination_ = std::make_unique<EditorDestination>(*this);
+  }
+  return *editor_destination_;
+}
+
 ApplicationContext::~ApplicationContext() {
+  editor_destination_.reset();
   animations_.stop();
   presentations_.stop();
   lifetime_->context = nullptr;

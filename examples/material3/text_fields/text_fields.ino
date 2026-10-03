@@ -1,5 +1,7 @@
-// Edit account settings in place, validate required values, and reveal a
-// password without leaving the form. Fields share the owning task editor.
+// Edit account settings, validate required values, and reveal a password.
+// Fields scroll above the keyboard when they fit. At larger text scales,
+// fields that cannot fit open a compact full-screen editor automatically;
+// Confirm saves the draft and Back keeps the previous value.
 
 #ifdef ROO_TESTING
 #include "roo_testing/devices/display/ili9341/ili9341spi.h"

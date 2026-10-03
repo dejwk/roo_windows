@@ -19,8 +19,10 @@ class Field : public TextField {
   }
   bool onTrailingAffordanceClicked() override { return handled; }
 };
+// Keep the field's 240x120 painting area above the software keyboard. These
+// tests exercise in-place editing; extraction has its own avoidance tests.
 class Material3TextFieldTest
-    : public test_support::RooWindowsRenderTestSized<240, 120> {};
+    : public test_support::RooWindowsRenderTestSized<240, 320> {};
 // Verifies defaults and assistive precedence.
 TEST_F(Material3TextFieldTest, DefaultsAndAssistivePrecedence) {
   Field field(context(), "Label");
@@ -44,7 +46,7 @@ TEST_F(Material3TextFieldTest, DefaultsAndAssistivePrecedence) {
 // Verifies focus is idle and activation starts hardware editing.
 TEST_F(Material3TextFieldTest, FocusIsIdleAndActivationStartsHardwareEditing) {
   Field field(context(), "Label");
-  Task& task = app_.addTaskFullScreen(field);
+  Task& task = app_.addTask(field, roo_display::Box(0, 0, 239, 119));
   ASSERT_TRUE(refresh());
   ASSERT_TRUE(field.requestFocus());
   EXPECT_FALSE(field.isEdited());
@@ -71,7 +73,7 @@ TEST_F(Material3TextFieldTest, FocusIsIdleAndActivationStartsHardwareEditing) {
 // Verifies read only disable and live cancel.
 TEST_F(Material3TextFieldTest, ReadOnlyDisableAndLiveCancel) {
   Field field(context(), "Label", TextFieldVariant::kOutlined);
-  Task& task = app_.addTaskFullScreen(field);
+  Task& task = app_.addTask(field, roo_display::Box(0, 0, 239, 119));
   ASSERT_TRUE(refresh());
   field.setReadOnly(true);
   field.edit();
@@ -95,7 +97,7 @@ TEST_F(Material3TextFieldTest, DisabledSlotBackgroundMatchesContainer) {
   Field field(context(), "Label");
   field.setText("value");
   field.setEnabled(false);
-  Task& task = app_.addTaskFullScreen(field);
+  Task& task = app_.addTask(field, roo_display::Box(0, 0, 239, 119));
   ASSERT_TRUE(refresh());
   EXPECT_EQ(pixelAt(8, 36), pixelAt(210, 36));
   task.navigation().clear();
@@ -103,7 +105,7 @@ TEST_F(Material3TextFieldTest, DisabledSlotBackgroundMatchesContainer) {
 // Verifies scroll and dirty caret equal full repaint.
 TEST_F(Material3TextFieldTest, ScrollAndDirtyCaretEqualFullRepaint) {
   Field field(context(), "Label", TextFieldVariant::kOutlined);
-  Task& task = app_.addTaskFullScreen(field);
+  Task& task = app_.addTask(field, roo_display::Box(0, 0, 239, 119));
   field.setPrefixText("USD ");
   field.setSuffixText(" / day");
   field.setText("A long editable line which must scroll beyond the viewport");
@@ -128,7 +130,7 @@ TEST_F(Material3TextFieldTest, ScrollAndDirtyCaretEqualFullRepaint) {
 TEST_F(Material3TextFieldTest,
        SecureRevealKeepsSelectionAndTrailingTapDoesNotEdit) {
   SecureTextField field(context(), "Password");
-  Task& task = app_.addTaskFullScreen(field);
+  Task& task = app_.addTask(field, roo_display::Box(0, 0, 239, 119));
   field.setText(u8"aé猫");
   ASSERT_TRUE(refresh());
   EXPECT_FALSE(field.revealed());
@@ -155,7 +157,7 @@ TEST_F(Material3TextFieldTest,
        ErrorAffordanceFallsBackAndAssistiveTapDoesNothing) {
   Field field(context(), "Account");
   field.setErrorText("Try again");
-  Task& task = app_.addTaskFullScreen(field);
+  Task& task = app_.addTask(field, roo_display::Box(0, 0, 239, 119));
   ASSERT_TRUE(refresh());
   field.onSingleTapUp(30, field.getSuggestedMinimumDimensions().height() - 2);
   ASSERT_TRUE(refresh());
@@ -168,7 +170,7 @@ TEST_F(Material3TextFieldTest,
 // Verifies detach ends session and pending mask deadline.
 TEST_F(Material3TextFieldTest, DetachEndsSessionAndPendingMaskDeadline) {
   SecureTextField field(context(), "Password");
-  Task& task = app_.addTaskFullScreen(field);
+  Task& task = app_.addTask(field, roo_display::Box(0, 0, 239, 119));
   ASSERT_TRUE(refresh());
   field.edit();
   task.textFieldEditor().rune(U'猫');
@@ -199,7 +201,7 @@ TEST_F(Material3TextFieldTest, NarrowViewportsKeepScrollBounded) {
 // Verifies caret selection and label transitions restore pixels.
 TEST_F(Material3TextFieldTest, CaretSelectionAndLabelTransitionsRestorePixels) {
   Field field(context(), "Account", TextFieldVariant::kOutlined);
-  Task& task = app_.addTaskFullScreen(field);
+  Task& task = app_.addTask(field, roo_display::Box(0, 0, 239, 119));
   ASSERT_TRUE(refresh());
   field.requestFocus();
   KeyEvent key(KeyPhase::kDown, KeyCode::kEnter, 0, 0);
@@ -247,7 +249,7 @@ class FieldKeys : public KeySource {
 // Verifies physical source activates without synthetic slot tap.
 TEST_F(Material3TextFieldTest, PhysicalSourceActivatesWithoutSyntheticSlotTap) {
   SecureTextField field(context(), "Password");
-  Task& task = app_.addTaskFullScreen(field);
+  Task& task = app_.addTask(field, roo_display::Box(0, 0, 239, 119));
   FieldKeys keys;
   keys.connect(task);
   ASSERT_TRUE(refresh());
@@ -282,7 +284,7 @@ TEST_F(Material3TextFieldTest, PhysicalSourceActivatesWithoutSyntheticSlotTap) {
 // disabling or canceling a tap cannot trigger a later reveal or edit.
 TEST_F(Material3TextFieldTest, SecureAffordancePolicyAndCancellation) {
   SecureTextField field(context(), "Password");
-  Task& task = app_.addTaskFullScreen(field);
+  Task& task = app_.addTask(field, roo_display::Box(0, 0, 239, 119));
   field.setText("secret");
   field.setTrailingIcon(nullptr);
   field.setErrorText("Error");
@@ -431,7 +433,7 @@ TEST_F(Material3TextFieldTest,
        OutlineLabelCentersAscentIndependentlyOfDescenders) {
   Field field(context(), "H", TextFieldVariant::kOutlined);
   field.setText("value");
-  Task& task = app_.addTaskFullScreen(field);
+  Task& task = app_.addTask(field, roo_display::Box(0, 0, 239, 119));
   ASSERT_TRUE(refresh());
   ASSERT_TRUE(field.requestFocus());
   ASSERT_TRUE(refresh());

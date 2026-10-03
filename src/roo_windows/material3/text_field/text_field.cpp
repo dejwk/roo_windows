@@ -6,6 +6,7 @@
 #include "roo_icons/filled/alert.h"
 #include "roo_windows/core/task.h"
 #include "roo_windows/internal/single_line_text.h"
+#include "roo_windows/keyboard/editor_destination.h"
 
 namespace roo_windows::material3 {
 namespace {
@@ -92,6 +93,10 @@ TextField::TextField(ApplicationContext& context, roo::string_view label,
       flags_(variant == TextFieldVariant::kOutlined ? kOutlined : 0) {}
 
 TextField::~TextField() {
+  ApplicationContext* owner = tryContext();
+  if (owner != nullptr && owner->editorDestinationIfPresent() != nullptr) {
+    owner->editorDestinationIfPresent()->forgetSource(*this);
+  }
   // Stop the editor before the edit-target base and owned value are destroyed.
   if (isEdited()) {
     getTask()->textFieldEditor().cancel();
@@ -534,6 +539,10 @@ void TextField::startEditing(bool show_keyboard) {
     return;
   }
   if (!requestFocus() && !bounds().empty()) {
+    return;
+  }
+  if (show_keyboard && EditorDestination::NeedsExtraction(*this) &&
+      context().editorDestination().triggerEditField(*this)) {
     return;
   }
   invalidateInterior();

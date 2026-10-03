@@ -686,6 +686,15 @@ class Widget {
     return *live_context;
   }
 
+  /// Returns the context, or nullptr after application teardown. Subclasses
+  /// use this for optional service cleanup when widgets outlive the context.
+  ApplicationContext* tryContext() { return context_lifetime_->context; }
+
+  /// Returns the live context for inspection, or nullptr after teardown.
+  const ApplicationContext* tryContext() const {
+    return context_lifetime_->context;
+  }
+
   void triggerInteractiveChange();
 
   /// Applies one due sample for a subclass-owned animation channel.
@@ -857,11 +866,6 @@ class Widget {
   friend bool internal::CaptureTransientSourceGeometry(
       Task& owner, const Widget& source,
       internal::TransientSourceGeometry& output);
-
-  ApplicationContext* tryContext() { return context_lifetime_->context; }
-  const ApplicationContext* tryContext() const {
-    return context_lifetime_->context;
-  }
 
   virtual bool isTransientHostLayer() const { return false; }
 

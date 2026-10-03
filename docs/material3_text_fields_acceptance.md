@@ -34,8 +34,30 @@ keyboard, then asks the ancestor scrollers to reveal the field. Static forms
 pan inside the task's clipping boundary. Closing the keyboard restores the
 normal layout; the live editor, buffer and selection remain intact. Physical
 keyboard activation leaves the viewport unchanged. This applies to the task's
-content tree; transient surfaces retain their own host layout. Full-screen
-extraction for fields taller than the available viewport remains deferred.
+content tree; transient surfaces retain their own host layout.
+
+At software-keyboard activation, a Material 3 field taller than the available
+viewport (or wider than its task) opens
+[EditorDestination](../src/roo_windows/keyboard/editor_destination.h).
+It replaces the form within the task with a compact value editor and Back /
+Confirm actions. The destination edits a copy: confirmation updates the source
+and reports `onEditFinished(true)`; Back discards the draft and reports false.
+Secure fields preserve their masking policy. Physical-key activation stays in
+place, and fields that fit continue to scroll or pan.
+
+The application context allocates one shared destination on first extraction,
+adding one pointer per context and no state to individual fields. Navigation
+borrows the destination; the context retains it for reuse. The source's
+destructor clears its borrowed reference, including while the source form is
+detached. Completion checks that reference again after the value-change hook,
+which can destroy the source. Removing the destination through navigation also
+cancels its pending edit. The old `EditTextField` include and name remain as a
+compatibility alias.
+
+The fit decision uses the field's laid-out dimensions and suggested minimum
+height before opening the keyboard. Transient-hosted fields retain their host's
+layout policy. Extraction requires the shared destination to be outside
+navigation history; an already-open destination is not pushed a second time.
 
 ## Allocation scope and accepted deferral
 

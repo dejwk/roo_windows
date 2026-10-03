@@ -65,6 +65,7 @@ class Task {
 
  private:
   friend class Application;
+  friend class EditorDestination;
   friend class ApplicationInputRouter;
   friend class KeySource;
   friend class MainWindow;

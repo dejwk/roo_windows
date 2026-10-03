@@ -1,79 +1,9 @@
 #pragma once
 
-#include <functional>
-
-#include "roo_windows/keyboard/keyboard.h"
-#include "roo_windows/containers/horizontal_layout.h"
-#include "roo_windows/containers/vertical_layout.h"
-#include "roo_windows/core/destination.h"
-#include "roo_windows/core/application_context.h"
-#include "roo_windows/core/navigation_host.h"
-#include "roo_windows/widgets/button.h"
-#include "roo_windows/widgets/icon.h"
-#include "roo_windows/widgets/text_field.h"
+#include "roo_windows/keyboard/editor_destination.h"
 
 namespace roo_windows {
-
-class EditTextField;
-
-/// `TextField` subclass used inside `EditTextField` activities.
-///
-/// Forwards the `onEditFinished` notification back to the owning activity so
-/// the activity can confirm or cancel the edit.
-class EditedTextField : public TextField {
- public:
-  EditedTextField(ApplicationContext& context, const std::string& hint,
-                  EditTextField& activity);
-
-  /// Confirms or cancels the activity-driven edit through the owning
-  /// `EditTextField`.
-  void onEditFinished(bool confirmed) override;
-
- private:
-  EditTextField& activity_;
-};
-
-/// Full-screen activity for editing a string value.
-///
-/// Hosts a single `EditedTextField` with back / enter buttons; pushing it onto
-/// a `NavigationHost` via `triggerEdit()` (or `triggerEditField()` to round-trip a
-/// caller-owned `TextField`) suspends the underlying activity, runs the edit,
-/// and invokes the supplied confirmation callback with the entered string.
-class EditTextField : public Destination {
- public:
-  EditTextField(ApplicationContext& context, const std::string& hint);
-
-  /// Returns the activity's root pane (containing the editor and action
-  /// buttons).
-  Widget& getContents() override { return main_pane_; }
-
-  /// Cancels an active edit when it receives a semantic back request.
-  BackResult onBackRequested(BackSource source) override;
-
-  /// Launches a text-enter activity with the specified conditions, triggering
-  /// the specified function on confirmation.
-  void triggerEdit(NavigationHost& navigation, const std::string& initial,
-                   const std::string& hint,
-                   std::function<void(const std::string&)> enter_fn);
-
-  /// Launches a text-enter activity to edit the text in the specified field.
-  /// Typical usage:
-  /// field.addOnClicked([&]() { enter_text.triggerEditField(field); });
-  void triggerEditField(TextField& field);
-
- private:
-  friend class EditedTextField;
-
-  void confirm();
-  void cancel();
-
-  VerticalLayout main_pane_;
-  HorizontalLayout content_pane_;
-  SimpleButton back_;
-  EditedTextField text_;
-  SimpleButton enter_;
-  bool editing_;
-  std::function<void(const std::string&)> enter_fn_;
-};
-
+/// Compatibility name; use EditorDestination from
+/// keyboard/editor_destination.h.
+using EditTextField = EditorDestination;
 }  // namespace roo_windows

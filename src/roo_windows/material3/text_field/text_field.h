@@ -1,7 +1,7 @@
 #pragma once
 
-#include "roo_windows/core/surface_widget.h"
 #include "roo_windows/core/layout_direction.h"
+#include "roo_windows/core/surface_widget.h"
 #include "roo_windows/internal/text_edit_target.h"
 #include "roo_windows/material3/typography.h"
 
@@ -99,6 +99,9 @@ class TextField : public SurfaceWidget,
   bool isEdited() const;
 
   /// Requests focus and editing with the software keyboard when eligible.
+  /// A field that cannot fit above the keyboard opens a compact
+  /// EditorDestination in its task. That destination edits a copy and commits
+  /// it on confirmation; Back leaves this field's value unchanged.
   void edit();
 
   /// Uses the field palette to resolve disabled colors once.
@@ -180,6 +183,8 @@ class TextField : public SurfaceWidget,
   void notifyStateChanged(uint16_t diff) override;
 
  private:
+  friend class ::roo_windows::EditorDestination;
+
   /// Owner-local rectangles for the field's painted regions.
   struct Slots;
 
@@ -233,9 +238,9 @@ class TextField : public SurfaceWidget,
 };
 
 // Includes the edit-target vptr, string ABI, slot views and packed state.
-static_assert(sizeof(TextField) <=
-                  sizeof(SurfaceWidget) + sizeof(std::string) +
-                      5 * sizeof(roo::string_view) + 4 * sizeof(void*),
+static_assert(sizeof(TextField) <= sizeof(SurfaceWidget) + sizeof(std::string) +
+                                       5 * sizeof(roo::string_view) +
+                                       4 * sizeof(void*),
               "TextField must not acquire per-instance editor, child or "
               "callback storage");
 }  // namespace roo_windows::material3

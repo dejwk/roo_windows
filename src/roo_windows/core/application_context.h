@@ -13,6 +13,7 @@
 namespace roo_windows {
 
 class Application;
+class EditorDestination;
 class Widget;
 namespace internal {
 class ScrollConnectionRegistry;
@@ -80,6 +81,17 @@ class ApplicationContext {
     return scroll_connections_.get();
   }
 
+  /// Provides the application-owned full-screen editor, allocating on first
+  /// use. Call on the UI thread. The returned destination is borrowed and
+  /// must leave navigation history before context destruction.
+  EditorDestination& editorDestination();
+
+  /// Returns the borrowed shared editor, or nullptr before first use.
+  /// Does not allocate. Call on the application's UI thread.
+  EditorDestination* editorDestinationIfPresent() const {
+    return editor_destination_.get();
+  }
+
  private:
   friend class AnimationRegistry;
   friend class Application;
@@ -114,6 +126,7 @@ class ApplicationContext {
   AnimationRegistry animations_;
   Application* frame_driver_ = nullptr;
   Lifetime* lifetime_;
+  std::unique_ptr<EditorDestination> editor_destination_;
 };
 
 }  // namespace roo_windows

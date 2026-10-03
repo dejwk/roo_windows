@@ -73,8 +73,9 @@ The existing prerequisites are:
 - The editor already supports Unicode insertion, selection, physical-key
   movement/deletion, and confirm/cancel. Its caret uses the application context's
   animation registry; recent-glyph masking uses a scheduler timer.
-- [activities/edit_text_field.h](../../../src/roo_windows/activities/edit_text_field.h)
-  remains a legacy navigation destination using the same runtime.
+- [keyboard/editor_destination.h](../../../src/roo_windows/keyboard/editor_destination.h)
+  provides a compact full-screen editing destination using the same runtime.
+  The old `EditTextField` name is a compatibility alias.
 - [material3/typography.h](../../../src/roo_windows/material3/typography.h)
   provides Material 3 `TextStyle` roles, including font, line height and tracking.
 - `TextBlock` supports wrapping, alignment, max lines and ellipsis. Shared rich
@@ -696,8 +697,8 @@ The migration plan is additive and non-breaking.
    use the same editing core.
 3. Resolve editing through the existing owning `Task`; preserve application
    semantic input routing and presentation isolation.
-4. Leave [activities/edit_text_field.h](../../../src/roo_windows/activities/edit_text_field.h)
-   available as a legacy full-screen wrapper.
+4. Use [keyboard/editor_destination.h](../../../src/roo_windows/keyboard/editor_destination.h)
+   for full-screen extraction; retain the old include and name as aliases.
 5. Migrate examples and new code to the Material 3 family gradually.
 
 This keeps the old widget available for compatibility while avoiding semantic
@@ -926,8 +927,9 @@ Code slice:
 2. Use the new example as the initial Material 3 form usage site. Migrate an
    existing form only if its semantics fit; do not expand this slice into an
    unrelated screen redesign.
-3. Keep the legacy full-screen edit activity available, but stop extending it
-   as the primary authoring path for new Material 3 work.
+3. Preserve the old full-screen editor name as an alias to `EditorDestination`.
+   Material 3 fields use the destination automatically when they cannot fit
+   above the keyboard.
 4. Add example-build coverage for the new sketch.
 
 Proposed commit message:
@@ -1061,5 +1063,27 @@ keyboard, then asks the ancestor scrollers to reveal the field. Static forms
 pan inside the task's clipping boundary. Closing the keyboard restores the
 normal layout; the live editor, buffer and selection remain intact. Physical
 keyboard activation leaves the viewport unchanged. This applies to the task's
-content tree; transient surfaces retain their own host layout. Full-screen
-extraction for fields taller than the available viewport remains deferred.
+content tree; transient surfaces retain their own host layout.
+
+At software-keyboard activation, a Material 3 field taller than the available
+viewport (or wider than its task) opens
+[EditorDestination](../../../src/roo_windows/keyboard/editor_destination.h).
+It replaces the form within the task with a compact value editor and Back /
+Confirm actions. The destination edits a copy: confirmation updates the source
+and reports `onEditFinished(true)`; Back discards the draft and reports false.
+Secure fields preserve their masking policy. Physical-key activation stays in
+place, and fields that fit continue to scroll or pan.
+
+The application context allocates one shared destination on first extraction,
+adding one pointer per context and no state to individual fields. Navigation
+borrows the destination; the context retains it for reuse. The source's
+destructor clears its borrowed reference, including while the source form is
+detached. Completion checks that reference again after the value-change hook,
+which can destroy the source. Removing the destination through navigation also
+cancels its pending edit. The old `EditTextField` include and name remain as a
+compatibility alias.
+
+The fit decision uses the field's laid-out dimensions and suggested minimum
+height before opening the keyboard. Transient-hosted fields retain their host's
+layout policy. Extraction requires the shared destination to be outside
+navigation history; an already-open destination is not pushed a second time.

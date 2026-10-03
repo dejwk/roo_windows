@@ -566,12 +566,13 @@ Widget* Application::activeTextEditorWidget() const {
 void Application::dismissTextEditor() { text_input_->dismiss(); }
 
 void Application::setTextEditorKeyboardVisibility(bool visible) {
+  // Task teardown can finish an editor after the keyboard task is destroyed.
+  if (state_ == State::kStopping) return;
   if (visible) {
     keyboard_.show();
   } else {
     keyboard_.hide();
   }
-  if (state_ == State::kStopping) return;
   // Recompute both outgoing and incoming owners during input transfer.
   for (const auto& task : tasks_) task->panel_.requestLayout();
 }
