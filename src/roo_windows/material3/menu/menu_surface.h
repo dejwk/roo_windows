@@ -68,6 +68,9 @@ class MenuPanel final : public Material3Container {
   explicit MenuPanel(ApplicationContext& context);
   ~MenuPanel() override;
 
+  /// Lets scrolling rows meet the panel curve with antialiased clipping.
+  bool clipsChildrenToRoundedBounds() const override { return true; }
+
   void setPolicy(const MenuPolicy& policy);
   void addGroup(MenuGroup& group);
   void addGroup(std::unique_ptr<MenuGroup> group);

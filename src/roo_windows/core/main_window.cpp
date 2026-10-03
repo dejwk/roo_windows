@@ -211,8 +211,17 @@ bool MainWindow::paintWindow(const roo_display::Surface& s,
     // Preserve the completed prefix outside the newly invalidated area. Inside
     // it, remove stale exclusions/overlays and reopen just the affected widget
     // subtrees for this continuation.
-    clipper_state_.invalidate(continuation_invalid_bounds_.asBox());
-    invalidateDescending(continuation_invalid_bounds_);
+    if (clipper_state_.hasRoundedClips()) {
+      // The prototype retains edge colors until the logical paint finishes.
+      // Any intervening mutation conservatively starts a fresh image while
+      // keeping Application's already sampled animation time.
+      paint_continuation_ = false;
+      redraw_bounds_ = bounds();
+      invalidateDescending();
+    } else {
+      clipper_state_.invalidate(continuation_invalid_bounds_.asBox());
+      invalidateDescending(continuation_invalid_bounds_);
+    }
     continuation_invalid_bounds_ = Rect(0, 0, -1, -1);
   }
   if (!initialized_) {

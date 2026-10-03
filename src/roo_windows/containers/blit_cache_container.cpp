@@ -439,6 +439,14 @@ void BlitCacheContainer::paintWidgetContents(PaintContext& ctx) {
   using roo_display::Box;
   const Canvas& canvas = ctx.canvas();
   Clipper& clipper = ctx.clipperForFramework();
+  if (clipper.hasRoundedClip()) {
+    has_pending_blit_ = false;
+    pending_dx_ = 0;
+    pending_dy_ = 0;
+    blit_safe_region_ = Box(0, 0, -1, -1);
+    Container::paintWidgetContents(ctx);
+    return;
+  }
 
   // On first paint, discover blit capability.
   if (blit_supported_ < 0) {

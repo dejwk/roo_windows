@@ -9,6 +9,15 @@
 
 namespace roo_windows {
 
+namespace internal {
+
+/// Returns the existing decoration's inner coverage, in device coordinates.
+uint8_t RoundedFillCoverage(roo_display::Box bounds,
+                            BorderStyle::CornerRadii radii, SmallNumber outline,
+                            int16_t x, int16_t y);
+
+}  // namespace internal
+
 struct ShadowSpec {
   // Extents of the shadow.
   int16_t x, y, w, h;
@@ -33,14 +42,22 @@ class Decoration : public roo_display::Rasterizable {
  public:
   Decoration();
 
-  // Extents are given for the original area to which the shadow is to be
-  // applied. Elevation from 1 to 31. Corner radius specifies that the corners
-  // of the object casting the shadow are rounded with the specified radius.
-  // Outline may be zero.
+  /// Creates a decorated surface over @p extents with the supplied fill,
+  /// outline and shadow. Extents describe the original area casting the shadow;
+  /// elevation is 0 for none or 1 to 31, and corner radii round that area.
+  /// The outline width may be zero. Set @p preserve_fill_boundary when
+  /// readWithContent will substitute subtree colors, so an outline matching
+  /// bgcolor is not folded away.
   Decoration(roo_display::Box extents, int elevation,
              const OverlaySpec& overlay_spec, const PressOverlay* press_overlay,
              roo_display::Color bgcolor, BorderStyle::CornerRadii corner_radii,
-             SmallNumber outline_width, roo_display::Color outline_color);
+             SmallNumber outline_width, roo_display::Color outline_color,
+             bool preserve_fill_boundary = false);
+
+  /// Composes resolved subtree content with this surface's coverage and shadow.
+  /// The content has not yet been multiplied by this surface's coverage.
+  roo_display::Color readWithContent(int16_t x, int16_t y,
+                                     roo_display::Color content) const;
 
   roo_display::Box extents() const override { return shadow_extents_; }
 

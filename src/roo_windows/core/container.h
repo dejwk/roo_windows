@@ -31,6 +31,13 @@ class Container : public SurfaceWidget {
  public:
   Container(ApplicationContext& context);
 
+  /// Enables experimental smooth child clipping using sparse boundary colors.
+  /// Children paint once; ordinary containers carry no additional stored state.
+  /// This prototype clips every descendant, including kUnclipped children.
+  /// Use with opaque, enabled surfaces whose interaction feedback belongs to
+  /// their children. Owner ripple/disabled effects are not yet supported.
+  virtual bool clipsChildrenToRoundedBounds() const { return false; }
+
   /// Allows an owning container to route an accepted direct-child invocation.
   /// Return true after handling the action; the caller must then return without
   /// touching the child because application callbacks may have destroyed it.
@@ -117,6 +124,8 @@ class Container : public SurfaceWidget {
   bool isScrollable() const;
 
  protected:
+  void emitPersistentDecoration(PaintContext& ctx) const override;
+
   int focusChildCount() const override { return getChildrenCount(); }
   Widget* focusChildAt(int index) override { return &getChild(index); }
   void attachChild(WidgetRef child,
@@ -207,6 +216,9 @@ class Container : public SurfaceWidget {
   virtual Widget& getChild(int idx) = 0;
 
  private:
+  void paintContentsWithoutRoundedClip(PaintContext& ctx);
+  void paintRoundedContents(PaintContext& ctx);
+
   void invalidateCachedMaxBounds() { cached_max_bounds_ = Rect(0, 0, -1, -1); }
 
   PaintContext prepareSurfaceContext(const PaintContext& in,

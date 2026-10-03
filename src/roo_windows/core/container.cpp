@@ -88,6 +88,49 @@ PaintContext Container::prepareSurfaceContext(const PaintContext& in,
 }
 
 void Container::paintWidgetContents(PaintContext& ctx) {
+  if (clipsChildrenToRoundedBounds() && getBorderStyle().hasRoundedCorners()) {
+    paintRoundedContents(ctx);
+    return;
+  }
+  paintContentsWithoutRoundedClip(ctx);
+}
+
+void Container::paintRoundedContents(PaintContext& ctx) {
+  Clipper& clipper = ctx.clipperForFramework();
+  bool fresh = false;
+  internal::RoundedClip& clip = clipper.beginRoundedClip(
+      this, bounds().translate(ctx.canvas().dx(), ctx.canvas().dy()).asBox(),
+      getBorderStyle().trim(width(), height()), fresh);
+  if (!clip.completed) {
+    roo_display::DisplayOutput& previous = ctx.canvas().out();
+    internal::RoundedClipOutput output(previous, clip);
+    ctx.canvas().set_out(&output);
+    paintContentsWithoutRoundedClip(ctx);
+    ctx.canvas().set_out(&previous);
+    clip.completed = !clipper.wasPaintInterrupted();
+  }
+  clipper.endRoundedClip();
+}
+
+void Container::emitPersistentDecoration(PaintContext& ctx) const {
+  Clipper& clipper = ctx.clipperForFramework();
+  if (!clipsChildrenToRoundedBounds() || clipper.roundedClip(this) == nullptr) {
+    SurfaceWidget::emitPersistentDecoration(ctx);
+    return;
+  }
+  const BorderStyle border = getBorderStyle().trim(width(), height());
+  clipper.addRoundedDecoration(
+      this, ctx.canvas().clip_box(),
+      bounds().translate(ctx.canvas().dx(), ctx.canvas().dy()).asBox(),
+      getElevation(), ctx.bgcolor(), border,
+      AlphaBlend(ctx.bgcolor(), getOutlineColor()));
+}
+
+void Container::paintContentsWithoutRoundedClip(PaintContext& ctx) {
+  if (ctx.clipperForFramework().needsRoundedRepaint()) {
+    markInvalidated();
+    invalid_region_ = ctx.localClip();
+  }
   if (!isInvalidated()) {
     // Faster path with less stack overhead; repaint the children.
     if (isDirty() || !bounds().contains(maxBounds())) {
@@ -126,7 +169,8 @@ void Container::paintWidgetContents(PaintContext& ctx) {
 
 void Container::paintChildren(PaintContext& ctx) {
   PaintContext clipped_ctx = ctx.clipped(bounds());
-  bool fast_render = isDirty() && respectsChildrenBoundaries();
+  bool fast_render = isDirty() && respectsChildrenBoundaries() &&
+                     !ctx.clipperForFramework().hasRoundedClip();
   for (int i = getChildrenCount() - 1; i >= 0; --i) {
     if (ctx.isDeadlineExceeded()) return;
     Widget& child = getChild(i);
@@ -255,6 +299,11 @@ void Container::propagateDirty(const Widget* child, const Rect& rect) {
     }
   }
   setDirty(clipped);
+  if (clipsChildrenToRoundedBounds() && !clipped.empty()) {
+    // Deferred boundary colors need lower scene pixels even for a state-only
+    // child change. Schedule the backdrop before entering the paint traversal.
+    notifyParentInvalidatedRegion(clipped.translate(offsetLeft(), offsetTop()));
+  }
 }
 
 void Container::invalidateDescending() {
