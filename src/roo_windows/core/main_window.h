@@ -25,6 +25,9 @@ class MainWindow : public Container {
 
   ~MainWindow() override;
 
+  /// Allows supplied task and popup roots to opt out of the window clip.
+  bool mayHaveUnclippedChildren() const override { return true; }
+
   /// Routes outside keyboard taps to the window for dismissal.
   bool fillTouchTargetPath(XDim x, YDim y, std::vector<Widget*>& path) override;
 
@@ -122,7 +125,8 @@ class MainWindow : public Container {
   void childInvalidatedRegion(const Widget* child, Rect rect) override;
 
   /// Paints root children with their eligible pins immediately before each
-  /// child, preserving the generic container traversal for ordinary trees.
+  /// child, preserving the generic container's unclipped-then-clipped group
+  /// order.
   void paintChildren(PaintContext& ctx) override;
 
  private:

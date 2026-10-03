@@ -91,6 +91,9 @@ class SnackbarWidget : public Container {
   /// Detaches its inline children.
   ~SnackbarWidget() override;
 
+  /// Conservatively permits mutable snackbar controls to become unclipped.
+  bool mayHaveUnclippedChildren() const override { return true; }
+
   SnackbarWidget(const SnackbarWidget&) = delete;
   SnackbarWidget& operator=(const SnackbarWidget&) = delete;
   SnackbarWidget(SnackbarWidget&&) = delete;

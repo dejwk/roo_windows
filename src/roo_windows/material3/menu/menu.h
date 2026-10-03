@@ -341,6 +341,9 @@ class MenuGroup final : public Container {
   /// Detaches all remaining rows, deleting rows adopted by `add()`.
   ~MenuGroup() override;
 
+  /// Allows caller-provided menu rows to be unclipped.
+  bool mayHaveUnclippedChildren() const override { return true; }
+
   /// Appends a detached caller-owned row.
   void add(MenuEntry& entry);
 

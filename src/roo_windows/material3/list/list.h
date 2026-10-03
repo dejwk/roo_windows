@@ -268,6 +268,9 @@ class ExpandablePanel : public Container {
   /// Creates an empty collapsed expandable panel.
   explicit ExpandablePanel(ApplicationContext& context);
 
+  /// Allows caller-provided expandable content to be unclipped.
+  bool mayHaveUnclippedChildren() const override { return true; }
+
   /// Sets the expandable content widget.
   void setContent(WidgetRef content);
 
@@ -327,6 +330,9 @@ class ListEntry : public Material3Container {
 
   /// Detaches any stable slot children that are still bound.
   ~ListEntry() override;
+
+  /// Allows caller-provided item slots to be unclipped.
+  bool mayHaveUnclippedChildren() const override { return true; }
 
   /// Returns whether an item is currently bound.
   bool hasItem() const;
@@ -964,6 +970,9 @@ class List : public Container {
 
   /// Releases any adopted rows still attached to this list.
   ~List() override;
+
+  /// Allows caller-provided rows and sections to be unclipped.
+  bool mayHaveUnclippedChildren() const override { return true; }
 
   /// Sets the Material 3 list variant used for future visual propagation.
   void setVariant(ListVariant variant);

@@ -27,6 +27,10 @@ constexpr int kWidth = 96;
 constexpr int kHeight = 72;
 constexpr Color kPanel(0xFFECE4DB);
 constexpr Color kRow(0xFF3867C7);
+constexpr Color kRed(0xFFCF3E32);
+constexpr Color kBlue(0xFF246FCE);
+constexpr Color kGreen(0xFF2E8B57);
+constexpr Color kTranslucentOrange(0x809C4E18);
 
 Color Backdrop(int x, int y) {
   return ((x / 5 + y / 5) & 1) == 0 ? Color(0xFF9A7F62) : Color(0xFF314B43);
@@ -156,6 +160,89 @@ class SelectedRow : public SurfaceWidget {
   }
   mutable int paint_count = 0;
   int delay_ms = 0;
+};
+
+class PaintBlock : public Widget {
+ public:
+  PaintBlock(ApplicationContext& context, Color color,
+             bool deferred_overlay = false)
+      : Widget(context), color_(color), deferred_overlay_(deferred_overlay) {}
+
+  void paint(PaintContext& ctx) const override {
+    ++paint_count;
+    if (deferred_overlay_) {
+      ctx.addOverlayShape(roo_display::SmoothFilledRoundRect(
+          0, 0, width() - 1, height() - 1, 0, color_));
+    } else {
+      ctx.fillRect(bounds(), color_);
+    }
+    if (delay_ms != 0) delay(delay_ms);
+  }
+
+  Dimensions getSuggestedMinimumDimensions() const override {
+    return Dimensions(1, 1);
+  }
+
+  void setColor(Color color) {
+    color_ = color;
+    invalidateInterior();
+  }
+
+  mutable int paint_count = 0;
+  int delay_ms = 0;
+
+ protected:
+  Rect getDirectPaintExclusionBounds() const override {
+    return deferred_overlay_ ? Rect() : bounds();
+  }
+
+ private:
+  Color color_;
+  bool deferred_overlay_;
+};
+
+class SloppyPaintBlock : public PaintBlock {
+ public:
+  using PaintBlock::PaintBlock;
+
+  Rect getSloppyTouchParentBounds() const override {
+    return Rect(parent_bounds().xMin() - 8, parent_bounds().yMin(),
+                parent_bounds().xMax(), parent_bounds().yMax());
+  }
+};
+
+class FixedRoundedPanel : public RoundedPanel {
+ public:
+  using RoundedPanel::RoundedPanel;
+
+  bool mayHaveUnclippedChildren() const override { return false; }
+};
+
+class PlainGroupedPanel : public Panel {
+ public:
+  using Panel::add;
+  using Panel::Panel;
+
+  Color background() const override { return kPanel; }
+};
+
+class FixedPlainPanel : public PlainGroupedPanel {
+ public:
+  using PlainGroupedPanel::PlainGroupedPanel;
+
+  bool mayHaveUnclippedChildren() const override { return false; }
+};
+
+class CountingRoundedPanel : public RoundedPanel {
+ public:
+  using RoundedPanel::RoundedPanel;
+
+  bool mayHaveUnclippedChildren() const override {
+    ++capability_queries;
+    return true;
+  }
+
+  mutable int capability_queries = 0;
 };
 
 class RoundedClipTest : public testing::Test {
@@ -424,6 +511,303 @@ TEST_F(RoundedClipTest, MutationDuringContinuationRestartsBoundary) {
   }
 }
 
+// Verifies unclipped children form the foreground group regardless of raw
+// insertion order, escape the parent curve, and restore lower clipped content.
+TEST_F(RoundedClipTest, UnclippedForegroundRestoresAndChangesGroups) {
+  auto panel = std::make_unique<RoundedPanel>(app_.context());
+  auto foreground = std::make_unique<PaintBlock>(app_.context(), kBlue);
+  PaintBlock* foreground_ptr = foreground.get();
+  foreground->setParentClipMode(ParentClipMode::kUnclipped);
+  panel->add(std::move(foreground), Rect(-8, -8, 31, 31));
+  auto clipped = std::make_unique<PaintBlock>(app_.context(), kRed);
+  panel->add(std::move(clipped), Rect(0, 0, 63, 43));
+  app_.add(std::move(panel), Box(16, 12, 79, 55));
+
+  device_.reset();
+  ASSERT_TRUE(app_.refresh());
+  EXPECT_EQ(pixel(32, 28), kBlue);
+  EXPECT_EQ(pixel(16, 12), kBlue);
+  EXPECT_EQ(pixel(10, 8), kBlue);
+  expectSingleWrite();
+
+  foreground_ptr->setVisibility(Visibility::kInvisible);
+  device_.reset();
+  ASSERT_TRUE(app_.refresh());
+  EXPECT_EQ(pixel(32, 28), kRed);
+  EXPECT_EQ(pixel(10, 8), Backdrop(10, 8));
+  expectSingleWrite();
+
+  foreground_ptr->setVisibility(Visibility::kVisible);
+  ASSERT_TRUE(app_.refresh());
+  foreground_ptr->setParentClipMode(ParentClipMode::kClipped);
+  device_.reset();
+  ASSERT_TRUE(app_.refresh());
+  EXPECT_EQ(pixel(32, 28), kRed);
+  EXPECT_EQ(pixel(10, 8), Backdrop(10, 8));
+  expectSingleWrite();
+}
+
+// Verifies a translucent unclipped overlay composes outside the parent's
+// retained boundary buffer and remains above a higher-index clipped sibling.
+TEST_F(RoundedClipTest, TranslucentUnclippedForegroundComposesOutsideMask) {
+  auto panel = std::make_unique<RoundedPanel>(app_.context());
+  auto foreground = std::make_unique<PaintBlock>(
+      app_.context(), kTranslucentOrange, /*deferred_overlay=*/true);
+  foreground->setParentClipMode(ParentClipMode::kUnclipped);
+  panel->add(std::move(foreground), Rect(-8, -8, 31, 31));
+  panel->add(std::make_unique<PaintBlock>(app_.context(), kRed),
+             Rect(0, 0, 63, 43));
+  app_.add(std::move(panel), Box(16, 12, 79, 55));
+
+  device_.reset();
+  ASSERT_TRUE(app_.refresh());
+  Decoration parent(Box(16, 12, 79, 55), 0, OverlaySpec(), nullptr, kPanel,
+                    {16, 16, 16, 16}, 0, kPanel);
+  const Color inside = parent.readWithContent(32, 28, kRed);
+  expectColor(pixel(32, 28), AlphaBlend(inside, kTranslucentOrange), 32, 28);
+  expectColor(pixel(10, 8), AlphaBlend(Backdrop(10, 8), kTranslucentOrange), 10,
+              8);
+  expectSingleWrite();
+}
+
+// Verifies an unclipped descendant bypasses only its immediate rounded parent;
+// the enclosing rounded ancestor still masks the escaped pixels.
+TEST_F(RoundedClipTest, UnclippedChildRetainsRoundedAncestorMask) {
+  auto outer = std::make_unique<RoundedPanel>(app_.context());
+  auto inner = std::make_unique<RoundedPanel>(app_.context());
+  auto foreground = std::make_unique<PaintBlock>(app_.context(), kBlue);
+  foreground->setParentClipMode(ParentClipMode::kUnclipped);
+  inner->add(std::move(foreground), Rect(-12, -12, 35, 35));
+  outer->add(std::move(inner), Rect(12, 10, 51, 37));
+  app_.add(std::move(outer), Box(16, 12, 79, 55));
+
+  device_.reset();
+  ASSERT_TRUE(app_.refresh());
+  EXPECT_EQ(pixel(24, 20), kBlue);
+  EXPECT_EQ(pixel(16, 12), Backdrop(16, 12));
+  expectSingleWrite();
+}
+
+// Verifies exact targets retain precedence over foreground-group sloppy hits,
+// while overlapping exact targets follow the visual child-group order.
+TEST_F(RoundedClipTest, TouchSearchMatchesGroupedVisualOrder) {
+  auto panel = std::make_unique<PlainGroupedPanel>(app_.context());
+  PlainGroupedPanel* panel_ptr = panel.get();
+  auto foreground = std::make_unique<SloppyPaintBlock>(app_.context(), kBlue);
+  SloppyPaintBlock* foreground_ptr = foreground.get();
+  foreground->setParentClipMode(ParentClipMode::kUnclipped);
+  panel->add(std::move(foreground), Rect(12, 0, 31, 19));
+  auto clipped = std::make_unique<PaintBlock>(app_.context(), kRed);
+  PaintBlock* clipped_ptr = clipped.get();
+  panel->add(std::move(clipped), Rect(4, 0, 23, 19));
+  app_.add(std::move(panel), Box(16, 12, 79, 55));
+
+  std::vector<Widget*> path;
+  ASSERT_TRUE(panel_ptr->fillTouchTargetPath(16, 8, path));
+  EXPECT_EQ(foreground_ptr, path.back());
+
+  path.clear();
+  ASSERT_TRUE(panel_ptr->fillTouchTargetPath(8, 8, path));
+  EXPECT_EQ(clipped_ptr, path.back());
+}
+
+// Verifies a deadline after an unclipped child retains the foreground cursor;
+// the continuation does not repaint that completed child before clipped work.
+TEST_F(RoundedClipTest, ContinuationRetainsUnclippedGroupProgress) {
+  auto panel = std::make_unique<RoundedPanel>(app_.context());
+  auto lower_foreground = std::make_unique<PaintBlock>(app_.context(), kGreen);
+  PaintBlock* lower_foreground_ptr = lower_foreground.get();
+  lower_foreground->setParentClipMode(ParentClipMode::kUnclipped);
+  panel->add(std::move(lower_foreground), Rect(-8, -8, 31, 31));
+  auto clipped = std::make_unique<PaintBlock>(app_.context(), kRed);
+  PaintBlock* clipped_ptr = clipped.get();
+  panel->add(std::move(clipped), Rect(0, 0, 63, 43));
+  auto foreground = std::make_unique<PaintBlock>(app_.context(), kBlue);
+  PaintBlock* foreground_ptr = foreground.get();
+  foreground->setParentClipMode(ParentClipMode::kUnclipped);
+  foreground->delay_ms = 40;
+  panel->add(std::move(foreground), Rect(-8, -8, 31, 31));
+  app_.add(std::move(panel), Box(16, 12, 79, 55));
+
+  device_.reset();
+  EXPECT_FALSE(app_.refresh(roo_time::Uptime::Now() + roo_time::Millis(20)));
+  EXPECT_EQ(foreground_ptr->paint_count, 1);
+  EXPECT_EQ(lower_foreground_ptr->paint_count, 0);
+  EXPECT_EQ(clipped_ptr->paint_count, 0);
+  foreground_ptr->delay_ms = 0;
+  ASSERT_TRUE(app_.refresh());
+  EXPECT_EQ(foreground_ptr->paint_count, 1);
+  EXPECT_EQ(lower_foreground_ptr->paint_count, 1);
+  EXPECT_EQ(clipped_ptr->paint_count, 1);
+  EXPECT_EQ(pixel(32, 28), kBlue);
+  expectSingleWrite();
+}
+
+// Verifies clipped-pass continuation retains its descending cursor while the
+// rounded record remains fresh for clean lower clipped contributors.
+TEST_F(RoundedClipTest, ContinuationRetainsClippedGroupProgress) {
+  auto panel = std::make_unique<RoundedPanel>(app_.context());
+  auto lower = std::make_unique<PaintBlock>(app_.context(), kRed);
+  PaintBlock* lower_ptr = lower.get();
+  panel->add(std::move(lower), Rect(0, 0, 63, 43));
+  auto higher = std::make_unique<PaintBlock>(app_.context(), kBlue);
+  PaintBlock* higher_ptr = higher.get();
+  higher->delay_ms = 40;
+  panel->add(std::move(higher), Rect(0, 0, 31, 31));
+  app_.add(std::move(panel), Box(16, 12, 79, 55));
+
+  device_.reset();
+  EXPECT_FALSE(app_.refresh(roo_time::Uptime::Now() + roo_time::Millis(20)));
+  EXPECT_EQ(higher_ptr->paint_count, 1);
+  EXPECT_EQ(lower_ptr->paint_count, 0);
+  higher_ptr->delay_ms = 0;
+  ASSERT_TRUE(app_.refresh());
+  EXPECT_EQ(higher_ptr->paint_count, 1);
+  EXPECT_EQ(lower_ptr->paint_count, 1);
+  EXPECT_EQ(pixel(32, 28), kBlue);
+  expectSingleWrite();
+}
+
+// Verifies mutation while the unclipped cursor is retained restarts the whole
+// rounded scene and discards the completed foreground child's stale color.
+TEST_F(RoundedClipTest, MutationDuringUnclippedContinuationRestartsGroups) {
+  auto panel = std::make_unique<RoundedPanel>(app_.context());
+  auto lower = std::make_unique<PaintBlock>(app_.context(), kRed);
+  lower->setParentClipMode(ParentClipMode::kUnclipped);
+  panel->add(std::move(lower), Rect(32, 0, 63, 31));
+  auto foreground = std::make_unique<PaintBlock>(app_.context(), kBlue);
+  PaintBlock* foreground_ptr = foreground.get();
+  foreground->setParentClipMode(ParentClipMode::kUnclipped);
+  foreground->delay_ms = 40;
+  panel->add(std::move(foreground), Rect(0, 0, 31, 31));
+  app_.add(std::move(panel), Box(16, 12, 79, 55));
+
+  EXPECT_FALSE(app_.refresh(roo_time::Uptime::Now() + roo_time::Millis(20)));
+  ASSERT_EQ(foreground_ptr->paint_count, 1);
+  foreground_ptr->delay_ms = 0;
+  foreground_ptr->setColor(kGreen);
+  device_.reset();
+  ASSERT_TRUE(app_.refresh());
+  EXPECT_EQ(foreground_ptr->paint_count, 2);
+  EXPECT_EQ(pixel(32, 28), kGreen);
+  expectSingleWrite();
+}
+
+// Verifies mutation while the clipped cursor is retained restarts capture and
+// replaces boundary/interior output from the completed clipped child.
+TEST_F(RoundedClipTest, MutationDuringClippedContinuationRestartsGroups) {
+  auto panel = std::make_unique<RoundedPanel>(app_.context());
+  panel->add(std::make_unique<PaintBlock>(app_.context(), kRed),
+             Rect(32, 0, 63, 31));
+  auto higher = std::make_unique<PaintBlock>(app_.context(), kBlue);
+  PaintBlock* higher_ptr = higher.get();
+  higher->delay_ms = 40;
+  panel->add(std::move(higher), Rect(0, 0, 31, 31));
+  app_.add(std::move(panel), Box(16, 12, 79, 55));
+
+  EXPECT_FALSE(app_.refresh(roo_time::Uptime::Now() + roo_time::Millis(20)));
+  ASSERT_EQ(higher_ptr->paint_count, 1);
+  higher_ptr->delay_ms = 0;
+  higher_ptr->setColor(kGreen);
+  device_.reset();
+  ASSERT_TRUE(app_.refresh());
+  EXPECT_EQ(higher_ptr->paint_count, 2);
+  EXPECT_EQ(pixel(32, 28), kGreen);
+  expectSingleWrite();
+}
+
+// Verifies a false capability uses the all-clipped scan while matching the
+// pixels and one-paint behavior of the conservatively true control.
+TEST_F(RoundedClipTest, GuaranteedClippedFastPathMatchesGroupedControl) {
+  auto fixed = std::make_unique<FixedRoundedPanel>(app_.context());
+  auto fixed_child = std::make_unique<PaintBlock>(app_.context(), kRed);
+  PaintBlock* fixed_child_ptr = fixed_child.get();
+  fixed->add(std::move(fixed_child), Rect(0, 0, 31, 31));
+  app_.add(std::move(fixed), Box(8, 20, 39, 51));
+
+  auto grouped = std::make_unique<RoundedPanel>(app_.context());
+  auto grouped_child = std::make_unique<PaintBlock>(app_.context(), kRed);
+  PaintBlock* grouped_child_ptr = grouped_child.get();
+  grouped->add(std::move(grouped_child), Rect(0, 0, 31, 31));
+  app_.add(std::move(grouped), Box(48, 20, 79, 51));
+
+  device_.reset();
+  ASSERT_TRUE(app_.refresh());
+  EXPECT_EQ(fixed_child_ptr->paint_count, 1);
+  EXPECT_EQ(grouped_child_ptr->paint_count, 1);
+  for (int16_t y = 20; y <= 51; ++y) {
+    for (int16_t x = 8; x <= 39; ++x) {
+      expectColor(pixel(x, y), pixel(x + 40, y), x, y);
+    }
+  }
+  expectSingleWrite();
+}
+
+// Verifies one uninterrupted rounded child traversal evaluates the virtual
+// capability once rather than rescanning or querying once per group.
+TEST_F(RoundedClipTest, CapabilityIsQueriedOncePerTraversal) {
+  auto panel = std::make_unique<CountingRoundedPanel>(app_.context());
+  CountingRoundedPanel* panel_ptr = panel.get();
+  panel->add(std::make_unique<PaintBlock>(app_.context(), kRed),
+             Rect(0, 0, 31, 31));
+  app_.add(std::move(panel), Box(24, 20, 55, 51));
+  panel_ptr->capability_queries = 0;
+
+  ASSERT_TRUE(app_.refresh());
+  EXPECT_EQ(panel_ptr->capability_queries, 1);
+}
+
+// Verifies grouping is independent of rounded clipping and preserves descending
+// collection order inside the unclipped foreground group.
+TEST_F(RoundedClipTest, NonRoundedContainerStillGroupsChildren) {
+  auto panel = std::make_unique<PlainGroupedPanel>(app_.context());
+  auto lower_unclipped = std::make_unique<PaintBlock>(app_.context(), kBlue);
+  PaintBlock* lower_ptr = lower_unclipped.get();
+  lower_unclipped->setParentClipMode(ParentClipMode::kUnclipped);
+  panel->add(std::move(lower_unclipped), Rect(0, 0, 31, 31));
+  panel->add(std::make_unique<PaintBlock>(app_.context(), kRed),
+             Rect(0, 0, 31, 31));
+  auto higher_unclipped = std::make_unique<PaintBlock>(app_.context(), kGreen);
+  PaintBlock* higher_ptr = higher_unclipped.get();
+  higher_unclipped->setParentClipMode(ParentClipMode::kUnclipped);
+  panel->add(std::move(higher_unclipped), Rect(0, 0, 31, 31));
+  app_.add(std::move(panel), Box(24, 20, 55, 51));
+
+  device_.reset();
+  ASSERT_TRUE(app_.refresh());
+  EXPECT_EQ(pixel(32, 28), kGreen);
+  higher_ptr->setVisibility(Visibility::kInvisible);
+  device_.reset();
+  ASSERT_TRUE(app_.refresh());
+  EXPECT_EQ(pixel(32, 28), kBlue);
+  EXPECT_EQ(lower_ptr->paint_count, 2);
+  expectSingleWrite();
+}
+
+#ifndef NDEBUG
+// Verifies a false capability is a checked authoring promise rather than a
+// request to silently clip a currently-unclipped direct child.
+TEST_F(RoundedClipTest, InvalidFalseCapabilityFailsDebugContract) {
+  auto panel = std::make_unique<FixedRoundedPanel>(app_.context());
+  auto child = std::make_unique<PaintBlock>(app_.context(), kBlue);
+  child->setParentClipMode(ParentClipMode::kUnclipped);
+  panel->add(std::move(child), Rect(0, 0, 31, 31));
+  app_.add(std::move(panel), Box(24, 20, 55, 51));
+
+  EXPECT_DEATH(app_.refresh(), "");
+}
+
+TEST_F(RoundedClipTest, InvalidFalseCapabilityFailsForNonRoundedContainer) {
+  auto panel = std::make_unique<FixedPlainPanel>(app_.context());
+  auto child = std::make_unique<PaintBlock>(app_.context(), kBlue);
+  child->setParentClipMode(ParentClipMode::kUnclipped);
+  panel->add(std::move(child), Rect(0, 0, 31, 31));
+  app_.add(std::move(panel), Box(24, 20, 55, 51));
+
+  EXPECT_DEATH(app_.refresh(), "");
+}
+#endif
+
 // Verifies the parent outline and shadow retain their existing coverage while
 // selected child pixels reach the fractional inner curve.
 TEST_F(RoundedClipTest, OutlineAndShadowAroundCapturedContent) {
@@ -556,7 +940,7 @@ TEST_F(RoundedClipTest, EveryOutputPathAndDeferredOverlay) {
       }
     }
     clipper.addExclusion(bounds);
-    clip.completed = true;
+    clip.phase = internal::RoundedPaintPhase::kComplete;
     clipper.deactivateRoundedClip();
     clipper.addRoundedDecoration(&state, Box(0, 0, 95, 71), bounds, 0, kPanel,
                                  BorderStyle(16, 0), kPanel);

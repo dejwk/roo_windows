@@ -104,6 +104,9 @@ class TransientHostLayer : public Container {
   explicit TransientHostLayer(ApplicationContext& context)
       : Container(context) {}
 
+  /// Allows supplied transient content to opt out of this layer's clip.
+  bool mayHaveUnclippedChildren() const override { return true; }
+
   /// Resolves descendants through the explicitly supplied interaction owner.
   Task* getTask() override { return owner_; }
 
@@ -225,8 +228,7 @@ class TransientSurfaceHost {
   void disableHostedInput(TransientPresentationRegistration& registration);
 
   /// Forces the hosted tree's active feedback to its final frame.
-  bool forceFinalClickFrame(
-      TransientPresentationRegistration& registration);
+  bool forceFinalClickFrame(TransientPresentationRegistration& registration);
 
   /// Returns whether click feedback still targets the hosted tree.
   bool hasClickFeedbackInHostedTree(

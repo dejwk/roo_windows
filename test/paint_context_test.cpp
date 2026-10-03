@@ -188,6 +188,7 @@ TEST_F(PaintContextTest, RoundedClipPreparationSurvivesBeforeActivation) {
   resumed.deactivateRoundedClip();
   EXPECT_FALSE(resumed.hasRoundedClip());
 
+  retained.fresh = false;
   internal::RoundedClip& activated = resumed.prepareRoundedClip(
       &owner, Box(0, 0, 31, 23), BorderStyle(8, 0), fresh);
   EXPECT_EQ(&retained, &activated);

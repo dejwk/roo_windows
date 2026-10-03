@@ -3,9 +3,11 @@
 ## Result
 
 A scrolling row can meet its container's rounded edge with smooth coverage,
-while its ordinary paint code runs once. This prototype is on
-`prototype/rounded-child-clipping`. It implements the output interception idea
-from the conversation.
+while its ordinary paint code runs once. Direct children explicitly marked
+`ParentClipMode::kUnclipped` can now escape that rounded edge: the container
+paints them as a foreground group before its clipped children and surface. The
+same unclipped-above-clipped stacking rule applies to containers without
+rounded clipping.
 
 ![Three tested scroll positions, enlarged four times without interpolation](figures/rounded_child_clipping.png)
 
@@ -57,6 +59,12 @@ as the traversal reaches them. There is no preliminary traversal of the
 children. Interrupted paints retain colors, overlays, and completed child
 progress. A mutation between attempts conservatively restarts the image;
 previous output belongs to the superseded scene.
+
+Record preparation is separate from activation. The unclipped group uses the
+incoming ancestor context, then a scoped adapter activates this owner's mask for
+the clipped group and later for the surface. The scope restores both output and
+mask on every exit. A retained phase and descending child cursor resume either
+group without replaying completed siblings.
 
 ## Compact exclusions
 
@@ -134,9 +142,12 @@ selective repair of captured boundary colors remains outside the prototype.
 
 ## Trying it
 
-Material 3 `MenuPanel` opts in on this branch. An ordinary container opts in by
+Material 3 `MenuPanel` opts in. An ordinary container opts in by
 overriding `clipsChildrenToRoundedBounds()`; its border supplies the radii and
-outline. No changes are needed to the children.
+outline. A direct child uses `ParentClipMode::kUnclipped` when it must overhang
+its immediate parent's boundary and stack above clipped siblings. Containers
+accepting configurable direct children return true from
+`mayHaveUnclippedChildren()`; fixed all-clipped components retain one scan.
 
 Menus retain horizontal gutters, while their top and bottom padding scrolls
 with the rows. The viewport spans the panel's full height, allowing moving
@@ -147,7 +158,9 @@ end of the list, the original padding remains visible. This layout adjustment
 adds no per-instance state.
 
 The [scrolling example](../../../examples/material3/menus/rounded_scrolling/rounded_scrolling.ino)
-uses selected Material rows over a patterned backdrop. Run from `roo_windows`:
+uses selected Material rows over a patterned backdrop and an unclipped status
+marker inserted below the scrolling body in collection order. Run from
+`roo_windows`:
 
 ```sh
 bazel run //examples/material3/menus/rounded_scrolling:rounded_scrolling
@@ -272,10 +285,12 @@ with this host GCC. It does not change the prototype code.
 pixel with independently composed parent and child raster layers. They allow
 two 8-bit color levels for blend rounding. They also count child paint calls
 and physical display writes. Covered cases include scrolling, nested clips,
-a higher sibling, descendant press feedback, a patterned backdrop, all six
-output entry points, translucent overlays, outlines (including an outline
-matching the fill), shadows, clean foreground reconstruction, continuation,
-and mutation during continuation. Geometry tests
+opaque and translucent unclipped overhangs, interleaved group order,
+restoration and clip-mode changes, exact versus sloppy touch precedence, a
+higher sibling, descendant press feedback, a patterned backdrop, all six output
+entry points, translucent overlays, outlines (including an outline matching the
+fill), shadows, clean foreground reconstruction, continuation in both child
+groups, and mutation during continuation. Geometry tests
 include asymmetric radii, fractional outlines, and very small bounds.
 
 The tests assert one child paint per completed scene and no repeated physical
@@ -313,15 +328,13 @@ Menu goldens already include the earlier scrolling-viewport adjustment. The
 compact exclusion representation preserves those images, including the Wi-Fi
 Security dropdown.
 
-This is a prototype with a deliberately narrow supported contract:
+The rounded compositor retains these deliberately narrow constraints:
 
 - Use an opaque, enabled clipping owner with feedback on its children. Owner
   ripple and disabled-group composition remain unsupported.
-- The rounded scope clips all descendant output, including children marked
-  `kUnclipped`. Escaping content should live outside that scope in this version.
-  The [proposed two-pass traversal](../proposed/rounded_unclipped_children_design.md)
-  would paint unclipped direct children as a foreground group outside this
-  parent's rounded scope.
+- An unclipped direct child escapes only its immediate parent's mask. Its whole
+  subtree stays in that local foreground group and continues to obey rounded
+  ancestors.
 - Direct writes follow the widget-authoring opaque-output contract; arbitrary
   destination-dependent blend operations are outside the prototype.
 - Blit caching and immediate child-shadow shortcuts are disabled inside a

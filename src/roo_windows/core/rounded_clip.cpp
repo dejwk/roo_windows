@@ -42,7 +42,8 @@ void RoundedClip::reset(const void* owner, Box bounds, BorderStyle style) {
   std::fill(colors_.begin(), colors_.end(), Color(0));
   direct_press = nullptr;
   fresh = true;
-  completed = false;
+  phase = RoundedPaintPhase::kUnclippedChildren;
+  next_child = kUninitializedChild;
   published = false;
 }
 

@@ -20,6 +20,9 @@ class Holder : public Container {
   Holder(ApplicationContext& context)
       : Container(context), contents_(nullptr) {}
 
+  /// Allows caller-provided contents to opt out of this holder's clip.
+  bool mayHaveUnclippedChildren() const override { return true; }
+
   /// Replaces (or clears, if `new_contents` is null) the single held child.
   /// No-op if the same widget with the same ownership is reassigned.
   void setContents(WidgetRef new_contents) {

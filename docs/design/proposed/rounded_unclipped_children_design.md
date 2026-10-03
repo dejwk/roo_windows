@@ -1,6 +1,7 @@
-# Unclipped children above rounded content
+# Unclipped children above clipped siblings
 
-**Status: Proposed; unimplemented.** This extends the
+**Status: In progress; phases 1 and 2 implemented, resource validation pending.**
+This extends the
 [sparse rounded child clipping prototype](../prototypes/rounded_child_clipping.md).
 It does not revive the [abandoned corner capture design](../abandoned/rounded_child_clipping_design.md).
 
@@ -64,23 +65,24 @@ unclipped children in front removes this case.
    Disjoint siblings require no author-enforced insertion order.
 6. Deadline continuation preserves completed work, and mutations cannot leave
    stale colors or stale child-order checkpoints.
-7. Containers that do not opt into rounded child clipping keep their existing
-   ordering and fast paths. Opted-in components that guarantee all their direct
-   children are clipped retain a single child scan.
+7. The unclipped-above-clipped order applies to every container. Components
+   that guarantee all their direct children are clipped retain a single child
+   scan.
 
 ## Design Overview
 
-An opted-in container has two **child groups**, derived from each direct child's
-existing `ParentClipMode`. A group includes that child's entire subtree:
+Every container that may have unclipped children has two **child groups**,
+derived from each direct child's existing `ParentClipMode`. A group includes
+that child's entire subtree:
 
 - **Unclipped group:** above all clipped siblings; bypasses this parent's clip.
 - **Clipped group:** below the unclipped group; obeys this parent's clip.
 
 Within each group, the highest child index is still foremost. The child vector
-is never rearranged. The grouping applies whenever
-`clipsChildrenToRoundedBounds()` is true, including zero corner radii, so a
-radius change does not unexpectedly change stacking order. Layout and keyboard
-focus traversal retain collection order.
+is never rearranged. Grouping is independent of
+`clipsChildrenToRoundedBounds()` and therefore remains stable across changes to
+a container's shape or clipping policy. Layout and keyboard focus traversal
+retain collection order.
 
 `Container::mayHaveUnclippedChildren()` is a constant-time virtual capability
 query, defaulting to `false`. A false result guarantees that every direct child
@@ -135,7 +137,7 @@ current source identifies these override responsibilities:
 | --- | --- |
 | [`Panel`](../../../src/roo_windows/core/panel.h) and its general layout subclasses, including `ListLayout`, `FlexLayout`, and `TaskPanel` | `Panel` overrides true; subclasses inherit it. Returning false instead requires control of every direct child's clip mode. |
 | [`Holder`](../../../src/roo_windows/containers/holder.h), [`SimpleScrollablePanel`](../../../src/roo_windows/containers/scrollable_panel.h), [`BlitCacheContainer`](../../../src/roo_windows/containers/blit_cache_container.h), [`HorizontalPageHost`](../../../src/roo_windows/containers/horizontal_page_host.h) | Override true for caller-provided content/pages; `ScrollableBlitPanel` inherits true. |
-| [`MainWindow`](../../../src/roo_windows/core/main_window.h), [`TransientHostLayer`](../../../src/roo_windows/core/transient_surface_host.h) | Override true for supplied task/popup/presentation content; existing non-opted-in traversal stays unchanged. |
+| [`MainWindow`](../../../src/roo_windows/core/main_window.h), [`TransientHostLayer`](../../../src/roo_windows/core/transient_surface_host.h) | Override true for supplied task/popup/presentation content; `MainWindow` preserves pin placement while adopting the same group order. |
 | [`LayoutScaffold`, `PaneLayout`, `GridLayout`](../../../src/roo_windows/material3/layout_scaffold/layout_scaffold.h); [`AppBar`, `SearchBar`, `SearchAppBar`](../../../src/roo_windows/material3/app_bar/app_bar.h); [`DialogScaffold`](../../../src/roo_windows/material3/dialog/dialog_scaffold.h) | Override true for arbitrary slots, body, or derived chrome. Derived hosts such as `SnackbarHost` inherit true. |
 | [`ExpandablePanel`, `ListEntry`, `List`](../../../src/roo_windows/material3/list/list.h); [`MenuGroup`](../../../src/roo_windows/material3/menu/menu.h), [`MenuGroupStack`, `MenuOverlay`](../../../src/roo_windows/material3/menu/menu_surface.h) | Override true for supplied contents, item slots, rows, groups, or panels. |
 | [`Tabs`](../../../src/roo_windows/material3/tabs/tabs.h), Material 3 [`NavigationBar`](../../../src/roo_windows/material3/navigation_bar/navigation_bar.h) and [`NavigationRail`](../../../src/roo_windows/material3/navigation_rail/navigation_rail.h) | Override true even though accepted child types are restricted: callers can configure their clip modes. |
@@ -158,8 +160,8 @@ A fresh owner record still triggers the prototype's owner-surface invalidation
 and child traversal, even when only the backdrop changed. Make that decision
 explicit instead of relying on this owner already being the active mask.
 
-Evaluate `mayHaveUnclippedChildren()` once when selecting the child traversal
-for an opted-in owner. The effective operation order is:
+Evaluate `mayHaveUnclippedChildren()` once when selecting each child traversal.
+For a rounded-clipping owner, the effective operation order is:
 
 ```text
 prepare this owner's retained record, without activating its mask
@@ -187,10 +189,10 @@ This preserves the one-call contract for overrides such as
 [`ListLayout::paintChildren()`](../../../src/roo_windows/containers/list_layout.h),
 which synchronizes visible children before delegating to the base. An override
 that performs child painting itself must use the same group order and clip
-scopes when it opts in. Existing custom traversal sites must be audited in the
-implementation; calling the whole virtual hook twice is not the algorithm.
-The non-opted-in [`MainWindow`](../../../src/roo_windows/core/main_window.cpp)
-keeps its presentation-pin and root-layer traversal.
+scopes. Existing custom traversal sites must be audited in the implementation;
+calling the whole virtual hook twice is not the algorithm.
+[`MainWindow`](../../../src/roo_windows/core/main_window.cpp) keeps its
+presentation-pin and root-layer behavior while grouping its direct children.
 
 Direct writes, deferred overlays, and exclusions must observe the same active
 mask at each step. An unclipped child can itself create a rounded scope; its
@@ -238,10 +240,10 @@ Use one internal group-order convention for all sibling-order decisions. Paint
 and touch searches visit the unclipped group first, then the clipped group,
 with descending indices inside each group. Background invalidation traverses
 the reverse: clipped group first, then unclipped group, with ascending indices.
-For opted-in containers returning false from `mayHaveUnclippedChildren()`, each
-search stage and reverse invalidation use one unfiltered sibling scan. Use the
-same capability contract across these ordering consumers. Non-opted-in
-containers retain their existing paths without querying the new method.
+For containers returning false from `mayHaveUnclippedChildren()`, each search
+stage and reverse invalidation use one unfiltered sibling scan. Use the same
+capability contract across these ordering consumers, regardless of the
+container's clipping policy.
 
 Touch handling preserves the existing eligibility tests, interceptors, and
 exact-target-before-sloppy-target policy. Apply group order within each existing
@@ -257,13 +259,12 @@ the reverse effective paint order, including recursive descent to a subject
 inside a child subtree. Otherwise hiding an unclipped child can fail to repaint
 a clipped sibling underneath it whose raw index is higher.
 
-A clip-mode change is now also a stacking change in an opted-in parent.
+A clip-mode change is also a stacking change in every parent.
 [`setParentClipMode()`](../../../src/roo_windows/core/widget.cpp) already hides
 the old presentation and shows the new one. Both operations must invalidate
 using their respective old and new group membership and full affected visual
-bounds, including decoration and descendant overflow. Runtime changes to the
-parent's opt-in policy likewise invalidate the old and new presentation. No
-geometric overlap check selects ordering: it is stable as children move.
+bounds, including decoration and descendant overflow. No geometric overlap
+check selects ordering: it is stable as children move.
 
 ### Interrupted paints
 
@@ -345,9 +346,9 @@ Local traversal counters and scope restoration use constant stack space per
 active level, so total traversal stack remains O(d) in addition to the existing
 widget and filter call stacks. Measure compiled frames; source-level local
 counts are not a stack-size measurement. Retained added progress is O(k), and
-warm paints add no allocations. An opted-in zero-radius owner still needs its
-progress record but has no fractional boundary color payload; containers that
-do not opt in allocate no such record for this feature.
+warm paints add no allocations. A zero-radius or otherwise non-rounded
+container uses grouped traversal without a rounded progress record or
+fractional boundary color payload.
 
 The extra scan adds index lookup and branch work. Boundary sampling and child
 rasterization are not doubled. Touch search and reverse invalidation also use
@@ -357,8 +358,7 @@ paths rather than infer device timing from host paint benchmarks.
 
 ## Proposed API
 
-Add one public const virtual method to `Container`, alongside the existing
-rounded-clipping policy:
+Add one public const virtual method to `Container`:
 
 ```cpp
 /// Whether any direct child can be ParentClipMode::kUnclipped.
@@ -379,9 +379,10 @@ guarantee as the base default. Keep these methods constant-time and free of
 child scans or mutable capability bookkeeping.
 
 Expand the documentation of `clipsChildrenToRoundedBounds()` and
-`ParentClipMode` with the grouping contract. The new method selects an equivalent
-fast path for guaranteed-clipped children; it is not a switch that disables
-unclipped semantics for arbitrary children.
+`ParentClipMode` with the grouping contract. The new method selects an
+equivalent fast path for guaranteed-clipped children; it is not a switch that
+disables unclipped semantics for arbitrary children, and grouping does not
+depend on rounded clipping.
 
 Internal changes separate record preparation from scoped mask activation and
 store traversal progress in `internal::RoundedClip`. The intended state is:
@@ -417,6 +418,8 @@ and [example guidance](../../../.github/instructions/embedded-example-authoring.
 
 ### 1. Separate rounded record lifetime from mask activation
 
+**Implemented.**
+
 Proposed commit: `Separate rounded clip preparation from activation`.
 
 Refactor the internal clipper/container boundary to prepare a record without
@@ -430,13 +433,16 @@ lifetime tests prove that retained mask links and colors survive scope changes.
 
 ### 2. Implement grouped painting, input, and restoration together
 
-Proposed commit: `Paint unclipped children before rounded child content`.
+**Implemented.**
+
+Proposed commit: `Paint unclipped children above clipped siblings`.
 
 Add `mayHaveUnclippedChildren()` and audit all container subclasses against
 the declaration table, including inherited APIs and mutable child accessors.
-Implement the conditional two filtered scans, the unfiltered single scan when
-false, owner-surface scope, phase/cursor continuation, matching touch order, and
-reverse invalidation. Audit existing child-paint hooks. Update public comments,
+Implement the conditional two filtered scans for every container, the
+unfiltered single scan when false, rounded owner-surface scope, phase/cursor
+continuation, matching touch order, and reverse invalidation. Audit existing
+child-paint hooks. Update public comments,
 widget-authoring guidance, and the prototype report, and extend the existing
 [rounded scrolling example](../../../examples/material3/menus/rounded_scrolling/rounded_scrolling.ino)
 with an unclipped overhang inserted below a clipped child in collection order.
@@ -456,8 +462,9 @@ Add a debug contract test for an invalid false declaration.
 
 Validation: those tests pass with sanitizers; existing ordinary-container,
 radio/checkbox/switch, badge, menu, and continuation regressions pass; the
-example builds. The feature is enabled only with all three ordering consumers
-and continuation handling in place.
+example builds. The rule applies independently of rounded clipping and is
+enabled only with all three ordering consumers and continuation handling in
+place.
 
 ### 3. Verify resource costs and document the result
 
@@ -470,13 +477,14 @@ Measure 0, 8, and 32 direct children with all-clipped owners returning false and
 owners returning true with all-clipped, all-unclipped, and mixed groups. Use warm
 paints and fixed geometry. Record capability queries, child visits, paint calls,
 allocations, target object sizes, vtable/code size, stack frames, and median CPU
-time against the pre-change branch. Include a non-opted-in container as the
-baseline and `MenuPanel` as a real component that skips the unclipped scan.
+time against the pre-change branch. Include a guaranteed-all-clipped container
+as the baseline and `MenuPanel` as a real component that skips the unclipped
+scan.
 
 Acceptance: no added warm allocations or boundary color storage; unchanged base
 object sizes; at most 8 added bytes per rounded record; one capability query
-per uninterrupted opted-in child traversal; at most `n` direct-child visits
-when false and `2n` when true; and no duplicate completed-child paint calls.
+per uninterrupted child traversal; at most `n` direct-child visits when false
+and `2n` when true; and no duplicate completed-child paint calls.
 Investigate and remove additional work outside those bounds before
 landing. Publish CPU and stack measurements without treating host time as an
 ESP32 display-bus result. Run the full library regression suite, then update this
@@ -494,10 +502,10 @@ traversal, using the established decoration coverage and foreground blending.
 
 The acceptance matrix covers grouping, nested masks, overflow decorations,
 input precedence, damage restoration, and unchanged versus mutated
-continuations. Include a zero-radius opted-in parent and a non-opted-in parent
-with interleaved modes. Cover capability inheritance, overrides returning true
-on general containers, explicit false overrides on components that control their
-children, and continuation starting directly in the clipped phase. Validate color
+continuations. Include both rounded and non-rounded parents with interleaved
+modes. Cover capability inheritance, overrides returning true on general
+containers, explicit false overrides on components that control their children,
+and continuation starting directly in the clipped phase. Validate color
 equality and no duplicate settled device writes across the entire unchanged logical paint, including all attempts.
 An intentionally restarted paint represents a new scene and resets that count.
 
@@ -508,11 +516,11 @@ itself does not claim those future implementation tests have passed.
 
 ## Caveats
 
-Opting into rounded child clipping now also opts into group stacking. An
-unclipped child intentionally positioned beneath a clipped sibling will move
-above it visually. Existing callers must review that change, including controls
-whose default mode is unclipped. Disjoint layout rectangles do not prove that
-shadows or animated feedback are disjoint.
+Every container now uses group stacking when its capability permits unclipped
+children. An unclipped child intentionally positioned beneath a clipped sibling
+will move above it visually. Existing callers must review that change,
+including controls whose default mode is unclipped. Disjoint layout rectangles
+do not prove that shadows or animated feedback are disjoint.
 
 The default false declaration requires a source audit before adoption. A custom
 container accepting arbitrary children must override it or inherit true from a

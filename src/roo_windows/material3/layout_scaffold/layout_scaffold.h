@@ -122,6 +122,9 @@ class LayoutScaffold : public Material3Container {
   /// Detaches all stored slots before their references are released.
   ~LayoutScaffold() override;
 
+  /// Allows caller-provided scaffold slots to be unclipped.
+  bool mayHaveUnclippedChildren() const override { return true; }
+
   /// Borrows an immutable breakpoint policy that must outlive this scaffold.
   void setBreakpointPolicy(const LayoutBreakpointPolicy& policy);
   void setBreakpointPolicy(LayoutBreakpointPolicy&&) = delete;
@@ -294,6 +297,9 @@ class PaneLayout : public Container {
   /// Detaches all stored slots before their references are released.
   ~PaneLayout() override;
 
+  /// Allows caller-provided pane slots to be unclipped.
+  bool mayHaveUnclippedChildren() const override { return true; }
+
   /// Borrows an immutable policy that must outlive this pane layout.
   void setBreakpointPolicy(const LayoutBreakpointPolicy& policy);
   void setBreakpointPolicy(LayoutBreakpointPolicy&&) = delete;
@@ -424,6 +430,9 @@ class GridLayout : public Container {
 
   /// Detaches every stored child before releasing the specialized item vector.
   ~GridLayout() override;
+
+  /// Allows caller-provided grid children to be unclipped.
+  bool mayHaveUnclippedChildren() const override { return true; }
 
   /// Borrows an immutable policy that must outlive this grid.
   void setBreakpointPolicy(const LayoutBreakpointPolicy& policy);

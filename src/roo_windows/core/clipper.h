@@ -387,14 +387,14 @@ class ClipperOutput : public roo_display::DisplayOutput {
   }
 
   /// Prepares retained rounded geometry without changing the active mask.
-  /// `fresh` remains true until the record's first activation.
+  /// `fresh` remains true until clipped-child reconstruction completes.
   RoundedClip& prepareRoundedClip(const void* owner, roo_display::Box bounds,
                                   BorderStyle style, bool& fresh);
 
   /// Makes a prepared record the active rounded mask.
   void activateRoundedClip(RoundedClip& clip);
 
-  /// Restores the enclosing mask and completes this activation.
+  /// Restores the enclosing mask without changing retained paint progress.
   void deactivateRoundedClip();
 
   /// Returns the current clip, or null on ordinary rectangular paths.

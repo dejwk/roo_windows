@@ -44,7 +44,6 @@ void ClipperOutput::deactivateRoundedClip() {
   RoundedClip* clip = activeRoundedClip();
   DCHECK_NOTNULL(clip);
   state_.rounded_->active = clip->parent;
-  clip->fresh = false;
 }
 
 void ClipperOutput::addRoundedExclusion(const roo_display::Box& exclusion) {
@@ -127,7 +126,10 @@ void ClipperOutput::addRoundedDecoration(
     int elevation, roo_display::Color bgcolor, BorderStyle border,
     roo_display::Color outline_color) {
   RoundedClip* clip = roundedClip(owner);
-  if (clip == nullptr || !clip->completed || clip->published) return;
+  if (clip == nullptr || clip->phase != RoundedPaintPhase::kComplete ||
+      clip->published) {
+    return;
+  }
   const OverlaySpec& spec = currentOverlaySpec();
   const PressOverlay* press = ((spec.is_area() && spec.has_press_overlay()) ||
                                scoped_press_overlay_active_)

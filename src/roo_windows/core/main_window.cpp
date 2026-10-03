@@ -402,16 +402,26 @@ void MainWindow::commitPresentationPinBounds() {
 void MainWindow::paintChildren(PaintContext& ctx) {
   PaintContext clipped_ctx = ctx.clipped(bounds());
   bool fast_render = isDirty() && respectsChildrenBoundaries();
-  for (int i = getChildrenCount() - 1; i >= 0; --i) {
-    if (ctx.isDeadlineExceeded()) return;
-    Widget& child = getChild(i);
-    paintPinsBeforeScopeRoot(child, ctx);
-    if (child.getParentClipMode() == ParentClipMode::kClipped) {
-      child.paintWidget(clipped_ctx.canvas(),
-                        clipped_ctx.clipperForFramework());
-      if (fast_render) fastDrawChildShadow(child, clipped_ctx);
-    } else {
-      child.paintWidget(ctx.canvas(), ctx.clipperForFramework());
+  const bool grouped = mayHaveUnclippedChildren();
+  const int group_count = grouped ? 2 : 1;
+  for (int group = 0; group < group_count; ++group) {
+    const ParentClipMode selected =
+        group == 0 ? ParentClipMode::kUnclipped : ParentClipMode::kClipped;
+    for (int i = getChildrenCount() - 1; i >= 0; --i) {
+      if (ctx.isDeadlineExceeded()) return;
+      Widget& child = getChild(i);
+      if (grouped && child.getParentClipMode() != selected) continue;
+      if (!grouped) {
+        DCHECK(child.getParentClipMode() == ParentClipMode::kClipped);
+      }
+      paintPinsBeforeScopeRoot(child, ctx);
+      if (child.getParentClipMode() == ParentClipMode::kClipped) {
+        child.paintWidget(clipped_ctx.canvas(),
+                          clipped_ctx.clipperForFramework());
+        if (fast_render) fastDrawChildShadow(child, clipped_ctx);
+      } else {
+        child.paintWidget(ctx.canvas(), ctx.clipperForFramework());
+      }
     }
   }
 }

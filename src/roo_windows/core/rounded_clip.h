@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <memory>
 #include <vector>
 
@@ -12,11 +13,21 @@
 namespace roo_windows {
 namespace internal {
 
+/// Retained progress through one rounded container's logical paint.
+enum class RoundedPaintPhase : uint8_t {
+  kUnclippedChildren,
+  kClippedChildren,
+  kSurface,
+  kComplete,
+};
+
 /// Sparse, unmasked colors along one rounded container's fractional boundary.
 /// Interior pixels are never stored. Rows describe visible and opaque spans;
 /// colors are packed left edge then right edge, in scanline order.
 class RoundedClip {
  public:
+  static constexpr int kUninitializedChild = -2;
+
   /// Reuses geometry capacity and starts a new logical paint for this owner.
   void reset(const void* owner, roo_display::Box bounds, BorderStyle style);
 
@@ -71,10 +82,12 @@ class RoundedClip {
   /// Borrowed only while the descendant's press scope is active.
   const roo_display::Rasterizable* direct_press = nullptr;
   roo_display::Box direct_press_clip{0, 0, -1, -1};
-  /// Fresh remains set until the prepared record's first activation.
+  /// Fresh remains set until clipped-child reconstruction completes.
   bool fresh = false;
-  /// Completed records are not repainted or published twice on continuation.
-  bool completed = false;
+  /// Retained traversal phase and descending direct-child cursor.
+  RoundedPaintPhase phase = RoundedPaintPhase::kUnclippedChildren;
+  int next_child = kUninitializedChild;
+  /// Completed records are not published twice on continuation.
   bool published = false;
 
  private:
