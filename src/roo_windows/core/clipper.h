@@ -386,14 +386,16 @@ class ClipperOutput : public roo_display::DisplayOutput {
     return state_.rounded_ == nullptr ? empty : state_.rounded_->exclusions;
   }
 
-  /// Opens a retained rounded scope; fresh records reconstruct once this paint.
-  RoundedClip& beginRoundedClip(const void* owner, roo_display::Box bounds,
-                                BorderStyle style, bool& fresh);
+  /// Prepares retained rounded geometry without changing the active mask.
+  /// `fresh` remains true until the record's first activation.
+  RoundedClip& prepareRoundedClip(const void* owner, roo_display::Box bounds,
+                                  BorderStyle style, bool& fresh);
 
-  /// Restores the enclosing clip after child traversal.
-  void endRoundedClip() {
-    state_.rounded_->active = activeRoundedClip()->parent;
-  }
+  /// Makes a prepared record the active rounded mask.
+  void activateRoundedClip(RoundedClip& clip);
+
+  /// Restores the enclosing mask and completes this activation.
+  void deactivateRoundedClip();
 
   /// Returns the current clip, or null on ordinary rectangular paths.
   RoundedClip* activeRoundedClip() const {
@@ -718,15 +720,20 @@ class Clipper {
                        corner_radii, outline_width, outline_color);
   }
 
-  /// Opens a sparse rounded clip without replaying the child subtree.
-  internal::RoundedClip& beginRoundedClip(const void* owner,
-                                          roo_display::Box bounds,
-                                          BorderStyle style, bool& fresh) {
-    return out_.beginRoundedClip(owner, bounds, style, fresh);
+  /// Prepares sparse rounded state without activating its output mask.
+  internal::RoundedClip& prepareRoundedClip(const void* owner,
+                                            roo_display::Box bounds,
+                                            BorderStyle style, bool& fresh) {
+    return out_.prepareRoundedClip(owner, bounds, style, fresh);
   }
 
-  /// Restores the enclosing clip after the child's paint completes or yields.
-  void endRoundedClip() { out_.endRoundedClip(); }
+  /// Activates a prepared rounded mask for one scoped paint operation.
+  void activateRoundedClip(internal::RoundedClip& clip) {
+    out_.activateRoundedClip(clip);
+  }
+
+  /// Restores the enclosing mask after the scoped operation completes.
+  void deactivateRoundedClip() { out_.deactivateRoundedClip(); }
 
   /// Identifies output paths that cannot bypass rounded filtering.
   bool hasRoundedClip() const { return out_.activeRoundedClip() != nullptr; }

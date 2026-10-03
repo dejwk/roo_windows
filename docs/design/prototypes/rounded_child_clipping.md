@@ -319,6 +319,9 @@ This is a prototype with a deliberately narrow supported contract:
   ripple and disabled-group composition remain unsupported.
 - The rounded scope clips all descendant output, including children marked
   `kUnclipped`. Escaping content should live outside that scope in this version.
+  The [proposed two-pass traversal](../proposed/rounded_unclipped_children_design.md)
+  would paint unclipped direct children as a foreground group outside this
+  parent's rounded scope.
 - Direct writes follow the widget-authoring opaque-output contract; arbitrary
   destination-dependent blend operations are outside the prototype.
 - Blit caching and immediate child-shadow shortcuts are disabled inside a

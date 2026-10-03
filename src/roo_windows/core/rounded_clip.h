@@ -66,13 +66,14 @@ class RoundedClip {
   }
   size_t storageBytes() const;
 
-  /// Parent clip remains alive with this record through the logical paint.
+  /// Parent mask is captured at preparation and retained for the logical paint.
   RoundedClip* parent = nullptr;
   /// Borrowed only while the descendant's press scope is active.
   const roo_display::Rasterizable* direct_press = nullptr;
   roo_display::Box direct_press_clip{0, 0, -1, -1};
-  /// Completed records are not repainted or published twice on continuation.
+  /// Fresh remains set until the prepared record's first activation.
   bool fresh = false;
+  /// Completed records are not repainted or published twice on continuation.
   bool completed = false;
   bool published = false;
 
@@ -193,6 +194,7 @@ struct RoundedPaintState {
   size_t clip_count = 0;
   size_t overlay_count = 0;
   size_t decoration_count = 0;
+  /// Top of the currently activated mask chain; prepared records are absent.
   RoundedClip* active = nullptr;
   RoundedClip* press_target = nullptr;
 };

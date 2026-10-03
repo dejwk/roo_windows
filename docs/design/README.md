@@ -88,6 +88,7 @@ Status was audited against the source tree and tests on 2026-09-12. “Dependenc
 | Interaction overlay reveal | Point and area ripples, widget-local click animation, paint context, and the navigation bar's component-local fade are implemented; shared fade reveal and paint-owned overlay policy are not. |
 | Navigation drawer | List support and basic dialogs are implemented and back routing exists; no drawer implementation exists. |
 | [Presentation registry](implemented/presentation_registry_design.md) | Effective presentation queries and targeted deferred widget notifications are implemented; consumers choose their lifecycle policies. |
+| [Unclipped children above rounded content](proposed/rounded_unclipped_children_design.md) | Sparse rounded clipping and compact masked exclusions are prototyped. Grouped child traversal with a single-scan capability fast path, matching touch and invalidation order, and phase-aware continuation remain proposed. |
 | Segmented buttons | Buttons are implemented; the superseding button-group design and this legacy component design are not implemented. |
 | Sheets | Paint/overflow foundations, icon buttons, and shared back behavior are implemented; the sheet family is not. Before implementation, modal sheets must be reconciled to use the P1.6b shared host with explicit task ownership, host-owned barrier paint, presenter-owned focus, and presenter-handled outside dismissal. |
 | Split button | Buttons, icon buttons, non-touch input, and menus are implemented; split buttons remain proposed. |

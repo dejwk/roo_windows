@@ -5,6 +5,23 @@ namespace roo_windows {
 PaintContext::PaintContext(Canvas canvas, Clipper& clipper)
     : canvas_(std::move(canvas)), clipper_(&clipper) {}
 
+namespace internal {
+
+RoundedClipScope::RoundedClipScope(PaintContext& context, RoundedClip& clip)
+    : context_(&context),
+      previous_output_(&context.canvas().out()),
+      output_(*previous_output_, clip) {
+  context_->clipperForFramework().activateRoundedClip(clip);
+  context_->canvas().set_out(&output_);
+}
+
+RoundedClipScope::~RoundedClipScope() {
+  context_->canvas().set_out(previous_output_);
+  context_->clipperForFramework().deactivateRoundedClip();
+}
+
+}  // namespace internal
+
 const Canvas& PaintContext::canvas() const {
   activate();
   return canvas_;

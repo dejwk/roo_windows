@@ -41,6 +41,7 @@ void RoundedClip::reset(const void* owner, Box bounds, BorderStyle style) {
   if (changed) buildRows();
   std::fill(colors_.begin(), colors_.end(), Color(0));
   direct_press = nullptr;
+  fresh = true;
   completed = false;
   published = false;
 }

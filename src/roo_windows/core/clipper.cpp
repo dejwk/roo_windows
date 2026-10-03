@@ -1,5 +1,7 @@
 #include "roo_windows/core/clipper.h"
 
+#include "roo_logging.h"
+
 namespace roo_windows {
 namespace internal {
 
@@ -12,26 +14,37 @@ RoundedClip* ClipperOutput::roundedClip(const void* owner) const {
   return nullptr;
 }
 
-RoundedClip& ClipperOutput::beginRoundedClip(const void* owner,
-                                             roo_display::Box bounds,
-                                             BorderStyle style, bool& fresh) {
+RoundedClip& ClipperOutput::prepareRoundedClip(const void* owner,
+                                               roo_display::Box bounds,
+                                               BorderStyle style, bool& fresh) {
   if (state_.rounded_ == nullptr) {
     state_.rounded_.reset(new RoundedPaintState());
   }
   RoundedPaintState& arena = *state_.rounded_;
   RoundedClip* clip = roundedClip(owner);
-  fresh = clip == nullptr;
-  if (fresh) {
+  if (clip == nullptr) {
     if (arena.clip_count == arena.clips.size()) {
       arena.clips.emplace_back(new RoundedClip());
     }
     clip = arena.clips[arena.clip_count++].get();
     clip->reset(owner, bounds, style);
+    clip->parent = arena.active;
   }
-  clip->fresh = fresh;
-  clip->parent = arena.active;
-  arena.active = clip;
+  fresh = clip->fresh;
   return *clip;
+}
+
+void ClipperOutput::activateRoundedClip(RoundedClip& clip) {
+  DCHECK_NOTNULL(state_.rounded_.get());
+  DCHECK_EQ(state_.rounded_->active, clip.parent);
+  state_.rounded_->active = &clip;
+}
+
+void ClipperOutput::deactivateRoundedClip() {
+  RoundedClip* clip = activeRoundedClip();
+  DCHECK_NOTNULL(clip);
+  state_.rounded_->active = clip->parent;
+  clip->fresh = false;
 }
 
 void ClipperOutput::addRoundedExclusion(const roo_display::Box& exclusion) {

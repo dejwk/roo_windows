@@ -372,8 +372,9 @@ TEST(MaskedExclusion, StorageDoesNotExpandIntoCornerRows) {
     internal::ClipperOutput output(state, device, false);
     bool fresh;
     const Box bounds(0, 0, 199, 199);
-    RoundedClip& clip =
-        output.beginRoundedClip(&state, bounds, BorderStyle(radius, 0), fresh);
+    RoundedClip& clip = output.prepareRoundedClip(
+        &state, bounds, BorderStyle(radius, 0), fresh);
+    output.activateRoundedClip(clip);
     for (int i = 0; i < 20; ++i) output.addExclusion(Box(0, 0, 100 + i, 199));
     ASSERT_EQ(output.maskedExclusions().size(), 20u);
     EXPECT_TRUE(output.exclusions().empty());
@@ -381,7 +382,7 @@ TEST(MaskedExclusion, StorageDoesNotExpandIntoCornerRows) {
       EXPECT_EQ(exclusion.mask, &clip);
     }
     EXPECT_EQ(sizeof(Box), 8u);
-    output.endRoundedClip();
+    output.deactivateRoundedClip();
   }
 }
 
@@ -402,9 +403,11 @@ TEST(MaskedExclusion, PruningRetainsUnprovenCoverage) {
   output.addOverlay(&corner, bounds);
   output.addOverlay(&middle, bounds);
   bool fresh;
-  output.beginRoundedClip(&state, bounds, BorderStyle(16, 0), fresh);
+  RoundedClip& clip =
+      output.prepareRoundedClip(&state, bounds, BorderStyle(16, 0), fresh);
+  output.activateRoundedClip(clip);
   output.addExclusion(bounds);
-  output.endRoundedClip();
+  output.deactivateRoundedClip();
   ASSERT_EQ(output.exclusions().size(), 1u);
   EXPECT_EQ(output.exclusions()[0], Box(0, 0, 1, 1));
   ASSERT_EQ(output.maskedExclusions().size(), 1u);
@@ -434,9 +437,10 @@ TEST(MaskedExclusion, InvalidationAndContinuationShareGeometry) {
     internal::ClipperOutput output(state, device, false);
     bool fresh;
     geometry =
-        &output.beginRoundedClip(&state, bounds, BorderStyle(16, 0), fresh);
+        &output.prepareRoundedClip(&state, bounds, BorderStyle(16, 0), fresh);
+    output.activateRoundedClip(*geometry);
     output.addExclusion(bounds);
-    output.endRoundedClip();
+    output.deactivateRoundedClip();
   }
   state.invalidate(damage);
   internal::ClipperOutput resumed(state, device, true);

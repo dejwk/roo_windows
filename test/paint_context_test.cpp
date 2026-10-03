@@ -156,6 +156,108 @@ TEST_F(PaintContextTest, DerivedContextsUpdateOriginAndLocalClip) {
   EXPECT_EQ(Rect(0, 0, 4, 4), clipped.localClip());
 }
 
+// Verifies preparation neither activates masking nor consumes the fresh state
+// needed when a paint is interrupted before the first activation.
+TEST_F(PaintContextTest, RoundedClipPreparationSurvivesBeforeActivation) {
+  internal::ClipperState state;
+  int owner = 0;
+  internal::RoundedClip* prepared = nullptr;
+  {
+    Clipper clipper(state, display_.output(), roo_time::Uptime::Max());
+    bool fresh = false;
+    prepared = &clipper.prepareRoundedClip(&owner, Box(0, 0, 31, 23),
+                                           BorderStyle(8, 0), fresh);
+    EXPECT_TRUE(fresh);
+    EXPECT_FALSE(clipper.hasRoundedClip());
+    clipper.addExclusion(Box(0, 0, 3, 3));
+    EXPECT_EQ(1u, clipper.exclusions().size());
+    EXPECT_FALSE(clipper.hasMaskedExclusions());
+  }
+
+  Clipper resumed(state, display_.output(), roo_time::Uptime::Max(),
+                  /*resume=*/true);
+  bool fresh = false;
+  internal::RoundedClip& retained = resumed.prepareRoundedClip(
+      &owner, Box(0, 0, 31, 23), BorderStyle(8, 0), fresh);
+  EXPECT_EQ(prepared, &retained);
+  EXPECT_TRUE(fresh);
+  EXPECT_FALSE(resumed.hasRoundedClip());
+
+  resumed.activateRoundedClip(retained);
+  EXPECT_TRUE(resumed.hasRoundedClip());
+  resumed.deactivateRoundedClip();
+  EXPECT_FALSE(resumed.hasRoundedClip());
+
+  internal::RoundedClip& activated = resumed.prepareRoundedClip(
+      &owner, Box(0, 0, 31, 23), BorderStyle(8, 0), fresh);
+  EXPECT_EQ(&retained, &activated);
+  EXPECT_FALSE(fresh);
+}
+
+// Verifies nested scopes restore both the previous output and mask, while a
+// second activation reuses the first activation's captured boundary colors.
+TEST_F(PaintContextTest, RoundedClipScopesRestoreAndRetainColors) {
+  Surface surface(display_.output(), 0, 0, display_.extents(),
+                  /*is_write_once=*/false, display_.getBackgroundColor(),
+                  FillMode::kVisible, BlendingMode::kSourceOver);
+  Canvas canvas(&surface);
+  internal::ClipperState state;
+  Clipper clipper(state, canvas.out(), roo_time::Uptime::Max());
+  PaintContext ctx(canvas, clipper);
+  roo_display::DisplayOutput* original = &ctx.canvas().out();
+  int outer_owner = 0;
+  int inner_owner = 0;
+  bool fresh = false;
+  internal::RoundedClip& outer = clipper.prepareRoundedClip(
+      &outer_owner, Box(0, 0, 31, 23), BorderStyle(8, 0), fresh);
+
+  {
+    internal::RoundedClipScope outer_scope(ctx, outer);
+    EXPECT_TRUE(clipper.hasRoundedClip());
+    EXPECT_NE(original, &ctx.canvas().out());
+    roo_display::DisplayOutput* outer_output = &ctx.canvas().out();
+    ctx.fillRect(Rect(0, 0, 31, 23), Color(0xFF336699));
+
+    internal::RoundedClip& inner = clipper.prepareRoundedClip(
+        &inner_owner, Box(4, 4, 27, 19), BorderStyle(6, 0), fresh);
+    EXPECT_EQ(&outer, inner.parent);
+    {
+      internal::RoundedClipScope inner_scope(ctx, inner);
+      EXPECT_NE(outer_output, &ctx.canvas().out());
+      EXPECT_TRUE(clipper.hasRoundedClip());
+    }
+    EXPECT_EQ(outer_output, &ctx.canvas().out());
+    EXPECT_TRUE(clipper.hasRoundedClip());
+  }
+  EXPECT_EQ(original, &ctx.canvas().out());
+  EXPECT_FALSE(clipper.hasRoundedClip());
+
+  int16_t boundary_x = -1;
+  int16_t boundary_y = -1;
+  for (int16_t y = 0; y < 24 && boundary_x < 0; ++y) {
+    for (int16_t x = 0; x < 32; ++x) {
+      if (outer.coverage(x, y) == 1) {
+        boundary_x = x;
+        boundary_y = y;
+        break;
+      }
+    }
+  }
+  ASSERT_GE(boundary_x, 0);
+  Color captured;
+  ASSERT_TRUE(outer.contentAt(boundary_x, boundary_y, color::Black, captured));
+
+  {
+    internal::RoundedClipScope repeated_scope(ctx, outer);
+    EXPECT_TRUE(clipper.hasRoundedClip());
+  }
+  Color retained;
+  ASSERT_TRUE(outer.contentAt(boundary_x, boundary_y, color::Black, retained));
+  EXPECT_EQ(captured, retained);
+  EXPECT_EQ(original, &ctx.canvas().out());
+  EXPECT_FALSE(clipper.hasRoundedClip());
+}
+
 TEST_F(PaintContextTest, AddExclusionTranslatesAndClipsLocalBounds) {
   Surface surface(display_.output(), 10, 20, Box(12, 22, 18, 23),
                   /*is_write_once=*/false, display_.getBackgroundColor(),

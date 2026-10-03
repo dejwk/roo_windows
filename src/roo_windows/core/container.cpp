@@ -98,18 +98,14 @@ void Container::paintWidgetContents(PaintContext& ctx) {
 void Container::paintRoundedContents(PaintContext& ctx) {
   Clipper& clipper = ctx.clipperForFramework();
   bool fresh = false;
-  internal::RoundedClip& clip = clipper.beginRoundedClip(
+  internal::RoundedClip& clip = clipper.prepareRoundedClip(
       this, bounds().translate(ctx.canvas().dx(), ctx.canvas().dy()).asBox(),
       getBorderStyle().trim(width(), height()), fresh);
   if (!clip.completed) {
-    roo_display::DisplayOutput& previous = ctx.canvas().out();
-    internal::RoundedClipOutput output(previous, clip);
-    ctx.canvas().set_out(&output);
+    internal::RoundedClipScope scope(ctx, clip);
     paintContentsWithoutRoundedClip(ctx);
-    ctx.canvas().set_out(&previous);
     clip.completed = !clipper.wasPaintInterrupted();
   }
-  clipper.endRoundedClip();
 }
 
 void Container::emitPersistentDecoration(PaintContext& ctx) const {

@@ -175,4 +175,26 @@ class PaintContext {
 static_assert(sizeof(PaintContext) <= sizeof(Canvas) + sizeof(void*),
               "PaintContext must stay within Canvas plus one pointer");
 
+namespace internal {
+
+/// Activates one prepared rounded mask and output route for a lexical scope.
+class RoundedClipScope {
+ public:
+  /// Routes @p context through @p clip until this scope is destroyed.
+  RoundedClipScope(PaintContext& context, RoundedClip& clip);
+
+  /// Restores the previous canvas output and enclosing rounded mask.
+  ~RoundedClipScope();
+
+  RoundedClipScope(const RoundedClipScope&) = delete;
+  RoundedClipScope& operator=(const RoundedClipScope&) = delete;
+
+ private:
+  PaintContext* context_;
+  roo_display::DisplayOutput* previous_output_;
+  RoundedClipOutput output_;
+};
+
+}  // namespace internal
+
 }  // namespace roo_windows

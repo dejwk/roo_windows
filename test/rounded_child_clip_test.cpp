@@ -504,7 +504,8 @@ TEST_F(RoundedClipTest, EveryOutputPathAndDeferredOverlay) {
     clipper.setBounds(Box(0, 0, 95, 71));
     bool fresh = false;
     internal::RoundedClip& clip =
-        clipper.beginRoundedClip(&state, bounds, BorderStyle(16, 0), fresh);
+        clipper.prepareRoundedClip(&state, bounds, BorderStyle(16, 0), fresh);
+    clipper.activateRoundedClip(clip);
     internal::RoundedClipOutput output(*clipper.out(), clip);
     roo_display::SmoothShape overlay = roo_display::SmoothFilledRoundRect(
         16, 8, 79, 32, 8, Color(96, 230, 20, 80));
@@ -556,7 +557,7 @@ TEST_F(RoundedClipTest, EveryOutputPathAndDeferredOverlay) {
     }
     clipper.addExclusion(bounds);
     clip.completed = true;
-    clipper.endRoundedClip();
+    clipper.deactivateRoundedClip();
     clipper.addRoundedDecoration(&state, Box(0, 0, 95, 71), bounds, 0, kPanel,
                                  BorderStyle(16, 0), kPanel);
     for (int16_t y = 0; y < kHeight; ++y) {
