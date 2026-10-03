@@ -93,29 +93,6 @@ class ExclusionUnion {
     return contains(x, y, nullptr);
   }
 
-  /// Returns the last row before any relevant exclusion span can change.
-  /// Uniform rectangle draws can emit whole vertical bands without storing
-  /// per-row fragments; the straight middle of a rounded mask stays one band.
-  int16_t bandEnd(const Box& bounds, int16_t y) const {
-    int16_t last = bounds.yMax();
-    for (const Box* box = begin_; box != end_; ++box) {
-      if (box->xMin() > bounds.xMax() || box->xMax() < bounds.xMin() ||
-          box->yMax() < y) {
-        continue;
-      }
-      last = std::min<int16_t>(last,
-                               y < box->yMin() ? box->yMin() - 1 : box->yMax());
-    }
-    for (const MaskedExclusion* e = masked_begin_; e != masked_end_; ++e) {
-      if (e->bounds.xMin() > bounds.xMax() ||
-          e->bounds.xMax() < bounds.xMin()) {
-        continue;
-      }
-      last = std::min(last, e->bandEnd(y));
-    }
-    return last;
-  }
-
   /// Return a best-effort lower bound on visible pixels in raster order
   /// starting at `(bounds.xMin(), y)`.
   ///
@@ -239,6 +216,16 @@ class ExclusionUnion {
 
   /// Return the rectangle at index `idx`.
   const Box& at(int idx) const { return *(begin_ + idx); }
+
+  /// Returns the masked descriptor count for recursive rectangle subtraction.
+  size_t maskedSize() const {
+    return masked_begin_ == masked_end_ ? 0 : masked_end_ - masked_begin_;
+  }
+
+  /// Returns a masked descriptor whose geometry is borrowed through reset().
+  const MaskedExclusion& maskedAt(size_t idx) const {
+    return masked_begin_[idx];
+  }
 
  private:
   const Box* begin_;

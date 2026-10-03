@@ -281,6 +281,87 @@ TEST(MaskedExclusion, UniformSideStripsRemainRectangles) {
   }
 }
 
+// Verifies a fill crossing both corner regions keeps each visible middle strip
+// in one rectangle, with the same rectangle count as the middle grows taller.
+TEST(MaskedExclusion, CrossingCornersKeepsMiddleBatched) {
+  class RectRecordingDevice : public roo_display::OffscreenDevice<Argb8888> {
+   public:
+    RectRecordingDevice(int height, roo::byte* data)
+        : OffscreenDevice(kWidth, height, data, Argb8888()) {}
+
+    void writeRects(BlendingMode mode, Color* colors, int16_t* x0, int16_t* y0,
+                    int16_t* x1, int16_t* y1, uint16_t count) override {
+      for (uint16_t i = 0; i < count; ++i) {
+        fillRects(mode, colors[i], x0 + i, y0 + i, x1 + i, y1 + i, 1);
+      }
+    }
+
+    void fillRects(BlendingMode mode, Color color, int16_t* x0, int16_t* y0,
+                   int16_t* x1, int16_t* y1, uint16_t count) override {
+      for (uint16_t i = 0; i < count; ++i) {
+        rectangles.emplace_back(x0[i], y0[i], x1[i], y1[i]);
+      }
+      OffscreenDevice::fillRects(mode, color, x0, y0, x1, y1, count);
+    }
+
+    std::vector<Box> rectangles;
+  };
+
+  const BorderStyle style(6, 10, 8, 12, 0);
+  for (bool colored : {false, true}) {
+    size_t short_count = 0;
+    for (int height : {48, 400}) {
+      SCOPED_TRACE(testing::Message()
+                   << "height=" << height << " colored=" << colored);
+      const Box bounds(16, 0, 47, height - 1);
+      RoundedClip clip;
+      clip.reset(&clip, bounds, style);
+      MaskedExclusion mask{bounds, &clip};
+      ExclusionUnion exclusions(nullptr, nullptr);
+      exclusions.reset(nullptr, nullptr, &mask, &mask + 1);
+      std::vector<roo::byte> data(kWidth * height * 4);
+      RectRecordingDevice device(height, data.data());
+      ExclusionFilter filter(device, &exclusions);
+      int16_t x0 = 0;
+      int16_t x1 = kWidth - 1;
+      int16_t y0 = 0;
+      int16_t y1 = height - 1;
+      Color value = kPaint;
+      if (colored) {
+        filter.writeRects(BlendingMode::kSource, &value, &x0, &y0, &x1, &y1, 1);
+      } else {
+        filter.fillRects(BlendingMode::kSource, value, &x0, &y0, &x1, &y1, 1);
+      }
+      if (height == 48) short_count = device.rectangles.size();
+      EXPECT_EQ(device.rectangles.size(), short_count);
+      for (const Box middle :
+           {Box(0, 16, 15, height - 17), Box(48, 16, 63, height - 17)}) {
+        int containing_rectangles = 0;
+        for (const Box& rect : device.rectangles) {
+          if (rect.contains(middle)) ++containing_rectangles;
+        }
+        EXPECT_EQ(containing_rectangles, 1);
+      }
+      // Every output rectangle is disjoint, including at corner/middle seams.
+      for (size_t i = 0; i < device.rectangles.size(); ++i) {
+        for (size_t j = 0; j < i; ++j) {
+          EXPECT_FALSE(device.rectangles[i].intersects(device.rectangles[j]));
+        }
+      }
+      for (int16_t y = 0; y < height; ++y) {
+        for (int16_t x = 0; x < kWidth; ++x) {
+          const bool excluded =
+              internal::RoundedFillCoverage(bounds, style.corner_radii(), 0, x,
+                                            y) == 255;
+          Color actual;
+          device.raster().readColors(&x, &y, 1, &actual);
+          EXPECT_EQ(actual, excluded ? Color(0) : kPaint) << x << ',' << y;
+        }
+      }
+    }
+  }
+}
+
 // Verifies a corner-crossing exclusion is one descriptor per draw, irrespective
 // of radius, and descriptors borrow one geometry table rather than copying it.
 TEST(MaskedExclusion, StorageDoesNotExpandIntoCornerRows) {

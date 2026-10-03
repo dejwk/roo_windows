@@ -1274,7 +1274,10 @@ cc_test(
 
 cc_test(
     name = "masked_exclusion_test",
-    srcs = ["test/masked_exclusion_test.cpp"],
+    srcs = [
+        "test/masked_exclusion_test.cpp",
+        "test/masked_exclusion_subdivision_test.cpp",
+    ],
     linkstatic = 1,
     deps = [
         ":roo_windows",

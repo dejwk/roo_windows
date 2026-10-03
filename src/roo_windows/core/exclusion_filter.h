@@ -14,8 +14,8 @@ using roo_display::DisplayOutput;
 
 /// Filters ordinary output through rectangular and shared rounded exclusions.
 /// The rectangle-only paths and streamed run batching are adapted from
-/// roo_display/filter/clip_exclude_rects.h. Masked fills emit visible bands
-/// directly, sharing constant spans through the straight middle of a mask.
+/// roo_display/filter/clip_exclude_rects.h. Rectangle draws subtract ordinary
+/// exclusions first, then split around masked bounds and visit their row spans.
 class ExclusionFilter : public DisplayOutput {
  public:
   /// Creates an adapter suppressing pixels in @p exclusion before forwarding
@@ -97,18 +97,9 @@ class ExclusionFilter : public DisplayOutput {
                   int16_t* x1, int16_t* y1, uint16_t count) override {
     BufferedRectWriter writer(*output_, mode);
     while (count-- > 0) {
-      if (exclusion_->intersectsMaskedBounds(Box(*x0, *y0, *x1, *y1))) {
-        roo_display::BufferedRectWriterFillAdapter<BufferedRectWriter> filler(
-            writer, *color);
-        fillMaskedRect(Box(*x0, *y0, *x1, *y1), &filler);
-      } else {
-        writeRect(*color, *x0, *y0, *x1, *y1, 0, &writer);
-      }
-      ++color;
-      ++x0;
-      ++y0;
-      ++x1;
-      ++y1;
+      roo_display::BufferedRectWriterFillAdapter<BufferedRectWriter> filler(
+          writer, *color++);
+      fillRect(*x0++, *y0++, *x1++, *y1++, 0, &filler);
     }
   }
 
@@ -117,15 +108,7 @@ class ExclusionFilter : public DisplayOutput {
                  int16_t* x1, int16_t* y1, uint16_t count) override {
     BufferedRectFiller filler(*output_, color, mode);
     while (count-- > 0) {
-      if (exclusion_->intersectsMaskedBounds(Box(*x0, *y0, *x1, *y1))) {
-        fillMaskedRect(Box(*x0, *y0, *x1, *y1), &filler);
-      } else {
-        fillRect(*x0, *y0, *x1, *y1, 0, &filler);
-      }
-      ++x0;
-      ++y0;
-      ++x1;
-      ++y1;
+      fillRect(*x0++, *y0++, *x1++, *y1++, 0, &filler);
     }
   }
 
@@ -239,37 +222,11 @@ class ExclusionFilter : public DisplayOutput {
     }
   }
 
-  void writeRect(Color color, int16_t x0, int16_t y0, int16_t x1, int16_t y1,
-                 int mask_idx, BufferedRectWriter* writer) {
-    Box rect(x0, y0, x1, y1);
-    while (mask_idx < (int)exclusion_->size() &&
-           !exclusion_->at(mask_idx).intersects(rect)) {
-      ++mask_idx;
-    }
-    if (mask_idx == (int)exclusion_->size()) {
-      writer->writeRect(x0, y0, x1, y1, color);
-      return;
-    }
-    Box intruder = Box::Intersect(exclusion_->at(mask_idx), rect);
-    if (intruder.yMin() > y0) {
-      writeRect(color, x0, y0, x1, intruder.yMin() - 1, mask_idx + 1, writer);
-      y0 = intruder.yMin();
-    }
-    if (intruder.xMin() > x0) {
-      writeRect(color, x0, y0, intruder.xMin() - 1, intruder.yMax(),
-                mask_idx + 1, writer);
-    }
-    if (intruder.xMax() < x1) {
-      writeRect(color, intruder.xMax() + 1, y0, x1, intruder.yMax(),
-                mask_idx + 1, writer);
-    }
-    if (intruder.yMax() < y1) {
-      writeRect(color, x0, intruder.yMax() + 1, x1, y1, mask_idx + 1, writer);
-    }
-  }
-
+  // Subtract ordinary rectangles before visiting masks. Both rectangle entry
+  // points share this traversal and keep their buffered writer in the caller.
+  template <typename Filler>
   void fillRect(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int mask_idx,
-                BufferedRectFiller* filler) {
+                Filler* filler) {
     {
       Box rect(x0, y0, x1, y1);
       while (mask_idx < (int)exclusion_->size() &&
@@ -278,7 +235,11 @@ class ExclusionFilter : public DisplayOutput {
       }
     }
     if (mask_idx == (int)exclusion_->size()) {
-      filler->fillRect(x0, y0, x1, y1);
+      if (exclusion_->maskedSize() == 0) {
+        filler->fillRect(x0, y0, x1, y1);
+      } else {
+        fillMaskedRect(Box(x0, y0, x1, y1), 0, filler);
+      }
       return;
     }
     Box intruder =
@@ -300,19 +261,88 @@ class ExclusionFilter : public DisplayOutput {
     }
   }
 
-  // Emits the complement of the union one constant vertical band at a time.
-  // The output writer batches rectangles; no fragment list is retained.
+  // Normalize an empty intersection so fully unmasked rows can coalesce even
+  // when the mask's opaque span moves outside the rectangle being drawn.
+  static void ClippedMaskedSpan(const MaskedExclusion& mask, const Box& bounds,
+                                int16_t y, int16_t& lo, int16_t& hi) {
+    mask.span(y, lo, hi);
+    lo = std::max(lo, bounds.xMin());
+    hi = std::min(hi, bounds.xMax());
+    if (hi < lo) {
+      lo = 0;
+      hi = -1;
+    }
+  }
+
+  // Earlier exclusions have already been removed from bounds. Each recursive
+  // call advances mask_idx, so pieces only test the remaining masks. The one
+  // buffered writer belongs to writeRects/fillRects, outside this recursion.
   template <typename Filler>
-  void fillMaskedRect(const Box& bounds, Filler* filler) {
-    for (int32_t y = bounds.yMin(); y <= bounds.yMax();) {
-      const int16_t last_y = exclusion_->bandEnd(bounds, y);
-      for (int32_t x = bounds.xMin(); x <= bounds.xMax();) {
-        size_t count;
-        const bool excluded = exclusion_->contains(x, y, &count);
-        const int16_t last_x =
-            x + std::min<size_t>(count, bounds.xMax() - x + 1) - 1;
-        if (!excluded) filler->fillRect(x, y, last_x, last_y);
-        x = int32_t(last_x) + 1;
+  void fillMaskedRect(const Box& bounds, size_t mask_idx, Filler* filler) {
+    while (mask_idx < exclusion_->maskedSize() &&
+           !exclusion_->maskedAt(mask_idx).bounds.intersects(bounds)) {
+      ++mask_idx;
+    }
+    if (mask_idx == exclusion_->maskedSize()) {
+      filler->fillRect(bounds.xMin(), bounds.yMin(), bounds.xMax(),
+                       bounds.yMax());
+      return;
+    }
+    const MaskedExclusion& mask = exclusion_->maskedAt(mask_idx++);
+    const Box inside = Box::Intersect(bounds, mask.bounds);
+    // These four disjoint pieces avoid this mask entirely. Keep them as large
+    // rectangles, while still subtracting any later intruders.
+    if (bounds.yMin() < inside.yMin()) {
+      fillMaskedRect(
+          Box(bounds.xMin(), bounds.yMin(), bounds.xMax(), inside.yMin() - 1),
+          mask_idx, filler);
+    }
+    if (bounds.xMin() < inside.xMin()) {
+      fillMaskedRect(
+          Box(bounds.xMin(), inside.yMin(), inside.xMin() - 1, inside.yMax()),
+          mask_idx, filler);
+    }
+    if (inside.xMax() < bounds.xMax()) {
+      fillMaskedRect(
+          Box(inside.xMax() + 1, inside.yMin(), bounds.xMax(), inside.yMax()),
+          mask_idx, filler);
+    }
+    if (inside.yMax() < bounds.yMax()) {
+      fillMaskedRect(
+          Box(bounds.xMin(), inside.yMax() + 1, bounds.xMax(), bounds.yMax()),
+          mask_idx, filler);
+    }
+    if (mask.contains(inside)) return;
+
+    // Only the overlap needs row geometry. Iterate rows/bands, recursing on
+    // their unexcluded portions; stack depth depends on masks, never on rows.
+    for (int32_t y = inside.yMin(); y <= inside.yMax();) {
+      int16_t lo;
+      int16_t hi;
+      ClippedMaskedSpan(mask, inside, y, lo, hi);
+      int16_t last_y = std::min(inside.yMax(), mask.bandEnd(y));
+      // Coalesce identical clipped spans before asking later masks about the
+      // remainder. bandEnd skips the implicit straight middle in one step.
+      while (last_y < inside.yMax()) {
+        const int16_t next_y = last_y + 1;
+        int16_t next_lo;
+        int16_t next_hi;
+        ClippedMaskedSpan(mask, inside, next_y, next_lo, next_hi);
+        if (next_lo != lo || next_hi != hi) break;
+        last_y = std::min(inside.yMax(), mask.bandEnd(next_y));
+      }
+      if (hi < lo) {
+        fillMaskedRect(Box(inside.xMin(), y, inside.xMax(), last_y), mask_idx,
+                       filler);
+      } else {
+        if (inside.xMin() < lo) {
+          fillMaskedRect(Box(inside.xMin(), y, lo - 1, last_y), mask_idx,
+                         filler);
+        }
+        if (hi < inside.xMax()) {
+          fillMaskedRect(Box(hi + 1, y, inside.xMax(), last_y), mask_idx,
+                         filler);
+        }
       }
       y = int32_t(last_y) + 1;
     }
