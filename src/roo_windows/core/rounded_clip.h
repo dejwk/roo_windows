@@ -6,6 +6,7 @@
 #include "roo_display/core/device.h"
 #include "roo_display/core/rasterizable.h"
 #include "roo_windows/core/border_style.h"
+#include "roo_windows/core/exclusion.h"
 #include "roo_windows/decoration/decoration.h"
 
 namespace roo_windows {
@@ -30,6 +31,10 @@ class RoundedClip {
 
   /// Returns the fully opaque interval on a row; an empty interval has x1<x0.
   void opaqueSpan(int16_t y, int16_t& x0, int16_t& x1) const;
+
+  /// Returns a conservative last row with the same opaque span as y.
+  /// Corner rows are evaluated individually; the straight middle is one band.
+  int16_t opaqueSpanBandEnd(int16_t y) const;
 
   /// Tests whether a rectangle can bypass all curved-boundary processing.
   bool containsOpaque(const roo_display::Box& box) const;
@@ -180,6 +185,8 @@ class RoundedDecoration : public roo_display::Rasterizable {
 
 /// Optional retained arenas: ordinary windows only store one nullable pointer.
 struct RoundedPaintState {
+  std::vector<MaskedExclusion> exclusions;
+  std::vector<MaskedExclusion> bounded_exclusions;
   std::vector<std::unique_ptr<RoundedClip>> clips;
   std::vector<std::unique_ptr<RoundedOverlay>> overlays;
   std::vector<std::unique_ptr<RoundedDecoration>> decorations;

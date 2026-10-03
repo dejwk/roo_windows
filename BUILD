@@ -1271,3 +1271,13 @@ cc_test(
         "@roo_testing//:arduino_gtest_main",
     ],
 )
+
+cc_test(
+    name = "masked_exclusion_test",
+    srcs = ["test/masked_exclusion_test.cpp"],
+    linkstatic = 1,
+    deps = [
+        ":roo_windows",
+        "@roo_testing//:arduino_gtest_main",
+    ],
+)

@@ -48,7 +48,8 @@ void operator delete[](void* p, const std::nothrow_t&) noexcept {
 namespace roo_windows {
 namespace {
 
-// Measures identical scene construction and invalidation with clipping off/on.
+// Verifies clipping adds no warmed allocations and measures identical scene
+// construction and invalidation with clipping off/on.
 // Timings exclude display bus transfer; use -c opt for useful host comparisons.
 TEST(RoundedClipResources, CharacterizeRefresh) {
   class PanelProbe : public Panel {
@@ -73,6 +74,8 @@ TEST(RoundedClipResources, CharacterizeRefresh) {
     BorderStyle getBorderStyle() const override { return BorderStyle(8, 0); }
     void paint(PaintContext& ctx) const override { ctx.clear(); }
   };
+  size_t baseline_allocations = 0;
+  size_t baseline_bytes = 0;
   for (bool rounded : {false, true}) {
     std::array<roo::byte, 240 * 160 * 4> pixels{};
     roo_display::OffscreenDevice<roo_display::Argb8888> device(
@@ -120,6 +123,13 @@ TEST(RoundedClipResources, CharacterizeRefresh) {
     const double cpu_us = (cpu_end.tv_sec - cpu_start.tv_sec) * 1e6 +
                           (cpu_end.tv_nsec - cpu_start.tv_nsec) / 1e3;
     ASSERT_TRUE(complete);
+    if (rounded) {
+      EXPECT_LE(allocations, baseline_allocations);
+      EXPECT_LE(allocated_bytes, baseline_bytes);
+    } else {
+      baseline_allocations = allocations;
+      baseline_bytes = allocated_bytes;
+    }
     std::printf(
         "rounded=%d wall_us_per_frame=%.2f cpu_us_per_frame=%.2f "
         "new_calls_per_frame=%.2f "

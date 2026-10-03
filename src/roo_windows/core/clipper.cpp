@@ -45,25 +45,45 @@ void ClipperOutput::addRoundedExclusion(const roo_display::Box& exclusion) {
     addRectExclusion(exclusion);
     return;
   }
-  Box run(0, 0, -1, -1);
-  for (int16_t y = exclusion.yMin(); y <= exclusion.yMax(); ++y) {
-    int16_t lo = exclusion.xMin();
-    int16_t hi = exclusion.xMax();
-    for (RoundedClip* clip = activeRoundedClip(); clip != nullptr;
-         clip = clip->parent) {
-      int16_t cl;
-      int16_t cr;
-      clip->opaqueSpan(y, cl, cr);
-      lo = std::max(lo, cl);
-      hi = std::min(hi, cr);
-    }
-    if (!run.empty() && (lo != run.xMin() || hi != run.xMax())) {
-      addRectExclusion(run);
-      run = Box(0, 0, -1, -1);
-    }
-    if (hi >= lo) run = Box(lo, run.empty() ? y : run.yMin(), hi, y);
+  Box bounds = exclusion;
+  for (RoundedClip* clip = activeRoundedClip(); clip != nullptr;
+       clip = clip->parent) {
+    bounds.clip(clip->viewport());
   }
-  if (!run.empty()) addRectExclusion(run);
+  if (bounds.empty()) return;
+  const MaskedExclusion masked{bounds, activeRoundedClip()};
+  // Prove coverage cheaply, otherwise retain the older descriptor/overlay.
+  while (!exclusions_.empty() && masked.contains(exclusions_.back())) {
+    exclusions_.pop_back();
+  }
+  auto& masks = state_.rounded_->exclusions;
+  while (!masks.empty() && masked.contains(masks.back().bounds)) {
+    masks.pop_back();
+  }
+  masks.push_back(masked);
+  while (!overlays_.empty() && masked.contains(overlays_.back().extents())) {
+    overlays_.pop_back();
+  }
+  valid_ = false;
+}
+
+void ClipperOutput::addRectExclusion(const roo_display::Box& exclusion) {
+  // Foreground-first registration lets enclosing rectangles fold recent child
+  // exclusions. Masked bounds are a conservative coverage proof too.
+  while (!exclusions_.empty() && exclusion.contains(exclusions_.back())) {
+    exclusions_.pop_back();
+  }
+  if (state_.rounded_ != nullptr) {
+    auto& masks = state_.rounded_->exclusions;
+    while (!masks.empty() && exclusion.contains(masks.back().bounds)) {
+      masks.pop_back();
+    }
+  }
+  exclusions_.push_back(exclusion);
+  while (!overlays_.empty() && exclusion.contains(overlays_.back().extents())) {
+    overlays_.pop_back();
+  }
+  valid_ = false;
 }
 
 const roo_display::Rasterizable* ClipperOutput::maskRoundedOverlay(

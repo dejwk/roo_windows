@@ -132,6 +132,14 @@ void RoundedClip::opaqueSpan(int16_t y, int16_t& x0, int16_t& x1) const {
   x1 = scan == nullptr ? viewport_.xMax() : scan->opaque_max;
 }
 
+int16_t RoundedClip::opaqueSpanBandEnd(int16_t y) const {
+  if (viewport_.empty() || y > viewport_.yMax()) {
+    return std::numeric_limits<int16_t>::max();
+  }
+  if (y < viewport_.yMin()) return viewport_.yMin() - 1;
+  return row(y) == nullptr ? viewport_.yMax() - bottom_rows_ : y;
+}
+
 bool RoundedClip::containsOpaque(const Box& box) const {
   if (!viewport_.contains(box)) return false;
   // A rounded rectangle is convex and its narrowest row is at an endpoint.
