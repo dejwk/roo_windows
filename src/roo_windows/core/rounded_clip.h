@@ -166,6 +166,11 @@ class RoundedOverlay : public roo_display::Rasterizable {
   roo_display::Box extents() const override { return extents_; }
   void readColors(const int16_t* x, const int16_t* y, uint32_t count,
                   roo_display::Color* result) const override;
+
+  /// Reads only fully covered spans; fractional samples remain in edge RAM.
+  bool readColorRect(int16_t x0, int16_t y0, int16_t x1, int16_t y1,
+                     roo_display::Color* result) const override;
+
   bool readUniformColorRect(int16_t x0, int16_t y0, int16_t x1, int16_t y1,
                             roo_display::Color* result) const override;
 

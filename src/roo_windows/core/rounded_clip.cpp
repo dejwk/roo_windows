@@ -24,6 +24,25 @@ bool OpaqueThrough(const RoundedClip* clip, int16_t x, int16_t y) {
   return true;
 }
 
+// Intersects ancestor interiors on one row without visiting individual pixels.
+void IntersectOpaqueSpans(const RoundedClip* mask, int16_t y, int16_t& x0,
+                          int16_t& x1) {
+  for (; mask != nullptr && x0 <= x1; mask = mask->parent) {
+    int16_t lo;
+    int16_t hi;
+    mask->opaqueSpan(y, lo, hi);
+    x0 = std::max(x0, lo);
+    x1 = std::min(x1, hi);
+  }
+}
+
+bool ContainsOpaqueThrough(const RoundedClip* mask, const Box& box) {
+  for (; mask != nullptr; mask = mask->parent) {
+    if (!mask->containsOpaque(box)) return false;
+  }
+  return true;
+}
+
 }  // namespace
 
 void RoundedClip::reset(const void* owner, Box bounds, BorderStyle style) {
@@ -403,26 +422,73 @@ RoundedOverlay::RoundedOverlay(const roo_display::Rasterizable* source,
 
 void RoundedOverlay::readColors(const int16_t* x, const int16_t* y,
                                 uint32_t count, Color* result) const {
-  for (uint32_t i = 0; i < count; ++i) {
+  constexpr uint32_t kBatchSize = 32;
+  int16_t sx[kBatchSize];
+  int16_t sy[kBatchSize];
+  uint32_t i = 0;
+  while (i < count) {
     if (!extents_.contains(x[i], y[i]) || !OpaqueThrough(mask_, x[i], y[i])) {
-      result[i] = Color(0);
-    } else {
-      const int16_t sx = x[i] - dx_;
-      const int16_t sy = y[i] - dy_;
-      source_->readColors(&sx, &sy, 1, &result[i]);
+      result[i++] = Color(0);
+      continue;
+    }
+    uint32_t begin = i;
+    do {
+      sx[i - begin] = x[i] - dx_;
+      sy[i - begin] = y[i] - dy_;
+      ++i;
+    } while (i < count && i - begin < kBatchSize &&
+             extents_.contains(x[i], y[i]) && OpaqueThrough(mask_, x[i], y[i]));
+    source_->readColors(sx, sy, i - begin, result + begin);
+  }
+}
+
+bool RoundedOverlay::readColorRect(int16_t x0, int16_t y0, int16_t x1,
+                                   int16_t y1, Color* result) const {
+  const Box box(x0, y0, x1, y1);
+  if (extents_.contains(box) && ContainsOpaqueThrough(mask_, box)) {
+    return source_->readColorRect(x0 - dx_, y0 - dy_, x1 - dx_, y1 - dy_,
+                                  result);
+  }
+  // Only the intersection of the ancestor interiors reaches the deferred
+  // source. Edge colors were already composed before applying parent coverage.
+  roo_display::FillColor(result, box.area(), Color(0));
+  const Box clipped = Box::Intersect(box, extents_);
+  for (int32_t y = clipped.yMin(); !clipped.empty() && y <= clipped.yMax();
+       ++y) {
+    int16_t lo = clipped.xMin();
+    int16_t hi = clipped.xMax();
+    IntersectOpaqueSpans(mask_, y, lo, hi);
+    if (lo > hi) continue;
+    Color* row = result + (y - y0) * box.width() + lo - x0;
+    if (source_->readColorRect(lo - dx_, y - dy_, hi - dx_, y - dy_, row)) {
+      roo_display::FillColor(row + 1, hi - lo, row[0]);
     }
   }
+  for (int32_t i = 1; i < box.area(); ++i) {
+    if (result[i] != result[0]) return false;
+  }
+  return true;
 }
 
 bool RoundedOverlay::readUniformColorRect(int16_t x0, int16_t y0, int16_t x1,
                                           int16_t y1, Color* result) const {
   const Box box(x0, y0, x1, y1);
-  if (!extents_.contains(box)) return false;
-  for (const RoundedClip* mask = mask_; mask != nullptr; mask = mask->parent) {
-    if (!mask->containsOpaque(box)) return false;
+  if (extents_.contains(box) && ContainsOpaqueThrough(mask_, box)) {
+    return source_->readUniformColorRect(x0 - dx_, y0 - dy_, x1 - dx_, y1 - dy_,
+                                         result);
   }
-  return source_->readUniformColorRect(x0 - dx_, y0 - dy_, x1 - dx_, y1 - dy_,
-                                       result);
+  // A rectangle outside every surviving span is transparent without sampling
+  // the source. Mixed rectangles use readColorRect's row-span path instead.
+  const Box clipped = Box::Intersect(box, extents_);
+  for (int32_t y = clipped.yMin(); !clipped.empty() && y <= clipped.yMax();
+       ++y) {
+    int16_t lo = clipped.xMin();
+    int16_t hi = clipped.xMax();
+    IntersectOpaqueSpans(mask_, y, lo, hi);
+    if (lo <= hi) return false;
+  }
+  *result = Color(0);
+  return true;
 }
 
 RoundedDecoration::RoundedDecoration(Decoration decoration,

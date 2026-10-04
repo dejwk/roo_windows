@@ -7,7 +7,10 @@
 #include <vector>
 
 #include "gtest/gtest.h"
+#include "roo_display/composition/rasterizable_stack.h"
 #include "roo_display/core/offscreen.h"
+#include "roo_display/filter/foreground.h"
+#include "roo_display/shape/basic.h"
 #include "roo_display/shape/smooth.h"
 #include "roo_windows.h"
 #include "roo_windows/containers/scrollable_panel.h"
@@ -1197,6 +1200,143 @@ TEST(RoundedClipGeometryTest, SparseStorageAndCapacityReuse) {
     clip.reset(&clip, Box(0, 0, size - 1, size - 1), BorderStyle(radius, 0));
     EXPECT_EQ(clip.storageBytes(), capacity);
     EXPECT_EQ(clip.colorBytes(), colors);
+  }
+}
+
+// Records actual source work independently of rounded mask classification.
+class OverlayReadProbe : public roo_display::Rasterizable {
+ public:
+  Box extents() const override { return Box(-50, -40, 100, 100); }
+
+  static Color Sample(int16_t x, int16_t y) {
+    return Color(128, static_cast<uint8_t>(x * 3), static_cast<uint8_t>(y * 5),
+                 73);
+  }
+
+  void readColors(const int16_t* x, const int16_t* y, uint32_t count,
+                  Color* result) const override {
+    ++point_calls;
+    sampled += count;
+    for (uint32_t i = 0; i < count; ++i) result[i] = Sample(x[i], y[i]);
+  }
+
+  bool readColorRect(int16_t x0, int16_t y0, int16_t x1, int16_t y1,
+                     Color* result) const override {
+    ++rect_calls;
+    sampled += (x1 - x0 + 1) * (y1 - y0 + 1);
+    for (int y = y0; y <= y1; ++y) {
+      for (int x = x0; x <= x1; ++x) *result++ = Sample(x, y);
+    }
+    return x0 == x1 && y0 == y1;
+  }
+
+  mutable uint32_t point_calls = 0;
+  mutable uint32_t rect_calls = 0;
+  mutable uint32_t sampled = 0;
+};
+
+// Verifies translated, nested rounded masks read only opaque source spans and
+// batch interior reads instead of dispatching the source once per pixel.
+TEST(RoundedOverlayTest, ReadsOnlySurvivingSpansAndBatchesPoints) {
+  internal::RoundedClip outer;
+  outer.reset(&outer, Box(4, 3, 55, 39), BorderStyle({12, 8, 16, 10}, 0));
+  internal::RoundedClip inner;
+  inner.reset(&inner, Box(10, 0, 63, 42), BorderStyle(14, 0));
+  inner.parent = &outer;
+  OverlayReadProbe source;
+  const Box bounds(-3, -2, 69, 49);
+  internal::RoundedOverlay overlay(&source, bounds, 7, -3, &inner);
+  std::vector<Color> actual(bounds.area());
+  std::vector<int16_t> x(bounds.area());
+  std::vector<int16_t> y(bounds.area());
+  uint32_t visible = 0;
+  for (int i = 0; i < bounds.area(); ++i) {
+    x[i] = bounds.xMin() + i % bounds.width();
+    y[i] = bounds.yMin() + i / bounds.width();
+    if (outer.coverage(x[i], y[i]) == 255 && inner.coverage(x[i], y[i]) == 255)
+      ++visible;
+  }
+  EXPECT_FALSE(overlay.readColorRect(bounds.xMin(), bounds.yMin(),
+                                     bounds.xMax(), bounds.yMax(),
+                                     actual.data()));
+  EXPECT_EQ(source.sampled, visible);
+  EXPECT_EQ(source.point_calls, 0u);
+  EXPECT_LE(source.rect_calls, static_cast<uint32_t>(bounds.height()));
+  for (int i = 0; i < bounds.area(); ++i) {
+    Color expected =
+        outer.coverage(x[i], y[i]) == 255 && inner.coverage(x[i], y[i]) == 255
+            ? OverlayReadProbe::Sample(x[i] - 7, y[i] + 3)
+            : Color(0);
+    EXPECT_EQ(actual[i], expected);
+  }
+  source.sampled = 0;
+  overlay.readColors(x.data(), y.data(), x.size(), actual.data());
+  EXPECT_EQ(source.sampled, visible);
+  EXPECT_LT(source.point_calls, visible / 4);
+  for (int i = 0; i < bounds.area(); ++i) {
+    Color expected =
+        outer.coverage(x[i], y[i]) == 255 && inner.coverage(x[i], y[i]) == 255
+            ? OverlayReadProbe::Sample(x[i] - 7, y[i] + 3)
+            : Color(0);
+    EXPECT_EQ(actual[i], expected);
+  }
+  source.rect_calls = 0;
+  overlay.readColorRect(20, 15, 40, 25, actual.data());
+  EXPECT_EQ(source.rect_calls, 1u);
+}
+
+// Verifies masked corners expose transparent metadata without touching the
+// source, and uniform visible row reads expand correctly inside mixed regions.
+TEST(RoundedOverlayTest, ReportsTransparentCornersAndExpandsUniformRows) {
+  internal::RoundedClip clip;
+  clip.reset(&clip, Box(0, 0, 63, 47), BorderStyle(20, 0));
+  OverlayReadProbe source;
+  internal::RoundedOverlay overlay(&source, source.extents(), 0, 0, &clip);
+  Color result = color::Red;
+  EXPECT_TRUE(overlay.readUniformColorRect(0, 0, 3, 3, &result));
+  EXPECT_EQ(result, Color(0));
+  EXPECT_EQ(source.sampled, 0u);
+  Color pixels[16];
+  EXPECT_TRUE(overlay.readColorRect(0, 0, 3, 3, pixels));
+  EXPECT_EQ(pixels[0], Color(0));
+  EXPECT_EQ(source.sampled, 0u);
+  EXPECT_FALSE(overlay.readUniformColorRect(0, 0, 63, 47, &result));
+
+  roo_display::FilledRect uniform(Box(-5, -5, 68, 52), Color(0x80654321));
+  internal::RoundedOverlay filled(&uniform, uniform.extents(), 0, 0, &clip);
+  std::vector<Color> mixed(64 * 48);
+  EXPECT_FALSE(filled.readColorRect(0, 0, 63, 47, mixed.data()));
+  for (int i = 0; i < 64 * 48; ++i) {
+    EXPECT_EQ(mixed[i], clip.coverage(i % 64, i / 64) == 255 ? Color(0x80654321)
+                                                             : Color(0));
+  }
+}
+
+// Verifies the span path remains correct when an overlay is composed with a
+// second translucent layer and consumed through a foreground filter.
+TEST(RoundedOverlayTest, SpanReadsSurviveCompositionAndFiltering) {
+  internal::RoundedClip clip;
+  clip.reset(&clip, Box(0, 0, 63, 47), BorderStyle(20, 0));
+  OverlayReadProbe source;
+  internal::RoundedOverlay overlay(&source, Box(0, 0, 63, 47), 0, 0, &clip);
+  roo_display::FilledRect tint(Box(0, 0, 63, 47), Color(0x40765432));
+  roo_display::RasterizableStack stack(tint.extents());
+  stack.addInput(&overlay);
+  stack.addInput(&tint);
+  roo_display::Offscreen<Argb8888> output(64, 48);
+  roo_display::ForegroundFilter filter(output.output(), &stack);
+  filter.setAddress(0, 0, 63, 47, BlendingMode::kSource);
+  std::vector<Color> base(64 * 48, color::Blue);
+  filter.write(base.data(), base.size());
+  std::vector<Color> actual(base.size());
+  output.readColorRect(0, 0, 63, 47, actual.data());
+  for (int i = 0; i < 64 * 48; ++i) {
+    Color visible = clip.coverage(i % 64, i / 64) == 255
+                        ? OverlayReadProbe::Sample(i % 64, i / 64)
+                        : Color(0);
+    Color expected =
+        AlphaBlend(color::Blue, AlphaBlend(visible, Color(0x40765432)));
+    EXPECT_EQ(actual[i], expected);
   }
 }
 
