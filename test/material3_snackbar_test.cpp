@@ -279,12 +279,12 @@ TEST_F(SnackbarTest, TimeoutModalPauseFocusPauseAndPersistentDefault) {
   DialogActionSpec ok{1, "OK", DialogActionRole::kAcknowledge};
   AlertDialog dialog(app_->context(), "Confirm", "Continue?", &ok, 1);
   ASSERT_EQ(DialogShowResult::kShown, dialog.show(task_));
-  ASSERT_TRUE(app_->refresh());
+  app_->refresh();
   EXPECT_TRUE(test::SnackbarTestAccess::transientActive(presenter()));
   test::SnackbarTestAccess::advanceReadableTime(presenter(), 5000);
   EXPECT_TRUE(a.isRegistered());
   dialog.dismiss();
-  ASSERT_TRUE(app_->refresh());
+  app_->refresh();
   EXPECT_FALSE(test::SnackbarTestAccess::transientActive(presenter()));
   test::SnackbarTestAccess::advanceReadableTime(presenter(), 1);
   EXPECT_EQ(SnackbarDismissReason::kTimeout, a.reasons.at(0));
@@ -333,7 +333,7 @@ TEST_F(SnackbarTest, FocusTouchAndBackUseOrdinaryTaskRouting) {
 TEST_F(SnackbarTest, RemovingFocusedControlClearsReadableTimePause) {
   Request request("Saved", "Undo");
   presenter().show(request);
-  ASSERT_TRUE(app_->refresh());
+  app_->refresh();
   ASSERT_TRUE(
       task_.focus().requestFocus(host_.snackbarWidget().actionButton()));
   ASSERT_TRUE(test::SnackbarTestAccess::controlFocused(presenter()));
@@ -528,7 +528,7 @@ TEST_F(SnackbarTest, ModalPauseRetainsRemainingTimeWithoutRecurringWork) {
   DialogActionSpec ok{1, "OK", DialogActionRole::kAcknowledge};
   AlertDialog dialog(app_->context(), "Confirm", "Continue?", &ok, 1);
   ASSERT_EQ(DialogShowResult::kShown, dialog.show(task_));
-  ASSERT_TRUE(app_->refresh());
+  app_->refresh();
   EXPECT_FALSE(test::SnackbarTestAccess::scheduled(presenter()));
   const int64_t paused_remaining =
       test::SnackbarTestAccess::remainingMillis(presenter());
@@ -540,7 +540,7 @@ TEST_F(SnackbarTest, ModalPauseRetainsRemainingTimeWithoutRecurringWork) {
             test::SnackbarTestAccess::remainingMillis(presenter()));
 
   dialog.dismiss();
-  ASSERT_TRUE(app_->refresh());
+  app_->refresh();
   EXPECT_TRUE(test::SnackbarTestAccess::scheduled(presenter()));
   test::SnackbarTestAccess::advanceReadableTime(
       presenter(), static_cast<uint32_t>(paused_remaining + 1));
@@ -552,7 +552,7 @@ TEST_F(SnackbarTest, ExitCompletionCallbackCanDestroyHost) {
   auto host = std::make_unique<SnackbarHost>(app_->context());
   host->setBody(std::make_unique<Button>(app_->context(), "Other"));
   Task& other = app_->addTaskFullScreen(*host);
-  ASSERT_TRUE(app_->refresh());
+  app_->refresh();
   host->snackbars().setAnimationsEnabled(true);
   Request request;
   request.finished = [&] {
@@ -561,13 +561,13 @@ TEST_F(SnackbarTest, ExitCompletionCallbackCanDestroyHost) {
   };
   SnackbarPresenter& presenter = host->snackbars();
   presenter.show(request);
-  ASSERT_TRUE(app_->refresh());
+  app_->refresh();
   test::SnackbarTestAccess::finishMotion(presenter);
-  ASSERT_TRUE(app_->refresh());
+  app_->refresh();
   presenter.dismissCurrent();
   test::SnackbarTestAccess::finishMotion(presenter);
 
-  ASSERT_TRUE(app_->refresh());
+  app_->refresh();
   EXPECT_EQ(nullptr, host);
   ASSERT_EQ(1u, request.reasons.size());
   EXPECT_EQ(SnackbarDismissReason::kProgrammatic, request.reasons.at(0));
@@ -577,25 +577,25 @@ TEST_F(SnackbarTest, ModalPausesAndResumesEntryTrack) {
   presenter().setAnimationsEnabled(true);
   Request request;
   presenter().show(request);
-  ASSERT_TRUE(app_->refresh());
+  app_->refresh();
   test::SnackbarTestAccess::seekMotion(presenter(), 75);
-  ASSERT_TRUE(app_->refresh());
+  app_->refresh();
   const float paused_offset = test::SnackbarTestAccess::offset(presenter());
 
   DialogActionSpec ok{1, "OK", DialogActionRole::kAcknowledge};
   AlertDialog dialog(app_->context(), "Confirm", "Continue?", &ok, 1);
   ASSERT_EQ(DialogShowResult::kShown, dialog.show(task_));
-  ASSERT_TRUE(app_->refresh());
+  app_->refresh();
   delay(200);
-  ASSERT_TRUE(app_->refresh());
+  app_->refresh();
   EXPECT_FLOAT_EQ(paused_offset, test::SnackbarTestAccess::offset(presenter()));
   EXPECT_TRUE(test::SnackbarTestAccess::motionScheduled(presenter()));
   EXPECT_FALSE(test::SnackbarTestAccess::scheduled(presenter()));
 
   dialog.dismiss();
-  ASSERT_TRUE(app_->refresh());
+  app_->refresh();
   delay(30);
-  ASSERT_TRUE(app_->refresh());
+  app_->refresh();
   EXPECT_LT(test::SnackbarTestAccess::offset(presenter()), paused_offset);
   presenter().clear();
 }

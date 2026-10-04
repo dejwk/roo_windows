@@ -33,7 +33,7 @@ class Material3TabsGoldenTest : public testing::Test {
 
     app.add(std::move(tabs), roo_display::Box(0, 0, 239, Scaled(64) - 1));
 
-    EXPECT_TRUE(app.refresh());
+    app.refresh();
     return test::CaptureRgb(offscreen_.raster(), 0, 0, 240, Scaled(64));
   }
 
@@ -47,7 +47,7 @@ class Material3TabsGoldenTest : public testing::Test {
 
     app.add(std::move(tabs), roo_display::Box(0, 0, 239, Scaled(48) - 1));
 
-    EXPECT_TRUE(app.refresh());
+    app.refresh();
     return test::CaptureRgb(offscreen_.raster(), 0, 0, 240, Scaled(48));
   }
 
@@ -66,7 +66,7 @@ class Material3TabsGoldenTest : public testing::Test {
 
     app.add(std::move(tabs), roo_display::Box(0, 0, 239, Scaled(64) - 1));
 
-    EXPECT_TRUE(app.refresh());
+    app.refresh();
     return test::CaptureRgb(offscreen_.raster(), 0, 0, 240, Scaled(64));
   }
 
@@ -84,7 +84,7 @@ class Material3TabsGoldenTest : public testing::Test {
 
     app.add(std::move(tabs), roo_display::Box(0, 0, 239, Scaled(48) - 1));
 
-    EXPECT_TRUE(app.refresh());
+    app.refresh();
     return test::CaptureRgb(offscreen_.raster(), 0, 0, 240, Scaled(48));
   }
 

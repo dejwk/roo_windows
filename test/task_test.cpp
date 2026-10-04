@@ -75,7 +75,7 @@ TEST(Task, DirectContentIsBorrowedAndHandlesBack) {
     EXPECT_EQ(1u, task.navigation().depth());
     EXPECT_EQ(&task.navigation(), task.navigationHost());
     EXPECT_EQ(&task, contents->getTask());
-    ASSERT_TRUE(app.refresh());
+    app.refresh();
     ASSERT_TRUE(contents->requestFocus());
     EXPECT_TRUE(contents->isFocused());
     task.setBackCallback([&called](BackSource source) {
@@ -112,7 +112,7 @@ TEST(Task, CompositeContentMayBeDestroyedAfterApplication) {
     child->setOnInteractiveChange([]() {});
     contents = new SimpleScrollablePanel(app.context(), std::move(owned_child));
     app.addTaskFullScreen(*contents);
-    ASSERT_TRUE(app.refresh());
+    app.refresh();
     ASSERT_TRUE(child->requestFocus());
   }
 

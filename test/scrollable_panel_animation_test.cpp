@@ -67,7 +67,7 @@ class ScrollablePanelAnimationTest : public RooWindowsRenderTestSized<100, 60> {
     panel_ptr->setVerticalScrollBarPresence(
         VerticalScrollBar::Presence::kShownWhenScrolling);
     app_.add(std::move(panel), Box(0, 0, kWidth - 1, kHeight - 1));
-    EXPECT_TRUE(refresh());
+    refresh();
     return {panel_ptr, content_ptr};
   }
 
@@ -76,7 +76,7 @@ class ScrollablePanelAnimationTest : public RooWindowsRenderTestSized<100, 60> {
     panel.onDrag(0, 0, 0, -30);
     panel.onFling(0, 0, 0, -1200);
     panel.onDragFinished(0, -1200);
-    ASSERT_TRUE(refresh());
+    refresh();
   }
 
   static YDim bottomPosition(const InstalledPanel& installed) {
@@ -162,14 +162,14 @@ TEST_F(ScrollablePanelAnimationTest, ScrollCallbackTracksAnimatedMotion) {
   EXPECT_GT(calls, 0);
   int after_drag = calls;
   delay(300);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_GT(calls, after_drag);
   delay(550);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(bottomPosition(installed), last.y);
   int settled = calls;
   delay(80);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(settled, calls);
 }
 
@@ -183,7 +183,7 @@ TEST_F(ScrollablePanelAnimationTest, ScrollCallbackTracksLayoutAndContent) {
         changes.emplace_back(previous, current);
       });
   installed.content->setDimensions(Dimensions(kWidth, 70));
-  ASSERT_TRUE(refresh());
+  refresh();
   ASSERT_EQ(1u, changes.size());
   EXPECT_EQ(-100, changes[0].first.y);
   EXPECT_EQ(-10, changes[0].second.y);
@@ -192,7 +192,7 @@ TEST_F(ScrollablePanelAnimationTest, ScrollCallbackTracksLayoutAndContent) {
   ASSERT_EQ(2u, changes.size());
   EXPECT_EQ(-10, changes[1].first.y);
   EXPECT_EQ(0, changes[1].second.y);
-  ASSERT_TRUE(refresh());
+  refresh();
   installed.panel->scrollTo(0, -20);
   installed.panel->clearContents();
   ASSERT_EQ(4u, changes.size());
@@ -234,18 +234,18 @@ TEST_F(ScrollablePanelAnimationTest, FlingTransitionsToSpringAndSettles) {
   EXPECT_LT(installed.panel->getScrollPosition().y, 0);
 
   delay(300);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_TRUE(installed.panel->hasMotionTrack());
   EXPECT_LE(installed.panel->getScrollPosition().y, bottom);
 
   delay(550);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_FALSE(installed.panel->hasMotionTrack());
   EXPECT_EQ(bottom, installed.panel->getScrollPosition().y);
 
   const auto settled = installed.panel->getScrollPosition();
   delay(80);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(settled.x, installed.panel->getScrollPosition().x);
   EXPECT_EQ(settled.y, installed.panel->getScrollPosition().y);
 }
@@ -257,14 +257,14 @@ TEST_F(ScrollablePanelAnimationTest, DragInterruptsFlingAtAppliedPosition) {
   startUpwardFling(*installed.panel);
 
   delay(80);
-  ASSERT_TRUE(refresh());
+  refresh();
   const auto interrupted = installed.panel->getScrollPosition();
   ASSERT_LT(interrupted.y, 0);
 
   installed.panel->onDragStart(0, 0);
   EXPECT_FALSE(installed.panel->hasMotionTrack());
   delay(250);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(interrupted.y, installed.panel->getScrollPosition().y);
 }
 
@@ -274,17 +274,17 @@ TEST_F(ScrollablePanelAnimationTest, GeometryChangeCancelsAndClampsMotion) {
   InstalledPanel installed = installPanel();
   startUpwardFling(*installed.panel);
   delay(100);
-  ASSERT_TRUE(refresh());
+  refresh();
   ASSERT_LT(installed.panel->getScrollPosition().y, -10);
 
   installed.content->setDimensions(Dimensions(kWidth, 70));
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_FALSE(installed.panel->hasMotionTrack());
   const YDim bottom = bottomPosition(installed);
   EXPECT_EQ(bottom, installed.panel->getScrollPosition().y);
 
   delay(250);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(bottom, installed.panel->getScrollPosition().y);
 }
 
@@ -313,20 +313,20 @@ TEST_F(ScrollablePanelAnimationTest, HiddenPanelCancelsAndClampsMotion) {
   InstalledPanel installed = installPanel();
   startUpwardFling(*installed.panel);
   delay(300);
-  ASSERT_TRUE(refresh());
+  refresh();
   ASSERT_TRUE(installed.panel->hasMotionTrack());
 
   installed.panel->setVisibility(Visibility::kInvisible);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_FALSE(installed.panel->hasMotionTrack());
   EXPECT_FALSE(installed.panel->scrollBarVisible());
   const YDim bottom = bottomPosition(installed);
   EXPECT_EQ(bottom, installed.panel->getScrollPosition().y);
 
   installed.panel->setVisibility(Visibility::kVisible);
-  ASSERT_TRUE(refresh());
+  refresh();
   delay(250);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_FALSE(installed.panel->hasMotionTrack());
   EXPECT_EQ(bottom, installed.panel->getScrollPosition().y);
 }
@@ -341,23 +341,23 @@ TEST_F(ScrollablePanelAnimationTest, DetachedPanelCancelsAndClampsMotion) {
   panel.setVerticalScrollBarPresence(
       VerticalScrollBar::Presence::kShownWhenScrolling);
   Task& task = app_.addTaskFullScreen(panel);
-  ASSERT_TRUE(refresh());
+  refresh();
   startUpwardFling(panel);
   delay(300);
-  ASSERT_TRUE(refresh());
+  refresh();
   ASSERT_TRUE(panel.hasMotionTrack());
 
   Margins margins = content_ptr->getMargins();
   const YDim bottom =
       panel.height() - margins.top() - margins.bottom() - content_ptr->height();
   task.navigation().clear();
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_FALSE(panel.hasMotionTrack());
   EXPECT_FALSE(panel.scrollBarVisible());
   EXPECT_EQ(bottom, panel.getScrollPosition().y);
 
   delay(250);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(bottom, panel.getScrollPosition().y);
 }
 

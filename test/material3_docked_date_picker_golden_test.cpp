@@ -40,10 +40,10 @@ void CheckField(const char* name, int width, int height, bool open) {
   field->setDate(CivilDay::FromYmd(2024, 2, 29));
   field->setToday(CivilDay::FromYmd(2024, 2, 12));
   content.add(WidgetRef(std::move(field)), Rect(16, 16, width - 17, 71));
-  ASSERT_TRUE(app.refresh());
+  app.refresh();
   if (open) {
     ASSERT_EQ(PresentationStartResult::kStarted, source->openPicker());
-    ASSERT_TRUE(app.refresh());
+    app.refresh();
     Widget* panel = owner.focus().scopeRoot();
     ASSERT_NE(nullptr, panel);
     if (height > 600) {

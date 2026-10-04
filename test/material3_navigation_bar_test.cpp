@@ -66,7 +66,7 @@ void ExpectDestinationFadeStaysWithinIndicator(NavigationBarLayout layout) {
   ASSERT_TRUE(bar->add(WidgetRef(std::move(first))));
   ASSERT_TRUE(bar->add(WidgetRef(std::move(second))));
   app.add(std::move(bar), roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
-  ASSERT_TRUE(app.refresh());
+  app.refresh();
 
   const Rect icon_bounds =
       NavigationBarDestinationTestAccess::iconBounds(*second_raw);
@@ -88,14 +88,14 @@ void ExpectDestinationFadeStaysWithinIndicator(NavigationBarLayout layout) {
 
   second_raw->onShowPress(second_raw->width() / 2, second_raw->height() / 2);
   delay(kPressAnimationMillis / 2);
-  ASSERT_TRUE(app.refresh());
+  app.refresh();
   EXPECT_NE(initial_indicator, ReadPixel(offscreen, inside_x, inside_y));
   if (layout == NavigationBarLayout::kVertical) {
     EXPECT_EQ(initial_outside, ReadPixel(offscreen, outside_x, outside_y));
   }
 
   delay(kPressAnimationMillis + 20);
-  ASSERT_TRUE(app.refresh());
+  app.refresh();
   EXPECT_NE(initial_indicator, ReadPixel(offscreen, inside_x, inside_y));
 }
 
@@ -130,7 +130,7 @@ void ExpectDestinationPaintsEveryPixel(NavigationBarLayout layout,
       roo_display::FillMode::kExtents, roo_display::BlendingMode::kSourceOver);
   Canvas canvas(&surface);
   roo_windows::internal::ClipperState clipper_state;
-  Clipper clipper(clipper_state, canvas.out(), roo_time::Uptime::Max());
+  Clipper clipper(clipper_state, canvas.out());
   canvas.set_out(clipper.out());
   PaintContext paint_context(canvas, clipper);
   NavigationBarDestinationTestAccess::paint(destination, paint_context);
@@ -455,7 +455,7 @@ TEST(Material3NavigationBar, TouchReleaseSettlesIntoSelectedPill) {
   ASSERT_TRUE(bar->add(WidgetRef(std::move(home))));
   ASSERT_TRUE(bar->add(WidgetRef(std::move(inbox))));
   app.add(std::move(bar), roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
-  ASSERT_TRUE(app.refresh());
+  app.refresh();
 
   inbox_raw->onShowPress(inbox_raw->width() / 2, inbox_raw->height() / 2);
   NavigationBarDestinationTestAccess::tapUp(*inbox_raw, inbox_raw->width() / 2,
@@ -468,7 +468,7 @@ TEST(Material3NavigationBar, TouchReleaseSettlesIntoSelectedPill) {
 
   delay(kPressAnimationMillis + 20);
   app.root().refreshClickAnimation();
-  ASSERT_TRUE(app.refresh());
+  app.refresh();
   EXPECT_FALSE(inbox_raw->isClicking());
 
   EXPECT_EQ(1, bar_raw->selectedIndex());
@@ -476,7 +476,7 @@ TEST(Material3NavigationBar, TouchReleaseSettlesIntoSelectedPill) {
   EXPECT_TRUE(inbox_raw->isDirty());
   EXPECT_EQ(std::vector<int>({1}), bar_raw->invoked);
   EXPECT_TRUE(bar_raw->reselected.empty());
-  ASSERT_TRUE(app.refresh());
+  app.refresh();
   EXPECT_FALSE(inbox_raw->isDirty());
 }
 
@@ -604,10 +604,10 @@ TEST(Material3NavigationBar, WrappedFocusRestoresEveryDestination) {
   ASSERT_TRUE(bar->add(WidgetRef(std::move(schedule))));
   ASSERT_TRUE(bar->add(WidgetRef(std::move(settings))));
   app.add(std::move(bar), roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
-  ASSERT_TRUE(app.refresh());
+  app.refresh();
 
   ASSERT_TRUE(status_raw->requestFocus());
-  ASSERT_TRUE(app.refresh());
+  app.refresh();
   roo_display::Color status_focused[kWidth * kHeight];
   for (int16_t y = 0; y < kHeight; ++y) {
     for (int16_t x = 0; x < kWidth; ++x) {
@@ -617,11 +617,11 @@ TEST(Material3NavigationBar, WrappedFocusRestoresEveryDestination) {
   }
 
   ASSERT_TRUE(schedule_raw->requestFocus());
-  ASSERT_TRUE(app.refresh());
+  app.refresh();
   ASSERT_TRUE(settings_raw->requestFocus());
-  ASSERT_TRUE(app.refresh());
+  app.refresh();
   ASSERT_TRUE(status_raw->requestFocus());
-  ASSERT_TRUE(app.refresh());
+  app.refresh();
 
   for (int16_t y = 0; y < kHeight; ++y) {
     for (int16_t x = 0; x < kWidth; ++x) {

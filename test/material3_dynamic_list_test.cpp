@@ -189,7 +189,7 @@ TEST_F(DynamicListTest, ModelOwnedSingleSelection) {
   list.add(section);
   SimpleScrollablePanel scroll(context(), list);
   Mount mount(app_, scroll);
-  ASSERT_TRUE(refresh());
+  refresh();
   section.row(0)->onClicked();
   EXPECT_EQ(model.selectedIndex(), 0);
   EXPECT_TRUE(section.row(0)->item().isSelected());
@@ -217,7 +217,7 @@ TEST_F(DynamicListTest, ModelOwnedSingleSelection) {
   ASSERT_TRUE(model.select(9000));
   EXPECT_FALSE(section.row(1)->item().isSelected());
   scroll.scrollTo(0, -9000 * 56);
-  ASSERT_TRUE(refresh());
+  refresh();
   ASSERT_NE(section.row(9000), nullptr);
   EXPECT_TRUE(section.row(9000)->item().isSelected());
   model.clearSelection();
@@ -239,18 +239,18 @@ TEST_F(DynamicListTest, SelectionInvalidationStaysWithinChangedRows) {
   SimpleScrollablePanel scroll(context(), list);
   Mount mount(app_, scroll);
   ASSERT_TRUE(model.select(0));
-  ASSERT_TRUE(refresh());
-  ASSERT_TRUE(refresh());
+  refresh();
+  refresh();
   int invocations = 0;
   section.row(0)->item().setOnInvoked([&]() { ++invocations; });
   section.row(0)->onClicked();
   EXPECT_EQ(invocations, 1);
   EXPECT_FALSE(list.isDirty());
-  ASSERT_TRUE(refresh());
+  refresh();
   section.row(0)->item().radioButton().onClicked();
   EXPECT_EQ(invocations, 2);
   EXPECT_FALSE(list.isDirty());
-  ASSERT_TRUE(refresh());
+  refresh();
   section.row(1)->item().radioButton().onClicked();
   EXPECT_EQ(model.selectedIndex(), 1);
   EXPECT_TRUE(section.row(0)->isInvalidated());
@@ -258,19 +258,19 @@ TEST_F(DynamicListTest, SelectionInvalidationStaysWithinChangedRows) {
   EXPECT_FALSE(section.row(2)->isDirty());
   EXPECT_FALSE(action.isDirty());
   EXPECT_FALSE(list.isInvalidated());
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_TRUE(model.select(2));
   EXPECT_FALSE(section.row(0)->isDirty());
   EXPECT_TRUE(section.row(1)->isInvalidated());
   EXPECT_TRUE(section.row(2)->isInvalidated());
   EXPECT_FALSE(action.isDirty());
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_TRUE(model.select(0));
   EXPECT_FALSE(section.row(1)->isDirty());
-  ASSERT_TRUE(refresh());
+  refresh();
   std::vector<roo::byte> incremental(raster_, raster_ + sizeof(raster_));
   list.invalidateInterior();
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_TRUE(std::equal(incremental.begin(), incremental.end(), raster_));
 }
 
@@ -287,11 +287,11 @@ TEST_F(DynamicListTest, ParentSelectionInvalidatesOnlyChangedRows) {
   SimpleScrollablePanel scroll(context(), list);
   Mount mount(app_, scroll);
   ASSERT_TRUE(list.select(section, 0));
-  ASSERT_TRUE(refresh());
-  ASSERT_TRUE(refresh());
+  refresh();
+  refresh();
   section.row(0)->onClicked();
   EXPECT_FALSE(list.isDirty());
-  ASSERT_TRUE(refresh());
+  refresh();
   ASSERT_TRUE(list.select(section, 1));
   EXPECT_TRUE(section.row(0)->isInvalidated());
   EXPECT_TRUE(section.row(1)->isInvalidated());
@@ -325,16 +325,16 @@ TEST_F(DynamicListTest, SelectionRepaintsChangedDividerBands) {
   ASSERT_TRUE(list.setSelected(footer, true));
   SimpleScrollablePanel scroll(context(), list);
   Mount mount(app_, scroll);
-  ASSERT_TRUE(refresh());
-  ASSERT_TRUE(refresh());
+  refresh();
+  refresh();
   for (SelectionState state :
        {SelectionState::kSelected, SelectionState::kDeselected}) {
     for (int index = 0; index < 3; ++index) {
       ASSERT_TRUE(list.setSelected(section, index, state));
-      ASSERT_TRUE(refresh());
+      refresh();
       std::vector<roo::byte> incremental(raster_, raster_ + sizeof(raster_));
       list.invalidateInterior();
-      ASSERT_TRUE(refresh());
+      refresh();
       EXPECT_TRUE(std::equal(incremental.begin(), incremental.end(), raster_))
           << "row=" << index
           << " selected=" << (state == SelectionState::kSelected);
@@ -361,7 +361,7 @@ TEST_F(DynamicListTest, IndependentGroupsAndAppend) {
   list.add(second);
   SimpleScrollablePanel scroll(context(), list);
   Mount mount(app_, scroll);
-  ASSERT_TRUE(refresh());
+  refresh();
   first_model.select(0);
   second_model.select(1);
   action.onClicked();
@@ -371,7 +371,7 @@ TEST_F(DynamicListTest, IndependentGroupsAndAppend) {
   first.beginModelReset();
   ++first_model.count;
   first.endModelReset();
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(first_model.selectedIndex(), 0);
   EXPECT_TRUE(first.row(0)->item().isSelected());
   first.beginModelReset();
@@ -396,7 +396,7 @@ TEST_F(DynamicListTest, ParentSelectionNotificationsAndActions) {
   list.add(section);
   SimpleScrollablePanel scroll(context(), list);
   Mount mount(app_, scroll);
-  ASSERT_TRUE(refresh());
+  refresh();
   ASSERT_TRUE(list.select(section, 0));
   section.row(1)->item().radioButton().onClicked();
   ASSERT_EQ(model.changes.size(), 3u);
@@ -428,7 +428,7 @@ TEST_F(DynamicListTest, MultipleSelectionCallbacksAndControls) {
   list.add(section);
   SimpleScrollablePanel scroll(context(), list);
   Mount mount(app_, scroll);
-  ASSERT_TRUE(refresh());
+  refresh();
   section.row(0)->onClicked();
   EXPECT_TRUE(model.selected[0]);
   EXPECT_TRUE(section.row(0)->item().isChecked());
@@ -465,7 +465,7 @@ TEST_F(DynamicListTest, SelectionControlOptOutAndRejection) {
   list.add(section);
   SimpleScrollablePanel scroll(context(), list);
   Mount mount(app_, scroll);
-  ASSERT_TRUE(refresh());
+  refresh();
   section.row(0)->item().checkbox().onClicked();
   EXPECT_FALSE(section.row(0)->item().isChecked());
   EXPECT_TRUE(model.changes.empty());
@@ -489,7 +489,7 @@ TEST_F(DynamicListTest, ReentrantSelectionNotifications) {
   list.add(section);
   SimpleScrollablePanel scroll(context(), list);
   Mount mount(app_, scroll);
-  ASSERT_TRUE(refresh());
+  refresh();
   list.select(section, 0);
   model.changed = [&](int index, SelectionState state) {
     if (index == 0 && state == SelectionState::kDeselected)
@@ -517,7 +517,7 @@ TEST_F(DynamicListTest, SelectionCallbackCanDestroySection) {
   list.add(std::move(section));
   SimpleScrollablePanel scroll(context(), list);
   Mount mount(app_, scroll);
-  ASSERT_TRUE(refresh());
+  refresh();
   list.select(*borrowed, 0);
   model.changed = [&](int index, SelectionState state) {
     if (index == 0 && state == SelectionState::kDeselected) list.clear();
@@ -541,7 +541,7 @@ TEST_F(DynamicListTest, HelperCallbackCanClearView) {
   list.add(std::move(section));
   SimpleScrollablePanel scroll(context(), list);
   Mount mount(app_, scroll);
-  ASSERT_TRUE(refresh());
+  refresh();
   model.changed = [&]() { list.clear(); };
   borrowed->row(0)->item().radioButton().onClicked();
   EXPECT_EQ(model.selectedIndex(), 0);
@@ -581,7 +581,7 @@ TEST_F(DynamicListTest, MixedSectionsFlattenAndCollapse) {
   list.add(last);
   SimpleScrollablePanel scroll(context(), list);
   Mount mount(app_, scroll);
-  ASSERT_TRUE(refresh());
+  refresh();
   ASSERT_NE(dynamic.row(0), nullptr);
   ASSERT_NE(dynamic.row(1), nullptr);
   EXPECT_EQ(first.visualContext().position, ListItemPosition::kFirst);
@@ -596,7 +596,7 @@ TEST_F(DynamicListTest, MixedSectionsFlattenAndCollapse) {
   last.setVisibility(Visibility::kGone);
   model.count = 1;
   dynamic.modelChanged();
-  ASSERT_TRUE(refresh());
+  refresh();
   ASSERT_NE(dynamic.row(0), nullptr);
   EXPECT_EQ(dynamic.row(0)->visualContext().position,
             ListItemPosition::kSingle);
@@ -617,7 +617,7 @@ TEST_F(DynamicListTest, SelectionIsLogicalAndBounded) {
   list.setSelectionPolicy(SingleSelection());
   SimpleScrollablePanel scroll(context(), list);
   Mount mount(app_, scroll);
-  ASSERT_TRUE(refresh());
+  refresh();
   int allocations = model.prepares;
   model.reads = 0;
   ASSERT_TRUE(list.select(dynamic, 9000));
@@ -628,7 +628,7 @@ TEST_F(DynamicListTest, SelectionIsLogicalAndBounded) {
   EXPECT_EQ(list.selection().index, 9000);
   EXPECT_EQ(dynamic.row(9000), nullptr);
   scroll.scrollTo(0, -9000 * 56);
-  ASSERT_TRUE(refresh());
+  refresh();
   ASSERT_NE(dynamic.row(9000), nullptr);
   EXPECT_TRUE(dynamic.row(9000)->visualContext().selected);
   EXPECT_EQ(model.prepares, allocations);
@@ -660,7 +660,7 @@ TEST_F(DynamicListTest, ResetCallbackCanDestroyAdoptedSection) {
   list.setSelectionPolicy(SingleSelection());
   SimpleScrollablePanel scroll(context(), list);
   Mount mount(app_, scroll);
-  ASSERT_TRUE(refresh());
+  refresh();
   ASSERT_TRUE(list.select(*section, 0));
   const int live_bindings = section->last() - section->first() + 1;
   const int released_before = model.releases;
@@ -689,7 +689,7 @@ TEST_F(DynamicListTest, ResetReentrancyAndBorrowedDetachment) {
   list.setSelectionPolicy(SingleSelection());
   SimpleScrollablePanel scroll(context(), list);
   Mount mount(app_, scroll);
-  ASSERT_TRUE(refresh());
+  refresh();
   list.select(section, 0);
   list.changed = [&](ListRowLocation location) {
     if (location.section != nullptr) return;
@@ -705,7 +705,7 @@ TEST_F(DynamicListTest, ResetReentrancyAndBorrowedDetachment) {
   EXPECT_DEATH(section.modelChanged(), "");
   model.text = "Replacement";
   section.endModelReset();
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_DEATH(section.endModelReset(), "");
   list.changed = {};
   list.select(section, 0);
@@ -725,7 +725,7 @@ TEST_F(DynamicListTest, InvocationDoesNotUseRowAfterCallbackClear) {
   list.setSelectionPolicy(SingleSelection());
   SimpleScrollablePanel scroll(context(), list);
   Mount mount(app_, scroll);
-  ASSERT_TRUE(refresh());
+  refresh();
   list.changed = [&](ListRowLocation location) {
     if (location.section != nullptr) list.clear();
   };
@@ -752,7 +752,7 @@ TEST_F(DynamicListTest, KeyboardSkipsInvisibleAndMaterializesDistantRows) {
   hidden.setVisibility(Visibility::kInvisible);
   SimpleScrollablePanel scroll(context(), list);
   Mount mount(app_, scroll);
-  ASSERT_TRUE(refresh());
+  refresh();
   ASSERT_TRUE(header.requestFocus());
   int binds = model.binds;
   ASSERT_TRUE(list.onKeyEvent({KeyPhase::kDown, KeyCode::kDown, 0, 0}));
@@ -782,7 +782,7 @@ TEST_F(DynamicListTest, ContentRefreshPreservesEligibleFocus) {
   list.setSelectionPolicy(SingleSelection());
   SimpleScrollablePanel scroll(context(), list);
   Mount mount(app_, scroll);
-  ASSERT_TRUE(refresh());
+  refresh();
   ASSERT_TRUE(section.row(0)->requestFocus());
   list.select(section, 0);
   section.modelItemChanged(0);
@@ -812,7 +812,7 @@ TEST_F(DynamicListTest, MultipleSelectionDoesNotChangeStride) {
   list.setDividerPolicy(dividers);
   SimpleScrollablePanel scroll(context(), list);
   Mount mount(app_, scroll);
-  ASSERT_TRUE(refresh());
+  refresh();
   YDim stride = section.row(1)->offsetTop() - section.row(0)->offsetTop();
   YDim extent = list.height();
   model.selected = true;
@@ -855,7 +855,7 @@ TEST_F(DynamicListTest, DescendantTargetsAndUniformPolicyChanges) {
   list.add(last);
   SimpleScrollablePanel scroll(context(), list);
   Mount mount(app_, scroll);
-  ASSERT_TRUE(refresh());
+  refresh();
   ASSERT_TRUE(last.requestFocus());
   ASSERT_TRUE(list.onKeyEvent({KeyPhase::kDown, KeyCode::kUp, 0, 0}));
   Widget* focused = list.focusManager().focused();
@@ -885,7 +885,7 @@ TEST_F(DynamicListTest, CleanupAndClearGuards) {
   list.setSelectionPolicy(SingleSelection());
   SimpleScrollablePanel scroll(context(), list);
   Mount mount(app_, scroll);
-  ASSERT_TRUE(refresh());
+  refresh();
   model.on_release = [&]() { list.clear(); };
   EXPECT_DEATH(section.beginModelReset(), "");
   model.on_release = {};
@@ -911,7 +911,7 @@ TEST_F(DynamicListTest, InvocationSelectionAndOptOut) {
   list.setSelectionPolicy(policy);
   SimpleScrollablePanel scroll(context(), list);
   Mount mount(app_, scroll);
-  ASSERT_TRUE(refresh());
+  refresh();
   section.row(1)->onClicked();
   EXPECT_EQ(model.invokes, 1);
   EXPECT_EQ(list.selection().index, 1);
@@ -951,7 +951,7 @@ TEST_F(DynamicListTest, MixedPixelsMatchEagerReference) {
         std::vector<roo::byte> reference;
         {
           Mount mount(app_, scroll);
-          ASSERT_TRUE(refresh());
+          refresh();
           reference.assign(raster_, raster_ + sizeof(raster_));
         }
         FullWidthList eager(context());
@@ -963,7 +963,7 @@ TEST_F(DynamicListTest, MixedPixelsMatchEagerReference) {
         }
         SimpleScrollablePanel eager_scroll(context(), eager);
         Mount mount(app_, eager_scroll);
-        ASSERT_TRUE(refresh());
+        refresh();
         int mismatch_count = 0;
         int first_x = -1;
         int first_y = -1;
@@ -1006,7 +1006,7 @@ TEST_F(DynamicListTest, MixedGoldenStates) {
   list.add(last);
   SimpleScrollablePanel scroll(context(), list);
   Mount mount(app_, scroll);
-  ASSERT_TRUE(refresh());
+  refresh();
   auto capture = [&]() {
     return test::CaptureRgb(offscreen_.raster(), 0, 0, kWidth, kHeight);
   };
@@ -1018,14 +1018,14 @@ TEST_F(DynamicListTest, MixedGoldenStates) {
   list.setSelectionPolicy(policy);
   model.selected = true;
   section.modelChanged();
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_TRUE(test::CompareOrUpdateGolden(
       capture(), "test/goldens/material3_dynamic_list/selected.ppm",
       "material3_dynamic_list_selected"));
   model.selected = false;
   section.modelChanged();
   scroll.scrollTo(0, -112);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_TRUE(test::CompareOrUpdateGolden(
       capture(), "test/goldens/material3_dynamic_list/offscreen.ppm",
       "material3_dynamic_list_offscreen"));
@@ -1050,7 +1050,7 @@ TEST_F(DynamicListTest, ResourceBoundsAcrossModelSizes) {
       list.setSelectionPolicy(policy);
       SimpleScrollablePanel scroll(context(), list);
       Mount mount(app_, scroll);
-      ASSERT_TRUE(refresh());
+      refresh();
       if (mode == SelectionMode::kSingle) list.select(section, 50);
       if (capacity != 0) {
         EXPECT_EQ(section.poolCapacity(), capacity);
@@ -1063,7 +1063,7 @@ TEST_F(DynamicListTest, ResourceBoundsAcrossModelSizes) {
       auto start = std::chrono::steady_clock::now();
       for (int i = 1; i <= 20; ++i) {
         scroll.scrollTo(0, -i * 56);
-        ASSERT_TRUE(refresh());
+        refresh();
       }
       auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(
                          std::chrono::steady_clock::now() - start)
@@ -1098,21 +1098,21 @@ TEST_F(DynamicListTest, RecyclingCancelsPendingTouch) {
   list.add(section);
   SimpleScrollablePanel scroll(context(), list);
   Mount mount(app_, scroll);
-  ASSERT_TRUE(refresh());
+  refresh();
   Row* row = section.row(0);
   row->onShowPress(10, 10);
   EXPECT_TRUE(row->isPressed());
   scroll.scrollTo(0, -2000);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_FALSE(row->isPressed());
   EXPECT_FALSE(row->isClicking());
   EXPECT_EQ(app_.root().click_animation().target(), nullptr);
   EXPECT_EQ(model.invokes, 0);
 }
 
-// Verifies an interrupted paint resumes existing bindings, then a reset starts
-// a new revision without retaining views into freed model storage.
-TEST_F(DynamicListTest, InterruptedPaintingDoesNotRebind) {
+// Verifies repeated slow painting preserves existing bindings, then a reset
+// starts a new revision without retaining views into freed model storage.
+TEST_F(DynamicListTest, SlowPaintingDoesNotRebind) {
   class SlowRow : public Row {
    public:
     explicit SlowRow(ApplicationContext& context) : Row(context) {}
@@ -1132,22 +1132,23 @@ TEST_F(DynamicListTest, InterruptedPaintingDoesNotRebind) {
   list.add(section);
   SimpleScrollablePanel scroll(context(), list);
   Mount mount(app_, scroll);
-  ASSERT_TRUE(refresh());
+  refresh();
   for (Widget* child : section.children())
     static_cast<SlowRow*>(child)->slow = true;
   section.invalidateInterior();
-  EXPECT_FALSE(refresh(roo_time::Uptime::Now() + roo_time::Millis(5)));
+  refresh();
   int binds = model.binds;
   for (Widget* child : section.children())
     static_cast<SlowRow*>(child)->slow = false;
-  ASSERT_TRUE(refresh());
+  section.invalidateInterior();
+  refresh();
   EXPECT_EQ(model.binds, binds);
   section.beginModelReset();
   model.text.assign(4096, 'X');
   model.text = "New storage";
   model.text.shrink_to_fit();
   section.endModelReset();
-  ASSERT_TRUE(refresh());
+  refresh();
 }
 
 // Verifies both parent-owned and internal separator bands stop sloppy touch
@@ -1164,7 +1165,7 @@ TEST_F(DynamicListTest, SeparatorBandsNeverInvokeNeighborRows) {
   list.add(section);
   SimpleScrollablePanel scroll(context(), list);
   Mount mount(app_, scroll);
-  ASSERT_TRUE(refresh());
+  refresh();
   std::vector<Widget*> path;
   ASSERT_TRUE(list.fillTouchTargetPath(20, first.height(), path));
   EXPECT_EQ(path.back(), &list);
@@ -1195,14 +1196,14 @@ TEST_F(DynamicListTest, MultipleCollectionsShareGlobalEnds) {
   list.add(last);
   SimpleScrollablePanel scroll(context(), list);
   Mount mount(app_, scroll);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(first.row(0)->visualContext().position, ListItemPosition::kFirst);
   EXPECT_EQ(first.row(1)->visualContext().position, ListItemPosition::kMiddle);
   EXPECT_EQ(last.row(0)->visualContext().position, ListItemPosition::kLast);
   EXPECT_EQ(last.offsetTop(), first.height() + Scaled(2));
   first_model.count = 0;
   first.modelChanged();
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(last.offsetTop(), 0);
   EXPECT_EQ(last.row(0)->visualContext().position, ListItemPosition::kSingle);
 }
@@ -1225,13 +1226,13 @@ TEST_F(DynamicListTest, WidthAndPolicyChangesReusePreparedRows) {
   list.setSelectionPolicy(SingleSelection());
   SimpleScrollablePanel scroll(context(), list);
   Mount mount(app_, scroll);
-  ASSERT_TRUE(refresh());
+  refresh();
   list.select(section, 2);
   int prepares = model.prepares;
   list.desired_width = 160;
   list.setStyle(ListStyle::kSegmented);
   list.requestLayout();
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(section.width(), 160);
   EXPECT_EQ(section.row(0)->width(), 160);
   EXPECT_EQ(section.row(1)->offsetTop(), section.row(0)->height() + Scaled(2));
@@ -1266,12 +1267,12 @@ TEST(DynamicListTheme, UsesUpdatedThemeAndParentBackground) {
   list.add(section);
   SimpleScrollablePanel scroll(app.context(), list);
   Mount mount(app, scroll);
-  ASSERT_TRUE(app.refresh());
+  app.refresh();
   int prepares = model.prepares;
   material.color.surfaceContainer = roo_display::color::Red;
   list.requestLayout();
   list.invalidateInterior();
-  ASSERT_TRUE(app.refresh());
+  app.refresh();
   EXPECT_EQ(section.row(0)->background(), roo_display::color::Red);
   EXPECT_EQ(section.background(), roo_display::color::Green);
   EXPECT_EQ(model.prepares, prepares);

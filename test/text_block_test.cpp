@@ -238,7 +238,7 @@ class TextBlockGoldenTest : public testing::Test {
 
     app.add(block,
             roo_display::Box(8, 8, 8 + box_width - 1, 8 + render_height - 1));
-    EXPECT_TRUE(app.refresh());
+    app.refresh();
     return test::CaptureRgb(offscreen_.raster(), 8, 8, box_width,
                             render_height);
   }
@@ -262,7 +262,7 @@ class TextBlockGoldenTest : public testing::Test {
     app.add(layout, roo_display::Box(kFlexLayoutX, kFlexLayoutY,
                                      kFlexLayoutX + kFlexLayoutWidth - 1,
                                      kFlexLayoutY + kFlexLayoutHeight - 1));
-    EXPECT_TRUE(app.refresh());
+    app.refresh();
     return test::CaptureRgb(offscreen_.raster(), kFlexLayoutX, kFlexLayoutY,
                             kFlexLayoutWidth, kFlexLayoutHeight);
   }

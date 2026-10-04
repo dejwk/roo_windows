@@ -62,7 +62,7 @@ class Material3SliderAppTest : public testing::Test {
                         kSliderY + kSliderHeight - 1)) {
     slider_ = slider.get();
     app_.add(std::move(slider), box);
-    EXPECT_TRUE(app_.refresh());
+    app_.refresh();
     return *slider_;
   }
 
@@ -228,8 +228,7 @@ class ContentPaintSlider : public Slider {
 
   void paintWidgetContentsForTest(const Canvas& parent_canvas) {
     roo_windows::internal::ClipperState clipper_state;
-    Clipper clipper(clipper_state, parent_canvas.out(),
-                    roo_time::Uptime::Max());
+    Clipper clipper(clipper_state, parent_canvas.out());
     PaintContext ctx(prepareCanvas(parent_canvas), clipper);
     clipper.pushOverlaySpec(*this, ctx.canvas());
     paintWidgetContents(ctx);
@@ -243,8 +242,7 @@ class ContentPaintSliderWithInsetIcon : public SliderWithInsetIcon {
 
   void paintWidgetContentsForTest(const Canvas& parent_canvas) {
     roo_windows::internal::ClipperState clipper_state;
-    Clipper clipper(clipper_state, parent_canvas.out(),
-                    roo_time::Uptime::Max());
+    Clipper clipper(clipper_state, parent_canvas.out());
     PaintContext ctx(prepareCanvas(parent_canvas), clipper);
     clipper.pushOverlaySpec(*this, ctx.canvas());
     paintWidgetContents(ctx);
@@ -385,8 +383,7 @@ class ContentPaintRangeSlider : public RangeSlider {
 
   void paintWidgetContentsForTest(const Canvas& parent_canvas) {
     roo_windows::internal::ClipperState clipper_state;
-    Clipper clipper(clipper_state, parent_canvas.out(),
-                    roo_time::Uptime::Max());
+    Clipper clipper(clipper_state, parent_canvas.out());
     PaintContext ctx(prepareCanvas(parent_canvas), clipper);
     clipper.pushOverlaySpec(*this, ctx.canvas());
     paintWidgetContents(ctx);
@@ -1158,7 +1155,7 @@ TEST_F(Material3SliderRenderTest,
                 context().theme().material3Theme().color.onSecondaryContainer),
             pixelAt(old_center_x, old_center_y));
   ASSERT_TRUE(slider_ptr->setValue(new_value));
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
 
   EXPECT_NE(QuantizeToArgb4444(
                 context().theme().material3Theme().color.onSecondaryContainer),
@@ -1186,7 +1183,7 @@ TEST_F(Material3SliderRenderTest,
            roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
                             kSliderY + Scaled(52) - 1));
 
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
 
   constexpr float old_value = 50.0f;
   constexpr float new_value = 60.0f;
@@ -1240,7 +1237,7 @@ TEST_F(Material3SliderRenderTest,
   int center_y = kSliderY + slider_ptr->height() / 2;
 
   ASSERT_TRUE(slider_ptr->setValue(0.0f));
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
 
   EXPECT_EQ(QuantizeToArgb4444(
                 context().theme().material3Theme().color.onSecondaryContainer),
@@ -1450,7 +1447,7 @@ TEST_F(Material3SliderAppTest,
   app_.add(std::move(tracking_slider),
            roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
                             kSliderY + kSliderHeight - 1));
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
 
   internal::SliderAxisMetrics axis(tracking->width(), tracking->height());
 
@@ -1526,7 +1523,7 @@ TEST_F(Material3SliderAppTest, VerticalSliderScrollUpUpdatesPosition) {
   app_.add(std::move(vertical_slider),
            roo_display::Box(kSliderX, kSliderY, kSliderX + Scaled(44) - 1,
                             kSliderY + Scaled(60) - 1));
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
 
   slider().onDragStart(slider().width() / 2, 2);
   slider().onDrag(slider().width() / 2, 2, 0, -Scaled(12));
@@ -1546,7 +1543,7 @@ TEST_F(Material3SliderAppTest,
   app_.add(std::move(vertical_slider),
            roo_display::Box(kSliderX, kSliderY, kSliderX + Scaled(44) - 1,
                             kSliderY + Scaled(60) - 1));
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
 
   float old_value = slider().value();
   EXPECT_EQ(DragClaim::kReject,
@@ -1567,7 +1564,7 @@ TEST_F(Material3SliderAppTest, VerticalTapToJumpUsesReversedYMapping) {
   app_.add(std::move(vertical_slider),
            roo_display::Box(kSliderX, kSliderY, kSliderX + Scaled(44) - 1,
                             kSliderY + Scaled(60) - 1));
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
 
   slider().onSingleTapUp(slider().width() / 2, 1);
   EXPECT_GT(slider().value(), 0.95f);
@@ -1586,7 +1583,7 @@ TEST_F(Material3SliderAppTest, VerticalNormalDirectionUsesForwardYMapping) {
   app_.add(std::move(vertical_slider),
            roo_display::Box(kSliderX, kSliderY, kSliderX + Scaled(44) - 1,
                             kSliderY + Scaled(60) - 1));
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
 
   slider().onSingleTapUp(slider().width() / 2, 1);
   EXPECT_LT(slider().value(), 0.05f);
@@ -1605,7 +1602,7 @@ TEST_F(Material3SliderAppTest,
   app_.add(std::move(inverted_slider),
            roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
                             kSliderY + kSliderHeight - 1));
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
 
   slider().onSingleTapUp(slider().width() - 2, slider().height() / 2);
   EXPECT_LT(slider().value(), 0.05f);
@@ -1629,7 +1626,7 @@ TEST_F(Material3SliderAppTest, TapToJumpSnapsToNearestDiscreteStep) {
   app_.add(std::move(discrete_slider),
            roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
                             kSliderY + kSliderHeight - 1));
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
 
   slider().onSingleTapUp(Scaled(70), slider().height() / 2);
   EXPECT_FLOAT_EQ(4.0f, slider().value());
@@ -1677,7 +1674,7 @@ TEST_F(Material3SliderAppTest,
   app_.add(std::move(tracking_slider),
            roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
                             kSliderY + kSliderHeight - 1));
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
 
   tracking->onSingleTapUp(Scaled(48) - 1, tracking->height() / 2);
 
@@ -1701,7 +1698,7 @@ TEST_F(Material3SliderAppTest, DragLifecycleFiresSingleStartAndEndsOnCancel) {
   app_.add(std::move(tracking_slider),
            roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
                             kSliderY + kSliderHeight - 1));
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
 
   tracking->onShowPress((XDim)tracking->getPointOverlayFocus().x,
                         tracking->height() / 2);
@@ -1730,7 +1727,7 @@ TEST_F(Material3SliderAppTest, DragTouchUpIsConsumedAndEndsInteraction) {
   app_.add(std::move(tracking_slider),
            roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
                             kSliderY + kSliderHeight - 1));
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
 
   tracking->onShowPress((XDim)tracking->getPointOverlayFocus().x,
                         tracking->height() / 2);
@@ -1762,7 +1759,7 @@ TEST_F(Material3SliderAppTest,
   app_.add(std::move(tracking_slider),
            roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
                             kSliderY + kSliderHeight - 1));
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
 
   internal::SliderAxisMetrics axis(tracking->width(), tracking->height());
   XDim start_thumb_center = (XDim)roundf(
@@ -1801,7 +1798,7 @@ TEST_F(Material3SliderAppTest, RangeSliderDragTouchUpIsConsumedAndEnds) {
   app_.add(std::move(tracking_slider),
            roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
                             kSliderY + kSliderHeight - 1));
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
 
   internal::SliderAxisMetrics axis(tracking->width(), tracking->height());
   XDim start_thumb_center = (XDim)roundf(
@@ -1832,7 +1829,7 @@ TEST_F(Material3SliderAppTest, OverlappingRangeThumbsWaitForDirectionalIntent) {
   app_.add(std::move(tracking_slider),
            roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
                             kSliderY + kSliderHeight - 1));
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
 
   tracking->onShowPress(Scaled(48) - 1, kSliderHeight / 2);
   EXPECT_TRUE(tracking->events.empty());
@@ -1872,7 +1869,7 @@ TEST_F(Material3SliderRenderTest,
            roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
                             kSliderY + kSliderHeight - 1));
 
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
 
   Color primary =
       QuantizeToArgb4444(context().theme().material3Theme().color.primary);
@@ -1909,7 +1906,7 @@ TEST_F(Material3SliderRenderTest,
            roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
                             kSliderY + kSliderHeight - 1));
 
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
 
   Color primary =
       QuantizeToArgb4444(context().theme().material3Theme().color.primary);
@@ -1963,7 +1960,7 @@ TEST_F(Material3SliderRenderTest, RangeSliderPaintsActiveTrackBetweenThumbs) {
            roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
                             kSliderY + kSliderHeight - 1));
 
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
 
   Color primary =
       QuantizeToArgb4444(context().theme().material3Theme().color.primary);
@@ -2010,7 +2007,7 @@ TEST_F(Material3SliderRenderTest,
            roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
                             kSliderY + kSliderHeight - 1));
 
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
 
   internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height());
   int16_t center_y = kSliderY + slider_ptr->height() / 2;
@@ -2051,7 +2048,7 @@ TEST_F(Material3SliderRenderTest,
            roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
                             kSliderY + kSliderHeight - 1));
 
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
 
   internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height());
   int16_t center_y = kSliderY + slider_ptr->height() / 2;
@@ -2092,7 +2089,7 @@ TEST_F(Material3SliderRenderTest,
            roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
                             kSliderY + kSliderHeight - 1));
 
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
 
   internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height());
   int16_t center_y = kSliderY + slider_ptr->height() / 2;
@@ -2135,7 +2132,7 @@ TEST_F(Material3SliderRenderTest,
            roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
                             kSliderY + Scaled(108) - 1));
 
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
 
   internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height(),
                                    false, true);
@@ -2177,7 +2174,7 @@ TEST_F(Material3SliderRenderTest,
            roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
                             kSliderY + kSliderHeight - 1));
 
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
 
   internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height());
   int16_t center_y = kSliderY + slider_ptr->height() / 2;
@@ -2221,7 +2218,7 @@ TEST_F(Material3SliderRenderTest,
            roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
                             kSliderY + kSliderHeight - 1));
 
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
 
   internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height());
   int16_t center_y = kSliderY + slider_ptr->height() / 2;
@@ -2260,10 +2257,10 @@ TEST_F(Material3SliderRenderTest,
            roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
                             kSliderY + kSliderHeight - 1));
 
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   slider().onShowPress((XDim)slider().getPointOverlayFocus().x,
                        slider().height() / 2);
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
 
   Color primary =
       QuantizeToArgb4444(context().theme().material3Theme().color.primary);
@@ -2297,10 +2294,10 @@ TEST_F(Material3SliderRenderTest,
            roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
                             kSliderY + kSliderHeight - 1));
 
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   slider_ptr->onShowPress((XDim)slider_ptr->getPointOverlayFocus().x,
                           slider_ptr->height() / 2);
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
 
   internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height());
   int16_t pressed_thumb_width = Scaled(2);
@@ -2335,13 +2332,13 @@ TEST_F(Material3SliderRenderTest,
            roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
                             kSliderY + kSliderHeight - 1));
 
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
 
   internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height());
   XDim start_thumb_center = (XDim)roundf(CenterFromValueForTest(
       axis, slider_ptr->range(), slider_ptr->startValue()));
   slider_ptr->onShowPress(start_thumb_center, slider_ptr->height() / 2);
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
 
   Color primary =
       QuantizeToArgb4444(context().theme().material3Theme().color.primary);
@@ -2378,7 +2375,7 @@ TEST_F(Material3SliderRenderTest,
            roo_display::Box(kSliderX, kSliderY, kSliderX + kVerticalWidth - 1,
                             kSliderY + kVerticalHeight - 1));
 
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
 
   internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height(),
                                    true, true);
@@ -2428,7 +2425,7 @@ TEST_F(Material3SliderRenderTest,
       roo_display::Box(kSliderX, kBubbleSliderY, kSliderX + kSliderWidth - 1,
                        kBubbleSliderY + kSliderHeight - 1));
 
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
 
   Rect bubble = ResolveCurrentIndicatorBoundsForTest(*slider_ptr, context())
                     .translate(kSliderX, kBubbleSliderY);
@@ -2448,7 +2445,7 @@ TEST_F(Material3SliderRenderTest,
 
   roo_display::FpPoint focus = slider_ptr->getPointOverlayFocus();
   slider_ptr->onShowPress((XDim)focus.x, (YDim)focus.y);
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
 
   EXPECT_EQ(
       QuantizeToArgb4444(env_.theme().material3Theme().color.inverseSurface),
@@ -2473,7 +2470,7 @@ TEST_F(Material3SliderRenderTest,
            roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
                             kSliderY + kSliderHeight - 1));
 
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
 
   ASSERT_TRUE(slider_ptr->setValue(0.8f));
 
@@ -2521,7 +2518,7 @@ TEST_F(Material3SliderRenderTest,
            roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
                             kSliderY + kSliderHeight - 1));
 
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
 
   ASSERT_TRUE(slider_ptr->setValue(0.08f));
 
@@ -2560,7 +2557,7 @@ TEST_F(Material3SliderRenderTest,
            roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
                             kSliderY + kSliderHeight - 1));
 
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
 
   ASSERT_TRUE(slider_ptr->setValues(35.0f, 75.0f));
 
@@ -2597,7 +2594,7 @@ TEST_F(Material3SliderRenderTest,
            roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
                             kSliderY + kSliderHeight - 1));
 
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
 
   internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height());
   XDim start_thumb_center = (XDim)CenterFromValueForTest(
@@ -2638,7 +2635,7 @@ TEST_F(Material3SliderRenderTest,
            roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
                             kSliderY + kSliderHeight - 1));
 
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
 
   roo_display::FpPoint focus = slider_ptr->getPointOverlayFocus();
   slider_ptr->onShowPress((XDim)focus.x, (YDim)focus.y);
@@ -2677,7 +2674,7 @@ TEST_F(Material3SliderRenderTest,
            roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
                             kSliderY + kSliderHeight - 1));
 
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
 
   roo_display::FpPoint focus = slider_ptr->getPointOverlayFocus();
   slider_ptr->onShowPress((XDim)focus.x, (YDim)focus.y);
@@ -2787,7 +2784,7 @@ TEST_F(Material3SliderAppTest,
   app_.add(std::move(tracking_slider),
            roo_display::Box(kSliderX, kSliderY, kSliderX + Scaled(44) - 1,
                             kSliderY + Scaled(60) - 1));
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
 
   tracking->onSingleTapUp(tracking->width() / 2, 2);
   ASSERT_GE(tracking->events.size(), 2u);
@@ -2809,7 +2806,7 @@ TEST_F(Material3SliderRenderTest, AlwaysIndicatorRegistersOnAttachment) {
   app_.add(std::move(slider),
            roo_display::Box(kSliderX, kHeight - kSliderHeight,
                             kSliderX + kSliderWidth - 1, kHeight - 1));
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   ASSERT_TRUE(raw->hasPresentationPin());
   Rect bubble = ResolveCurrentIndicatorBoundsForTest(*raw, context());
   ASSERT_FALSE(bubble.empty());
@@ -2829,11 +2826,11 @@ TEST_F(Material3SliderRenderTest, RangeAlwaysIndicatorRequiresActiveThumb) {
   app_.add(std::move(slider),
            roo_display::Box(kSliderX, kHeight - kSliderHeight,
                             kSliderX + kSliderWidth - 1, kHeight - 1));
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   EXPECT_FALSE(raw->hasPresentationPin());
   roo_display::FpPoint focus = raw->getPointOverlayFocus();
   raw->onShowPress((XDim)focus.x, (YDim)focus.y);
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   ASSERT_TRUE(raw->hasPresentationPin());
   Rect bubble =
       ResolveRangeIndicatorBoundsForTest(*raw, raw->startValue(), context());
@@ -2876,10 +2873,10 @@ TEST_F(Material3SliderRenderTest,
              Rect(2, 0, 2 + kSliderWidth - 1, kSliderHeight - 1));
   root->add(std::move(panel), Rect(10, 40, 111, 79));
   app_.add(std::move(root), roo_display::Box(0, 0, 119, 79));
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   roo_display::FpPoint focus = raw->getPointOverlayFocus();
   raw->onShowPress((XDim)focus.x, (YDim)focus.y);
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   ASSERT_TRUE(raw->hasPresentationPin());
   Rect bubble = ResolveCurrentIndicatorBoundsForTest(*raw, context());
   ASSERT_FALSE(bubble.empty());
@@ -2911,10 +2908,10 @@ TEST_F(Material3SliderRenderTest,
              Rect(2, 0, 2 + kSliderWidth - 1, kSliderHeight - 1));
   root->add(std::move(panel), Rect(10, 40, 111, 79));
   app_.add(std::move(root), roo_display::Box(0, 0, 119, 79));
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   roo_display::FpPoint focus = raw->getPointOverlayFocus();
   raw->onShowPress((XDim)focus.x, (YDim)focus.y);
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   ASSERT_TRUE(raw->hasPresentationPin());
   Rect bubble =
       ResolveRangeIndicatorBoundsForTest(*raw, raw->startValue(), context());
@@ -2941,14 +2938,14 @@ TEST_F(Material3SliderRenderTest, RangeValueMoveReusesAlwaysIndicatorPin) {
   app_.add(std::move(slider),
            roo_display::Box(kSliderX, kHeight - kSliderHeight,
                             kSliderX + kSliderWidth - 1, kHeight - 1));
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   roo_display::FpPoint focus = raw->getPointOverlayFocus();
   raw->onShowPress((XDim)focus.x, (YDim)focus.y);
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   ASSERT_TRUE(raw->hasPresentationPin());
   ASSERT_TRUE(raw->setValues(0.4f, 0.9f));
   EXPECT_TRUE(raw->hasPresentationPin());
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   Rect bubble =
       ResolveRangeIndicatorBoundsForTest(*raw, raw->startValue(), context());
   ASSERT_FALSE(bubble.empty());
@@ -2966,7 +2963,7 @@ TEST_F(Material3SliderRenderTest, IndicatorPinsRegisterInPopupAndDialogLayers) {
                                                SliderVariant::kStandard, style);
   Slider* popup_raw = popup_slider.get();
   app_.addPopup(std::move(popup_slider), roo_display::Box(12, 24, 107, 67));
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   EXPECT_TRUE(popup_raw->hasPresentationPin());
 
   IndicatorDialog dialog(context());
@@ -2977,7 +2974,7 @@ TEST_F(Material3SliderRenderTest, IndicatorPinsRegisterInPopupAndDialogLayers) {
   Task* owner = app_.keyboard().getContents().getTask();
   ASSERT_NE(nullptr, owner);
   ASSERT_EQ(PresentationStartResult::kStarted, dialog.show(*owner, [](int) {}));
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   EXPECT_TRUE(dialog_raw->hasPresentationPin());
 }
 

@@ -406,8 +406,7 @@ class ListLayout : public Panel {
     row.setVisibility(Visibility::kVisible);
   }
 
-  // Range changes are idempotent; resumed painting never rotates or rebinds
-  // rows.
+  // An unchanged range never rotates or rebinds rows during repaint.
   void synchronizeRange(int begin, int end) {
     CHECK(!synchronizing_);
     synchronizing_ = true;

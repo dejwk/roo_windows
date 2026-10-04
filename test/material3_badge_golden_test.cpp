@@ -157,7 +157,7 @@ class Material3BadgeGoldenTest : public testing::Test {
     value->setBadgeValue(1000);
     value->setBadgeAlignment(roo_display::kLeft | roo_display::kTop);
 
-    EXPECT_TRUE(app.refresh());
+    app.refresh();
     return test::CaptureRgb(offscreen_.raster(), 0, 0, 184, 56);
   }
 
@@ -176,7 +176,7 @@ class Material3BadgeGoldenTest : public testing::Test {
     unclipped->setBadgeValue(1000);
     unclipped->setBadgeAlignment(overhang);
 
-    EXPECT_TRUE(app.refresh());
+    app.refresh();
     return test::CaptureRgb(offscreen_.raster(), 0, 0, 184, 60);
   }
 

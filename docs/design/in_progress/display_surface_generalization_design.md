@@ -40,7 +40,6 @@ Before Phases 1–6, `Application` directly or indirectly owned:
 - the borrowed display and `MainWindow`;
 - touch sensing and gesture detection;
 - application context and its focus manager;
-- interrupted-paint continuation;
 - task panels and activity stacks;
 - the default software keyboard and text-field editor;
 - physical or emulated key input; and
@@ -152,7 +151,7 @@ without preserving their semantics:
 - User code must be able to drive multiple applications, each borrowing a
   different display, on one UI thread.
 - Each display window must independently own touch, gesture, dirty-region,
-  refresh, and interrupted-paint state.
+  and refresh state.
 - A display window may contain several tasks. Each task must retain independent
   focus even while another task is touched or receives key events.
 - A physical or emulated key source must have one current destination task.
@@ -223,8 +222,8 @@ without preserving their semantics:
   the active host and each pin's effective z-scope.
 - The implementation must not require `shared_ptr`, RTTI, exceptions, or
   per-event heap allocation.
-- Destruction must cancel gesture, key-repeat, transient, focus, and paint
-  continuation state before referenced objects disappear.
+- Destruction must cancel gesture, key-repeat, transient, and focus state
+  before referenced objects disappear.
 
 ### Non-goals for the first version
 
@@ -315,14 +314,14 @@ a multi-window application coordinator.
 - `MainWindow` and its display root;
 - touch-sensor and gesture-detector state;
 - dirty-region and refresh state;
-- interrupted-paint continuation;
 - pointer capture and display-local click animation; and
 - the one shared transient-surface coordinator, composite `TransientHostLayer`,
   logical presentation slot, and reusable scrim paint.
 
-The extraction moved paint continuation from application context into
-`DisplayWindow`. A paint interrupted on one display is never resumed against
-another display's canvas or dirty region.
+Each window paints its own canvas and dirty region to completion. Framework
+paint interruption was removed on 2026-10-05; see the
+[current paint contract](../README.md#current-paint-contract). Historical phase
+notes below still record the original continuation behavior.
 
 Gesture callbacks resolve their target through their originating window. No
 window-local event may consult a process-global or application-global “current
@@ -463,7 +462,8 @@ scheduler:
 
 Each application owns a private scheduler task. One dispatch drains at most a
 documented number of input events, advances due task/window timers and gesture
-recognition, and performs at most one bounded refresh/paint slice. It then
+recognition, and performs at most one complete refresh. Painting has no time
+budget, so a slow refresh delays other UI-thread work. The application then
 reschedules itself immediately or at its next internal deadline. A dormant
 application is woken by new input or invalidation.
 
@@ -658,7 +658,7 @@ following logical sequence:
 4. cancel key-repeat, armed-key, gesture, and pointer-capture state;
 5. clear editor and focus references;
 6. detach task panels from the display root;
-7. cancel paint continuation and stop touch sensing; and
+7. stop touch sensing; and
 8. destroy the display window and remaining application state.
 
 Endpoint self-disconnection makes step 2 safe even if another application was
@@ -1199,7 +1199,7 @@ invariants:
 
 - the single-application convenience path behaves like today's default;
 - each application renders and recognizes gestures only for its own display;
-- paint continuation and refresh scheduling are window-local;
+- dirty-region state and refresh scheduling are window-local;
 - multiple tasks retain independent focus on one display;
 - two tasks can be driven by two separately bound key sources;
 - direct-content tasks incur no hidden navigation stack;

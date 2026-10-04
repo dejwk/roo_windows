@@ -10,6 +10,23 @@ Design documents are filed by implementation status:
 
 Status was audited against the source tree and tests on 2026-09-12. “Dependency status” distinguishes implemented prerequisites from proposed or partially implemented work; a design can be proposed even when all of its prerequisites are available.
 
+## Current paint contract
+
+As of 2026-10-05, framework paint interruption has been removed.
+`Application::refresh()` and `DisplayWindow::refresh()` are synchronous `void`
+operations with no deadline argument. Each refresh samples animations before
+layout, paints current damage to completion, and settles clicks after the
+drawing context closes. New invalidations remain eligible for a later refresh.
+Frame scheduling deadlines still control when painting starts; they do not
+limit its duration. Slow painting therefore delays UI-thread input delivery
+until it returns.
+
+The [retired continuation design](implemented/interrupted_paint_continuation_design.md)
+and continuation references in earlier implementation histories describe the
+previous behavior. Per-widget partial drawing and deferred scrolling backgrounds
+are future experiments, with no replacement interruption mechanism in this
+baseline.
+
 ## Implemented
 
 | Design | Dependency status |
@@ -26,7 +43,7 @@ Status was audited against the source tree and tests on 2026-09-12. “Dependenc
 | Click-animation lifecycle and settlement | Stable per-frame timing, slow-display rendering, deferred semantic delivery, held-press settlement, late-release coalescing, and transient-overlay cleanup are implemented. |
 | Click-animation lifecycle simplification | Changes 1–3 are implemented: characterization and mechanical cleanup, one-target phase ownership, atomic admission, identity-checked cancellation, reentrant delivery, and completed-refresh settlement. |
 | Display runtime Phase 1 characterization | The integrated runtime characterization target, size probe, and ESP32-S3 baseline report are implemented. |
-| Display runtime Phase 2 `DisplayWindow` extraction | One `DisplayWindow` now owns display-local pointer, paint, continuation, and teardown state for each application. |
+| Display runtime Phase 2 `DisplayWindow` extraction | One `DisplayWindow` owns display-local pointer, paint, and teardown state for each application. |
 | Display runtime Phase 3 task extraction | Task-local focus, editing, key routing, and structural task ownership are implemented. |
 | Display runtime Phase 4 optional navigation | Historical foundation; the optional host ownership/API is superseded by task-owned navigation. Borrowed destinations and their lifecycle remain. |
 | [Progress indicators](implemented/material3_progress_indicators_design.md) | Standard linear/circular components use the shared animation registry; geometry, presentation, composition and embedded-cost acceptance pass. |
@@ -36,7 +53,6 @@ Status was audited against the source tree and tests on 2026-09-12. “Dependenc
 | Gesture arbitration and ownership | Callback-free hit paths, explicit tap/long-press/drag roles, directional arbitration, strong ownership, and lifecycle-safe terminal delivery are implemented without compatibility routing. |
 | Horizontal page host | Viewport layout, adjacent swipe/settle, blit wrappers, examples, and tabs synchronization are implemented. |
 | Icon buttons | The non-toggle icon-button family, focused unit coverage, compact-controls example adoption, and rendering goldens are implemented. |
-| Interrupted paint continuation | Deadline-bounded paint attempts retain completed exclusions and overlays, selectively reopen state changed between attempts, and preserve one animation snapshot until refresh completion. |
 | Layout scaffold | Shared adaptive primitives, the fixed-slot `LayoutScaffold` shell, fixed-slot `PaneLayout`, row-major `GridLayout`, and a build-covered catalog with app-bar, navigation-bar, and navigation-rail composition are implemented. Navigation drawer remains separate component work. |
 | Material 3 dialogs | The shared pinned-chrome scaffold, fixed action model, persistent body ownership, presenter focus, public basic/alert and full-screen families, veto hooks, unit/golden coverage, and dialog catalog are implemented. |
 | [Material 3 component surface theme](implemented/material3_component_surface_theme_design.md) | All six phases are implemented: 27 compact shared surface-role slots, component migrations, default reconciliation, focused rendering coverage, RGB565 integration acceptance, and target-ABI cost evidence. |
@@ -63,6 +79,12 @@ Status was audited against the source tree and tests on 2026-09-12. “Dependenc
 | Widget state compaction | Widget event dispatch is implemented, and both compaction phases are implemented. |
 | [Snackbar](implemented/material3_snackbar_design.md) | Owning registered requests, bounded queue, inverse-surface widget, opt-in scaffold host, timing, focus/input, goldens, catalog and target cost checks are implemented. |
 | [Text fields](implemented/material3_text_fields_design.md) | Filled/outlined single-line fields, task-owned abstract editing, secure reveal, keyboard/touch activation, tests and example are implemented. Upstream glyph-stream paint allocations are explicitly deferred. |
+
+## Retired
+
+| Design | Status |
+| --- | --- |
+| [Interrupted paint continuation](implemented/interrupted_paint_continuation_design.md) | Removed on 2026-10-05. Refresh now paints to completion; the design remains as historical rationale. |
 
 ## In progress
 

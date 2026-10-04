@@ -172,7 +172,7 @@ class HorizontalPageHostRenderTest : public testing::Test {
     return result[0];
   }
 
-  bool refresh() { return app_.refresh(); }
+  void refresh() { app_.refresh(); }
 
   ApplicationContext& context() { return app_.context(); }
 
@@ -193,13 +193,13 @@ TEST_F(HorizontalPageHostRenderTest,
   cache->setChild(std::make_unique<ColorBoxWidget>(context(), color::Red,
                                                    Dimensions(120, 40)));
   app_.add(std::move(cache), Box(0, 0, 119, 39));
-  ASSERT_TRUE(refresh());
+  refresh();
 
   for (int height : {50, 30, 45}) {
     SCOPED_TRACE(height);
     offscreen_.resetCounters();
     cache_ptr->moveTo(Rect(0, 0, 119, height - 1));
-    ASSERT_TRUE(refresh());
+    refresh();
     EXPECT_EQ(0u, offscreen_.blitCalls());
     // Growth beyond the child must not redraw it. Shrinking intersects the
     // child; this simple test widget then repaints its whole visible surface.
@@ -209,7 +209,7 @@ TEST_F(HorizontalPageHostRenderTest,
     EXPECT_EQ(QuantizeToArgb4444(color::Red), pixelAt(10, 10));
     const std::vector<roo::byte> before(std::begin(raster_), std::end(raster_));
     app_.root().invalidateInterior();
-    ASSERT_TRUE(refresh());
+    refresh();
     EXPECT_EQ(before,
               std::vector<roo::byte>(std::begin(raster_), std::end(raster_)));
   }
@@ -234,7 +234,7 @@ TEST_F(HorizontalPageHostRenderTest, RevealedStripRepaintsWithBlitSupport) {
 
   app_.add(std::move(host), Box(0, 0, 119, 59));
 
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(QuantizeToArgb4444(color::Red), pixelAt(10, 20));
   EXPECT_EQ(QuantizeToArgb4444(color::Red), pixelAt(110, 20));
 
@@ -242,7 +242,7 @@ TEST_F(HorizontalPageHostRenderTest, RevealedStripRepaintsWithBlitSupport) {
   host_ptr->onDrag(0, 0, -30, 0);
 
   offscreen_.resetCounters();
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(1u, offscreen_.blitCalls());
   EXPECT_EQ(3600u, offscreen_.outputPixels());
   EXPECT_EQ(2u, offscreen_.addressWindows());
@@ -251,7 +251,7 @@ TEST_F(HorizontalPageHostRenderTest, RevealedStripRepaintsWithBlitSupport) {
 
   host_ptr->onDrag(0, 0, 130, 0);
 
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_NE(QuantizeToArgb4444(color::Red), pixelAt(10, 20));
   EXPECT_EQ(QuantizeToArgb4444(color::Red), pixelAt(40, 20));
 }
@@ -266,18 +266,18 @@ TEST_F(HorizontalPageHostRenderTest, MarginedPagesPreserveRepaintCorrectness) {
   host->addPage(std::make_unique<ColorBoxWidget>(context(), color::Blue,
                                                  Dimensions(120, 60)));
   app_.add(std::move(host), Box(0, 0, 119, 59));
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_NE(QuantizeToArgb4444(color::Red), pixelAt(1, 20));
   EXPECT_EQ(QuantizeToArgb4444(color::Red), pixelAt(10, 20));
   host_ptr->onDragStart(0, 0);
   host_ptr->onDrag(0, 0, -30, 0);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(QuantizeToArgb4444(color::Red), pixelAt(10, 20));
   EXPECT_EQ(QuantizeToArgb4444(color::Blue), pixelAt(110, 20));
   EXPECT_NE(QuantizeToArgb4444(color::Blue), pixelAt(91, 20));
   const std::vector<roo::byte> before(std::begin(raster_), std::end(raster_));
   app_.root().invalidateInterior();
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(before,
             std::vector<roo::byte>(std::begin(raster_), std::end(raster_)));
 }
@@ -294,19 +294,19 @@ TEST_F(HorizontalPageHostRenderTest, DragInterruptsSettleAtAppliedPosition) {
   host_ptr->addPage(std::make_unique<ColorBoxWidget>(
       context(), color::Blue, Dimensions(kWidth, kHeight)));
   app_.add(std::move(host), Box(0, 0, kWidth - 1, kHeight - 1));
-  ASSERT_TRUE(refresh());
+  refresh();
 
   ASSERT_TRUE(host_ptr->setCurrentIndex(1));
-  ASSERT_TRUE(refresh());
+  refresh();
   delay(65);
-  ASSERT_TRUE(refresh());
+  refresh();
   const Rect interrupted = SlotBoundsForPage(*first_ptr);
   ASSERT_LT(interrupted.xMin(), 0);
   ASSERT_GT(interrupted.xMin(), -kWidth);
 
   host_ptr->onDragStart(0, 0);
   delay(220);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(interrupted, SlotBoundsForPage(*first_ptr));
   EXPECT_EQ(0, host_ptr->currentIndex());
 }
@@ -323,25 +323,25 @@ TEST_F(HorizontalPageHostRenderTest, SettlePausesWhileHidden) {
   host_ptr->addPage(std::make_unique<ColorBoxWidget>(
       context(), color::Blue, Dimensions(kWidth, kHeight)));
   app_.add(std::move(host), Box(0, 0, kWidth - 1, kHeight - 1));
-  ASSERT_TRUE(refresh());
+  refresh();
 
   ASSERT_TRUE(host_ptr->setCurrentIndex(1));
-  ASSERT_TRUE(refresh());
+  refresh();
   delay(65);
-  ASSERT_TRUE(refresh());
+  refresh();
   host_ptr->setVisibility(Visibility::kInvisible);
-  ASSERT_TRUE(refresh());
+  refresh();
   const Rect paused = SlotBoundsForPage(*first_ptr);
 
   delay(220);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(paused, SlotBoundsForPage(*first_ptr));
   EXPECT_EQ(0, host_ptr->currentIndex());
 
   host_ptr->setVisibility(Visibility::kVisible);
-  ASSERT_TRUE(refresh());
+  refresh();
   delay(140);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(1, host_ptr->currentIndex());
   EXPECT_EQ(1, host_ptr->settledChangeCount());
 }
@@ -358,20 +358,20 @@ TEST_F(HorizontalPageHostRenderTest,
   ColorBoxWidget covering(context(), color::Green, Dimensions(kWidth, kHeight));
   WidgetDestination covering_destination(covering);
   Task& task = app_.addTaskFullScreen(host);
-  ASSERT_TRUE(refresh());
+  refresh();
 
   ASSERT_TRUE(host.setCurrentIndex(1));
-  ASSERT_TRUE(refresh());
+  refresh();
   delay(65);
-  ASSERT_TRUE(refresh());
+  refresh();
   task.navigation().push(covering_destination);
-  ASSERT_TRUE(refresh());
+  refresh();
   delay(220);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(0, host.currentIndex());
 
   task.navigation().pop();
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(1, host.currentIndex());
   EXPECT_EQ(0, host.settledChangeCount());
   task.navigation().clear();
@@ -395,12 +395,12 @@ TEST_F(HorizontalPageHostRenderTest, CompletionCallbackCanDeleteHost) {
   host->addPage(std::make_unique<ColorBoxWidget>(context(), color::Blue,
                                                  Dimensions(kWidth, kHeight)));
   task = &app_.addTaskFullScreen(*host);
-  ASSERT_TRUE(refresh());
+  refresh();
 
   ASSERT_TRUE(host->setCurrentIndex(1));
-  ASSERT_TRUE(refresh());
+  refresh();
   delay(220);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_TRUE(deleted);
   EXPECT_EQ(nullptr, host.get());
 }
@@ -436,7 +436,7 @@ TEST(HorizontalPageHostRender, RevealedStripRepaintsWithoutBlitSupport) {
                                                      Dimensions(120, 60)));
 
   app.add(std::move(host), Box(0, 0, 119, 59));
-  ASSERT_TRUE(app.refresh());
+  app.refresh();
 
   int16_t px0[] = {10, 110};
   int16_t py0[] = {20, 20};
@@ -447,7 +447,7 @@ TEST(HorizontalPageHostRender, RevealedStripRepaintsWithoutBlitSupport) {
 
   host_ptr->onDragStart(0, 0);
   host_ptr->onDrag(0, 0, -30, 0);
-  ASSERT_TRUE(app.refresh());
+  app.refresh();
 
   Color colors1[2];
   offscreen.raster().readColors(px0, py0, 2, colors1);

@@ -443,9 +443,9 @@ bool Application::drainKeyEvents() {
   return input_router_->drainReadySources();
 }
 
-bool Application::refresh(roo_time::Uptime deadline) {
+void Application::refresh() {
   checkUiThread();
-  return window_.refresh(deadline);
+  window_.refresh();
 }
 
 Task& Application::addTask(Widget& content, const roo_display::Box& bounds) {

@@ -85,7 +85,7 @@ class Material3LayoutScaffoldGoldenTest : public testing::Test {
     panes->setLayoutDirection(direction);
     app.add(std::move(panes), roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
 
-    EXPECT_TRUE(app.refresh());
+    app.refresh();
     return test::CaptureRgb(offscreen_.raster(), 0, 0, kWidth, kHeight);
   }
 
@@ -100,7 +100,7 @@ class Material3LayoutScaffoldGoldenTest : public testing::Test {
     EXPECT_TRUE(panes->setActivePane(PaneRole::kLeading));
     app.add(std::move(panes), roo_display::Box(0, 0, 319, kHeight - 1));
 
-    EXPECT_TRUE(app.refresh());
+    app.refresh();
     return test::CaptureRgb(offscreen_.raster(), 0, 0, 320, kHeight);
   }
 
@@ -125,7 +125,7 @@ class Material3LayoutScaffoldGoldenTest : public testing::Test {
               full_row);
     app.add(std::move(grid), roo_display::Box(0, 0, 199, kHeight - 1));
 
-    EXPECT_TRUE(app.refresh());
+    app.refresh();
     return test::CaptureRgb(offscreen_.raster(), 0, 0, 200, kHeight);
   }
 

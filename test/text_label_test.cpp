@@ -58,9 +58,7 @@ class TextLabelRenderTest : public testing::Test {
 
   ApplicationContext& context() { return app_.context(); }
 
-  bool refresh(roo_time::Uptime deadline = roo_time::Uptime::Max()) {
-    return app_.refresh(deadline);
-  }
+  void refresh() { app_.refresh(); }
 
   Color pixelAt(int16_t x, int16_t y) const {
     int16_t px[] = {x};
@@ -130,7 +128,7 @@ class TextLabelGoldenTest : public testing::Test {
 
     app.add(layout, Box(kLayoutX, kLayoutY, kLayoutX + kLayoutWidth - 1,
                         kLayoutY + kLayoutHeight - 1));
-    EXPECT_TRUE(app.refresh());
+    app.refresh();
     return test::CaptureRgb(offscreen_.raster(), kLayoutX, kLayoutY,
                             kLayoutWidth, kLayoutHeight);
   }
@@ -313,7 +311,7 @@ TEST_F(TextLabelRenderTest, ConstrainedLabelsDoNotPaintOutsideTheirSlots) {
   StringViewLabel* viewed_ptr = viewed.get();
   app_.add(std::move(owned), Box(30, 0, 49, 29));
   app_.add(std::move(viewed), Box(30, 32, 49, 61));
-  ASSERT_TRUE(refresh());
+  refresh();
   const Color background =
       QuantizeToArgb4444(context().theme().material3Theme().color.background);
   EXPECT_TRUE(findNonBackground(30, 0, 49, 29, background).found);
@@ -322,7 +320,7 @@ TEST_F(TextLabelRenderTest, ConstrainedLabelsDoNotPaintOutsideTheirSlots) {
   EXPECT_FALSE(findNonBackground(50, 0, 95, 63, background).found);
   owned_ptr->clearText();
   viewed_ptr->clearText();
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_FALSE(findNonBackground(0, 0, 95, 63, background).found);
 }
 
@@ -474,7 +472,7 @@ TEST_F(TextLabelRenderTest, PaintAndClearInkOutsideLogicalBounds) {
   const Dimensions size = label->getSuggestedMinimumDimensions();
   const Box logical(30, 4, 30 + size.width() - 1, 4 + size.height() - 1);
   app_.add(std::move(label), logical);
-  ASSERT_TRUE(refresh());
+  refresh();
   ASSERT_LT(label_ptr->getContentBounds().xMin(), 0);
 
   roo::byte reference_pixels[kWidth * kHeight * 2];
@@ -497,7 +495,7 @@ TEST_F(TextLabelRenderTest, PaintAndClearInkOutsideLogicalBounds) {
     }
   }
   label_ptr->clearText();
-  ASSERT_TRUE(refresh());
+  refresh();
   for (int16_t y = 0; y < kHeight; ++y) {
     for (int16_t x = 0; x < kWidth; ++x) {
       ASSERT_EQ(QuantizeToArgb4444(background), pixelAt(x, y))
@@ -515,20 +513,20 @@ TEST_F(TextLabelRenderTest, SetTextAndClearTextAffectRenderedPixels) {
   TextLabel* label_ptr = label.get();
   app_.add(std::move(label), Box(8, 8, 80, 32));
 
-  ASSERT_TRUE(refresh());
+  refresh();
   Color bg =
       QuantizeToArgb4444(context().theme().material3Theme().color.background);
   PixelBounds initial = findNonBackground(8, 8, 80, 32, bg);
   ASSERT_TRUE(initial.found);
 
   label_ptr->setText("MMMMMMMM");
-  ASSERT_TRUE(refresh());
+  refresh();
   PixelBounds expanded = findNonBackground(8, 8, 80, 32, bg);
   ASSERT_TRUE(expanded.found);
   EXPECT_GT(expanded.x_max - expanded.x_min, initial.x_max - initial.x_min);
 
   label_ptr->clearText();
-  ASSERT_TRUE(refresh());
+  refresh();
   PixelBounds cleared = findNonBackground(8, 8, 80, 32, bg);
   EXPECT_FALSE(cleared.found);
 }
@@ -549,7 +547,7 @@ TEST_F(TextLabelRenderTest, GravityChangesHorizontalPlacement) {
   app_.add(std::move(left), Box(4, 6, 44, 28));
   app_.add(std::move(right), Box(4, 34, 44, 56));
 
-  ASSERT_TRUE(refresh());
+  refresh();
   Color bg =
       QuantizeToArgb4444(context().theme().material3Theme().color.background);
   PixelBounds left_bounds = findNonBackground(4, 6, 44, 28, bg);
@@ -575,7 +573,7 @@ TEST_F(TextLabelRenderTest, TransparentColorMatchesExplicitDefaultColor) {
   app_.add(std::move(implicit), Box(4, 6, 44, 28));
   app_.add(std::move(explicit_default), Box(4, 34, 44, 56));
 
-  ASSERT_TRUE(refresh());
+  refresh();
   Color bg =
       QuantizeToArgb4444(context().theme().material3Theme().color.background);
   PixelBounds top = findNonBackground(4, 6, 44, 28, bg);

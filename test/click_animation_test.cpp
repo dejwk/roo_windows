@@ -108,7 +108,7 @@ class ClickFrameTest : public testing::Test {
     auto widget = std::make_unique<ClickFrameWidget>(app_.context());
     target_ = widget.get();
     app_.add(std::move(widget), roo_display::Box(0, 0, 15, 15));
-    ASSERT_TRUE(app_.refresh());
+    app_.refresh();
   }
   void touch(bool down) {
     touch_.set(down, 8, 8);
@@ -157,11 +157,11 @@ TEST_F(ClickFrameTest, EligibilityChangeCancelsRetainedGesture) {
       EXPECT_FALSE(target_->isPressed());
       changed.setEnabled(true);
       changed.setVisibility(Visibility::kVisible);
-      ASSERT_TRUE(app_.refresh());
+      app_.refresh();
       touch(false);
       system_time_delay_micros(400000);
       test::ApplicationWorkTestAccess::PollPointer(app_);
-      ASSERT_TRUE(app_.refresh());
+      app_.refresh();
       EXPECT_EQ(0, target_->clicks);
       EXPECT_FALSE(animation().isBusy());
     }
@@ -169,7 +169,7 @@ TEST_F(ClickFrameTest, EligibilityChangeCancelsRetainedGesture) {
   touch(true);
   touch(false);
   system_time_delay_micros(200000);
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   EXPECT_EQ(1, target_->clicks);
 }
 
@@ -183,7 +183,7 @@ TEST_F(ClickFrameTest, HiddenAncestorCancelsDeferredNonAnimatedClick) {
   app_.root().setVisibility(Visibility::kInvisible);
   EXPECT_FALSE(animation().isBusy());
   app_.root().setVisibility(Visibility::kVisible);
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   EXPECT_EQ(0, target_->clicks);
 }
 
@@ -192,7 +192,7 @@ TEST_F(ClickFrameTest, HiddenAncestorCancelsDeferredNonAnimatedClick) {
 TEST_F(ClickFrameTest, ControllerOwnsNextFrameWithoutPaintSelfDirtying) {
   EXPECT_EQ(roo_time::Uptime::Max(), animation().nextFrameDeadline());
   target_->onShowPress(8, 8);
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   EXPECT_FALSE(target_->isDirty());
   EXPECT_FALSE(app_.root().isDirty());
   roo_time::Uptime next = animation().nextFrameDeadline();
@@ -201,7 +201,7 @@ TEST_F(ClickFrameTest, ControllerOwnsNextFrameWithoutPaintSelfDirtying) {
   EXPECT_EQ(next, animation().nextFrameDeadline());
   system_time_delay_micros(15000);
   EXPECT_EQ(roo_time::Uptime::Now(), animation().nextFrameDeadline());
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   EXPECT_NEAR(0.1f, target_->painted_progress, 0.001f);
   EXPECT_FALSE(target_->isDirty());
   EXPECT_EQ(next + roo_time::Millis(20), animation().nextFrameDeadline());
@@ -211,30 +211,29 @@ TEST_F(ClickFrameTest, ControllerOwnsNextFrameWithoutPaintSelfDirtying) {
 // with no continuing animation deadline after settlement.
 TEST_F(ClickFrameTest, NaturalFinalFrameSettlesAndClearsDeadline) {
   target_->onSingleTapUp(8, 8);
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   EXPECT_EQ(0, target_->clicks);
   system_time_delay_micros(200000);
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   EXPECT_EQ(1, target_->clicks);
   EXPECT_FALSE(animation().isBusy());
   EXPECT_EQ(roo_time::Uptime::Max(), animation().nextFrameDeadline());
   EXPECT_TRUE(target_->isDirty());
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   EXPECT_FALSE(target_->isDirty());
   EXPECT_EQ(1, target_->clicks);
 }
 
-// Verifies forced final paint cannot settle across an interrupted refresh,
+// Verifies forced final paint settles only after the requested refresh,
 // and explicit cancellation removes the remaining frame deadline.
 TEST_F(ClickFrameTest,
        ForcedFinalFrameWaitsForPaintAndCancellationStopsFrames) {
   target_->policy = ClickActivationPolicy::kAfterForcedFinalFrame;
   target_->onSingleTapUp(8, 8);
   EXPECT_FLOAT_EQ(1, animation().progress());
-  ASSERT_FALSE(app_.refresh(roo_time::Uptime::Start()));
   EXPECT_EQ(0, target_->clicks);
   EXPECT_TRUE(animation().isBusy());
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   EXPECT_EQ(1, target_->clicks);
   EXPECT_EQ(roo_time::Uptime::Max(), animation().nextFrameDeadline());
   target_->policy = ClickActivationPolicy::kAfterNaturalAnimation;
@@ -245,19 +244,17 @@ TEST_F(ClickFrameTest,
   EXPECT_EQ(roo_time::Uptime::Max(), animation().nextFrameDeadline());
 }
 
-// Verifies a retained logical frame keeps its click sample even if an explicit
-// compatibility tick runs, then samples the next frame after continuation.
-TEST_F(ClickFrameTest, ContinuationFreezesClickSampleAndCompatibilityTick) {
+// Verifies each refresh and explicit click tick samples current time, without
+// preserving a previous paint's sample between calls.
+TEST_F(ClickFrameTest, EveryRefreshUsesCurrentClickSample) {
   target_->onShowPress(8, 8);
   system_time_delay_micros(20000);
-  ASSERT_FALSE(app_.refresh(roo_time::Uptime::Start()));
-  EXPECT_NEAR(0.1f, animation().progress(), 0.001f);
+  app_.refresh();
+  EXPECT_NEAR(0.1f, target_->painted_progress, 0.001f);
   system_time_delay_micros(100000);
   app_.root().refreshClickAnimation();
-  EXPECT_NEAR(0.1f, animation().progress(), 0.001f);
-  ASSERT_TRUE(app_.refresh());
-  EXPECT_NEAR(0.1f, target_->painted_progress, 0.001f);
-  ASSERT_TRUE(app_.refresh());
+  EXPECT_NEAR(0.6f, animation().progress(), 0.001f);
+  app_.refresh();
   EXPECT_NEAR(0.6f, target_->painted_progress, 0.001f);
 }
 
@@ -266,7 +263,7 @@ TEST_F(ClickFrameTest, ContinuationFreezesClickSampleAndCompatibilityTick) {
 TEST_F(ClickFrameTest, HeldAndNonAnimatedStatesHaveNoFrameDeadline) {
   target_->onShowPress(8, 8);
   system_time_delay_micros(200000);
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   EXPECT_TRUE(animation().isBusy());
   EXPECT_EQ(roo_time::Uptime::Max(), animation().nextFrameDeadline());
   target_->onSingleTapUp(8, 8);
@@ -276,7 +273,7 @@ TEST_F(ClickFrameTest, HeldAndNonAnimatedStatesHaveNoFrameDeadline) {
   EXPECT_TRUE(animation().isBusy());
   EXPECT_EQ(roo_time::Uptime::Max(), animation().nextFrameDeadline());
   EXPECT_EQ(1, target_->clicks);
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   EXPECT_EQ(2, target_->clicks);
 }
 
@@ -350,42 +347,44 @@ TEST_F(ClickFrameTest, FrameDeadlinePreservesMillisecondBoundaryAcrossWrap) {
   system_time_delay_micros(200);
   EXPECT_EQ(expected, animation().nextFrameDeadline());
   system_time_delay_micros((expected - roo_time::Uptime::Now()).inMicros());
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   EXPECT_NEAR(0.1f, animation().progress(), 0.001f);
   EXPECT_EQ(expected + roo_time::Millis(20), animation().nextFrameDeadline());
 }
 
-// Verifies forcing completion between slices retains the in-flight sample and
-// cannot deliver the click until the next logical frame paints the final value.
-TEST_F(ClickFrameTest, ForcedFinishBetweenSlicesWaitsForNextLogicalFrame) {
+// Verifies forcing the final sample after a refresh delivers exactly once
+// after the following refresh has painted that final sample.
+TEST_F(ClickFrameTest, ForcedFinishAppliesOnNextRefresh) {
   target_->onSingleTapUp(8, 8);
   system_time_delay_micros(20000);
-  ASSERT_FALSE(app_.refresh(roo_time::Uptime::Start()));
-  ASSERT_TRUE(animation().forceFinalFrame(*target_));
-  EXPECT_NEAR(0.1f, animation().progress(), 0.001f);
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   EXPECT_NEAR(0.1f, target_->painted_progress, 0.001f);
+  ASSERT_TRUE(animation().forceFinalFrame(*target_));
+  EXPECT_FLOAT_EQ(1.0f, animation().progress());
   EXPECT_EQ(0, target_->clicks);
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
+  EXPECT_FLOAT_EQ(1.0f, target_->painted_progress);
   EXPECT_EQ(1, target_->clicks);
   EXPECT_FALSE(animation().isBusy());
+  app_.refresh();
+  EXPECT_EQ(1, target_->clicks);
 }
 
-// Verifies an overdue retained sample requests at most one immediate follow-up
-// after continuation; the collector schedules the next eligible new paint.
-TEST_F(ClickFrameTest, ResumedClickDoesNotSpinOnOverdueFrameDeadline) {
+// Verifies a delayed dispatch samples current progress once and schedules
+// the next frame at the normal cadence without an immediate retry loop.
+TEST_F(ClickFrameTest, DelayedClickFrameDoesNotSpinOnOverdueDeadline) {
   app_.start();
   dispatch();
   system_time_delay_micros(20000);
   target_->onShowPress(8, 8);
   dispatch();
   system_time_delay_micros(20000);
-  ASSERT_FALSE(app_.refresh(roo_time::Uptime::Start()));
+  app_.refresh();
   system_time_delay_micros(100000);
   int before = keys_.dispatches;
   dispatch();
   EXPECT_EQ(before + 1, keys_.dispatches);
-  EXPECT_NEAR(0.1f, target_->painted_progress, 0.001f);
+  EXPECT_NEAR(0.6f, target_->painted_progress, 0.001f);
   EXPECT_EQ(roo_time::Uptime::Now() + roo_time::Millis(20),
             scheduler_.getNearestExecutionTime());
   system_time_delay_micros(20000);

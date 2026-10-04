@@ -84,10 +84,8 @@ class ColorDestination final : public Destination {
   } contents;
 };
 
-// Verifies a public refresh paints the destination tree and a
-// deadline-interrupted frame remains resumable through the same public one-shot
-// entry point.
-TEST(DisplayRuntimeCharacterization, RefreshPaintsAndResumesInterruptedFrame) {
+// Verifies one public refresh completely paints the destination tree.
+TEST(DisplayRuntimeCharacterization, RefreshPaintsDestinationBeforeReturning) {
   roo::byte raster[32 * 32 * 2] = {};
   roo_display::OffscreenDevice<roo_display::Argb4444> device(
       32, 32, raster, roo_display::Argb4444());
@@ -100,8 +98,7 @@ TEST(DisplayRuntimeCharacterization, RefreshPaintsAndResumesInterruptedFrame) {
   NavigationHost& navigation = app.addTaskFullScreen().navigation();
   navigation.push(destination);
 
-  EXPECT_FALSE(app.refresh(roo_time::Uptime::Start()));
-  EXPECT_TRUE(app.refresh());
+  app.refresh();
   int16_t x = 4;
   int16_t y = 4;
   roo_display::Color pixel;
@@ -133,7 +130,7 @@ TEST(DisplayRuntimeCharacterization,
   RecordingDestination destination(app.context());
   NavigationHost& navigation = app.addTaskFullScreen().navigation();
   navigation.push(destination);
-  ASSERT_TRUE(app.refresh());
+  app.refresh();
   ASSERT_TRUE(destination.contents.requestFocus());
 
   app.start();

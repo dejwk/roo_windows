@@ -82,7 +82,7 @@ class DecorationGoldenTest : public testing::Test {
         elevation, Dimensions(92, 58));
     app.add(WidgetRef(std::move(card)), roo_display::Box(44, 30, 135, 87));
 
-    EXPECT_TRUE(app.refresh());
+    app.refresh();
     return test::CaptureRgb(offscreen_.raster(), 20, 8, 140, 112);
   }
 

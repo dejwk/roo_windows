@@ -223,8 +223,7 @@ Color DynamicListBase::background() const {
 }
 
 void DynamicListBase::paint(PaintContext& context) const {
-  if (owner_ != nullptr && !resetting() && elementCount() > 1 && gap_ > 0 &&
-      !context.isDeadlineExceeded()) {
+  if (owner_ != nullptr && !resetting() && elementCount() > 1 && gap_ > 0) {
     Rect viewport = unclippedRegion(this);
     if (!viewport.empty()) {
       int first_band = std::max<YDim>(0, viewport.yMin() / rowStride() - 1);

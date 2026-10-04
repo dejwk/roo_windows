@@ -64,54 +64,54 @@ class TextFieldAnimationTest : public RooWindowsRenderTestSized<180, 48> {
 
 TEST_F(TextFieldAnimationTest, MissedBoundariesUseElapsedParity) {
   AddedField added = AddField();
-  ASSERT_TRUE(refresh());
+  refresh();
   added.task->textFieldEditor().edit(added.field, false);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_TRUE(added.field->caretActive());
   EXPECT_TRUE(added.task->textFieldEditor().isBlinkingCursorNowOn());
 
   ASSERT_EQ(AnimationStatus::kOk, added.field->seekCaret(500));
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_FALSE(added.task->textFieldEditor().isBlinkingCursorNowOn());
 
   ASSERT_EQ(AnimationStatus::kOk, added.field->seekCaret(1250));
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_TRUE(added.task->textFieldEditor().isBlinkingCursorNowOn());
 
   ASSERT_EQ(AnimationStatus::kOk, added.field->seekCaret(1750));
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_FALSE(added.task->textFieldEditor().isBlinkingCursorNowOn());
 }
 
 TEST_F(TextFieldAnimationTest, EditingRestartsAtVisiblePhaseZero) {
   AddedField added = AddField();
-  ASSERT_TRUE(refresh());
+  refresh();
   TextFieldEditor& editor = added.task->textFieldEditor();
   editor.edit(added.field, false);
-  ASSERT_TRUE(refresh());
+  refresh();
   ASSERT_EQ(AnimationStatus::kOk, added.field->seekCaret(500));
-  ASSERT_TRUE(refresh());
+  refresh();
   ASSERT_FALSE(editor.isBlinkingCursorNowOn());
 
   editor.rune(U'x');
   EXPECT_TRUE(editor.isBlinkingCursorNowOn());
   EXPECT_TRUE(added.field->caretActive());
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_TRUE(editor.isBlinkingCursorNowOn());
   EXPECT_EQ("x", added.field->content());
 }
 
 TEST_F(TextFieldAnimationTest, FocusTransferAcrossTasksCancelsOldTarget) {
   AddedField first = AddField();
-  ASSERT_TRUE(refresh());
+  refresh();
   first.task->textFieldEditor().edit(first.field, false);
-  ASSERT_TRUE(refresh());
+  refresh();
   ASSERT_TRUE(first.field->caretActive());
 
   AddedField second = AddField(8);
-  ASSERT_TRUE(refresh());
+  refresh();
   second.task->textFieldEditor().edit(second.field, false);
-  ASSERT_TRUE(refresh());
+  refresh();
 
   EXPECT_FALSE(first.field->caretActive());
   EXPECT_FALSE(first.task->textFieldEditor().isEdited(first.field));
@@ -121,50 +121,50 @@ TEST_F(TextFieldAnimationTest, FocusTransferAcrossTasksCancelsOldTarget) {
 
 TEST_F(TextFieldAnimationTest, HideAndShowDoesNotResumeStaleCaret) {
   AddedField added = AddField();
-  ASSERT_TRUE(refresh());
+  refresh();
   ASSERT_TRUE(added.field->requestFocus());
   ASSERT_TRUE(added.field->caretActive());
 
   added.task->setVisible(false);
   EXPECT_FALSE(added.field->caretActive());
   EXPECT_FALSE(added.task->textFieldEditor().isEdited(added.field));
-  ASSERT_TRUE(refresh());
+  refresh();
 
   added.task->setVisible(true);
-  ASSERT_TRUE(refresh());
+  refresh();
   delay(550);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_FALSE(added.field->caretActive());
   EXPECT_FALSE(added.task->textFieldEditor().isEdited(added.field));
 }
 
 TEST_F(TextFieldAnimationTest, DestroyingTargetClearsEditorAndTrack) {
   AddedField added = AddField();
-  ASSERT_TRUE(refresh());
+  refresh();
   ASSERT_TRUE(added.field->requestFocus());
   ASSERT_TRUE(added.field->caretActive());
   const TextField* former_address = added.field;
 
   added.task->navigation().clear();
   fields_.erase(fields_.begin());
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_FALSE(added.task->textFieldEditor().isEdited(former_address));
 }
 
 TEST_F(TextFieldAnimationTest, SlowCaretDoesNotPollAtFrameCadence) {
   AddedField added = AddField();
-  ASSERT_TRUE(refresh());
+  refresh();
   added.task->textFieldEditor().edit(added.field, false);
-  ASSERT_TRUE(refresh());
+  refresh();
   int initial_frames = added.field->caretFrameCount();
   ASSERT_GT(initial_frames, 0);
 
   delay(20);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(initial_frames, added.field->caretFrameCount());
 
   delay(480);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_GT(added.field->caretFrameCount(), initial_frames);
   EXPECT_FALSE(added.task->textFieldEditor().isBlinkingCursorNowOn());
 }

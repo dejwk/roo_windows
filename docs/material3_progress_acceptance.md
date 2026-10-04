@@ -24,9 +24,10 @@ Real-registry tests cover large elapsed-time jumps, hidden ancestors, empty
 layouts, immediate detach/reattach, repeated reconciliation, reduced-motion
 restart and determinate cancellation. Instrumented output is confined to the
 nominal 240-pixel linear band (3/4 pixels thick at 75%/100%) or a 48×48 circular
-footprint. An unchanged refresh writes zero pixels. A slow output device forces
-paint continuation and verifies that a pending seek cannot change the published
-phase partway through that logical frame.
+footprint. An unchanged refresh writes zero pixels. Following the removal of
+framework paint interruption on 2026-10-05, the slow-output regression checks
+that each refresh completes at its sampled phase and that a seek is applied by
+the following refresh.
 
 Nested list slots, independently opening menus, legacy dialogs, Material basic
 dialogs and navigation-backed full-screen dialogs exercise ownership and

@@ -84,7 +84,7 @@ TEST_F(Material3IconButtonGoldenTest, Styles) {
   AddButton(app, 124, 12, IconButtonStyle::kFilledTonal);
   AddButton(app, 180, 12, IconButtonStyle::kOutlined);
 
-  ASSERT_TRUE(app.refresh());
+  app.refresh();
   EXPECT_TRUE(test::CompareOrUpdateGolden(
       Capture(), "test/goldens/material3_icon_button/styles.ppm",
       "material3_icon_button_styles"));
@@ -100,7 +100,7 @@ TEST_F(Material3IconButtonGoldenTest, Sizes) {
   AddButton(app, 12, 80, IconButtonStyle::kFilled, ButtonSize::kLarge);
   AddButton(app, 120, 68, IconButtonStyle::kFilled, ButtonSize::kExtraLarge);
 
-  ASSERT_TRUE(app.refresh());
+  app.refresh();
   EXPECT_TRUE(test::CompareOrUpdateGolden(
       Capture(), "test/goldens/material3_icon_button/sizes.ppm",
       "material3_icon_button_sizes"));
@@ -121,7 +121,7 @@ TEST_F(Material3IconButtonGoldenTest, ShapesAndWidths) {
   AddButton(app, 148, 124, IconButtonStyle::kOutlined, ButtonSize::kMedium,
             ButtonShape::kRound, IconButtonWidth::kWide);
 
-  ASSERT_TRUE(app.refresh());
+  app.refresh();
   EXPECT_TRUE(test::CompareOrUpdateGolden(
       Capture(), "test/goldens/material3_icon_button/shapes_and_widths.ppm",
       "material3_icon_button_shapes_and_widths"));
@@ -138,9 +138,9 @@ TEST_F(Material3IconButtonGoldenTest, DisabledAndPressedStates) {
   IconButton* pressed = AddButton(app, 156, 12, IconButtonStyle::kFilledTonal,
                                   ButtonSize::kMedium, ButtonShape::kSquare);
 
-  ASSERT_TRUE(app.refresh());
+  app.refresh();
   pressed->onShowPress(pressed->width() / 2, pressed->height() / 2);
-  ASSERT_TRUE(app.refresh());
+  app.refresh();
   EXPECT_TRUE(test::CompareOrUpdateGolden(
       Capture(), "test/goldens/material3_icon_button/disabled_and_pressed.ppm",
       "material3_icon_button_disabled_and_pressed"));

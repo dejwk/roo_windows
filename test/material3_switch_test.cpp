@@ -159,7 +159,7 @@ TEST_F(SwitchAnimationTest, MaterialClickAnimationCoexistsWithThumbTrack) {
   app_.add(std::move(sw),
            roo_display::Box(Scaled(10), Scaled(8), Scaled(10) + Scaled(52) - 1,
                             Scaled(8) + Scaled(32) - 1));
-  ASSERT_TRUE(refresh());
+  refresh();
   const float off_x = sw_ptr->getPointOverlayFocus().x;
 
   sw_ptr->onSingleTapUp(sw_ptr->width() / 2, sw_ptr->height() / 2);
@@ -168,9 +168,9 @@ TEST_F(SwitchAnimationTest, MaterialClickAnimationCoexistsWithThumbTrack) {
   EXPECT_TRUE(sw_ptr->thumbAnimationActive());
   EXPECT_FLOAT_EQ(off_x, sw_ptr->getPointOverlayFocus().x);
 
-  ASSERT_TRUE(refresh());
+  refresh();
   delay(50);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_TRUE(sw_ptr->isClicking());
   EXPECT_TRUE(sw_ptr->thumbAnimationActive());
   EXPECT_GT(sw_ptr->getPointOverlayFocus().x, off_x);
@@ -178,7 +178,7 @@ TEST_F(SwitchAnimationTest, MaterialClickAnimationCoexistsWithThumbTrack) {
             off_x + static_cast<float>(Scaled(20)));
 
   delay(60);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_FALSE(sw_ptr->thumbAnimationActive());
   EXPECT_FLOAT_EQ(off_x + static_cast<float>(Scaled(20)),
                   sw_ptr->getPointOverlayFocus().x);
@@ -192,25 +192,25 @@ TEST_F(SwitchAnimationTest, MaterialRapidToggleRetargetsContinuously) {
   app_.add(std::move(sw),
            roo_display::Box(Scaled(10), Scaled(8), Scaled(10) + Scaled(52) - 1,
                             Scaled(8) + Scaled(32) - 1));
-  ASSERT_TRUE(refresh());
+  refresh();
   const float off_x = sw_ptr->getPointOverlayFocus().x;
 
   sw_ptr->onClicked();
-  ASSERT_TRUE(refresh());
+  refresh();
   delay(40);
-  ASSERT_TRUE(refresh());
+  refresh();
   const float midpoint = sw_ptr->getPointOverlayFocus().x;
   ASSERT_GT(midpoint, off_x);
 
   sw_ptr->onClicked();
   ASSERT_FALSE(sw_ptr->isOn());
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_FLOAT_EQ(midpoint, sw_ptr->getPointOverlayFocus().x);
   delay(40);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_LT(sw_ptr->getPointOverlayFocus().x, midpoint);
   delay(70);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_FALSE(sw_ptr->thumbAnimationActive());
   EXPECT_FLOAT_EQ(off_x, sw_ptr->getPointOverlayFocus().x);
 }
@@ -223,20 +223,20 @@ TEST_F(SwitchAnimationTest, LegacySwitchUsesOneHundredTwentyMillisecondTrack) {
   app_.add(std::move(sw),
            roo_display::Box(Scaled(10), Scaled(10), Scaled(10) + Scaled(42) - 1,
                             Scaled(10) + Scaled(24) - 1));
-  ASSERT_TRUE(refresh());
+  refresh();
   const float off_x = sw_ptr->getPointOverlayFocus().x;
 
   sw_ptr->onClicked();
-  ASSERT_TRUE(refresh());
+  refresh();
   delay(60);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_TRUE(sw_ptr->thumbAnimationActive());
   EXPECT_GT(sw_ptr->getPointOverlayFocus().x, off_x);
   EXPECT_LT(sw_ptr->getPointOverlayFocus().x,
             off_x + static_cast<float>(Scaled(19)));
 
   delay(70);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_FALSE(sw_ptr->thumbAnimationActive());
   EXPECT_FLOAT_EQ(off_x + static_cast<float>(Scaled(19)),
                   sw_ptr->getPointOverlayFocus().x);
@@ -257,7 +257,7 @@ TEST_F(SwitchAnimationTest, ProgrammaticSettersSnapAndCancelTracks) {
             Rect(Scaled(68), Scaled(10), Scaled(68) + Scaled(42) - 1,
                  Scaled(10) + Scaled(24) - 1));
   app_.add(std::move(host), roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
-  ASSERT_TRUE(refresh());
+  refresh();
 
   material_ptr->onClicked();
   legacy_ptr->onClicked();
@@ -282,24 +282,24 @@ TEST_F(SwitchAnimationTest, HiddenMaterialSwitchSnapsWithoutResume) {
   app_.add(std::move(sw),
            roo_display::Box(Scaled(10), Scaled(8), Scaled(10) + Scaled(52) - 1,
                             Scaled(8) + Scaled(32) - 1));
-  ASSERT_TRUE(refresh());
+  refresh();
   const float off_x = sw_ptr->getPointOverlayFocus().x;
   sw_ptr->onClicked();
-  ASSERT_TRUE(refresh());
+  refresh();
   delay(40);
-  ASSERT_TRUE(refresh());
+  refresh();
   ASSERT_TRUE(sw_ptr->thumbAnimationActive());
 
   sw_ptr->setVisibility(Visibility::kInvisible);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_FALSE(sw_ptr->thumbAnimationActive());
   EXPECT_FLOAT_EQ(off_x + static_cast<float>(Scaled(20)),
                   sw_ptr->getPointOverlayFocus().x);
 
   sw_ptr->setVisibility(Visibility::kVisible);
-  ASSERT_TRUE(refresh());
+  refresh();
   delay(120);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_FALSE(sw_ptr->thumbAnimationActive());
   EXPECT_FLOAT_EQ(off_x + static_cast<float>(Scaled(20)),
                   sw_ptr->getPointOverlayFocus().x);
@@ -310,21 +310,21 @@ TEST_F(SwitchAnimationTest, HiddenMaterialSwitchSnapsWithoutResume) {
 TEST_F(SwitchAnimationTest, DetachedLegacySwitchSnapsWithoutResume) {
   TestLegacySwitch sw(context());
   Task& task = app_.addTaskFullScreen(sw);
-  ASSERT_TRUE(refresh());
+  refresh();
   const float off_x = sw.getPointOverlayFocus().x;
   sw.onClicked();
-  ASSERT_TRUE(refresh());
+  refresh();
   delay(50);
-  ASSERT_TRUE(refresh());
+  refresh();
   ASSERT_TRUE(sw.thumbAnimationActive());
 
   task.navigation().clear();
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_FALSE(sw.thumbAnimationActive());
   EXPECT_FLOAT_EQ(off_x + static_cast<float>(Scaled(19)),
                   sw.getPointOverlayFocus().x);
   delay(140);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_FLOAT_EQ(off_x + static_cast<float>(Scaled(19)),
                   sw.getPointOverlayFocus().x);
 }

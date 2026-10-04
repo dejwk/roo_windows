@@ -75,11 +75,11 @@ TEST_F(TransientActivityObserverTest, DeliversOpenAndCloseChanges) {
 
   Registration presentation;
   ASSERT_EQ(PresentationStartResult::kStarted, slot().show(presentation));
-  ASSERT_TRUE(refresh());
+  refresh();
   ASSERT_EQ(std::vector<bool>({true}), added.observer->events);
 
   presentation.finish(PresentationFinishReason::kCancel);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(std::vector<bool>({true, false}), added.observer->events);
 }
 
@@ -89,16 +89,16 @@ TEST_F(TransientActivityObserverTest, ReplacementCoalescesAsStillActive) {
   Registration first;
   Registration second;
   ASSERT_EQ(PresentationStartResult::kStarted, slot().show(first));
-  ASSERT_TRUE(refresh());
+  refresh();
   ASSERT_EQ(1u, added.observer->events.size());
 
   ASSERT_EQ(PresentationStartResult::kStarted, slot().replace(second));
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(1u, added.observer->events.size());
   EXPECT_TRUE(added.observer->events.back());
 
   second.finish(PresentationFinishReason::kCancel);
-  ASSERT_TRUE(refresh());
+  refresh();
   ASSERT_EQ(2u, added.observer->events.size());
   EXPECT_FALSE(added.observer->events.back());
 }
@@ -109,11 +109,11 @@ TEST_F(TransientActivityObserverTest, UnsubscribeDuringDeliveryIsSafe) {
   added.observer->unsubscribe_from = &slot();
   Registration presentation;
   ASSERT_EQ(PresentationStartResult::kStarted, slot().show(presentation));
-  ASSERT_TRUE(refresh());
+  refresh();
   ASSERT_EQ(1u, added.observer->events.size());
 
   presentation.finish(PresentationFinishReason::kCancel);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(1u, added.observer->events.size());
 }
 
@@ -124,7 +124,7 @@ TEST_F(TransientActivityObserverTest, DetachRemovesBorrowedObserver) {
 
   Registration presentation;
   ASSERT_EQ(PresentationStartResult::kStarted, slot().show(presentation));
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_TRUE(added.observer->events.empty());
 }
 
@@ -136,9 +136,9 @@ TEST_F(TransientActivityObserverTest, DestroyAfterDetachLeavesNoBorrowedPointer)
 
   Registration presentation;
   ASSERT_EQ(PresentationStartResult::kStarted, slot().show(presentation));
-  EXPECT_TRUE(refresh());
+  refresh();
   presentation.finish(PresentationFinishReason::kCancel);
-  EXPECT_TRUE(refresh());
+  refresh();
 }
 
 TEST(TransientActivityObserver, ControlStorageStaysWithinTargetBudget) {

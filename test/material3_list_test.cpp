@@ -722,10 +722,10 @@ TEST_F(Material3ListRenderTest,
   panel_ptr->setAnimationDuration(100);
   panel_ptr->setContent(WidgetRef(std::move(content)));
   app_.add(WidgetRef(std::move(panel)), roo_display::Box(0, 0, 79, 29));
-  ASSERT_TRUE(refresh());
+  refresh();
 
   panel_ptr->setExpanded(true);
-  ASSERT_TRUE(refresh());
+  refresh();
   Dimensions start =
       panel_ptr->measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
   EXPECT_EQ(0, start.height());
@@ -736,7 +736,7 @@ TEST_F(Material3ListRenderTest,
   EXPECT_EQ(start.height(), repeated.height());
 
   delay(45);
-  ASSERT_TRUE(refresh());
+  refresh();
   Dimensions middle =
       panel_ptr->measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
   EXPECT_TRUE(panel_ptr->isAnimating());
@@ -744,7 +744,7 @@ TEST_F(Material3ListRenderTest,
   EXPECT_LT(middle.height(), 30);
 
   delay(70);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_FALSE(panel_ptr->isAnimating());
   Dimensions expanded =
       panel_ptr->measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
@@ -760,12 +760,12 @@ TEST_F(Material3ListRenderTest, ExpandablePanelRapidReversalIsContinuous) {
   panel_ptr->setAnimationDuration(120);
   panel_ptr->setContent(WidgetRef(std::move(content)));
   app_.add(WidgetRef(std::move(panel)), roo_display::Box(0, 0, 79, 39));
-  ASSERT_TRUE(refresh());
+  refresh();
 
   panel_ptr->setExpanded(true);
-  ASSERT_TRUE(refresh());
+  refresh();
   delay(65);
-  ASSERT_TRUE(refresh());
+  refresh();
   const int16_t outward =
       panel_ptr->measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0))
           .height();
@@ -773,13 +773,13 @@ TEST_F(Material3ListRenderTest, ExpandablePanelRapidReversalIsContinuous) {
   ASSERT_LT(outward, 40);
 
   panel_ptr->setExpanded(false);
-  ASSERT_TRUE(refresh());
+  refresh();
   const int16_t reversal =
       panel_ptr->measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0))
           .height();
   EXPECT_EQ(outward, reversal);
   delay(30);
-  ASSERT_TRUE(refresh());
+  refresh();
   const int16_t returning =
       panel_ptr->measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0))
           .height();
@@ -787,7 +787,7 @@ TEST_F(Material3ListRenderTest, ExpandablePanelRapidReversalIsContinuous) {
   EXPECT_LT(returning, reversal);
 
   delay(60);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_FALSE(panel_ptr->isAnimating());
   EXPECT_EQ(
       0,
@@ -804,14 +804,14 @@ TEST_F(Material3ListRenderTest, ExpandablePanelPausesWhileHidden) {
   panel_ptr->setAnimationDuration(120);
   panel_ptr->setContent(WidgetRef(std::move(content)));
   app_.add(WidgetRef(std::move(panel)), roo_display::Box(0, 0, 79, 39));
-  ASSERT_TRUE(refresh());
+  refresh();
 
   panel_ptr->setExpanded(true);
-  ASSERT_TRUE(refresh());
+  refresh();
   delay(45);
-  ASSERT_TRUE(refresh());
+  refresh();
   panel_ptr->setVisibility(Visibility::kInvisible);
-  ASSERT_TRUE(refresh());
+  refresh();
   const int16_t paused =
       panel_ptr->measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0))
           .height();
@@ -819,7 +819,7 @@ TEST_F(Material3ListRenderTest, ExpandablePanelPausesWhileHidden) {
   ASSERT_LT(paused, 40);
 
   delay(150);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_TRUE(panel_ptr->isAnimating());
   EXPECT_EQ(
       paused,
@@ -827,9 +827,9 @@ TEST_F(Material3ListRenderTest, ExpandablePanelPausesWhileHidden) {
           .height());
 
   panel_ptr->setVisibility(Visibility::kVisible);
-  ASSERT_TRUE(refresh());
+  refresh();
   delay(100);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_FALSE(panel_ptr->isAnimating());
   EXPECT_EQ(
       40,
@@ -851,11 +851,11 @@ TEST_F(Material3ListRenderTest,
 
   Task& task = app_.addTaskFullScreen();
   task.navigation().push(panel_destination);
-  ASSERT_TRUE(refresh());
+  refresh();
   panel.setExpanded(true);
-  ASSERT_TRUE(refresh());
+  refresh();
   delay(45);
-  ASSERT_TRUE(refresh());
+  refresh();
   const int16_t partial =
       panel.measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0))
           .height();
@@ -863,13 +863,13 @@ TEST_F(Material3ListRenderTest,
   ASSERT_LT(partial, 30);
 
   task.navigation().push(covering_destination);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_FALSE(panel.isAnimating());
   delay(140);
-  ASSERT_TRUE(refresh());
+  refresh();
 
   task.navigation().pop();
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_TRUE(panel.isExpanded());
   EXPECT_FALSE(panel.isAnimating());
   EXPECT_EQ(30,
@@ -913,13 +913,13 @@ TEST_F(Material3ListRenderTest, NavigationRowWaitsForFinalFrameBeforeHiding) {
     row_ptr->setVisibility(Visibility::kGone);
   });
   app_.add(WidgetRef(std::move(row)), roo_display::Box(0, 0, 179, 55));
-  ASSERT_TRUE(refresh());
+  refresh();
 
   row_ptr->onSingleTapUp(10, 10);
   EXPECT_EQ(0, invocations);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(1, invocations);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(1, invocations);
 }
 
@@ -931,13 +931,13 @@ TEST_F(Material3ListRenderTest, SelectionRowsStillApplyQuickTapsImmediately) {
     int invocations = 0;
     row_ptr->item().setOnInvoked([&]() { ++invocations; });
     app_.add(WidgetRef(std::move(row)), roo_display::Box(0, 0, 179, 55));
-    ASSERT_TRUE(refresh());
+    refresh();
     EXPECT_FALSE(selected(row_ptr->item()));
     row_ptr->onSingleTapUp(10, 10);
     EXPECT_TRUE(selected(row_ptr->item()));
     EXPECT_EQ(1, invocations);
     row_ptr->setVisibility(Visibility::kGone);
-    ASSERT_TRUE(refresh());
+    refresh();
     EXPECT_EQ(1, invocations);
   };
   verify(std::make_unique<ListRow<CheckboxListItem>>(context(), "Check"),
@@ -957,16 +957,16 @@ TEST_F(Material3ListRenderTest,
       "Expanded body details line.");
   TestListRow<ExpandableBodyListItem>* row_ptr = row.get();
   app_.add(WidgetRef(std::move(row)), roo_display::Box(0, 0, 179, 139));
-  ASSERT_TRUE(refresh());
+  refresh();
 
   EXPECT_TRUE(row_ptr->isClickable());
   Dimensions collapsed =
       row_ptr->measure(WidthSpec::Exactly(180), HeightSpec::Unspecified(0));
 
   row_ptr->onClicked();
-  ASSERT_TRUE(refresh());
+  refresh();
   delay(200);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_TRUE(row_ptr->item().bodyPanel().isExpanded());
   EXPECT_FALSE(row_ptr->item().bodyPanel().isAnimating());
 
@@ -1063,14 +1063,14 @@ TEST_F(Material3ExpandableRippleTest,
   scroll_ptr->setContents(WidgetRef(std::move(content)));
   app_.add(std::move(scroll), roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
 
-  ASSERT_TRUE(refresh());
+  refresh();
 
   // Bring row1's top near the top of the viewport (deep scroll offset).
   XDim row_lx;
   YDim row_ly;
   row1_ptr->getAbsoluteOffset(row_lx, row_ly);
   scroll_ptr->scrollTo(0, 24 - row_ly);
-  ASSERT_TRUE(refresh());
+  refresh();
 
   // Capture a PRISTINE reference of the final (expanded) layout produced with
   // no click animation. Expanding directly drives the normal layout
@@ -1081,7 +1081,7 @@ TEST_F(Material3ExpandableRippleTest,
   content_ptr->invalidateInterior();
   section_ptr->invalidateInterior();
   list_ptr->invalidateInterior();
-  ASSERT_TRUE(refresh());
+  refresh();
   ASSERT_TRUE(row1_ptr->item().bodyPanel().isExpanded());
   ASSERT_FALSE(row1_ptr->item().bodyPanel().isAnimating());
   std::vector<roo_display::Color> expanded_clean(kWidth * kHeight);
@@ -1095,7 +1095,7 @@ TEST_F(Material3ExpandableRippleTest,
   content_ptr->invalidateInterior();
   section_ptr->invalidateInterior();
   list_ptr->invalidateInterior();
-  ASSERT_TRUE(refresh());
+  refresh();
 
   // Record row1's collapsed device bounds so we can probe for ripple pixels
   // painted OUTSIDE the row (on the parent surface) during the gesture.
@@ -1125,7 +1125,7 @@ TEST_F(Material3ExpandableRippleTest,
   for (int frame = 0; frame < 12; ++frame) {
     delay(70);
     app_.root().refreshClickAnimation();
-    ASSERT_TRUE(refresh());
+    refresh();
     if (frame_first_overshoot < 0) {
       // Scan the band to the left of and above the row's left/top edges.
       for (int16_t y = 0; y < kHeight && frame_first_overshoot < 0; ++y) {
@@ -1520,7 +1520,7 @@ TEST_F(Material3ListRenderTest, InsetDividerPaintUsesResolvedInsets) {
 
   app_.add(WidgetRef(std::move(list)), roo_display::Box(10, 12, 149, 123));
 
-  ASSERT_TRUE(refresh());
+  refresh();
 
   roo_display::Color divider_color = test_support::QuantizeToArgb4444(
       context().theme().material3Theme().color.resolve(
@@ -1568,7 +1568,7 @@ TEST_F(Material3ListRenderTest, ExpressiveInsetDividerPaintUsesGapSpace) {
 
   app_.add(WidgetRef(std::move(list)), roo_display::Box(10, 12, 149, 123));
 
-  ASSERT_TRUE(refresh());
+  refresh();
 
   roo_display::Color divider_color = test_support::QuantizeToArgb4444(
       context().theme().material3Theme().color.resolve(
@@ -1715,7 +1715,7 @@ TEST_F(Material3ListRenderTest, ContentColorsFollowExpressiveSelection) {
     visual.variant =
         state == 3 ? ListVariant::kBaseline : ListVariant::kExpressive;
     row->setVisualContext(visual);
-    ASSERT_TRUE(refresh());
+    refresh();
     bool selected = state == 1;
     Color secondary =
         selected ? colors.onSecondaryContainer : colors.onSurfaceVariant;
@@ -1727,10 +1727,10 @@ TEST_F(Material3ListRenderTest, ContentColorsFollowExpressiveSelection) {
   row->item().leadingIcon().setColor(roo_display::color::Red);
   visual.variant = ListVariant::kExpressive;
   row->setVisualContext(visual);
-  ASSERT_TRUE(refresh());
+  refresh();
   expectInkColor(row->getChild(0), roo_display::color::Red);
   row->item().leadingIcon().setColor(roo_display::color::Transparent);
-  ASSERT_TRUE(refresh());
+  refresh();
   expectInkColor(row->getChild(0), colors.onSecondaryContainer);
 }
 
@@ -1751,7 +1751,7 @@ TEST_F(Material3ListRenderTest, TrailingTextAndOverlineInheritListColors) {
   for (bool selected : {true, false, true}) {
     visual.selected = selected;
     row->setVisualContext(visual);
-    ASSERT_TRUE(refresh());
+    refresh();
     for (int index : {0, 2, 3}) {
       expectInkColor(row->getChild(index), selected
                                                ? colors.onSecondaryContainer

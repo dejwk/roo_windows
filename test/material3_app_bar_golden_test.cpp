@@ -35,7 +35,7 @@ class Material3AppBarGoldenTest : public testing::Test {
     AddTitleBar(app, 264, AppBarVariant::kLargeFlexible, "Library", "", true,
                 surface_state);
 
-    EXPECT_TRUE(app.refresh());
+    app.refresh();
     return test::CaptureRgb(offscreen_.raster(), 0, 0, kWidth, 440);
   }
 
@@ -48,7 +48,7 @@ class Material3AppBarGoldenTest : public testing::Test {
     search->setTrailing(0, std::move(close));
     app.add(std::move(search), roo_display::Box(16, 16, 303, 71));
 
-    EXPECT_TRUE(app.refresh());
+    app.refresh();
     return test::CaptureRgb(offscreen_.raster(), 0, 0, kWidth, 88);
   }
 
@@ -57,7 +57,7 @@ class Material3AppBarGoldenTest : public testing::Test {
     AddSearchAppBar(app, 0, AppBarSurfaceState::kFlat);
     AddSearchAppBar(app, 72, AppBarSurfaceState::kScrolled);
 
-    EXPECT_TRUE(app.refresh());
+    app.refresh();
     return test::CaptureRgb(offscreen_.raster(), 0, 0, kWidth, 136);
   }
 

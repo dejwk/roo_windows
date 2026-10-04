@@ -157,18 +157,18 @@ TEST(PresentationRegistry, ObservedWidgetReceivesCoalescedChanges) {
   app.add(WidgetRef(std::move(parent)), roo_display::Box(0, 0, 15, 15));
 
   ASSERT_TRUE(raw_child->observePresentation());
-  ASSERT_TRUE(app.refresh());
+  app.refresh();
   ASSERT_EQ(1u, raw_child->changes.size());
   EXPECT_EQ(PresentationState::kPresented, raw_child->changes.back().state);
   EXPECT_FALSE(raw_child->changes.back().detached_since_delivery);
 
   raw_parent->setVisibility(Visibility::kInvisible);
   raw_parent->setVisibility(Visibility::kVisible);
-  ASSERT_TRUE(app.refresh());
+  app.refresh();
   EXPECT_EQ(1u, raw_child->changes.size());
 
   raw_parent->setVisibility(Visibility::kInvisible);
-  ASSERT_TRUE(app.refresh());
+  app.refresh();
   ASSERT_EQ(2u, raw_child->changes.size());
   EXPECT_EQ(PresentationState::kHidden, raw_child->changes.back().state);
 }

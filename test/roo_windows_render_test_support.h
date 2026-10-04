@@ -160,9 +160,7 @@ class RooWindowsRenderTest : public testing::Test {
     return color[0];
   }
 
-  bool refresh(roo_time::Uptime deadline = roo_time::Uptime::Max()) {
-    return app_.refresh(deadline);
-  }
+  void refresh() { app_.refresh(); }
 
   ApplicationContext& context() { return app_.context(); }
   const ApplicationContext& context() const { return app_.context(); }
@@ -195,9 +193,7 @@ class RooWindowsRenderTestSized : public testing::Test {
     return color[0];
   }
 
-  bool refresh(roo_time::Uptime deadline = roo_time::Uptime::Max()) {
-    return app_.refresh(deadline);
-  }
+  void refresh() { app_.refresh(); }
 
   ApplicationContext& context() { return app_.context(); }
   const ApplicationContext& context() const { return app_.context(); }

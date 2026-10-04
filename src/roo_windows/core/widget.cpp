@@ -737,13 +737,9 @@ void Widget::paintWidget(const Canvas& canvas, Clipper& clipper) {
       paintWidgetModded(ctx);
     }
   }
-  // Do not publish terminal state for a widget whose paint was interrupted;
-  // retained entries would claim pixels that the continuation still owes.
-  if (!clipper.wasPaintInterrupted()) {
-    ctx.setClipBox(canvas.clip_box());
-    emitPersistentDecoration(ctx);
-    ctx.addExclusion(getDirectPaintExclusionBounds());
-  }
+  ctx.setClipBox(canvas.clip_box());
+  emitPersistentDecoration(ctx);
+  ctx.addExclusion(getDirectPaintExclusionBounds());
   clipper.popOverlaySpec();
 }
 
@@ -752,7 +748,6 @@ void Widget::paintWidgetModded(PaintContext& ctx) {
   Canvas& canvas = ctx.canvas();
   Clipper& clipper = ctx.clipperForFramework();
   const OverlaySpec& overlay_spec = clipper.currentOverlaySpec();
-  bool final_click_frame = false;
   if (overlay_spec.is_disabled()) {
     roo_display::DisplayOutput& out = canvas.out();
     roo_display::TranslucencyFilter disablement_filter(
@@ -778,12 +773,9 @@ void Widget::paintWidgetModded(PaintContext& ctx) {
                                         canvas.clip_box());
         }
       } else {
-        // Clear provisionally so state-change invalidations are consumed by
-        // this final overlay paint. If the refresh deadline prevents that
-        // paint, restore kWidgetClicking below so ClickAnimation cannot retire
-        // a frame that was never emitted.
+        // Consume state-change invalidations in this final overlay paint.
+        // Semantic click delivery follows after the drawing context closes.
         clearClicking();
-        final_click_frame = true;
       }
     }
     if (overlay_spec.has_press_overlay()) {
@@ -808,18 +800,11 @@ void Widget::paintWidgetModded(PaintContext& ctx) {
     } else {
       paintWidgetContents(ctx);
     }
-    if (final_click_frame && clipper.wasPaintInterrupted()) {
-      setClicking();
-    }
   }
 }
 
 void Widget::paintWidgetContents(PaintContext& ctx) {
   if (!isDirty()) return;
-  if (ctx.isDeadlineExceeded()) {
-    ctx.markPaintInterrupted();
-    return;
-  }
   PaintContext content_ctx(prepareContentsCanvas(ctx.canvas()),
                            ctx.clipperForFramework());
   paint(content_ctx);

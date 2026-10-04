@@ -43,24 +43,24 @@ class ProgressBarAnimationTest : public RooWindowsRenderTestSized<120, 20> {
 
 TEST_F(ProgressBarAnimationTest, UsesDeterministicPerPresentationPhase) {
   TestProgressBar* progress = AddProgressBar();
-  ASSERT_TRUE(refresh());
+  refresh();
   ASSERT_TRUE(progress->marqueeActive());
   EXPECT_EQ(0, progress->marqueePhaseMs());
 
   ASSERT_EQ(AnimationStatus::kOk, progress->seekMarquee(512));
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(512, progress->marqueePhaseMs());
 
   ASSERT_EQ(AnimationStatus::kOk, progress->seekMarquee(1424 + 37));
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(37, progress->marqueePhaseMs());
 }
 
 TEST_F(ProgressBarAnimationTest, DeterminateModeCancelsAndRestartResetsPhase) {
   TestProgressBar* progress = AddProgressBar();
-  ASSERT_TRUE(refresh());
+  refresh();
   ASSERT_EQ(AnimationStatus::kOk, progress->seekMarquee(700));
-  ASSERT_TRUE(refresh());
+  refresh();
   ASSERT_EQ(700, progress->marqueePhaseMs());
 
   progress->setProgress(5000);
@@ -75,17 +75,17 @@ TEST_F(ProgressBarAnimationTest, DeterminateModeCancelsAndRestartResetsPhase) {
 
 TEST_F(ProgressBarAnimationTest, HiddenAndEmptyBarsRestartAtPhaseZero) {
   TestProgressBar* progress = AddProgressBar();
-  ASSERT_TRUE(refresh());
+  refresh();
   ASSERT_EQ(AnimationStatus::kOk, progress->seekMarquee(600));
-  ASSERT_TRUE(refresh());
+  refresh();
 
   progress->setVisibility(Visibility::kInvisible);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_FALSE(progress->marqueeActive());
   EXPECT_EQ(0, progress->marqueePhaseMs());
 
   progress->setVisibility(Visibility::kVisible);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_TRUE(progress->marqueeActive());
   EXPECT_EQ(0, progress->marqueePhaseMs());
 
@@ -100,26 +100,26 @@ TEST_F(ProgressBarAnimationTest, HiddenAndEmptyBarsRestartAtPhaseZero) {
 TEST_F(ProgressBarAnimationTest, DetachedBarCancelsAndResetsPhase) {
   TestProgressBar progress(context());
   Task& task = app_.addTaskFullScreen(progress);
-  ASSERT_TRUE(refresh());
+  refresh();
   ASSERT_EQ(AnimationStatus::kOk, progress.seekMarquee(450));
-  ASSERT_TRUE(refresh());
+  refresh();
   ASSERT_EQ(450, progress.marqueePhaseMs());
 
   task.navigation().clear();
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_FALSE(progress.marqueeActive());
   EXPECT_EQ(0, progress.marqueePhaseMs());
 }
 
 TEST_F(ProgressBarAnimationTest, MovingSegmentRestoresVacatedPixels) {
   TestProgressBar* progress = AddProgressBar();
-  ASSERT_TRUE(refresh());
+  refresh();
   roo_display::Color bright = pixelAt(10, 9);
   roo_display::Color dim = pixelAt(105, 9);
   ASSERT_NE(bright, dim);
 
   ASSERT_EQ(AnimationStatus::kOk, progress->seekMarquee(800));
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(dim, pixelAt(10, 9));
   EXPECT_EQ(bright, pixelAt(70, 9));
 }

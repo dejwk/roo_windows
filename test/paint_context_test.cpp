@@ -142,7 +142,7 @@ TEST_F(PaintContextTest, DerivedContextsUpdateOriginAndLocalClip) {
                   FillMode::kVisible, BlendingMode::kSourceOver);
   Canvas canvas(&surface);
   internal::ClipperState clipper_state;
-  Clipper clipper(clipper_state, canvas.out(), roo_time::Uptime::Max());
+  Clipper clipper(clipper_state, canvas.out());
   PaintContext ctx(canvas, clipper);
 
   EXPECT_EQ(Rect(1, 1, 10, 10), ctx.localClip());
@@ -162,7 +162,7 @@ TEST_F(PaintContextTest, AddExclusionTranslatesAndClipsLocalBounds) {
                   FillMode::kVisible, BlendingMode::kSourceOver);
   Canvas canvas(&surface);
   internal::ClipperState clipper_state;
-  Clipper clipper(clipper_state, canvas.out(), roo_time::Uptime::Max());
+  Clipper clipper(clipper_state, canvas.out());
   PaintContext ctx(canvas, clipper);
 
   ctx.addExclusion(Rect(0, 0, 10, 10));
@@ -177,25 +177,9 @@ TEST_F(PaintContextTest, AddExclusionTranslatesAndClipsLocalBounds) {
   EXPECT_EQ(1u, clipper.exclusions().size());
 }
 
-TEST_F(PaintContextTest, RetainedStateReopensOnlyInvalidatedExclusionPixels) {
-  internal::ClipperState clipper_state;
-  {
-    Clipper clipper(clipper_state, display_.output(), roo_time::Uptime::Max());
-    clipper.addExclusion(Box(2, 2, 9, 9));
-  }
-
-  clipper_state.invalidate(Box(5, 5, 6, 6));
-  Clipper resumed(clipper_state, display_.output(), roo_time::Uptime::Max(),
-                  /*resume=*/true);
-
-  ASSERT_EQ(4u, resumed.exclusions().size());
-  EXPECT_EQ(Box(2, 2, 9, 4), resumed.exclusions()[0]);
-  EXPECT_EQ(Box(2, 7, 9, 9), resumed.exclusions()[1]);
-  EXPECT_EQ(Box(2, 5, 4, 6), resumed.exclusions()[2]);
-  EXPECT_EQ(Box(7, 5, 9, 6), resumed.exclusions()[3]);
-}
-
-TEST_F(PaintContextTest, RetainedStateReopensOnlyInvalidatedOverlayPixels) {
+// Verifies reused clipper storage starts each paint without the previous
+// paint's exclusions or overlays, including cached composition inputs.
+TEST_F(PaintContextTest, ReusedStateStartsWithFreshComposition) {
   Surface surface(display_.output(), 0, 0, display_.extents(),
                   /*is_write_once=*/false, display_.getBackgroundColor(),
                   FillMode::kVisible, BlendingMode::kSourceOver);
@@ -203,23 +187,29 @@ TEST_F(PaintContextTest, RetainedStateReopensOnlyInvalidatedOverlayPixels) {
       Box(2, 2, 9, 9), [](int16_t, int16_t) -> Color { return color::Red; });
   internal::ClipperState clipper_state;
   {
-    Clipper clipper(clipper_state, surface.out(), roo_time::Uptime::Max());
-    clipper.addOverlay(&overlay, overlay.extents());
+    Canvas canvas(&surface);
+    Clipper clipper(clipper_state, canvas.out());
+    canvas.set_out(clipper.out());
+    PaintContext ctx(canvas, clipper);
+    ctx.addOverlay(overlay, Rect(2, 2, 9, 9));
+    ctx.setBgcolor(color::Blue);
+    ctx.clear();
+    ctx.addExclusion(Rect(12, 12, 19, 19));
+    ASSERT_EQ(1u, clipper.exclusions().size());
   }
-
-  clipper_state.invalidate(Box(5, 5, 6, 6));
-  Canvas canvas(&surface);
-  Clipper resumed(clipper_state, canvas.out(), roo_time::Uptime::Max(),
-                  /*resume=*/true);
-  canvas.set_out(resumed.out());
-  PaintContext ctx(canvas, resumed);
-  ctx.setBgcolor(color::Blue);
-  ctx.clear();
-
   EXPECT_EQ(QuantizeToArgb4444(color::Red), pixelAt(4, 4));
-  EXPECT_EQ(QuantizeToArgb4444(color::Blue), pixelAt(5, 5));
-  EXPECT_EQ(QuantizeToArgb4444(color::Blue), pixelAt(6, 6));
-  EXPECT_EQ(QuantizeToArgb4444(color::Red), pixelAt(7, 7));
+  EXPECT_EQ(QuantizeToArgb4444(color::Blue), pixelAt(14, 14));
+  {
+    Canvas canvas(&surface);
+    Clipper clipper(clipper_state, canvas.out());
+    EXPECT_TRUE(clipper.exclusions().empty());
+    canvas.set_out(clipper.out());
+    PaintContext ctx(canvas, clipper);
+    ctx.setBgcolor(color::Green);
+    ctx.clear();
+  }
+  EXPECT_EQ(QuantizeToArgb4444(color::Green), pixelAt(4, 4));
+  EXPECT_EQ(QuantizeToArgb4444(color::Green), pixelAt(14, 14));
 }
 
 TEST_F(PaintContextTest, AddOverlayTranslatesLocalExtentsAndAppliesClip) {
@@ -228,7 +218,7 @@ TEST_F(PaintContextTest, AddOverlayTranslatesLocalExtentsAndAppliesClip) {
                   FillMode::kVisible, BlendingMode::kSourceOver);
   Canvas canvas(&surface);
   internal::ClipperState clipper_state;
-  Clipper clipper(clipper_state, canvas.out(), roo_time::Uptime::Max());
+  Clipper clipper(clipper_state, canvas.out());
   canvas.set_out(clipper.out());
   PaintContext ctx(canvas, clipper);
 
@@ -253,7 +243,7 @@ TEST_F(PaintContextTest, EarlierAddedOverlayRemainsOnTopWhenOverlapping) {
                   FillMode::kVisible, BlendingMode::kSourceOver);
   Canvas canvas(&surface);
   internal::ClipperState clipper_state;
-  Clipper clipper(clipper_state, canvas.out(), roo_time::Uptime::Max());
+  Clipper clipper(clipper_state, canvas.out());
   canvas.set_out(clipper.out());
   PaintContext ctx(canvas, clipper);
 
@@ -280,7 +270,7 @@ TEST_F(PaintContextTest,
                   FillMode::kVisible, BlendingMode::kSourceOver);
   Canvas canvas(&surface);
   internal::ClipperState clipper_state;
-  Clipper clipper(clipper_state, canvas.out(), roo_time::Uptime::Max());
+  Clipper clipper(clipper_state, canvas.out());
   canvas.set_out(clipper.out());
   PaintContext ctx(canvas, clipper);
 
@@ -304,7 +294,7 @@ TEST_F(PaintContextTest, AddOverlayShapeTranslatesLocalExtentsAndAppliesClip) {
                   FillMode::kVisible, BlendingMode::kSourceOver);
   Canvas canvas(&surface);
   internal::ClipperState clipper_state;
-  Clipper clipper(clipper_state, canvas.out(), roo_time::Uptime::Max());
+  Clipper clipper(clipper_state, canvas.out());
   canvas.set_out(clipper.out());
   PaintContext ctx(canvas, clipper);
 
@@ -325,7 +315,7 @@ TEST_F(PaintContextTest, AddDecorationTranslatesLocalBounds) {
                   FillMode::kVisible, BlendingMode::kSourceOver);
   Canvas canvas(&surface);
   internal::ClipperState clipper_state;
-  Clipper clipper(clipper_state, canvas.out(), roo_time::Uptime::Max());
+  Clipper clipper(clipper_state, canvas.out());
   canvas.set_out(clipper.out());
   PaintContext ctx(canvas, clipper);
 
@@ -353,7 +343,7 @@ TEST_F(PaintContextTest, DecorationUsesCurrentOverlaySpecWhenPresent) {
                   FillMode::kVisible, BlendingMode::kSourceOver);
   Canvas canvas(&surface);
   internal::ClipperState clipper_state;
-  Clipper clipper(clipper_state, canvas.out(), roo_time::Uptime::Max());
+  Clipper clipper(clipper_state, canvas.out());
   canvas.set_out(clipper.out());
   PaintContext ctx(canvas, clipper);
   OverlaySpec overlay_spec(*widget_ptr, canvas);
@@ -388,7 +378,7 @@ TEST_F(PaintContextTest, ClipperOverlaySpecPushPopRestoresPreviousSpec) {
                   FillMode::kVisible, BlendingMode::kSourceOver);
   Canvas canvas(&surface);
   internal::ClipperState clipper_state;
-  Clipper clipper(clipper_state, canvas.out(), roo_time::Uptime::Max());
+  Clipper clipper(clipper_state, canvas.out());
 
   clipper.pushOverlaySpec(*widget_ptr, canvas);
   const OverlaySpec* inert = &clipper.currentOverlaySpec();
@@ -425,7 +415,7 @@ TEST_F(PaintContextTest, ClipperOverlaySpecCoalescesAdjacentInertFrames) {
                   FillMode::kVisible, BlendingMode::kSourceOver);
   Canvas canvas(&surface);
   internal::ClipperState clipper_state;
-  Clipper clipper(clipper_state, canvas.out(), roo_time::Uptime::Max());
+  Clipper clipper(clipper_state, canvas.out());
 
   clipper.pushOverlaySpec(*widget_ptr, canvas);
   const OverlaySpec* first = &clipper.currentOverlaySpec();
@@ -460,7 +450,7 @@ TEST_F(PaintContextTest,
                   FillMode::kVisible, BlendingMode::kSourceOver);
   Canvas canvas(&surface);
   internal::ClipperState clipper_state;
-  Clipper clipper(clipper_state, canvas.out(), roo_time::Uptime::Max());
+  Clipper clipper(clipper_state, canvas.out());
   PaintContext ctx(canvas, clipper);
 
   EXPECT_FALSE(clipper.currentOverlaySpec().is_modded());

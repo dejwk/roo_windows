@@ -28,14 +28,6 @@ Rect PaintContext::localClip() const {
   return Rect(canvas_.clip_box()).translate(-canvas_.dx(), -canvas_.dy());
 }
 
-bool PaintContext::isDeadlineExceeded() const {
-  return clipper_->isDeadlineExceeded();
-}
-
-void PaintContext::markPaintInterrupted() const {
-  clipper_->markPaintInterrupted();
-}
-
 PaintContext PaintContext::translated(XDim dx, YDim dy) const {
   PaintContext out(*this);
   out.canvas_.shift(dx, dy);

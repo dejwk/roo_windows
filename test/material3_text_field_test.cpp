@@ -47,7 +47,7 @@ TEST_F(Material3TextFieldTest, DefaultsAndAssistivePrecedence) {
 TEST_F(Material3TextFieldTest, FocusIsIdleAndActivationStartsHardwareEditing) {
   Field field(context(), "Label");
   Task& task = app_.addTask(field, roo_display::Box(0, 0, 239, 119));
-  ASSERT_TRUE(refresh());
+  refresh();
   ASSERT_TRUE(field.requestFocus());
   EXPECT_FALSE(field.isEdited());
   KeyEvent key;
@@ -74,7 +74,7 @@ TEST_F(Material3TextFieldTest, FocusIsIdleAndActivationStartsHardwareEditing) {
 TEST_F(Material3TextFieldTest, ReadOnlyDisableAndLiveCancel) {
   Field field(context(), "Label", TextFieldVariant::kOutlined);
   Task& task = app_.addTask(field, roo_display::Box(0, 0, 239, 119));
-  ASSERT_TRUE(refresh());
+  refresh();
   field.setReadOnly(true);
   field.edit();
   EXPECT_FALSE(field.isEdited());
@@ -98,7 +98,7 @@ TEST_F(Material3TextFieldTest, DisabledSlotBackgroundMatchesContainer) {
   field.setText("value");
   field.setEnabled(false);
   Task& task = app_.addTask(field, roo_display::Box(0, 0, 239, 119));
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(pixelAt(8, 36), pixelAt(210, 36));
   task.navigation().clear();
 }
@@ -109,18 +109,18 @@ TEST_F(Material3TextFieldTest, ScrollAndDirtyCaretEqualFullRepaint) {
   field.setPrefixText("USD ");
   field.setSuffixText(" / day");
   field.setText("A long editable line which must scroll beyond the viewport");
-  ASSERT_TRUE(refresh());
+  refresh();
   field.edit();
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_LT(task.textFieldEditor().draw_xoffset(), 0);
   task.textFieldEditor().moveHome();
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(0, task.textFieldEditor().draw_xoffset());
   std::vector<Color> dirty;
   for (int y = 0; y < 120; ++y)
     for (int x = 0; x < 240; ++x) dirty.push_back(pixelAt(x, y));
   field.invalidateInterior();
-  ASSERT_TRUE(refresh());
+  refresh();
   for (int y = 0; y < 120; ++y)
     for (int x = 0; x < 240; ++x) EXPECT_EQ(dirty[y * 240 + x], pixelAt(x, y));
   task.navigation().clear();
@@ -132,10 +132,10 @@ TEST_F(Material3TextFieldTest,
   SecureTextField field(context(), "Password");
   Task& task = app_.addTask(field, roo_display::Box(0, 0, 239, 119));
   field.setText(u8"aé猫");
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_FALSE(field.revealed());
   field.onSingleTapUp(220, 28);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_TRUE(field.revealed());
   EXPECT_FALSE(field.isEdited());
   field.edit();
@@ -158,12 +158,12 @@ TEST_F(Material3TextFieldTest,
   Field field(context(), "Account");
   field.setErrorText("Try again");
   Task& task = app_.addTask(field, roo_display::Box(0, 0, 239, 119));
-  ASSERT_TRUE(refresh());
+  refresh();
   field.onSingleTapUp(30, field.getSuggestedMinimumDimensions().height() - 2);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_FALSE(field.isEdited());
   field.onSingleTapUp(220, 28);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_TRUE(field.isEdited());
   task.navigation().clear();
 }
@@ -171,14 +171,14 @@ TEST_F(Material3TextFieldTest,
 TEST_F(Material3TextFieldTest, DetachEndsSessionAndPendingMaskDeadline) {
   SecureTextField field(context(), "Password");
   Task& task = app_.addTask(field, roo_display::Box(0, 0, 239, 119));
-  ASSERT_TRUE(refresh());
+  refresh();
   field.edit();
   task.textFieldEditor().rune(U'猫');
   ASSERT_TRUE(field.isEdited());
   task.navigation().clear();
   EXPECT_FALSE(field.isEdited());
   delay(1600);
-  ASSERT_TRUE(refresh());
+  refresh();
 }
 // Verifies narrow viewports keep scroll bounded.
 TEST_F(Material3TextFieldTest, NarrowViewportsKeepScrollBounded) {
@@ -188,13 +188,13 @@ TEST_F(Material3TextFieldTest, NarrowViewportsKeepScrollBounded) {
   field.setSuffixText("a wide suffix");
   field.setErrorText("error");
   Task& task = app_.addTask(field, roo_display::Box(0, 0, 15, 99));
-  ASSERT_TRUE(refresh());
+  refresh();
   field.requestFocus();
   KeyEvent key(KeyPhase::kDown, KeyCode::kEnter, 0, 0);
   field.onKeyEvent(key);
-  ASSERT_TRUE(refresh());
+  refresh();
   task.textFieldEditor().moveEnd();
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_LE(task.textFieldEditor().draw_xoffset(), 0);
   task.navigation().clear();
 }
@@ -202,7 +202,7 @@ TEST_F(Material3TextFieldTest, NarrowViewportsKeepScrollBounded) {
 TEST_F(Material3TextFieldTest, CaretSelectionAndLabelTransitionsRestorePixels) {
   Field field(context(), "Account", TextFieldVariant::kOutlined);
   Task& task = app_.addTask(field, roo_display::Box(0, 0, 239, 119));
-  ASSERT_TRUE(refresh());
+  refresh();
   field.requestFocus();
   KeyEvent key(KeyPhase::kDown, KeyCode::kEnter, 0, 0);
   field.onKeyEvent(key);
@@ -217,12 +217,12 @@ TEST_F(Material3TextFieldTest, CaretSelectionAndLabelTransitionsRestorePixels) {
           "field");
     if (step == 4) context().animations().seek(field, 0, roo_time::Millis(500));
     if (step == 5) editor.cancel();
-    ASSERT_TRUE(refresh());
+    refresh();
     std::vector<Color> partial;
     for (int y = 0; y < 120; ++y)
       for (int x = 0; x < 240; ++x) partial.push_back(pixelAt(x, y));
     field.invalidateInterior();
-    ASSERT_TRUE(refresh());
+    refresh();
     for (int y = 0; y < 120; ++y)
       for (int x = 0; x < 240; ++x)
         ASSERT_EQ(partial[y * 240 + x], pixelAt(x, y)) << "step " << step;
@@ -252,7 +252,7 @@ TEST_F(Material3TextFieldTest, PhysicalSourceActivatesWithoutSyntheticSlotTap) {
   Task& task = app_.addTask(field, roo_display::Box(0, 0, 239, 119));
   FieldKeys keys;
   keys.connect(task);
-  ASSERT_TRUE(refresh());
+  refresh();
   ASSERT_TRUE(field.requestFocus());
   EXPECT_FALSE(field.isEdited());
   app_.start();
@@ -262,20 +262,20 @@ TEST_F(Material3TextFieldTest, PhysicalSourceActivatesWithoutSyntheticSlotTap) {
   keys.push(
       KeyEvent(KeyPhase::kUp, KeyCode::kEnter, 0, PhysicalKey::kEnter, 0));
   scheduler_.executeEligibleTasksUpToNow(roo_scheduler::Priority::kMinimum, 1);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_TRUE(field.isEdited());
   EXPECT_FALSE(field.revealed());
   keys.push(
       KeyEvent(KeyPhase::kDown, KeyCode::kCharacter, 0, PhysicalKey::kX, U'x'));
   scheduler_.executeEligibleTasksUpToNow(roo_scheduler::Priority::kMinimum, 1);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ("x", field.text());
   keys.push(
       KeyEvent(KeyPhase::kDown, KeyCode::kEnter, 0, PhysicalKey::kEnter, 0));
   keys.push(
       KeyEvent(KeyPhase::kUp, KeyCode::kEnter, 0, PhysicalKey::kEnter, 0));
   scheduler_.executeEligibleTasksUpToNow(roo_scheduler::Priority::kMinimum, 1);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_FALSE(field.isEdited());
   keys.disconnect();
   task.navigation().clear();
@@ -289,20 +289,20 @@ TEST_F(Material3TextFieldTest, SecureAffordancePolicyAndCancellation) {
   field.setTrailingIcon(nullptr);
   field.setErrorText("Error");
   field.setReadOnly(true);
-  ASSERT_TRUE(refresh());
+  refresh();
   field.onSingleTapUp(220, 28);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_TRUE(field.revealed());
   EXPECT_FALSE(field.isEdited());
   field.setEnabled(false);
   field.onSingleTapUp(220, 28);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_TRUE(field.revealed());
   field.setEnabled(true);
   field.onDown(220, 28);
   field.onShowPress(220, 28);
   field.onCancel();
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_TRUE(field.revealed());
   task.navigation().clear();
 }
@@ -403,7 +403,7 @@ TEST(Material3TextFieldPaint, SinglePassAndAssistiveRemovalOnColoredAncestor) {
   field.setText("a secret");
   FieldBackdrop backdrop(app.context(), field);
   // Initialize the display before counting a logical field paint.
-  ASSERT_TRUE(app.refresh());
+  app.refresh();
   Task& task = app.addTaskFullScreen(backdrop);
   for (int step = 0; step < 5; ++step) {
     if (step == 1) field.setRevealed(true);
@@ -414,13 +414,13 @@ TEST(Material3TextFieldPaint, SinglePassAndAssistiveRemovalOnColoredAncestor) {
       field.clearError();
     }
     device.reset();
-    ASSERT_TRUE(app.refresh());
+    app.refresh();
     EXPECT_LE(*std::max_element(device.writes.begin(), device.writes.end()), 1)
         << "dirty step " << step;
     std::vector<roo::byte> partial = pixels;
     backdrop.invalidateInterior();
     device.reset();
-    ASSERT_TRUE(app.refresh());
+    app.refresh();
     EXPECT_LE(*std::max_element(device.writes.begin(), device.writes.end()), 1)
         << "full step " << step;
     EXPECT_EQ(partial, pixels) << "step " << step;
@@ -434,9 +434,9 @@ TEST_F(Material3TextFieldTest,
   Field field(context(), "H", TextFieldVariant::kOutlined);
   field.setText("value");
   Task& task = app_.addTask(field, roo_display::Box(0, 0, 239, 119));
-  ASSERT_TRUE(refresh());
+  refresh();
   ASSERT_TRUE(field.requestFocus());
-  ASSERT_TRUE(refresh());
+  refresh();
   const TextStyle& small = text_style_body_small();
   auto inkBand = [&]() {
     std::pair<int, int> band(small.lineHeight(), -1);
@@ -456,13 +456,13 @@ TEST_F(Material3TextFieldTest,
   auto initial = inkBand();
   ASSERT_GE(initial.second, initial.first);
   field.setLabel("Hg");
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(initial, inkBand());
   field.setLabel("HPassword");
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(initial, inkBand());
   field.setLabel("HRegion");
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(initial, inkBand());
   task.navigation().clear();
 }

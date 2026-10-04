@@ -40,7 +40,7 @@ class Material3NavigationBarGoldenTest : public testing::Test {
                    nullptr, false, false, false, true,
                    NavigationBarLayout::kVertical);
 
-    EXPECT_TRUE(app.refresh());
+    app.refresh();
     return test::CaptureRgb(offscreen_.raster(), 0, 0, 480, Scaled(64));
   }
 
@@ -62,7 +62,7 @@ class Material3NavigationBarGoldenTest : public testing::Test {
                    nullptr, false, false, false, true,
                    NavigationBarLayout::kHorizontal);
 
-    EXPECT_TRUE(app.refresh());
+    app.refresh();
     return test::CaptureRgb(offscreen_.raster(), 0, 0, 560, Scaled(64));
   }
 
@@ -78,7 +78,7 @@ class Material3NavigationBarGoldenTest : public testing::Test {
                          &ic_outlined_24_action_done(), false, true,
                          NavigationBarLayout::kVertical);
 
-    EXPECT_TRUE(app.refresh());
+    app.refresh();
     return test::CaptureRgb(offscreen_.raster(), 0, 0, 288, Scaled(64));
   }
 
@@ -94,7 +94,7 @@ class Material3NavigationBarGoldenTest : public testing::Test {
                          &ic_outlined_24_action_done(), false, true,
                          NavigationBarLayout::kHorizontal);
 
-    EXPECT_TRUE(app.refresh());
+    app.refresh();
     return test::CaptureRgb(offscreen_.raster(), 0, 0, 336, Scaled(64));
   }
 

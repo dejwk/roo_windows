@@ -64,9 +64,9 @@ class DatePickerPresentation : public testing::Test {
     return *static_cast<internal::DatePickerPanel*>(owner_.focus().scopeRoot());
   }
   void open() {
-    ASSERT_TRUE(app_.refresh());
+    app_.refresh();
     ASSERT_EQ(PresentationStartResult::kStarted, picker_.open(owner_));
-    ASSERT_TRUE(app_.refresh());
+    app_.refresh();
   }
   roo::byte raster_[480 * 640 * 2] = {};
   roo_display::OffscreenDevice<roo_display::Argb4444> device_;
@@ -85,10 +85,10 @@ TEST_F(DatePickerPresentation, ActiveBodyReceivesFocus) {
   ASSERT_NE(nullptr, owner_.focus().focused());
   EXPECT_NE(&content_, owner_.focus().focused());
   panel().setMode(DatePickerMode::kInput);
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   EXPECT_EQ(panel().input(), owner_.focus().focused());
   panel().setMode(DatePickerMode::kDays);
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   EXPECT_NE(nullptr, owner_.focus().focused());
   EXPECT_NE(panel().input(), owner_.focus().focused());
 }
@@ -191,7 +191,7 @@ TEST_F(DatePickerPresentation, CompletionCanReopen) {
 // Verifies destruction cancels the registration and restores the owner's scope.
 TEST_F(DatePickerPresentation, PresenterDestructionIsSilent) {
   auto other = std::make_unique<Picker>(app_.context());
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   ASSERT_EQ(PresentationStartResult::kStarted, other->open(owner_));
   bool called = false;
   other->completion = [&] { called = true; };
@@ -242,10 +242,10 @@ TEST_F(DatePickerPresentation, YearPagesReachCivilLimits) {
   picker_.setDisplayedMonth(CivilDay::FromYmd(9999, 12, 1));
   open();
   panel().setMode(DatePickerMode::kYears);
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   EXPECT_LE(panel().firstYear(), 9999);
   panel().activateHeader(3);
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   EXPECT_EQ(9961, panel().firstYear());
   panel().selectMonth(1, 1);
   panel().activateHeader(0);
@@ -281,7 +281,7 @@ TEST_F(DatePickerPresentation, CompletionCanDestroyPresenter) {
    private:
     std::unique_ptr<DeletingPicker>& slot_;
   };
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   std::unique_ptr<DeletingPicker> picker;
   picker.reset(new DeletingPicker(app_.context(), picker));
   picker->setValue(CivilDay::FromYmd(2024, 2, 29));
@@ -294,7 +294,7 @@ TEST_F(DatePickerPresentation, CompletionCanDestroyPresenter) {
 
 // Verifies rejected configuration leaves focus and the shared slot intact.
 TEST_F(DatePickerPresentation, ReversedBoundsRejectAdmission) {
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   picker_.setBounds(
       {CivilDay::FromYmd(2024, 2, 1), CivilDay::FromYmd(2024, 1, 1)});
   Widget* scope = owner_.focus().scopeRoot();

@@ -94,21 +94,21 @@ TEST(Material3ToggleIconButton, ClickTogglesBeforeTheCallback) {
 // Verifies a programmatic selection morphs from the prior resting shape.
 TEST_F(ToggleIconButtonAnimationTest, ProgrammaticSelectionUsesValueTrack) {
   TestToggleIconButton* button = AddButton();
-  ASSERT_TRUE(refresh());
+  refresh();
 
   button->setSelected(true);
   EXPECT_TRUE(button->selectionAnimationActive());
   EXPECT_EQ(0xFF, button->getBorderStyle().top_left_corner_radius());
 
-  ASSERT_TRUE(refresh());
+  refresh();
   delay(50);
-  ASSERT_TRUE(refresh());
+  refresh();
   uint8_t midpoint = button->getBorderStyle().top_left_corner_radius();
   EXPECT_GT(midpoint, Scaled(12));
   EXPECT_LT(midpoint, 0xFF);
 
   delay(60);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_FALSE(button->selectionAnimationActive());
   EXPECT_EQ(Scaled(12), button->getBorderStyle().top_left_corner_radius());
 }
@@ -116,16 +116,16 @@ TEST_F(ToggleIconButtonAnimationTest, ProgrammaticSelectionUsesValueTrack) {
 // Verifies an input-driven selection starts at pressed shape and reaches rest.
 TEST_F(ToggleIconButtonAnimationTest, ReleaseMorphsFromPressedShapeToRest) {
   TestToggleIconButton* button = AddButton();
-  ASSERT_TRUE(refresh());
+  refresh();
 
   button->onClicked();
   EXPECT_TRUE(button->isSelected());
   EXPECT_TRUE(button->selectionAnimationActive());
   EXPECT_EQ(Scaled(8), button->getBorderStyle().top_left_corner_radius());
 
-  ASSERT_TRUE(refresh());
+  refresh();
   delay(110);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_FALSE(button->selectionAnimationActive());
   EXPECT_EQ(Scaled(12), button->getBorderStyle().top_left_corner_radius());
 }
@@ -133,26 +133,26 @@ TEST_F(ToggleIconButtonAnimationTest, ReleaseMorphsFromPressedShapeToRest) {
 // Verifies click appearance keeps precedence while the selection track runs.
 TEST_F(ToggleIconButtonAnimationTest, ClickAndSelectionAnimationsOverlap) {
   TestToggleIconButton* button = AddButton();
-  ASSERT_TRUE(refresh());
+  refresh();
 
   button->onSingleTapUp(button->width() / 2, button->height() / 2);
   EXPECT_TRUE(button->isSelected());
   EXPECT_TRUE(button->isClicking());
   EXPECT_TRUE(button->selectionAnimationActive());
 
-  ASSERT_TRUE(refresh());
+  refresh();
   delay(50);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_TRUE(button->isClicking());
   EXPECT_TRUE(button->selectionAnimationActive());
 
   delay(60);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_TRUE(button->isClicking());
   EXPECT_FALSE(button->selectionAnimationActive());
 
   delay(250);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_FALSE(button->isClicking());
   EXPECT_EQ(Scaled(12), button->getBorderStyle().top_left_corner_radius());
 }
@@ -160,12 +160,12 @@ TEST_F(ToggleIconButtonAnimationTest, ClickAndSelectionAnimationsOverlap) {
 // Verifies rapid state changes retarget from the last applied radius.
 TEST_F(ToggleIconButtonAnimationTest, RapidSelectionRetargetsContinuously) {
   TestToggleIconButton* button = AddButton();
-  ASSERT_TRUE(refresh());
+  refresh();
 
   button->setSelected(true);
-  ASSERT_TRUE(refresh());
+  refresh();
   delay(40);
-  ASSERT_TRUE(refresh());
+  refresh();
   uint8_t midpoint = button->getBorderStyle().top_left_corner_radius();
   ASSERT_GT(midpoint, Scaled(12));
   ASSERT_LT(midpoint, 0xFF);
@@ -173,13 +173,13 @@ TEST_F(ToggleIconButtonAnimationTest, RapidSelectionRetargetsContinuously) {
   button->setSelected(false);
   EXPECT_TRUE(button->selectionAnimationActive());
   EXPECT_EQ(midpoint, button->getBorderStyle().top_left_corner_radius());
-  ASSERT_TRUE(refresh());
+  refresh();
   delay(40);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_GT(button->getBorderStyle().top_left_corner_radius(), midpoint);
 
   delay(70);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_FALSE(button->selectionAnimationActive());
   EXPECT_EQ(0xFF, button->getBorderStyle().top_left_corner_radius());
 }
@@ -187,22 +187,22 @@ TEST_F(ToggleIconButtonAnimationTest, RapidSelectionRetargetsContinuously) {
 // Verifies hiding cancels and snaps without resuming stale selection work.
 TEST_F(ToggleIconButtonAnimationTest, HiddenButtonSnapsWithoutResume) {
   TestToggleIconButton* button = AddButton();
-  ASSERT_TRUE(refresh());
+  refresh();
   button->setSelected(true);
-  ASSERT_TRUE(refresh());
+  refresh();
   delay(40);
-  ASSERT_TRUE(refresh());
+  refresh();
   ASSERT_TRUE(button->selectionAnimationActive());
 
   button->setVisibility(Visibility::kInvisible);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_FALSE(button->selectionAnimationActive());
   EXPECT_EQ(Scaled(12), button->getBorderStyle().top_left_corner_radius());
 
   button->setVisibility(Visibility::kVisible);
-  ASSERT_TRUE(refresh());
+  refresh();
   delay(120);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_FALSE(button->selectionAnimationActive());
   EXPECT_EQ(Scaled(12), button->getBorderStyle().top_left_corner_radius());
 }
@@ -211,19 +211,19 @@ TEST_F(ToggleIconButtonAnimationTest, HiddenButtonSnapsWithoutResume) {
 TEST_F(ToggleIconButtonAnimationTest, DetachedButtonSnapsWithoutResume) {
   TestToggleIconButton button(context(), ic_outlined_24_action_done());
   Task& task = app_.addTaskFullScreen(button);
-  ASSERT_TRUE(refresh());
+  refresh();
   button.setSelected(true);
-  ASSERT_TRUE(refresh());
+  refresh();
   delay(40);
-  ASSERT_TRUE(refresh());
+  refresh();
   ASSERT_TRUE(button.selectionAnimationActive());
 
   task.navigation().clear();
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_FALSE(button.selectionAnimationActive());
   EXPECT_EQ(Scaled(12), button.getBorderStyle().top_left_corner_radius());
   delay(120);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(Scaled(12), button.getBorderStyle().top_left_corner_radius());
 }
 
@@ -330,7 +330,7 @@ TEST(Material3ToggleIconButton, StableIconSlotAndStorageBudget) {
 TEST_F(ToggleIconButtonAnimationTest,
        DisabledPressMorphPreservesSelectionShape) {
   TestToggleIconButton* button = AddButton();
-  ASSERT_TRUE(refresh());
+  refresh();
   button->setShapeMorph(ButtonShapeMorph::kDisabled);
   button->setPressed(true);
   EXPECT_EQ(0xFF, button->getBorderStyle().top_left_corner_radius());
@@ -340,7 +340,7 @@ TEST_F(ToggleIconButtonAnimationTest,
   EXPECT_EQ(0xFF, button->getBorderStyle().top_left_corner_radius());
   button->setPressed(false);
   button->setVisibility(Visibility::kInvisible);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(Scaled(12), button->getBorderStyle().top_left_corner_radius());
   button->setPressed(true);
   EXPECT_EQ(Scaled(12), button->getBorderStyle().top_left_corner_radius());

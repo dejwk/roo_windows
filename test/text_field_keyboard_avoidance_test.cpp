@@ -45,7 +45,7 @@ TEST_F(KeyboardAvoidanceTest, ResizesScrollViewportAndPreservesLiveSession) {
   form.add(last);
   SimpleScrollablePanel scroller(context(), form);
   Task& task = app_.addTaskFullScreen(scroller);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(240 - 2 * Scaled(8) - last.getMargins().left() -
                 last.getMargins().right(),
             last.width());
@@ -53,7 +53,7 @@ TEST_F(KeyboardAvoidanceTest, ResizesScrollViewportAndPreservesLiveSession) {
   last.setText("value");
   last.edit();
   task.textFieldEditor().setSelection(1, 3);
-  ASSERT_TRUE(refresh());
+  refresh();
   ASSERT_TRUE(last.isEdited());
   EXPECT_EQ(160, scroller.height());
   EXPECT_GE(ScreenBounds(last).yMin(), 0);
@@ -63,7 +63,7 @@ TEST_F(KeyboardAvoidanceTest, ResizesScrollViewportAndPreservesLiveSession) {
   task.textFieldEditor().rune(U'X');
   EXPECT_EQ("vXue", last.text());
   task.textFieldEditor().enter();
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(320, scroller.height());
   EXPECT_FALSE(last.isEdited());
   task.navigation().clear();
@@ -84,10 +84,10 @@ TEST_F(KeyboardAvoidanceTest, OutsideTapDismissesKeyboard) {
     ++back_requests;
     return BackResult::kHandled;
   });
-  ASSERT_TRUE(refresh());
+  refresh();
   field.setText("retained");
   field.edit();
-  ASSERT_TRUE(refresh());
+  refresh();
   MainWindow& root = *field.getMainWindow();
   std::vector<Widget*> path;
   Rect bounds = ScreenBounds(field);
@@ -108,7 +108,7 @@ TEST_F(KeyboardAvoidanceTest, OutsideTapDismissesKeyboard) {
   EXPECT_TRUE(root.supportsTap());
   EXPECT_TRUE(field.isEdited());
   root.onSingleTapUp(bounds.xMin() + 1, bounds.yMin() + 1);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_FALSE(field.isEdited());
   EXPECT_FALSE(other.isEdited());
   EXPECT_FALSE(app_.keyboard().getContents().isVisible());
@@ -127,9 +127,9 @@ TEST_F(KeyboardAvoidanceTest, BlankSpaceDismissesOnlyOnCompletedTap) {
   FullWidthColumn form(context());
   form.add(field);
   Task& task = app_.addTaskFullScreen(form);
-  ASSERT_TRUE(refresh());
+  refresh();
   field.edit();
-  ASSERT_TRUE(refresh());
+  refresh();
   std::vector<Widget*> path;
   ASSERT_TRUE(app_.root().fillTouchTargetPath(230, 150, path));
   ASSERT_EQ(1u, path.size());
@@ -161,19 +161,19 @@ TEST_F(KeyboardAvoidanceTest, PansStaticFormAndRestoresOnClose) {
   TextField field(context(), "Bottom");
   StaticKeyboardForm form(context(), field);
   Task& task = app_.addTaskFullScreen(form);
-  ASSERT_TRUE(refresh());
+  refresh();
   Rect original = form.parent_bounds();
   field.edit();
-  ASSERT_TRUE(refresh());
+  refresh();
   ASSERT_TRUE(field.isEdited());
   EXPECT_LT(form.offsetTop(), 0);
   EXPECT_GE(ScreenBounds(field).yMin(), 0);
   EXPECT_LT(ScreenBounds(field).yMax(), 160);
   task.textFieldEditor().cancel();
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(original, form.parent_bounds());
   field.onKeyEvent(KeyEvent(KeyPhase::kDown, KeyCode::kEnter, 0, 0));
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_TRUE(field.isEdited());
   EXPECT_EQ(original, form.parent_bounds());
   task.navigation().clear();
@@ -208,11 +208,11 @@ TEST_F(KeyboardAvoidanceTest, ExtractsTallFieldAndConfirms) {
   ExtractionForm form(context());
   form.add(field, Rect(0, 0, 239, 199));
   Task& task = app_.addTaskFullScreen(form);
-  ASSERT_TRUE(refresh());
+  refresh();
   field.setText("old");
   field.edit();
   ASSERT_EQ(2u, task.navigation().depth());
-  ASSERT_TRUE(refresh());
+  refresh();
   Widget* editor = task.textFieldEditor().editedWidget();
   ASSERT_NE(nullptr, editor);
   EXPECT_NE(&field, editor);
@@ -227,7 +227,7 @@ TEST_F(KeyboardAvoidanceTest, ExtractsTallFieldAndConfirms) {
   EXPECT_EQ(1, field.completions);
   EXPECT_TRUE(field.confirmed);
   EXPECT_FALSE(app_.keyboard().getContents().isVisible());
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(&task, field.getTask());
   task.navigation().clear();
 }
@@ -239,16 +239,16 @@ TEST_F(KeyboardAvoidanceTest, ExtractedBackCancelsAndDestinationIsReusable) {
   ExtractionForm form(context());
   form.add(field, Rect(0, 0, 239, 199));
   Task& task = app_.addTaskFullScreen(form);
-  ASSERT_TRUE(refresh());
+  refresh();
   field.setText("old");
   field.edit();
-  ASSERT_TRUE(refresh());
+  refresh();
   task.textFieldEditor().rune(U'X');
   EXPECT_EQ(BackResult::kHandled, task.requestBack());
   EXPECT_EQ("old", field.text());
   EXPECT_EQ(1, field.completions);
   EXPECT_FALSE(field.confirmed);
-  ASSERT_TRUE(refresh());
+  refresh();
   field.edit();
   EXPECT_EQ(2u, task.navigation().depth());
   task.navigation().clear();
@@ -262,10 +262,10 @@ TEST_F(KeyboardAvoidanceTest, ExtractedSecureFieldRemainsMasked) {
   ExtractionForm form(context());
   form.add(field, Rect(0, 0, 239, 199));
   Task& task = app_.addTaskFullScreen(form);
-  ASSERT_TRUE(refresh());
+  refresh();
   field.setText("secret");
   field.edit();
-  ASSERT_TRUE(refresh());
+  refresh();
   ASSERT_EQ(2u, task.navigation().depth());
   Widget* editor = task.textFieldEditor().editedWidget();
   ASSERT_NE(nullptr, editor);
@@ -281,10 +281,10 @@ TEST_F(KeyboardAvoidanceTest, SourceCanBeDestroyedWhileExtracted) {
   ExtractionForm form(context());
   form.add(*field, Rect(0, 0, 239, 199));
   Task& task = app_.addTaskFullScreen(form);
-  ASSERT_TRUE(refresh());
+  refresh();
   field->edit();
   ASSERT_EQ(2u, task.navigation().depth());
-  ASSERT_TRUE(refresh());
+  refresh();
   form.removeAll();
   field.reset();
   task.textFieldEditor().enter();
@@ -298,13 +298,13 @@ TEST_F(KeyboardAvoidanceTest, FitsExactlyAndPhysicalKeyboardDoesNotExtract) {
   ExtractionForm form(context());
   form.add(field, Rect(0, 0, 239, 159));
   Task& task = app_.addTaskFullScreen(form);
-  ASSERT_TRUE(refresh());
+  refresh();
   field.edit();
   EXPECT_EQ(1u, task.navigation().depth());
   task.textFieldEditor().cancel();
   form.removeAll();
   form.add(field, Rect(0, 0, 239, 199));
-  ASSERT_TRUE(refresh());
+  refresh();
   field.onKeyEvent(KeyEvent(KeyPhase::kDown, KeyCode::kEnter, 0, 0));
   EXPECT_EQ(1u, task.navigation().depth());
   EXPECT_TRUE(field.isEdited());
@@ -326,7 +326,7 @@ TEST_F(KeyboardAvoidanceTest, ExplicitEditorDestinationRoundTrip) {
                        ++completions;
                        result = value;
                      });
-  ASSERT_TRUE(refresh());
+  refresh();
   Widget* target = task.textFieldEditor().editedWidget();
   ASSERT_NE(nullptr, target);
   EXPECT_EQ("New hint", static_cast<roo_windows::TextField*>(target)->hint());
@@ -358,11 +358,11 @@ TEST_F(KeyboardAvoidanceTest, ExtractsTallScrollableField) {
   form.add(field);
   SimpleScrollablePanel scroller(context(), form);
   Task& task = app_.addTaskFullScreen(scroller);
-  ASSERT_TRUE(refresh());
+  refresh();
   field.edit();
   EXPECT_EQ(2u, task.navigation().depth());
   task.requestBack();
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(320, scroller.height());
   task.navigation().clear();
 }
@@ -386,14 +386,14 @@ TEST_F(KeyboardAvoidanceTest, ValueChangeMayDestroySource) {
   ExtractionForm form(context());
   form.add(*field, Rect(0, 0, 239, 199));
   Task& task = app_.addTaskFullScreen(form);
-  ASSERT_TRUE(refresh());
+  refresh();
   field->changed = [&]() {
     form.removeAll();
     field.reset();
   };
   field->edit();
   ASSERT_EQ(2u, task.navigation().depth());
-  ASSERT_TRUE(refresh());
+  refresh();
   task.textFieldEditor().rune(U'X');
   task.textFieldEditor().enter();
   EXPECT_EQ(nullptr, field);
@@ -407,7 +407,7 @@ TEST_F(KeyboardAvoidanceTest, ExtractsFieldWiderThanTask) {
   ExtractionForm form(context());
   form.add(field, Rect(0, 0, 299, 99));
   Task& task = app_.addTaskFullScreen(form);
-  ASSERT_TRUE(refresh());
+  refresh();
   field.edit();
   EXPECT_EQ(2u, task.navigation().depth());
   task.navigation().clear();
@@ -421,10 +421,10 @@ TEST_F(KeyboardAvoidanceTest, ApplicationTeardownCancelsExtractedEditor) {
   ExtractionForm form(owner->context());
   form.add(field, Rect(0, 0, 239, 199));
   Task& task = owner->addTaskFullScreen(form);
-  ASSERT_TRUE(owner->refresh());
+  owner->refresh();
   field.edit();
   ASSERT_EQ(2u, task.navigation().depth());
-  ASSERT_TRUE(owner->refresh());
+  owner->refresh();
   task.textFieldEditor().rune(U'X');
   owner.reset();
   EXPECT_EQ(1, field.completions);

@@ -46,11 +46,11 @@ This is the canonical widget-authoring guidance for the repository.
   `ClickAnimation` sample through existing overlay hooks. The controller requests
   its frames and invalidates transient spill before layout. Do not add a widget
   track or paint-time self-dirtying merely to keep a click overlay moving.
-- Terminal click painting may still clear clicking state provisionally and
-  restore it when painting is interrupted. Semantic delivery waits for the
-  completed logical paint; this is settlement, not a recurring animation loop.
-- Preserve samples across paint continuation; elapsed time advances at the next
-  new logical frame. Do not read wall-clock time from paint to advance animation.
+- Terminal click painting clears clicking state. Semantic delivery waits until
+  the complete refresh closes its drawing context; this is settlement, not a
+  recurring animation loop.
+- Each refresh samples animations before layout and paints to completion. Do
+  not read wall-clock time from paint to advance animation.
 - Keep semantic timers (password masking, scrollbar hiding, snackbar expiry,
   keyboard repeat) as scheduled semantic work. Their callbacks can change state
   or start a registry track; they are not visual frame drivers.

@@ -117,15 +117,15 @@ TEST_F(ProgressTest, PatternRestorationAndNoOp) {
   pattern.add(linear, Rect(10, 10, 249, 10 + Scaled(4) - 1));
   pattern.add(circular, Rect(100, 40, 159, 99));
   app_.add(std::move(owner), roo_display::Box(0, 0, 259, 119));
-  ASSERT_TRUE(refresh());
+  refresh();
   for (float p : {0.0001f, 0.5f, 0.98f, 1.0f, 0.0f}) {
     linear.setProgress(p);
     circular.setProgress(p);
-    ASSERT_TRUE(refresh());
+    refresh();
     auto partial = ::roo_windows::test::CaptureRgb(offscreen_.raster(), 0, 0,
                                                    kWidth, kHeight);
     pattern.invalidateInterior();
-    ASSERT_TRUE(refresh());
+    refresh();
     auto full = ::roo_windows::test::CaptureRgb(offscreen_.raster(), 0, 0,
                                                 kWidth, kHeight);
     for (int y = 0; y < kHeight; ++y)
@@ -183,7 +183,7 @@ TEST_F(ProgressTest, StaticGoldens) {
       ++i;
     }
     Task& task = app.addTaskFullScreen(pattern);
-    EXPECT_TRUE(app.refresh());
+    app.refresh();
     std::string name = std::string(dark ? "rtl" : "ltr") + "_" +
                        std::to_string(ROO_WINDOWS_ZOOM);
     EXPECT_TRUE(::roo_windows::test::CompareOrUpdateGolden(
@@ -220,21 +220,21 @@ TEST_F(ProgressTest, AnimationLifecycle) {
   linear.setIndeterminate();
   EXPECT_FALSE(linear.active());
   Task& task = app_.addTaskFullScreen(parent);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_TRUE(linear.active());
   EXPECT_EQ(0, linear.phase());
   ASSERT_EQ(AnimationStatus::kOk, linear.seek(1800LL * 10000000 + 700));
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(700, linear.phase());
   linear.setIndeterminate();
   linear.setMotionEnabled(true);
   linear.layout(linear.parent_bounds());
   EXPECT_EQ(700, linear.phase());
   parent.setVisibility(Visibility::kInvisible);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_FALSE(linear.active());
   parent.setVisibility(Visibility::kVisible);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_TRUE(linear.active());
   EXPECT_EQ(0, linear.phase());
   linear.layout(Rect(0, 0, -1, -1));
@@ -245,14 +245,14 @@ TEST_F(ProgressTest, AnimationLifecycle) {
   refresh();
   parent.removeAll();
   parent.add(linear, Rect(0, 0, 239, 3));
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_TRUE(linear.active());
   EXPECT_EQ(0, linear.phase());
   linear.setMotionEnabled(false);
   EXPECT_FALSE(linear.active());
   EXPECT_EQ(ProgressIndicatorMode::kIndeterminate, linear.mode());
   EXPECT_FLOAT_EQ(0.4f, linear.progress());
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_FALSE(linear.isDirty());
   linear.setMotionEnabled(true);
   EXPECT_TRUE(linear.active());
@@ -336,7 +336,7 @@ TEST_F(ProgressTest, MotionGoldens) {
   linear.setIndeterminate();
   circular.setIndeterminate();
   Task& task = app_.addTaskFullScreen(pattern);
-  ASSERT_TRUE(refresh());
+  refresh();
   for (int phase : {0, 333, 750, 1100, 1500, 1799, 2700, 5399}) {
     ASSERT_EQ(AnimationStatus::kOk, linear.seek(phase));
     ASSERT_EQ(AnimationStatus::kOk, circular.seek(phase));
@@ -375,9 +375,9 @@ class ProgressDisplay
   bool slow = false;
 };
 
-// Verifies output is confined to the thin band/ring envelope and a slow paint
-// continuation keeps the published phase even when another seek is pending.
-TEST(ProgressAcceptanceTest, BoundedWritesAndCoherentContinuation) {
+// Verifies output stays within the thin band/ring envelope and every slow
+// refresh completes before a subsequent seek is applied.
+TEST(ProgressAcceptanceTest, BoundedWritesAndCompleteSlowRefresh) {
   roo::byte raster[260 * 120 * 2] = {};
   ProgressDisplay device(raster);
   roo_display::Display display(device);
@@ -392,35 +392,29 @@ TEST(ProgressAcceptanceTest, BoundedWritesAndCoherentContinuation) {
   Task& task = app.addTaskFullScreen(pattern);
   linear.setIndeterminate();
   circular.setIndeterminate();
-  ASSERT_TRUE(app.refresh());
+  app.refresh();
   device.pixels = 0;
   linear.seek(700);
-  ASSERT_TRUE(app.refresh());
+  app.refresh();
   EXPECT_GT(device.pixels, 0u);
   EXPECT_LE(device.pixels, 240u * Scaled(4));
   device.pixels = 0;
   circular.seek(700);
-  ASSERT_TRUE(app.refresh());
+  app.refresh();
   EXPECT_GT(device.pixels, 0u);
   EXPECT_LE(device.pixels, 48u * 48);
   device.pixels = 0;
-  ASSERT_TRUE(app.refresh());
+  app.refresh();
   EXPECT_EQ(0u, device.pixels);
   linear.seek(1000);
   circular.seek(1000);
   device.slow = true;
-  bool complete = app.refresh(roo_time::Uptime::Now() + roo_time::Millis(2));
-  EXPECT_FALSE(complete);
+  app.refresh();
   EXPECT_EQ(1000, circular.phase());
+  EXPECT_FALSE(app.root().isDirty());
   circular.seek(1600);
-  unsigned attempts = 0;
-  while (!complete && attempts++ < 200) {
-    complete = app.refresh(roo_time::Uptime::Now() + roo_time::Millis(2));
-    EXPECT_EQ(1000, circular.phase());
-  }
-  EXPECT_TRUE(complete);
   device.slow = false;
-  ASSERT_TRUE(app.refresh());
+  app.refresh();
   EXPECT_EQ(1600, circular.phase());
   pattern.removeAll();
   task.navigation().clear();
@@ -450,17 +444,17 @@ TEST(ProgressAcceptanceTest, DialogAndNavigationOwnership) {
   Task& task = app.addTaskFullScreen(root);
   root_indicator.setIndeterminate();
   dialog_indicator.setIndeterminate();
-  ASSERT_TRUE(app.refresh());
+  app.refresh();
   EXPECT_TRUE(root_indicator.active());
   {
     FullScreenDialog dialog(app.context(), dialog_indicator);
     dialog.setHeaderTitle("Working");
     dialog.show(task);
-    ASSERT_TRUE(app.refresh());
+    app.refresh();
     EXPECT_FALSE(root_indicator.active());
     EXPECT_TRUE(dialog_indicator.active());
     dialog.dismiss();
-    ASSERT_TRUE(app.refresh());
+    app.refresh();
     EXPECT_TRUE(root_indicator.active());
     EXPECT_FALSE(dialog_indicator.active());
   }
@@ -468,20 +462,20 @@ TEST(ProgressAcceptanceTest, DialogAndNavigationOwnership) {
     const DialogActionSpec action{1, "Close", DialogActionRole::kAcknowledge};
     BasicDialog dialog(app.context(), dialog_indicator, &action, 1);
     dialog.show(task);
-    ASSERT_TRUE(app.refresh());
+    app.refresh();
     EXPECT_TRUE(dialog_indicator.active());
     dialog.dismiss();
-    ASSERT_TRUE(app.refresh());
+    app.refresh();
     EXPECT_FALSE(dialog_indicator.active());
   }
   {
     ProgressLegacyDialog dialog(app.context());
     dialog.setPresentationContent(dialog_indicator);
     dialog.show(task, [](int) {});
-    ASSERT_TRUE(app.refresh());
+    app.refresh();
     EXPECT_TRUE(dialog_indicator.active());
     dialog.close();
-    ASSERT_TRUE(app.refresh());
+    app.refresh();
     EXPECT_FALSE(dialog_indicator.active());
   }
   root.removeAll();
@@ -508,7 +502,7 @@ TEST_F(ProgressTest, NestedListAndIndependentMenu) {
   outer.add(inner);
   Task& task = app_.addTaskFullScreen(outer);
   progress.setIndeterminate();
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_TRUE(progress.active());
   MenuGroup group(context());
   group.add(std::make_unique<MenuRow<StandardMenuItem>>(
@@ -516,16 +510,16 @@ TEST_F(ProgressTest, NestedListAndIndependentMenu) {
   Menu menu(context());
   menu.addGroup(group);
   EXPECT_EQ(MenuShowResult::kShown, menu.show(task, entry));
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_TRUE(progress.active());
   menu.dismissChain();
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_TRUE(progress.active());
   outer.setVisibility(Visibility::kInvisible);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_FALSE(progress.active());
   outer.setVisibility(Visibility::kVisible);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(0, progress.phase());
   task.navigation().clear();
   refresh();
@@ -542,13 +536,13 @@ TEST_F(ProgressTest, TinyAndEmptyBounds) {
   for (float value : {0.0f, 0.001f, 0.5f, 0.99f, 1.0f}) {
     linear.setProgress(value);
     circular.setProgress(value);
-    EXPECT_TRUE(refresh());
+    refresh();
   }
   linear.layout(Rect(0, 0, -1, -1));
   circular.layout(Rect(0, 0, -1, -1));
   linear.setIndeterminate();
   circular.setIndeterminate();
-  EXPECT_TRUE(refresh());
+  refresh();
   EXPECT_FALSE(context().animations().contains(linear, 0));
   EXPECT_FALSE(context().animations().contains(circular, 0));
   pattern.removeAll();

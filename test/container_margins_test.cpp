@@ -191,7 +191,7 @@ TEST_F(ContainerMargins, TaskRoot) {
     Application app(&env, display);
     root = std::make_unique<Probe>(app.context());
     app.addTaskFullScreen(*root);
-    ASSERT_TRUE(app.refresh());
+    app.refresh();
     EXPECT_EQ(Rect(3, 5, 96, 74), root->parent_bounds());
     expectMeasured(*root, 94, 70);
   }

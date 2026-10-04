@@ -411,7 +411,7 @@ TEST_F(Material3DialogTest, SemanticTextInputIsIsolatedToDialogBody) {
   TextField dialog_field(app_.context(), font_body1(), "", roo_display::kLeft,
                          TextField::NONE);
   TestScaffold dialog(app_.context(), WidgetRef(dialog_field));
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   ASSERT_EQ(DialogShowResult::kShown, dialog.show(owner_));
   TextInputEmitter emitter;
   emitter.connect(app_);
@@ -484,7 +484,7 @@ TEST_F(Material3DialogTest, BasicDialogMapsBackEscapeAndProgrammaticDismissal) {
 TEST_F(Material3DialogTest, BasicDialogRestoresOwnerFocusAfterDismissal) {
   TestContent owner_focus(app_.context());
   task_content_.add(WidgetRef(owner_focus), Rect(0, 0, 20, 20));
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   ASSERT_TRUE(owner_focus.requestFocus());
   TestContent body(app_.context());
   DialogActionSpec action{1, "OK", DialogActionRole::kAcknowledge};
@@ -560,7 +560,7 @@ TEST_F(Material3DialogTest, FullScreenDialogCoversWindowWithSquareSurface) {
   dialog.setHeaderTitle("Edit schedule");
 
   ASSERT_EQ(DialogShowResult::kShown, dialog.show(navigation_owner_));
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   EXPECT_EQ(0, dialog.offsetLeft());
   EXPECT_EQ(0, dialog.offsetTop());
   EXPECT_EQ(320, dialog.width());
@@ -641,13 +641,13 @@ TEST_F(Material3DialogTest, FullScreenHeaderMirrorsWithLayoutDirection) {
   DialogActionSpec confirm{23, "Save", DialogActionRole::kConfirm};
   dialog.setConfirmAction(confirm);
   ASSERT_EQ(DialogShowResult::kShown, dialog.show(navigation_owner_));
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   Widget& close = test::DialogTestAccess::CloseButton(dialog);
   Widget& save = test::DialogTestAccess::ConfirmButton(dialog);
   EXPECT_LT(close.offsetLeft(), save.offsetLeft());
 
   dialog.setLayoutDirection(LayoutDirection::kRightToLeft);
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   EXPECT_GT(close.offsetLeft(), save.offsetLeft());
   dialog.dismiss();
 }
@@ -698,7 +698,7 @@ TEST_F(Material3DialogTest, FullScreenWorksWithWidgetConvenienceTask) {
   ASSERT_EQ(DialogShowResult::kShown, dialog.show(owner_));
   EXPECT_EQ(2u, owner_.navigation().depth());
   EXPECT_EQ(nullptr, task_content_.parent());
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   StandardMenuItem item(StandardMenuItemInit{"Option"});
   MenuRow<StandardMenuItem> row(app_.context());
   row.setMenuItem(item);
@@ -726,7 +726,7 @@ TEST_F(Material3DialogTest, FullScreenMenuUsesFreeTransientSlotAndBackOrder) {
   Menu menu(app_.context());
   menu.addGroup(group);
   ASSERT_EQ(DialogShowResult::kShown, dialog.show(navigation_owner_));
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   EXPECT_EQ(2u, navigation_.depth());
   EXPECT_EQ(1, root_.pauses);
   ASSERT_TRUE(anchor.requestFocus());
@@ -748,7 +748,7 @@ TEST_F(Material3DialogTest, FullScreenCanOpenBasicDialog) {
   DialogActionSpec action{1, "OK", DialogActionRole::kAcknowledge};
   TestBasicDialog basic(app_.context(), WidgetRef(), &action, 1);
   ASSERT_EQ(DialogShowResult::kShown, dialog.show(navigation_owner_));
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   ASSERT_EQ(DialogShowResult::kShown, basic.show(navigation_owner_));
   navigation_owner_.requestBack();
   EXPECT_FALSE(basic.isShowing());
@@ -769,7 +769,7 @@ TEST_F(Material3DialogTest, NavigationClosesMenuBeforeCoveringDialog) {
   Menu menu(app_.context());
   menu.addGroup(group);
   ASSERT_EQ(DialogShowResult::kShown, dialog.show(navigation_owner_));
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   ASSERT_EQ(MenuShowResult::kShown, menu.show(navigation_owner_, anchor));
   navigation_.push(next);
   EXPECT_FALSE(
@@ -782,7 +782,7 @@ TEST_F(Material3DialogTest, NavigationClosesMenuBeforeCoveringDialog) {
   EXPECT_DEATH_IF_SUPPORTED(dialog.dismiss(), "");
   navigation_.pop();
   EXPECT_TRUE(dialog.isCurrent());
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   ASSERT_EQ(MenuShowResult::kShown, menu.show(navigation_owner_, anchor));
   dialog.dismiss();
   EXPECT_FALSE(
@@ -838,7 +838,7 @@ TEST_F(Material3DialogTest, AbsoluteBoundsPreserveAncestorClipping) {
   TestContent anchor(app_.context());
   nested.add(WidgetRef(anchor), Rect(-5, 10, 14, 29));
   task_content_.add(WidgetRef(nested), Rect(20, 30, 69, 79));
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   Rect full, visible;
   anchor.getAbsoluteBounds(full, visible);
   EXPECT_EQ(Rect(15, 40, 34, 59), full);
@@ -915,7 +915,7 @@ TEST_F(Material3DialogTest, TransientCompletionCannotReadmitDuringNavigation) {
   group.add(row);
   menu.addGroup(group);
   ASSERT_EQ(DialogShowResult::kShown, dialog.show(navigation_owner_));
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   ASSERT_EQ(MenuShowResult::kShown,
             menu.showFromRect(navigation_owner_, Rect(0, 0, 20, 20)));
   dialog.dismiss();

@@ -70,10 +70,10 @@ class Application {
   /// drawing has finished. Such callbacks may invalidate additional work.
   ///
   /// Useful when you want to enforce visual changes immediately without
-  /// waiting for the next tick. `deadline` can limit the redraw. Returns true
-  /// when the refresh completed. When the deadline interrupts drawing, returns
-  /// false and leaves deferred click notifications pending.
-  bool refresh(roo_time::Uptime deadline = roo_time::Uptime::Max());
+  /// waiting for the next tick. Drawing runs to completion before returning;
+  /// invalidations raised during drawing or click settlement remain pending
+  /// for a later refresh.
+  void refresh();
 
   /// Returns the bootstrap environment used by this application.
   const Environment& env() const { return *env_; }

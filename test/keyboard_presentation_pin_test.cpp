@@ -94,7 +94,7 @@ class KeyboardPresentationPinTest : public RooWindowsRenderTestSized<412, 320> {
     task_ = &app_.addTaskFullScreen(field_);
     task_->textFieldEditor().edit(&field_, false);
     app_.keyboard().show();
-    ASSERT_TRUE(refresh());
+    refresh();
     // A 20-pixel grid unit and 40-pixel row make key coordinates explicit.
     widget().layout(Rect(0, 0, 411, 173));
   }
@@ -131,7 +131,7 @@ TEST_F(KeyboardPresentationPinTest,
   binary.setTask(owner);
   binary.connect(app_);
   binary.show();
-  ASSERT_TRUE(refresh());
+  refresh();
   Widget& keys = binary.getContents();
   keys.layout(Rect(0, 0, 411, 173));
   task_->textFieldEditor().edit(&field_, false);
@@ -161,11 +161,11 @@ TEST_F(KeyboardPresentationPinTest, CircularActionPaintAndTouchBoundsDiffer) {
   binary.setTask(owner);
   binary.connect(app_);
   binary.show();
-  ASSERT_TRUE(refresh());
+  refresh();
   Widget& keys = binary.getContents();
   keys.layout(Rect(0, 0, 411, 173));
   keys.invalidateInterior();
-  ASSERT_TRUE(refresh());
+  refresh();
   XDim dx;
   YDim dy;
   keys.getAbsoluteOffset(dx, dy);
@@ -192,7 +192,7 @@ class BinaryPopupTest : public KeyboardPresentationPinTest {
     binary_.setLayout(accentDemoLayout());
     task_->textFieldEditor().edit(&field_, false);
     binary_.show();
-    ASSERT_TRUE(refresh());
+    refresh();
   }
 
   Widget& keys() { return binary_.getContents(); }
@@ -228,7 +228,7 @@ class BinaryPopupTest : public KeyboardPresentationPinTest {
 // order.
 TEST_F(BinaryPopupTest, PolishAlternativesWrapAfterFiveChoices) {
   binary_.setLayout(kbPolPLLayout());
-  ASSERT_TRUE(refresh());
+  refresh();
   keys().layout(Rect(0, 0, 411, 173));
   EXPECT_EQ(aWidth(), popupRowHeight());
   std::string expected;
@@ -241,7 +241,7 @@ TEST_F(BinaryPopupTest, PolishAlternativesWrapAfterFiveChoices) {
     const int x = aX(i % 5);
     const int y = popupY(48, i / 5, 2);
     keys().onLongPressMove(x, y);
-    ASSERT_TRUE(refresh());
+    refresh();
     keys().onLongPressFinished(x, y);
     expected += choices[i];
     EXPECT_EQ(expected, field_.content()) << i;
@@ -251,7 +251,7 @@ TEST_F(BinaryPopupTest, PolishAlternativesWrapAfterFiveChoices) {
 // Verifies seven choices occupy two rows of four in authored order.
 TEST_F(BinaryPopupTest, SevenChoicesUseFourColumns) {
   binary_.setLayout(kbPolPLLayout());
-  ASSERT_TRUE(refresh());
+  refresh();
   keys().layout(Rect(0, 0, 411, 173));
   std::string expected;
   const char* choices[] = {u8"è", u8"é", u8"ê", u8"ë", u8"ė", u8"ę", u8"ē"};
@@ -267,12 +267,12 @@ TEST_F(BinaryPopupTest, SevenChoicesUseFourColumns) {
 // Verifies selection tints a circle without filling the cell's corners.
 TEST_F(BinaryPopupTest, AlternativeHighlightIsCircular) {
   binary_.setLayout(kbPolPLLayout());
-  ASSERT_TRUE(refresh());
+  refresh();
   keys().layout(Rect(0, 0, 411, 173));
   keys().onDown(46, 68);
   keys().onLongPress(46, 68);
   keys().onLongPressMove(aX(2), popupY(48, 1, 2));
-  ASSERT_TRUE(refresh());
+  refresh();
   XDim dx;
   YDim dy;
   keys().getAbsoluteOffset(dx, dy);
@@ -290,12 +290,12 @@ TEST_F(BinaryPopupTest, AlternativeHighlightIsCircular) {
 // below the cell center, independently of the font's line gap and descent.
 TEST_F(BinaryPopupTest, AlternativesUseHalfAscentBaseline) {
   binary_.setLayout(kbPolPLLayout());
-  ASSERT_TRUE(refresh());
+  refresh();
   keys().layout(Rect(0, 0, 411, 173));
   keys().onDown(46, 68);
   keys().onLongPress(46, 68);
   keys().onLongPressMove(-100, 68);  // Clear highlight without cancelling.
-  ASSERT_TRUE(refresh());
+  refresh();
   XDim dx;
   YDim dy;
   keys().getAbsoluteOffset(dx, dy);
@@ -325,7 +325,7 @@ TEST_F(BinaryPopupTest, AlternativesUseHalfAscentBaseline) {
 // nothing.
 TEST_F(BinaryPopupTest, BalancedRowsHaveNoPhantomFifthColumn) {
   binary_.setLayout(kbPolPLLayout());
-  ASSERT_TRUE(refresh());
+  refresh();
   keys().layout(Rect(0, 0, 411, 173));
   keys().onDown(106, 28);
   keys().onLongPress(106, 28);
@@ -346,12 +346,12 @@ TEST_F(BinaryPopupTest, BalancedRowsHaveNoPhantomFifthColumn) {
 // an edge highlight, while the middle of the side still belongs to the surface.
 TEST_F(BinaryPopupTest, MultiRowPopupHasRoundedOuterCorners) {
   binary_.setLayout(kbPolPLLayout());
-  ASSERT_TRUE(refresh());
+  refresh();
   keys().layout(Rect(0, 0, 411, 173));
   keys().onDown(46, 68);
   keys().onLongPress(46, 68);
   keys().onLongPressMove(aX(2), popupY(48, 1, 2));
-  ASSERT_TRUE(refresh());
+  refresh();
   XDim dx;
   YDim dy;
   keys().getAbsoluteOffset(dx, dy);
@@ -369,15 +369,15 @@ TEST_F(BinaryPopupTest, MultiRowPopupHasRoundedOuterCorners) {
 // commit.
 TEST_F(BinaryPopupTest, SlideSelectsAccentAndClearsPopup) {
   hold();
-  ASSERT_TRUE(refresh());
+  refresh();
   keys().onLongPressMove(demoX(0), 48);
-  ASSERT_TRUE(refresh());
+  refresh();
   keys().onLongPressFinished(demoX(0), 48);
   EXPECT_EQ(u8"é", field_.content());
   EXPECT_FALSE(keys().hasPresentationPin());
   keys().onLongPressFinished(demoX(0), 48);
   EXPECT_EQ(u8"é", field_.content());
-  ASSERT_TRUE(refresh());
+  refresh();
 }
 
 // Verifies release coordinates work without a preceding MOVE and consume
@@ -402,7 +402,7 @@ TEST_F(BinaryPopupTest, ReleaseSelectsUppercaseAndAuthoredAlternatives) {
 TEST_F(BinaryPopupTest, OutsideAndLifecycleChangesCancelSelection) {
   for (int reason = 0; reason < 6; ++reason) {
     binary_.show();
-    ASSERT_TRUE(refresh());
+    refresh();
     hold();
     if (reason == 0) keys().onLongPressMove(-100, -100);
     if (reason == 1) binary_.hide();
@@ -419,7 +419,7 @@ TEST_F(BinaryPopupTest, OutsideAndLifecycleChangesCancelSelection) {
 // Verifies horizontal movement below the popup projects into its bottom row.
 TEST_F(BinaryPopupTest, HorizontalProjectionSelectsBottomRow) {
   binary_.setLayout(kbPolPLLayout());
-  ASSERT_TRUE(refresh());
+  refresh();
   keys().layout(Rect(0, 0, 411, 173));
   keys().onDown(106, 28);
   keys().onLongPress(106, 28);
@@ -450,14 +450,14 @@ TEST_F(BinaryPopupTest, VerticalEscapeCancelsUntilNextPress) {
 // bottom-row cell centered exactly on the held key.
 TEST_F(BinaryPopupTest, DefaultChoiceTracksAnchoredColumn) {
   binary_.setLayout(kbPolPLLayout());
-  ASSERT_TRUE(refresh());
+  refresh();
   keys().layout(Rect(0, 0, 411, 173));
   for (const std::pair<int, int>& point :
        {std::pair<int, int>{46, 68}, {106, 28}, {346, 28}}) {
     keys().onDown(point.first, point.second);
     keys().onLongPress(point.first, point.second);
     ASSERT_TRUE(keys().hasPresentationPin());
-    ASSERT_TRUE(refresh());
+    refresh();
     XDim dx;
     YDim dy;
     keys().getAbsoluteOffset(dx, dy);
@@ -467,7 +467,7 @@ TEST_F(BinaryPopupTest, DefaultChoiceTracksAnchoredColumn) {
     for (int x = point.first - 17; x <= point.first + 17; ++x)
       initial.push_back(pixelAt(dx + x, sample_y));
     keys().onLongPressMove(point.first, point.second);
-    ASSERT_TRUE(refresh());
+    refresh();
     for (int x = point.first - 17; x <= point.first + 17; ++x)
       EXPECT_EQ(initial[x - point.first + 17], pixelAt(dx + x, sample_y));
     keys().onLongPressFinished(point.first, point.second);
@@ -495,14 +495,14 @@ TEST_F(BinaryPopupTest, LayoutAndPresentationChangesCancel) {
   keys().onLongPressFinished(232, -36);
   EXPECT_TRUE(field_.content().empty());
   binary_.setLayout(accentDemoLayout());
-  ASSERT_TRUE(refresh());
+  refresh();
   hold();
   keys().layout(Rect(0, 0, 399, 159));
   keys().onLongPressFinished(232, -36);
   EXPECT_TRUE(field_.content().empty());
   binary_.hide();
   binary_.show();
-  ASSERT_TRUE(refresh());
+  refresh();
   hold();
   keys().setVisibility(Visibility::kInvisible);
   keys().onLongPressFinished(232, -36);
@@ -532,7 +532,7 @@ TEST(KeyboardPaint, AlternativePopupDirtyPaintMatchesFullPaint) {
   for (bool multirow : {false, true}) {
     app.keyboard().setLayout(multirow ? kbPolPLLayout() : accentDemoLayout());
     app.keyboard().show();
-    ASSERT_TRUE(app.refresh());
+    app.refresh();
     Widget& keyboard = app.keyboard().getContents();
     if (multirow) keyboard.layout(Rect(0, 0, 411, 173));
     for (int step = 0; step < 4; ++step) {
@@ -547,13 +547,13 @@ TEST(KeyboardPaint, AlternativePopupDirtyPaintMatchesFullPaint) {
         keyboard.onLongPressMove(multirow ? 190 : 310, multirow ? 68 : 48);
       if (step == 3) keyboard.onCancel();
       device.reset();
-      ASSERT_TRUE(app.refresh());
+      app.refresh();
       EXPECT_LE(*std::max_element(device.writes.begin(), device.writes.end()),
                 1);
       const std::vector<roo::byte> partial = pixels;
       app.root().invalidateInterior();
       device.reset();
-      ASSERT_TRUE(app.refresh());
+      app.refresh();
       EXPECT_LE(*std::max_element(device.writes.begin(), device.writes.end()),
                 1);
       EXPECT_EQ(partial, pixels) << step;
@@ -589,7 +589,7 @@ TEST_F(KeyboardPresentationPinTest,
   widget().onShowPress(26, 28);
   EXPECT_TRUE(widget().hasPresentationPin());
   EXPECT_EQ(&widget(), owner->focus().focused());
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(QuantizeToArgb4444(context().keyboardColorTheme().normalButton),
             pixelAt(preview_center_x + Scaled(12), preview_center_y));
   widget().onCancel();
@@ -722,7 +722,7 @@ TEST(KeyboardPaint, SinglePassAndDirtyPaintMatchesFullPaint) {
   roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   Application app(&env, display);
-  ASSERT_TRUE(app.refresh());
+  app.refresh();
   app.keyboard().show();
   Widget& keyboard = app.keyboard().getContents();
   for (int step = 0; step < 9; ++step) {
@@ -743,7 +743,7 @@ TEST(KeyboardPaint, SinglePassAndDirtyPaintMatchesFullPaint) {
     }
     if (step == 8) app.keyboard().setPage(1);
     device.reset();
-    ASSERT_TRUE(app.refresh());
+    app.refresh();
     EXPECT_LE(*std::max_element(device.writes.begin(), device.writes.end()), 1)
         << "dirty step " << step;
     if (step == 1 || step == 2) {
@@ -754,7 +754,7 @@ TEST(KeyboardPaint, SinglePassAndDirtyPaintMatchesFullPaint) {
     const std::vector<roo::byte> partial = pixels;
     keyboard.invalidateInterior();
     device.reset();
-    ASSERT_TRUE(app.refresh());
+    app.refresh();
     EXPECT_LE(*std::max_element(device.writes.begin(), device.writes.end()), 1)
         << "full step " << step;
     EXPECT_EQ(partial, pixels) << "step " << step;
@@ -809,7 +809,7 @@ TEST(KeyboardPaint, FirstRowMatchesOriginalButtons) {
   Environment env(scheduler);
   Application app(&env, display);
   app.keyboard().show();
-  ASSERT_TRUE(app.refresh());
+  app.refresh();
   Widget& keyboard = app.keyboard().getContents();
   EXPECT_EQ(320, keyboard.width());
   EXPECT_EQ(120, keyboard.height());
@@ -818,7 +818,7 @@ TEST(KeyboardPaint, FirstRowMatchesOriginalButtons) {
     app.keyboard().setCapsState(caps ? Keyboard::CAPS_STATE_HIGH
                                      : Keyboard::CAPS_STATE_LOW);
     keyboard.invalidateInterior();
-    ASSERT_TRUE(app.refresh());
+    app.refresh();
     std::vector<roo::byte> reference_pixels(320 * 120 * 2);
     roo_display::OffscreenDevice<roo_display::Argb4444> reference_device(
         320, 120, reference_pixels.data(), roo_display::Argb4444());
@@ -827,7 +827,7 @@ TEST(KeyboardPaint, FirstRowMatchesOriginalButtons) {
     LegacyKeyboardFirstRow reference(reference_app.context(),
                                      caps ? "QWERTYUIOP" : "qwertyuiop");
     Task& reference_task = reference_app.addTaskFullScreen(reference);
-    ASSERT_TRUE(reference_app.refresh());
+    reference_app.refresh();
     // Compare the entire first row, including the outer keyboard margins.
     for (int y = 0; y < 35; ++y) {
       for (int x = 0; x < 320 * 2; ++x) {
@@ -854,7 +854,7 @@ TEST(KeyboardPaint, TextPressAndReleaseWithEditorDamageStayLocal) {
   Task& task = app.addTaskFullScreen(field);
   task.textFieldEditor().edit(&field, false);
   app.keyboard().show();
-  ASSERT_TRUE(app.refresh());
+  app.refresh();
   Widget& keyboard = app.keyboard().getContents();
   for (int step = 0; step < 4; ++step) {
     if ((step % 2) == 0) {
@@ -866,7 +866,7 @@ TEST(KeyboardPaint, TextPressAndReleaseWithEditorDamageStayLocal) {
     // MainWindow now has a much wider aggregate redraw bound than the key.
     field.invalidateInterior();
     device.reset();
-    ASSERT_TRUE(app.refresh());
+    app.refresh();
     int keyboard_pixels = 0;
     for (int y = 160; y < 320; ++y) {
       for (int x = 0; x < 412; ++x) {
@@ -883,7 +883,7 @@ TEST(KeyboardPaint, TextPressAndReleaseWithEditorDamageStayLocal) {
     EXPECT_LT(keyboard_pixels, 8500);
     const std::vector<roo::byte> partial = pixels;
     keyboard.invalidateInterior();
-    ASSERT_TRUE(app.refresh());
+    app.refresh();
     EXPECT_EQ(partial, pixels) << "step " << step;
   }
   EXPECT_EQ("vv", field.content());

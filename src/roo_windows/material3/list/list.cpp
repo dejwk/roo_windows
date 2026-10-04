@@ -2212,16 +2212,14 @@ void List::paintBand(PaintContext& context, int section, int index,
 }
 
 void List::paint(PaintContext& context) const {
-  if (!context.isDeadlineExceeded()) {
-    int previous = -1;
-    for (int i = 0; i < static_cast<int>(sections_.size()); ++i) {
-      if (sectionCount(sections_[i]) == 0) continue;
-      if (previous >= 0) {
-        paintBand(context, previous, sectionCount(sections_[previous]) - 1,
-                  interSectionGap(previous, i));
-      }
-      previous = i;
+  int previous = -1;
+  for (int i = 0; i < static_cast<int>(sections_.size()); ++i) {
+    if (sectionCount(sections_[i]) == 0) continue;
+    if (previous >= 0) {
+      paintBand(context, previous, sectionCount(sections_[previous]) - 1,
+                interSectionGap(previous, i));
     }
+    previous = i;
   }
   Container::paint(context);
 }

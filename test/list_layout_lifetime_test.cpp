@@ -107,9 +107,9 @@ TEST(ListLayoutLifetime, DestroysPopulatedPoolAfterNavigationClear) {
                   [&]() { return std::make_unique<Row>(app.context()); });
   SimpleScrollablePanel scroll(app.context(), list);
   Task& task = app.addTaskFullScreen(scroll);
-  ASSERT_TRUE(app.refresh());
+  app.refresh();
   scroll.scrollTo(0, -200);
-  ASSERT_TRUE(app.refresh());
+  app.refresh();
   EXPECT_GT(list.first(), 0);
   task.navigation().clear();
 }

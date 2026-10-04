@@ -220,7 +220,7 @@ TEST_F(ScrollConnectionResourceTest, ScaffoldDragDoesNotAllocate) {
   scaffold->setTopBar(std::move(bar));
   scaffold->setBody(std::move(panel));
   app_.add(std::move(scaffold), roo_display::Box(0, 0, 319, 239));
-  ASSERT_TRUE(refresh());
+  refresh();
   target->onDragStart(0, 0);
   BeginAllocationTracking();
   for (int i = 0; i < 40; ++i) {
@@ -252,7 +252,7 @@ TEST_F(ScrollConnectionResourceTest, FlexDragDoesNotAllocate) {
   scaffold->add(std::move(panel),
                 {.flex_grow = 1, .flex_basis = FlexBasis::kZero});
   app_.add(std::move(scaffold), roo_display::Box(0, 0, 319, 239));
-  ASSERT_TRUE(refresh());
+  refresh();
   target->onDragStart(0, 0);
   BeginAllocationTracking();
   for (int i = 0; i < 40; ++i) {

@@ -70,7 +70,7 @@ class MovingAppBarTest : public RooWindowsRenderTestSized<320, 240> {
     column->add(std::move(panel),
                 {.flex_grow = 1, .flex_basis = FlexBasis::kZero});
     app_.add(std::move(column), roo_display::Box(0, 0, 319, 239));
-    ASSERT_TRUE(refresh());
+    refresh();
   }
   AppBar* bar_ = nullptr;
   MotionPanel* panel_ = nullptr;
@@ -84,18 +84,18 @@ TEST_F(MovingAppBarTest, EnterAlwaysConservesMovementThroughLayout) {
   ASSERT_EQ(128, panel_->height());
   panel_->onDragStart(0, 0);
   panel_->onDrag(0, 0, 0, -60);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(64, bar_->height());
   EXPECT_EQ(176, panel_->height());
   EXPECT_EQ(-12, panel_->getScrollPosition().y);
   panel_->onDrag(0, 0, 0, 10);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(74, bar_->height());
   EXPECT_EQ(-12, panel_->getScrollPosition().y);
   panel_->onDragFinished(0, 0);
-  ASSERT_TRUE(refresh());
+  refresh();
   delay(200);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(64, bar_->height());
   EXPECT_FALSE(context().animations().contains(
       *bar_, material3::internal::AppBarScrollConnection::kSettle));
@@ -109,16 +109,16 @@ TEST_F(MovingAppBarTest, FlingSurvivesCollapsingViewport) {
   panel_->onDrag(0, 0, 0, -10);
   panel_->onFling(0, 0, 0, -1200);
   panel_->onDragFinished(0, -1200);
-  ASSERT_TRUE(refresh());
+  refresh();
   delay(100);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(64, bar_->height());
   EXPECT_LT(panel_->getScrollPosition().y, 0);
   EXPECT_TRUE(panel_->moving());
   panel_->onDragStart(0, 0);
   auto stopped = panel_->getScrollPosition();
   delay(200);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(stopped.y, panel_->getScrollPosition().y);
   EXPECT_FALSE(panel_->moving());
 }
@@ -129,11 +129,11 @@ TEST_F(MovingAppBarTest, SmallBarAndShortContent) {
   install(AppBarScrollBehavior::kEnterAlways, AppBarVariant::kSmall, 20);
   panel_->onDragStart(0, 0);
   panel_->onDrag(0, 0, 0, -64);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(0, bar_->height());
   EXPECT_EQ(240, panel_->height());
   panel_->scrollToTop();
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(64, bar_->height());
 }
 
@@ -145,7 +145,7 @@ TEST_F(MovingAppBarTest, HidingBarStopsCoordinatedMotion) {
   panel_->onDrag(0, 0, 0, -20);
   panel_->onFling(0, 0, 0, -1200);
   bar_->setVisibility(Visibility::kInvisible);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_FALSE(panel_->moving());
   EXPECT_TRUE(bar_->hasScrollBehavior());
 }
@@ -178,7 +178,7 @@ void VerifyTitleCenterPath(AppBar& bar, MotionPanel& panel) {
 TEST_F(MovingAppBarTest, MediumTitleCenterIsContinuous) {
   install();
   bar_->setSubtitle("Solar heating");
-  ASSERT_TRUE(refresh());
+  refresh();
   VerifyTitleCenterPath(*bar_, *panel_);
 }
 
@@ -187,7 +187,7 @@ TEST_F(MovingAppBarTest, LargeTitleCenterIsContinuous) {
           AppBarVariant::kLargeFlexible);
   bar_->setSubtitle("Solar heating");
   bar_->setTitleAlignment(AppBarTitleAlignment::kCentered);
-  ASSERT_TRUE(refresh());
+  refresh();
   VerifyTitleCenterPath(*bar_, *panel_);
 }
 
@@ -206,7 +206,7 @@ TEST_F(MovingAppBarTest, SubtitleFollowsTitleDuringCollapseAndExpansion) {
          {AppBarTitleAlignment::kLeading, AppBarTitleAlignment::kCentered}) {
       bar_->setTitleAlignment(alignment);
       panel_->scrollToTop();
-      ASSERT_TRUE(refresh());
+      refresh();
       Widget* title = static_cast<Widget&>(*bar_).focusChildAt(0);
       Widget* subtitle = static_cast<Widget&>(*bar_).focusChildAt(1);
       ASSERT_NE(nullptr, title);
@@ -250,7 +250,7 @@ TEST_F(MovingAppBarTest, CompactTrackingIsBoundedAndSettles) {
   for (const char* text : titles) {
     bar_->setTitle(text);
     panel_->scrollToTop();
-    ASSERT_TRUE(refresh());
+    refresh();
     // Empty titles have no visible child to inspect.
     if (bar_->title().empty()) continue;
     auto* title = static_cast<material3::internal::AppBarTitle*>(
@@ -318,7 +318,7 @@ TEST_F(MovingAppBarTest, ExitExampleUsesTrackingAcrossCompactHalf) {
   install(AppBarScrollBehavior::kExitUntilCollapsed);
   bar_->setTitle("Solar heating");
   bar_->setSubtitle("Equipment details");
-  ASSERT_TRUE(refresh());
+  refresh();
   auto* title = static_cast<material3::internal::AppBarTitle*>(
       static_cast<Widget&>(*bar_).focusChildAt(0));
   int travel = bar_->height() - 64;
@@ -337,20 +337,20 @@ TEST_F(MovingAppBarTest, ExitExampleUsesTrackingAcrossCompactHalf) {
 TEST_F(MovingAppBarTest, LeadingTitleContractsAroundItsCenter) {
   install(AppBarScrollBehavior::kEnterAlways, AppBarVariant::kLargeFlexible);
   bar_->setTitle("Equipment");
-  ASSERT_TRUE(refresh());
+  refresh();
   Widget* title = static_cast<Widget&>(*bar_).focusChildAt(0);
   int travel = bar_->height() - 64;
   panel_->onDragStart(0, 0);
   panel_->onDrag(0, 0, 0, -(travel / 2 - 1));
   Rect before = title->parent_bounds();
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_TRUE(test::CompareOrUpdateGolden(
       test::CaptureRgb(offscreen_.raster(), 0, 0, 320, 240),
       "test/goldens/app_bar_scroll/leading_before.ppm",
       "app_bar_leading_before"));
   panel_->onDrag(0, 0, 0, -1);
   Rect after = title->parent_bounds();
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_TRUE(test::CompareOrUpdateGolden(
       test::CaptureRgb(offscreen_.raster(), 0, 0, 320, 240),
       "test/goldens/app_bar_scroll/leading_after.ppm",
@@ -384,7 +384,7 @@ TEST_F(MovingAppBarTest, CollapsedTitleAndActionsShareCenter) {
       leading_ptr->setSize(size);
       trailing_ptr->setSize(size);
       panel_->scrollToTop();
-      ASSERT_TRUE(refresh());
+      refresh();
       int travel = bar_->height() - 64;
       const int action_y = leading_ptr->offsetTop();
       const int trailing_y = trailing_ptr->offsetTop();
@@ -394,7 +394,7 @@ TEST_F(MovingAppBarTest, CollapsedTitleAndActionsShareCenter) {
         EXPECT_EQ(action_y, leading_ptr->offsetTop());
         EXPECT_EQ(trailing_y, trailing_ptr->offsetTop());
       }
-      ASSERT_TRUE(refresh());
+      refresh();
       EXPECT_EQ(64, bar_->height());
       Widget* title = static_cast<Widget&>(*bar_).focusChildAt(0);
       for (Widget* child : {title, static_cast<Widget*>(leading_ptr),
@@ -424,10 +424,10 @@ TEST_F(MovingAppBarTest, CollapsedTitlePaintIsCentered) {
   install(AppBarScrollBehavior::kExitUntilCollapsed);
   bar_->setTitle("Solar heating");
   bar_->setSubtitle("Equipment details");
-  ASSERT_TRUE(refresh());
+  refresh();
   panel_->onDragStart(0, 0);
   panel_->onDrag(0, 0, 0, -(bar_->height() - 64));
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_TRUE(test::CompareOrUpdateGolden(
       test::CaptureRgb(offscreen_.raster(), 0, 0, 320, 240),
       "test/goldens/app_bar_scroll/collapsed_solar.ppm",
@@ -484,7 +484,7 @@ TEST_F(AppBarScrollBehaviorTest, TitleBaselineUsesHalfAscent) {
         SCOPED_TRACE(style->ascent());
         title_ptr->setText(text);
         title_ptr->invalidateInterior();
-        ASSERT_TRUE(refresh());
+        refresh();
         const roo_display::Box ink =
             style->font()
                 .getHorizontalStringMetrics(text, style->fontOptions())
@@ -516,7 +516,7 @@ TEST_F(AppBarScrollBehaviorTest, CenteredTitleMatchesStandardTextAlignment) {
       SCOPED_TRACE(text);
       title_ptr->setText(text);
       reference_ptr->setText(text);
-      ASSERT_TRUE(refresh());
+      refresh();
       for (int16_t y = 0; y < 64; ++y) {
         int16_t reference_y = y + 64;
         for (int16_t x = 0; x < 240; ++x) {
@@ -537,21 +537,21 @@ TEST_F(MovingAppBarTest, CollapseFramesGolden) {
   install();
   bar_->setSubtitle("Solar heating");
   bar_->setTitleAlignment(AppBarTitleAlignment::kCentered);
-  ASSERT_TRUE(refresh());
+  refresh();
   panel_->onDragStart(0, 0);
   const int steps[] = {0, -18, -17, -1, -36};
   const char* names[] = {"expanded", "fading", "before_switch", "midpoint",
                          "collapsed"};
   for (int i = 0; i < 5; ++i) {
     panel_->onDrag(0, 0, 0, steps[i]);
-    ASSERT_TRUE(refresh());
+    refresh();
     EXPECT_TRUE(test::CompareOrUpdateGolden(
         test::CaptureRgb(offscreen_.raster(), 0, 0, 320, 240),
         std::string("test/goldens/app_bar_scroll/") + names[i] + ".ppm",
         std::string("app_bar_scroll_") + names[i]));
   }
   panel_->onDrag(0, 0, 0, 54);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_TRUE(test::CompareOrUpdateGolden(
       test::CaptureRgb(offscreen_.raster(), 0, 0, 320, 240),
       "test/goldens/app_bar_scroll/fading.ppm",
@@ -572,17 +572,17 @@ TEST_F(AppBarScrollBehaviorTest, ScaffoldAndSearchBarGeometry) {
   scaffold->setTopBar(std::move(bar));
   scaffold->setBody(std::move(panel));
   app_.add(std::move(scaffold), roo_display::Box(0, 0, 319, 239));
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(64, bar_ptr->height());
   panel_ptr->onDragStart(0, 0);
   panel_ptr->onDrag(0, 0, 0, -32);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(32, bar_ptr->height());
   EXPECT_EQ(208, panel_ptr->height());
   std::vector<Widget*> path;
   EXPECT_FALSE(bar_ptr->fillTouchTargetPath(10, 40, path));
   panel_ptr->scrollToTop();
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(64, bar_ptr->height());
 }
 
@@ -621,12 +621,12 @@ TEST_F(MovingAppBarTest, ExitUntilCollapsedExpandsOnlyAtTop) {
   EXPECT_EQ(72, bar_->height());
   EXPECT_EQ(0, panel_->getScrollPosition().y);
   panel_->onDragFinished(0, 0);
-  ASSERT_TRUE(refresh());
+  refresh();
   delay(200);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(64, bar_->height());
   panel_->scrollToTop();
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(112, bar_->height());
 }
 
@@ -635,7 +635,7 @@ TEST_F(MovingAppBarTest, SmallExitUntilCollapsedIsPinned) {
   install(AppBarScrollBehavior::kExitUntilCollapsed, AppBarVariant::kSmall);
   panel_->onDragStart(0, 0);
   panel_->onDrag(0, 0, 0, -60);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(64, bar_->height());
   EXPECT_EQ(-60, panel_->getScrollPosition().y);
 }
@@ -648,7 +648,7 @@ TEST_F(MovingAppBarTest, ClearDuringMotionAndUnsupportedSearchPolicy) {
   panel_->onDrag(0, 0, 0, -60);
   panel_->onFling(0, 0, 0, -1200);
   EXPECT_EQ(ScrollConnectionStatus::kSuccess, bar_->clearScrollBehavior());
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(112, bar_->height());
   EXPECT_FALSE(panel_->moving());
   SearchAppBar search(context());
@@ -703,14 +703,14 @@ TEST_F(MovingAppBarTest, FlingAndSpringReachExactEndpoint) {
   panel_->onDrag(0, 0, 0, -60);
   panel_->onFling(0, 0, 0, -1200);
   panel_->onDragFinished(0, -1200);
-  ASSERT_TRUE(refresh());
+  refresh();
   delay(800);
-  ASSERT_TRUE(refresh());
+  refresh();
   // The replacement spring track anchors on its first sampled frame.
   delay(20);
-  ASSERT_TRUE(refresh());
+  refresh();
   delay(600);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(64, bar_->height());
   EXPECT_FALSE(panel_->moving());
   Margins margins = panel_->contents()->getMargins();

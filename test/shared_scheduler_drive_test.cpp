@@ -85,18 +85,18 @@ TEST(SharedSchedulerDrive, KeyboardCanTargetAnotherApplicationEditor) {
   destination.start();
   scheduler.executeEligibleTasksUpToNow(roo_scheduler::Priority::kMinimum, 2);
 
-  ASSERT_TRUE(destination.refresh());
+  destination.refresh();
   // Keep the destination's local keyboard hidden while accepting semantic
   // input from the source application's keyboard.
   destination_task.textFieldEditor().edit(&target.field, false);
-  EXPECT_TRUE(destination.refresh());
+  destination.refresh();
 
   // The source keyboard remains a source-owned presenter, while its semantic
   // operations synchronously target the destination application's editor.
   source.keyboard().connect(destination);
-  ASSERT_TRUE(source.refresh());
+  source.refresh();
   source.keyboard().show();
-  EXPECT_TRUE(source.refresh());
+  source.refresh();
   Widget& keyboard_contents = source.keyboard().getContents();
   keyboard_contents.onDown(5, 6);
   keyboard_contents.onSingleTapUp(5, 6);

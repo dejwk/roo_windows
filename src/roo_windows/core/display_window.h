@@ -43,8 +43,9 @@ class DisplayWindow {
   /// Returns the display-local gesture dispatcher.
   const GestureDetector& gestureDetector() const { return gesture_detector_; }
 
-  /// Performs one layout-and-paint pass on the borrowed display.
-  bool refresh(roo_time::Uptime deadline = roo_time::Uptime::Max());
+  /// Completes layout and painting on the borrowed display, then delivers
+  /// pending click settlement after the drawing context closes.
+  void refresh();
 
   /// Invalidates the full root and requests application work asynchronously.
   void requestRefresh();
@@ -67,20 +68,20 @@ class DisplayWindow {
   /// Drains pointer input and dispatches gestures and due transitions.
   void servicePointerInput();
 
-  /// Services deferred work and attempts at most one eligible paint slice.
+  /// Services deferred work and completes at most one eligible refresh.
   void refreshIfDue();
 
   /// Collects immediate framework work and the next eligible frame deadline.
   roo_time::Uptime nextWorkDeadline() const;
 
-  /// Returns the next frame opportunity, applying cadence only to new frames.
+  /// Returns the next frame opportunity, respecting the refresh cadence.
   roo_time::Uptime nextPaintDeadline() const;
 
   /// Delivers one notification batch; returns true after terminal delivery.
   bool serviceDeferredWork();
 
-  /// Samples and paints one logical frame or resumes its retained continuation.
-  bool refreshPaint(roo_time::Uptime deadline);
+  /// Samples animation and completes one paint before settling click feedback.
+  void refreshPaint();
 
   /// Clears gesture references into a subtree before it loses parent links.
   void cancelGestureTargetsInSubtree(Widget& subtree);
@@ -92,7 +93,6 @@ class DisplayWindow {
   bool touch_enabled_;
   bool refreshing_ = false;
   unsigned long last_time_refreshed_ms_ = 0;
-  roo_time::Duration paint_interval_ = roo_time::Millis(200);
 };
 
 }  // namespace roo_windows

@@ -2,14 +2,18 @@
 
 ## Implementation status
 
-**Implemented.** This is a retroactive design for the deadline-interruption
-handling present in the current source tree. It documents the decisions and
-invariants behind an implementation distributed across the application loop,
-root window, widget traversal, invalidation propagation, and clipper storage.
-Dependency status is recorded in the [status index](../README.md).
+**Retired on 2026-10-05.** Framework interruption and continuation support
+has been removed to establish a simpler synchronous painting baseline. See the
+[current paint contract](../README.md#current-paint-contract).
 
-Because the implementation is complete, this document omits an implementation
-plan and links the implemented code and regression coverage directly.
+`refresh()` now returns `void` and accepts no deadline. Paint-context deadline
+checks, retained continuation state, selective repair, frozen samples across
+attempts, and adaptive retry budgets have been removed. Clipper buffers still
+reuse their capacity, with fresh composition state for each paint. Frame
+scheduling and click settlement after drawing remain.
+
+The rest of this document records the former implementation and its rationale.
+Its API names, code links, and interruption-specific tests are historical.
 
 ## Objective
 

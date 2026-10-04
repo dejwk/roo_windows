@@ -33,7 +33,7 @@ void CheckPicker(const char* name, int width, int height, DatePickerMode mode,
   picker.setToday(CivilDay::FromYmd(2024, 2, 12));
   picker.setBounds(
       {CivilDay::FromYmd(2024, 2, 5), CivilDay::FromYmd(2024, 12, 31)});
-  ASSERT_TRUE(app.refresh());
+  app.refresh();
   ASSERT_EQ(PresentationStartResult::kStarted, picker.open(owner));
   auto& panel =
       *static_cast<internal::DatePickerPanel*>(owner.focus().scopeRoot());
@@ -48,7 +48,7 @@ void CheckPicker(const char* name, int width, int height, DatePickerMode mode,
   }
   panel.setMode(mode);
   if (invalid) panel.input()->setText("02/");
-  ASSERT_TRUE(app.refresh());
+  app.refresh();
   EXPECT_TRUE(::roo_windows::test::CompareOrUpdateGolden(
       ::roo_windows::test::CaptureRgb(device.raster(), 0, 0, width, height),
       std::string("test/goldens/material3_date_picker/") + name + ".ppm",

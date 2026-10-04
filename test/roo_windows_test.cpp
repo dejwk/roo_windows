@@ -680,7 +680,7 @@ TEST_F(RooWindowsRenderTest, LaterAddedChildPaintsOnTop) {
   app_.add(std::move(back), Box(4, 4, 30, 30));
   app_.add(std::move(front), Box(16, 16, 40, 40));
 
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(QuantizeToArgb4444(color::Red), pixelAt(8, 8));
   EXPECT_EQ(QuantizeToArgb4444(color::Blue), pixelAt(20, 20));
 }
@@ -698,15 +698,15 @@ TEST_F(RooWindowsRenderTest, HideAndShowRestoresUnderlyingContent) {
   app_.add(std::move(back), Box(4, 4, 30, 30));
   app_.add(std::move(front), Box(16, 16, 40, 40));
 
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(QuantizeToArgb4444(color::Blue), pixelAt(20, 20));
 
   front_ptr->setVisibility(Visibility::kInvisible);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(QuantizeToArgb4444(color::Red), pixelAt(20, 20));
 
   front_ptr->setVisibility(Visibility::kVisible);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(QuantizeToArgb4444(color::Blue), pixelAt(20, 20));
 }
 
@@ -787,16 +787,16 @@ TEST_F(RooWindowsRenderTest, HideAndShowRestoresShadowOverflowRegion) {
   app_.add(std::move(back), Box(0, 0, 47, 39));
   app_.add(std::move(front), Box(16, 12, 35, 31));
 
-  ASSERT_TRUE(refresh());
+  refresh();
   Color shadow_pixel = pixelAt(14, 22);
   EXPECT_NE(QuantizeToArgb4444(color::Red), shadow_pixel);
 
   front_ptr->setVisibility(Visibility::kInvisible);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(QuantizeToArgb4444(color::Red), pixelAt(14, 22));
 
   front_ptr->setVisibility(Visibility::kVisible);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(shadow_pixel, pixelAt(14, 22));
 }
 
@@ -813,11 +813,11 @@ TEST_F(RooWindowsRenderTest, RoundedSurfaceInvalidationRestoresExposedCorners) {
   app_.add(std::move(back), Box(0, 0, 47, 39));
   app_.add(std::move(front), Box(16, 12, 35, 31));
 
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(QuantizeToArgb4444(color::Blue), pixelAt(16, 12));
 
   front_ptr->setRounded(true);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(QuantizeToArgb4444(color::Red), pixelAt(16, 12));
 }
 
@@ -885,27 +885,20 @@ TEST_F(RooWindowsRenderTest, GesturePathBuildsWithoutGestureCallbacks) {
   EXPECT_EQ(0, child_ptr->down_count());
 }
 
-// Verifies that a refresh() call which exceeds its time deadline mid-paint
-// returns false and leaves the partial state untouched; a subsequent
-// refresh() without a deadline completes the paint.
-TEST_F(RooWindowsRenderTest, RefreshCanResumeAfterDeadlineExceeded) {
+// Verifies the public refresh paints current damage completely before
+// returning.
+TEST_F(RooWindowsRenderTest, RefreshCompletesBeforeReturning) {
   auto box = std::make_unique<ColorBoxWidget>(context(), color::Green,
                                               Dimensions(20, 20));
   app_.add(std::move(box), Box(8, 8, 36, 36));
-
-  EXPECT_FALSE(refresh(roo_time::Uptime::Start()));
-  EXPECT_NE(QuantizeToArgb4444(color::Green), pixelAt(16, 16));
-
-  EXPECT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(QuantizeToArgb4444(color::Green), pixelAt(16, 16));
+  EXPECT_FALSE(app_.root().isDirty());
 }
 
-// A child that completed before a later sibling exceeded the deadline must
-// keep its exclusion on retry. Some widgets, including navigation
-// destinations, create exclusions only while paint() runs; losing that state
-// lets the parent's surface erase a completed child.
-TEST_F(RooWindowsRenderTest,
-       DeadlineRetryPreservesCompletedChildrenAndReopensInvalidations) {
+// Verifies slow foreground children and the lower surface complete together,
+// and a later state change does not repaint an unchanged sibling.
+TEST_F(RooWindowsRenderTest, SlowRefreshCompletesChildrenAndBackground) {
   auto panel = std::make_unique<OpaqueExposedPanel>(context());
   OpaqueExposedPanel* panel_ptr = panel.get();
   auto delayed = std::make_unique<SelfExcludingColorWidget>(
@@ -916,68 +909,52 @@ TEST_F(RooWindowsRenderTest,
   SelfExcludingColorWidget* target_ptr = target.get();
   panel_ptr->add(std::move(delayed), Rect(0, 0, 19, 19));
   panel_ptr->add(std::move(target), Rect(20, 0, 39, 19));
-  app_.add(std::move(panel), Box(8, 8, 47, 27));
-  ASSERT_TRUE(refresh());
-  ASSERT_EQ(QuantizeToArgb4444(color::Red), pixelAt(32, 16));
+  app_.add(std::move(panel), Box(8, 8, 47, 37));
+  refresh();
 
-  target_ptr->setPaintDelay(80);
-  delayed_ptr->setPaintDelay(80);
+  target_ptr->setPaintDelay(120);
+  delayed_ptr->setPaintDelay(120);
   panel_ptr->invalidateInterior();
-  EXPECT_FALSE(refresh(roo_time::Uptime::Now() + roo_time::Millis(50)));
-  EXPECT_EQ(2, target_ptr->paintCount());
-  EXPECT_EQ(1, delayed_ptr->paintCount());
-
-  EXPECT_FALSE(refresh(roo_time::Uptime::Now() + roo_time::Millis(50)));
+  refresh();
   EXPECT_EQ(2, target_ptr->paintCount());
   EXPECT_EQ(2, delayed_ptr->paintCount());
+  EXPECT_EQ(QuantizeToArgb4444(color::Red), pixelAt(32, 16));
+  EXPECT_EQ(QuantizeToArgb4444(color::Green), pixelAt(12, 16));
+  EXPECT_EQ(QuantizeToArgb4444(color::Blue), pixelAt(12, 32));
+  EXPECT_FALSE(app_.root().isDirty());
 
   target_ptr->setPaintDelay(0);
   delayed_ptr->setPaintDelay(0);
-  ASSERT_TRUE(refresh());
-  EXPECT_EQ(2, target_ptr->paintCount());
-  EXPECT_EQ(2, delayed_ptr->paintCount());
-  EXPECT_EQ(QuantizeToArgb4444(color::Red), pixelAt(32, 16));
-
-  // A real state change between attempts reopens just that target in the saved
-  // snapshot. The unrelated delayed sibling must remain completed.
-  delayed_ptr->setPaintDelay(80);
-  panel_ptr->invalidateInterior();
-  EXPECT_FALSE(refresh(roo_time::Uptime::Now() + roo_time::Millis(50)));
-  EXPECT_EQ(3, target_ptr->paintCount());
-  EXPECT_EQ(3, delayed_ptr->paintCount());
-
   target_ptr->setColor(color::Yellow);
-  delayed_ptr->setPaintDelay(0);
-  ASSERT_TRUE(refresh());
-  EXPECT_EQ(4, target_ptr->paintCount());
-  EXPECT_EQ(3, delayed_ptr->paintCount());
+  refresh();
+  EXPECT_EQ(3, target_ptr->paintCount());
+  EXPECT_EQ(2, delayed_ptr->paintCount());
   EXPECT_EQ(QuantizeToArgb4444(color::Yellow), pixelAt(32, 16));
 }
 
-TEST_F(RooWindowsRenderTest,
-       CompletedDirtyWidgetPublishesTerminalStateBeforeTimeout) {
+// Verifies invalidation raised by a completed widget remains pending for the
+// next refresh while its exclusion still protects this refresh's output.
+TEST_F(RooWindowsRenderTest, PaintInvalidationSurvivesUntilNextRefresh) {
   auto panel = std::make_unique<OpaqueExposedPanel>(context());
   OpaqueExposedPanel* panel_ptr = panel.get();
-  auto delayed = std::make_unique<SelfExcludingColorWidget>(
-      context(), color::Green, Dimensions(20, 20));
-  SelfExcludingColorWidget* delayed_ptr = delayed.get();
   auto animated = std::make_unique<RedirtyingColorWidget>(context());
   RedirtyingColorWidget* animated_ptr = animated.get();
-  panel_ptr->add(std::move(delayed), Rect(0, 0, 19, 19));
   panel_ptr->add(std::move(animated), Rect(20, 0, 39, 19));
   app_.add(std::move(panel), Box(8, 8, 47, 27));
-  ASSERT_TRUE(refresh());
+  refresh();
 
   animated_ptr->setRedirty(true);
-  delayed_ptr->setPaintDelay(80);
   panel_ptr->invalidateInterior();
-  EXPECT_FALSE(refresh(roo_time::Uptime::Now() + roo_time::Millis(50)));
+  refresh();
   EXPECT_EQ(2, animated_ptr->paintCount());
+  EXPECT_EQ(QuantizeToArgb4444(color::Red), pixelAt(32, 16));
+  EXPECT_TRUE(app_.root().isDirty());
 
-  delayed_ptr->setPaintDelay(0);
-  ASSERT_TRUE(refresh());
+  animated_ptr->setRedirty(false);
+  refresh();
   EXPECT_EQ(3, animated_ptr->paintCount());
   EXPECT_EQ(QuantizeToArgb4444(color::Red), pixelAt(32, 16));
+  EXPECT_FALSE(app_.root().isDirty());
 }
 
 // Verifies that draw-tiled clips paint output to the tile bounds even when
@@ -989,7 +966,7 @@ TEST_F(RooWindowsRenderTest, DrawTiledClipsOversizedContentToTileBounds) {
 
   app_.add(std::move(tile), Box(8, 8, 19, 19));
 
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(QuantizeToArgb4444(color::White), pixelAt(12, 12));
   EXPECT_EQ(QuantizeToArgb4444(color::White), pixelAt(13, 13));
   EXPECT_EQ(QuantizeToArgb4444(color::Black), pixelAt(11, 12));
@@ -1007,7 +984,7 @@ TEST_F(RooWindowsRenderTest,
 
   app_.add(std::move(tile), Box(8, 8, 19, 19));
 
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(QuantizeToArgb4444(color::White), pixelAt(12, 12));
   EXPECT_EQ(QuantizeToArgb4444(color::White), pixelAt(13, 13));
   EXPECT_EQ(QuantizeToArgb4444(color::Black), pixelAt(11, 12));
@@ -1024,7 +1001,7 @@ TEST_F(RooWindowsRenderTest, DrawTiledIgnoresEmptyBoundsWithoutBorder) {
 
   app_.add(std::move(tile), Box(8, 8, 19, 19));
 
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(QuantizeToArgb4444(color::Black), pixelAt(12, 12));
   EXPECT_EQ(QuantizeToArgb4444(color::Black), pixelAt(8, 8));
 }

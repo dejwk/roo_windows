@@ -157,10 +157,6 @@ class ClickAnimation {
   Widget* target_;
   Phase phase_;
 
-  // A forced finish takes effect only after the retained paint sample is
-  // released. Keep this separate from elapsed time, which also paces frames.
-  bool finishing_sampled_;
-
   // Last transient parent-space footprint reported by the active target.
   // Keeping the full Rect preserves the framework's extended Y coordinate
   // range while allowing shrinking or moving effects to erase old pixels.

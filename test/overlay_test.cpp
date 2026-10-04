@@ -50,7 +50,7 @@ class ClickableIcon : public Icon {
   int click_count_ = 0;
 };
 
-class DeadlineExpiringClickableIcon : public ClickableIcon {
+class SlowOverlayClickableIcon : public ClickableIcon {
  public:
   using ClickableIcon::ClickableIcon;
 
@@ -464,7 +464,7 @@ TEST_F(RooWindowsRenderTest, PointFadeUsesTimelineWithoutPressOverlay) {
 
   app_.add(std::move(back), Box(0, 0, 47, 39));
   app_.add(std::move(front), Box(20, 12, 37, 29));
-  ASSERT_TRUE(refresh());
+  refresh();
 
   const Color outside_circle = pixelAt(8, 20);
   const Color point_circle = pixelAt(12, 20);
@@ -473,7 +473,7 @@ TEST_F(RooWindowsRenderTest, PointFadeUsesTimelineWithoutPressOverlay) {
 
   front_ptr->onShowPress(front_ptr->width() / 2, front_ptr->height() / 2);
   delay(kPressAnimationMillis / 2);
-  ASSERT_TRUE(refresh());
+  refresh();
 
   EXPECT_TRUE(front_ptr->clickAnimationInProgress());
   EXPECT_FALSE(front_ptr->hasPressOverlay());
@@ -482,7 +482,7 @@ TEST_F(RooWindowsRenderTest, PointFadeUsesTimelineWithoutPressOverlay) {
   EXPECT_NE(point_circle, pixelAt(12, 20));
 
   delay(kPressAnimationMillis + 20);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_FALSE(front_ptr->clickAnimationInProgress());
   EXPECT_FALSE(front_ptr->hasPressOverlay());
   EXPECT_GT(front_ptr->overlayAlpha(), 0);
@@ -500,7 +500,7 @@ TEST_F(RooWindowsRenderTest, AreaFadeStaysInsideSurfaceBounds) {
 
   app_.add(std::move(back), Box(0, 0, 47, 39));
   app_.add(std::move(front), Box(20, 12, 37, 29));
-  ASSERT_TRUE(refresh());
+  refresh();
 
   const Color background = pixelAt(12, 20);
   const Color surface = pixelAt(28, 20);
@@ -509,7 +509,7 @@ TEST_F(RooWindowsRenderTest, AreaFadeStaysInsideSurfaceBounds) {
 
   front_ptr->onShowPress(front_ptr->width() / 2, front_ptr->height() / 2);
   delay(kPressAnimationMillis / 2);
-  ASSERT_TRUE(refresh());
+  refresh();
 
   EXPECT_EQ(background, pixelAt(12, 20));
   EXPECT_NE(surface, pixelAt(28, 20));
@@ -585,7 +585,7 @@ TEST_F(RooWindowsRenderTest, AreaClickAnimationStaysInsideSurfaceBounds) {
 
   app_.add(std::move(back), Box(0, 0, 47, 39));
   app_.add(std::move(front), Box(20, 12, 37, 29));
-  ASSERT_TRUE(refresh());
+  refresh();
 
   front_ptr->onShowPress(3, 4);
   delay(kPressAnimationMillis - 20);
@@ -596,7 +596,7 @@ TEST_F(RooWindowsRenderTest, AreaClickAnimationStaysInsideSurfaceBounds) {
   EXPECT_EQ(front_ptr->parent_bounds(),
             front_ptr->getParentTransientPaintBounds());
 
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(QuantizeToArgb4444(color::Red), pixelAt(12, 20));
   EXPECT_NE(QuantizeToArgb4444(color::Blue), pixelAt(20, 20));
 }
@@ -611,7 +611,7 @@ TEST_F(RooWindowsRenderTest, ClickAnimationUsesOneWallClockSamplePerFrame) {
   SlowPaintPointOverlayBoxWidget* target_ptr = target.get();
 
   app_.add(std::move(target), Box(20, 12, 37, 29));
-  ASSERT_TRUE(refresh());
+  refresh();
 
   target_ptr->onShowPress(target_ptr->width() / 2, target_ptr->height() / 2);
   delay(kPressAnimationMillis / 4);
@@ -621,7 +621,7 @@ TEST_F(RooWindowsRenderTest, ClickAnimationUsesOneWallClockSamplePerFrame) {
   ASSERT_LT(animation->progress(), 1.0f);
 
   target_ptr->setPaintDelay(kSlowPaintMillis);
-  ASSERT_TRUE(refresh());
+  refresh();
   target_ptr->setPaintDelay(0);
 
   EXPECT_NEAR(target_ptr->progressAtPaintStart(),
@@ -636,22 +636,20 @@ TEST_F(RooWindowsRenderTest, ClickAnimationUsesOneWallClockSamplePerFrame) {
                 0.05f);
 }
 
-// Verifies that reaching progress 1 is not enough to retire an animation when
-// the refresh deadline expires after OverlaySpec is computed but before the
-// target contents are emitted. The following successful refresh must still
-// paint the final overlay before click delivery and normal-state settlement.
-TEST_F(RooWindowsRenderTest, DeadlineInterruptedFinalClickFrameRemainsPending) {
+// Verifies slow overlay resolution still paints the final feedback before
+// click delivery, and the following refresh restores the ordinary appearance.
+TEST_F(RooWindowsRenderTest, SlowFinalClickFramePaintsBeforeDelivery) {
   constexpr unsigned long kOverlayQueryDelayMillis = 30;
   auto back = std::make_unique<ColorBoxWidget>(
       context(), context().theme().material3Theme().color.background,
       Dimensions(kWidth, kHeight));
-  auto icon = std::make_unique<DeadlineExpiringClickableIcon>(
+  auto icon = std::make_unique<SlowOverlayClickableIcon>(
       context(), ic_outlined_24_navigation_menu());
-  DeadlineExpiringClickableIcon* icon_ptr = icon.get();
+  SlowOverlayClickableIcon* icon_ptr = icon.get();
 
   app_.add(std::move(back), Box(0, 0, kWidth - 1, kHeight - 1));
   app_.add(std::move(icon), Box(20, 12, 43, 35));
-  ASSERT_TRUE(refresh());
+  refresh();
 
   XDim abs_x;
   YDim abs_y;
@@ -666,19 +664,9 @@ TEST_F(RooWindowsRenderTest, DeadlineInterruptedFinalClickFrameRemainsPending) {
   const int queries_before = icon_ptr->overlayQueryCount();
   const int paints_before = icon_ptr->paintCount();
   icon_ptr->setOverlayQueryDelay(kOverlayQueryDelayMillis);
-  EXPECT_FALSE(refresh(roo_time::Uptime::Now() + roo_time::Millis(10)));
-
+  refresh();
   EXPECT_GT(icon_ptr->overlayQueryCount(), queries_before);
-  EXPECT_EQ(paints_before, icon_ptr->paintCount());
-  EXPECT_TRUE(icon_ptr->isClicking());
-  EXPECT_EQ(0, icon_ptr->clickCount());
-
-  app_.root().refreshClickAnimation();
-  EXPECT_EQ(icon_ptr, app_.root().click_animation().target());
-  EXPECT_EQ(0, icon_ptr->clickCount());
-
   icon_ptr->setOverlayQueryDelay(0);
-  ASSERT_TRUE(refresh());
   EXPECT_FALSE(icon_ptr->isClicking());
   EXPECT_TRUE(icon_ptr->isDirty());
   EXPECT_GT(icon_ptr->paintCount(), paints_before);
@@ -686,7 +674,7 @@ TEST_F(RooWindowsRenderTest, DeadlineInterruptedFinalClickFrameRemainsPending) {
   EXPECT_EQ(1, icon_ptr->clickCount());
   EXPECT_FALSE(app_.root().click_animation().isBusy());
 
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_FALSE(icon_ptr->isDirty());
   EXPECT_EQ(settled_pixel, pixelAt(probe_x, probe_y));
 }
@@ -703,7 +691,7 @@ TEST_F(RooWindowsRenderTest,
 
   app_.add(std::move(back), Box(0, 0, 63, 47));
   app_.add(std::move(front), Box(20, 12, 59, 35));
-  ASSERT_TRUE(refresh());
+  refresh();
 
   const Color corner_color = pixelAt(20, 12);
   const Color interior_color = pixelAt(40, 24);
@@ -716,7 +704,7 @@ TEST_F(RooWindowsRenderTest,
   ASSERT_NE(nullptr, anim);
   ASSERT_LT(anim->progress(), 1.0f);
 
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(corner_color, pixelAt(20, 12));
   EXPECT_NE(interior_color, pixelAt(40, 24));
 }
@@ -736,7 +724,7 @@ TEST_F(RooWindowsRenderTest,
                         Rect(1, 8, 6, 15));
   app_.add(std::move(surface), Box(20, 12, 59, 35));
 
-  ASSERT_TRUE(refresh());
+  refresh();
 
   // Local (1, 12) is inside the rounded surface, but outside the conservative
   // inner rectangle (which begins at x = 3 for an 8 px corner radius).
@@ -755,13 +743,13 @@ TEST_F(RooWindowsRenderTest,
                                                          Dimensions(6, 8)),
                         Rect(0, 8, 5, 15));
   app_.add(std::move(surface), Box(20, 12, 59, 35));
-  ASSERT_TRUE(refresh());
+  refresh();
 
   const Color child_color = QuantizeToArgb4444(color::Blue);
   ASSERT_EQ(child_color, pixelAt(21, 24));
 
   surface_ptr->setPressed(true);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_NE(child_color, pixelAt(21, 24));
 }
 
@@ -778,7 +766,7 @@ TEST_F(RooWindowsRenderTest,
                             context(), color::Blue, Dimensions(6, 8)),
                         Rect(1, 8, 6, 15));
   app_.add(std::move(surface), Box(20, 12, 59, 35));
-  ASSERT_TRUE(refresh());
+  refresh();
 
   const Color child_color = QuantizeToArgb4444(color::Blue);
   ASSERT_EQ(child_color, pixelAt(21, 24));
@@ -789,7 +777,7 @@ TEST_F(RooWindowsRenderTest,
   ASSERT_NE(nullptr, anim);
   ASSERT_LT(anim->progress(), 1.0f);
 
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_NE(child_color, pixelAt(21, 24));
 }
 
@@ -806,14 +794,14 @@ TEST_F(RooWindowsRenderTest, AreaClickAnimationDoesNotTintSiblingDecoration) {
 
   app_.add(std::move(target), Box(0, 0, 39, 23));
   app_.add(std::move(sibling), Box(0, 24, 39, 43));
-  ASSERT_TRUE(refresh());
+  refresh();
 
   Color sibling_pixel = pixelAt(20, 34);
   target_ptr->onShowPress(10, 10);
   sibling_ptr->invalidateInterior();
   delay(kPressAnimationMillis - 20);
 
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(sibling_pixel, pixelAt(20, 34));
 }
 
@@ -835,7 +823,7 @@ TEST_F(
       std::make_unique<SimpleScrollablePanel>(context(), std::move(content));
   app_.add(std::move(panel), Box(0, 0, kWidth - 1, kHeight - 1));
 
-  ASSERT_TRUE(refresh());
+  refresh();
 
   XDim divider_x;
   YDim divider_y;
@@ -862,7 +850,7 @@ TEST_F(ExampleSliderRenderTest,
   ExampleSliderScreen* screen_ptr = screen.get();
   app_.add(std::move(screen), Box(0, 0, kWidth - 1, kHeight - 1));
 
-  ASSERT_TRUE(refresh());
+  refresh();
 
   Color bg =
       QuantizeToArgb4444(context().theme().material3Theme().color.background);
@@ -904,7 +892,7 @@ TEST_F(RooWindowsRenderTest,
   app_.add(std::move(back), Box(0, 0, 47, 39));
   app_.add(std::move(front), Box(20, 12, 37, 29));
 
-  ASSERT_TRUE(refresh());
+  refresh();
 
   XDim abs_x;
   YDim abs_y;
@@ -922,17 +910,17 @@ TEST_F(RooWindowsRenderTest,
   EXPECT_EQ(QuantizeToArgb4444(color::Red), background_pixel);
 
   front_ptr->onSingleTapUp(front_ptr->width() / 2, front_ptr->height() / 2);
-  ASSERT_TRUE(refresh());
+  refresh();
 
   delay(kPressAnimationMillis + 20);
-  ASSERT_TRUE(refresh());
+  refresh();
 
   app_.root().refreshClickAnimation();
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(background_pixel, pixelAt(probe_x, probe_y));
 
   app_.root().refreshClickAnimation();
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(background_pixel, pixelAt(probe_x, probe_y));
 }
 
@@ -950,7 +938,7 @@ TEST_F(RooWindowsRenderTest,
 
   app_.add(std::move(back), Box(0, 0, kWidth - 1, kHeight - 1));
   app_.add(std::move(icon), Box(20, 12, 43, 35));
-  ASSERT_TRUE(refresh());
+  refresh();
 
   XDim abs_x;
   YDim abs_y;
@@ -960,16 +948,16 @@ TEST_F(RooWindowsRenderTest,
   const Color settled_pixel = pixelAt(probe_x, probe_y);
 
   icon_ptr->onSingleTapUp(icon_ptr->width() / 2, icon_ptr->height() / 2);
-  ASSERT_TRUE(refresh());
+  refresh();
 
   delay(kPressAnimationMillis + 20);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_FALSE(icon_ptr->isClicking());
   EXPECT_TRUE(icon_ptr->isDirty());
   EXPECT_EQ(1, icon_ptr->clickCount());
   EXPECT_NE(settled_pixel, pixelAt(probe_x, probe_y));
 
-  ASSERT_TRUE(refresh());
+  refresh();
 
   EXPECT_FALSE(icon_ptr->isDirty());
   EXPECT_EQ(settled_pixel, pixelAt(probe_x, probe_y));
@@ -983,19 +971,19 @@ TEST_F(RooWindowsRenderTest,
                                               ic_outlined_24_navigation_menu());
   ClickableIcon* icon_ptr = icon.get();
   app_.add(std::move(icon), Box(20, 12, 43, 35));
-  ASSERT_TRUE(refresh());
+  refresh();
 
   icon_ptr->onShowPress(icon_ptr->width() / 2, icon_ptr->height() / 2);
   ASSERT_TRUE(icon_ptr->isPressed());
 
   delay(kPressAnimationMillis + 20);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_FALSE(icon_ptr->isClicking());
   EXPECT_TRUE(icon_ptr->isDirty());
   EXPECT_TRUE(icon_ptr->isPressed());
   EXPECT_EQ(icon_ptr, app_.root().click_animation().target());
 
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_FALSE(icon_ptr->isDirty());
   EXPECT_TRUE(icon_ptr->isPressed());
 
@@ -1003,7 +991,7 @@ TEST_F(RooWindowsRenderTest,
   EXPECT_EQ(nullptr, icon_ptr->getClickAnimation());
   EXPECT_EQ(1, icon_ptr->clickCount());
   EXPECT_TRUE(icon_ptr->isDirty());
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_FALSE(icon_ptr->isDirty());
 }
 
@@ -1015,11 +1003,11 @@ TEST_F(RooWindowsRenderTest,
                                               ic_outlined_24_navigation_menu());
   ClickableIcon* icon_ptr = icon.get();
   app_.add(std::move(icon), Box(20, 12, 43, 35));
-  ASSERT_TRUE(refresh());
+  refresh();
 
   icon_ptr->onShowPress(icon_ptr->width() / 2, icon_ptr->height() / 2);
   delay(kPressAnimationMillis + 20);
-  ASSERT_TRUE(refresh());
+  refresh();
   ASSERT_FALSE(icon_ptr->isClicking());
   ASSERT_TRUE(icon_ptr->isDirty());
   ASSERT_EQ(0, icon_ptr->clickCount());
@@ -1030,7 +1018,7 @@ TEST_F(RooWindowsRenderTest,
   EXPECT_EQ(1, icon_ptr->clickCount());
   EXPECT_TRUE(icon_ptr->isDirty());
 
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_FALSE(icon_ptr->isDirty());
 }
 
@@ -1048,7 +1036,7 @@ TEST_F(RooWindowsRenderTest,
 
   app_.add(std::move(animated), Box(0, 8, 23, 31));
   app_.add(std::move(non_animated), Box(24, 8, 47, 31));
-  ASSERT_TRUE(refresh());
+  refresh();
 
   animated_ptr->onShowPress(animated_ptr->width() / 2,
                             animated_ptr->height() / 2);
@@ -1074,7 +1062,7 @@ TEST_F(RooWindowsRenderTest, NonAnimatedClickWaitsForCompletedRefresh) {
       context(), ic_outlined_24_navigation_menu());
   NonAnimatedClickableIcon* icon_ptr = icon.get();
   app_.add(std::move(icon), Box(20, 8, 43, 31));
-  ASSERT_TRUE(refresh());
+  refresh();
 
   icon_ptr->onSingleTapUp(icon_ptr->width() / 2, icon_ptr->height() / 2);
   ClickAnimation& animation = app_.root().click_animation();
@@ -1083,16 +1071,12 @@ TEST_F(RooWindowsRenderTest, NonAnimatedClickWaitsForCompletedRefresh) {
   EXPECT_EQ(0, icon_ptr->clickCount());
 
   icon_ptr->invalidateInterior();
-  EXPECT_FALSE(refresh(roo_time::Uptime::Start()));
-  EXPECT_TRUE(animation.isBusy());
-  EXPECT_EQ(0, icon_ptr->clickCount());
-
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_FALSE(animation.isBusy());
   EXPECT_EQ(1, icon_ptr->clickCount());
   EXPECT_TRUE(icon_ptr->isDirty());
 
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_FALSE(icon_ptr->isDirty());
 }
 
@@ -1101,21 +1085,21 @@ TEST_F(RooWindowsRenderTest, ActivationPoliciesDeliverAtTheirSelectedBoundary) {
       context(), ClickActivationPolicy::kAfterForcedFinalFrame);
   PolicyClickableIcon* forced_ptr = forced.get();
   app_.add(std::move(forced), Box(0, 8, 23, 31));
-  ASSERT_TRUE(refresh());
+  refresh();
 
   forced_ptr->onSingleTapUp(forced_ptr->width() / 2,
                             forced_ptr->height() / 2);
   ASSERT_NE(nullptr, forced_ptr->getClickAnimation());
   EXPECT_FLOAT_EQ(1.0f, forced_ptr->getClickAnimation()->progress());
   EXPECT_EQ(0, forced_ptr->clickCount());
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(1, forced_ptr->clickCount());
 
   auto cancel = std::make_unique<PolicyClickableIcon>(
       context(), ClickActivationPolicy::kImmediateCancelAnimation);
   PolicyClickableIcon* cancel_ptr = cancel.get();
   app_.add(std::move(cancel), Box(0, 8, 23, 31));
-  ASSERT_TRUE(refresh());
+  refresh();
   cancel_ptr->onShowPress(cancel_ptr->width() / 2, cancel_ptr->height() / 2);
   cancel_ptr->onSingleTapUp(cancel_ptr->width() / 2, cancel_ptr->height() / 2);
   EXPECT_EQ(1, cancel_ptr->clickCount());
@@ -1126,7 +1110,7 @@ TEST_F(RooWindowsRenderTest, ActivationPoliciesDeliverAtTheirSelectedBoundary) {
       context(), ClickActivationPolicy::kImmediateContinueAnimation);
   PolicyClickableIcon* continue_ptr = continue_animation.get();
   app_.add(std::move(continue_animation), Box(0, 8, 23, 31));
-  ASSERT_TRUE(refresh());
+  refresh();
   continue_ptr->onShowPress(continue_ptr->width() / 2,
                              continue_ptr->height() / 2);
   continue_ptr->onSingleTapUp(continue_ptr->width() / 2,
@@ -1134,14 +1118,14 @@ TEST_F(RooWindowsRenderTest, ActivationPoliciesDeliverAtTheirSelectedBoundary) {
   EXPECT_EQ(1, continue_ptr->clickCount());
   EXPECT_EQ(continue_ptr, app_.root().click_animation().target());
   delay(kPressAnimationMillis + 20);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_FALSE(app_.root().click_animation().isBusy());
 
   auto immediate = std::make_unique<PolicyClickableIcon>(
       context(), ClickActivationPolicy::kImmediateNoAnimation);
   PolicyClickableIcon* immediate_ptr = immediate.get();
   app_.add(std::move(immediate), Box(0, 8, 23, 31));
-  ASSERT_TRUE(refresh());
+  refresh();
   immediate_ptr->onSingleTapUp(immediate_ptr->width() / 2,
                                 immediate_ptr->height() / 2);
   EXPECT_EQ(1, immediate_ptr->clickCount());
@@ -1160,7 +1144,7 @@ TEST_F(RooWindowsRenderTest, CompetingPressCannotReplaceAnimationTarget) {
 
   app_.add(std::move(first), Box(0, 8, 23, 31));
   app_.add(std::move(second), Box(24, 8, 47, 31));
-  ASSERT_TRUE(refresh());
+  refresh();
 
   first_ptr->onShowPress(first_ptr->width() / 2, first_ptr->height() / 2);
   second_ptr->onShowPress(second_ptr->width() / 2, second_ptr->height() / 2);
@@ -1180,7 +1164,7 @@ TEST_F(RooWindowsRenderTest, CancelingConfirmedOwnerCancelsPendingClick) {
                                               ic_outlined_24_navigation_menu());
   ClickableIcon* icon_ptr = icon.get();
   app_.add(std::move(icon), Box(20, 8, 43, 31));
-  ASSERT_TRUE(refresh());
+  refresh();
 
   icon_ptr->onShowPress(icon_ptr->width() / 2, icon_ptr->height() / 2);
   icon_ptr->onSingleTapUp(icon_ptr->width() / 2, icon_ptr->height() / 2);
@@ -1195,7 +1179,7 @@ TEST_F(RooWindowsRenderTest, CancelingConfirmedOwnerCancelsPendingClick) {
 
   delay(kPressAnimationMillis + 20);
   app_.root().refreshClickAnimation();
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(0, icon_ptr->clickCount());
 }
 
@@ -1211,7 +1195,7 @@ TEST_F(RooWindowsRenderTest, HidingTargetCancelsVisualAndRefreshPendingPhases) {
 
   app_.add(std::move(unconfirmed), Box(0, 8, 23, 31));
   app_.add(std::move(confirmed), Box(24, 8, 47, 31));
-  ASSERT_TRUE(refresh());
+  refresh();
 
   ClickAnimation& animation = app_.root().click_animation();
   unconfirmed_ptr->onShowPress(unconfirmed_ptr->width() / 2,
@@ -1229,7 +1213,7 @@ TEST_F(RooWindowsRenderTest, HidingTargetCancelsVisualAndRefreshPendingPhases) {
 
   confirmed_ptr->setVisibility(Visibility::kInvisible);
   EXPECT_FALSE(animation.isBusy());
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(0, confirmed_ptr->clickCount());
 }
 
@@ -1246,11 +1230,11 @@ TEST_F(RooWindowsRenderTest, ReentrantClickCanStartNextAnimation) {
 
   app_.add(std::move(first), Box(0, 8, 23, 31));
   app_.add(std::move(second), Box(24, 8, 47, 31));
-  ASSERT_TRUE(refresh());
+  refresh();
 
   first_ptr->onSingleTapUp(first_ptr->width() / 2, first_ptr->height() / 2);
   delay(kPressAnimationMillis + 20);
-  ASSERT_TRUE(refresh());
+  refresh();
 
   ClickAnimation& animation = app_.root().click_animation();
   EXPECT_EQ(1, first_ptr->clickCount());
@@ -1274,7 +1258,7 @@ TEST_F(RooWindowsRenderTest,
   app_.add(std::move(back), Box(0, 0, 47, 39));
   app_.add(std::move(front), Box(20, 12, 37, 29));
 
-  ASSERT_TRUE(refresh());
+  refresh();
 
   XDim abs_x;
   YDim abs_y;
@@ -1287,7 +1271,7 @@ TEST_F(RooWindowsRenderTest,
   EXPECT_EQ(QuantizeToArgb4444(color::Red), background_pixel);
 
   front_ptr->setOn();
-  ASSERT_TRUE(refresh());
+  refresh();
 
   EXPECT_EQ(background_pixel, pixelAt(spill_x, spill_y));
 }
@@ -1309,7 +1293,7 @@ TEST_F(
   app_.add(std::move(back), Box(0, 0, 47, 39));
   app_.add(std::move(front), Box(20, 12, 37, 29));
 
-  ASSERT_TRUE(refresh());
+  refresh();
 
   XDim abs_x;
   YDim abs_y;
@@ -1324,17 +1308,17 @@ TEST_F(
   Color initial_inside_pixel = pixelAt(inside_x, inside_y);
 
   front_ptr->onSingleTapUp(front_ptr->width() / 2, front_ptr->height() / 2);
-  ASSERT_TRUE(refresh());
+  refresh();
 
   delay(kPressAnimationMillis + 20);
-  ASSERT_TRUE(refresh());
+  refresh();
 
   app_.root().refreshClickAnimation();
-  ASSERT_TRUE(refresh());
+  refresh();
   Color cleared_pixel = pixelAt(spill_x, spill_y);
 
   app_.root().refreshClickAnimation();
-  ASSERT_TRUE(refresh());
+  refresh();
   Color post_click_pixel = pixelAt(spill_x, spill_y);
   Color post_click_inside_pixel = pixelAt(inside_x, inside_y);
 
@@ -1386,20 +1370,20 @@ TEST_F(RooWindowsRenderTest,
   app_.add(std::move(back), Box(0, 0, 47, 39));
   app_.add(std::move(front), Box(20, 12, 37, 29));
 
-  ASSERT_TRUE(refresh());
+  refresh();
   Color background_pixel = pixelAt(12, 20);
   Color center_background_pixel = pixelAt(28, 20);
   EXPECT_EQ(QuantizeToArgb4444(color::Red), background_pixel);
   EXPECT_EQ(QuantizeToArgb4444(color::Blue), center_background_pixel);
 
   front_ptr->setActivated(true);
-  ASSERT_TRUE(refresh());
+  refresh();
   Color overlay_pixel = pixelAt(12, 20);
   EXPECT_NE(QuantizeToArgb4444(color::Red), overlay_pixel);
   EXPECT_NE(center_background_pixel, pixelAt(28, 20));
 
   front_ptr->setActivated(false);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(QuantizeToArgb4444(color::Red), pixelAt(12, 20));
   EXPECT_EQ(center_background_pixel, pixelAt(28, 20));
 }
@@ -1422,10 +1406,10 @@ TEST_F(RooWindowsRenderTest,
   back->addChild(std::move(front), Box(20, 12, 37, 29));
   app_.add(std::move(back), Box(0, 0, 47, 39));
 
-  ASSERT_TRUE(refresh());
+  refresh();
 
   front_ptr->setActivated(true);
-  ASSERT_TRUE(refresh());
+  refresh();
 
   Color overlay =
       front_ptr->theme().material3Theme().color.contentColorFor(parent_role);
@@ -1452,19 +1436,19 @@ TEST_F(RooWindowsRenderTest, PointPressOverlayRendersOutsideLogicalBounds) {
   app_.add(std::move(back), Box(0, 0, 47, 39));
   app_.add(std::move(front), Box(20, 12, 37, 29));
 
-  ASSERT_TRUE(refresh());
+  refresh();
   Color background_pixel = pixelAt(12, 20);
   Color center_background_pixel = pixelAt(28, 20);
   EXPECT_EQ(QuantizeToArgb4444(color::Red), background_pixel);
   EXPECT_EQ(QuantizeToArgb4444(color::Blue), center_background_pixel);
 
   front_ptr->setPressed(true);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_NE(background_pixel, pixelAt(12, 20));
   EXPECT_NE(center_background_pixel, pixelAt(28, 20));
 
   front_ptr->setPressed(false);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(background_pixel, pixelAt(12, 20));
   EXPECT_EQ(center_background_pixel, pixelAt(28, 20));
 }
@@ -1485,18 +1469,18 @@ TEST_F(RooWindowsRenderTest,
   app_.add(std::move(back), Box(0, 0, 47, 39));
   app_.add(std::move(scrim), Box(8, 8, 39, 31));
 
-  ASSERT_TRUE(refresh());
+  refresh();
 
   Color expected_tint = QuantizeToArgb4444(AlphaBlend(color::Red, kScrimColor));
   EXPECT_EQ(QuantizeToArgb4444(color::Red), pixelAt(4, 4));
   EXPECT_EQ(expected_tint, pixelAt(20, 20));
 
   scrim_ptr->setVisibility(Visibility::kInvisible);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(QuantizeToArgb4444(color::Red), pixelAt(20, 20));
 
   scrim_ptr->setVisibility(Visibility::kVisible);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(expected_tint, pixelAt(20, 20));
 }
 
@@ -1642,7 +1626,7 @@ TEST_F(RooWindowsRenderTest, PointClickAnimationSettlesIntoStaticPressOverlay) {
   app_.add(std::move(back), Box(0, 0, 47, 39));
   app_.add(std::move(front), Box(20, 12, 37, 29));
 
-  ASSERT_TRUE(refresh());
+  refresh();
   Color outer_background_pixel = pixelAt(12, 20);
   Color mid_animation_background_pixel = pixelAt(18, 20);
   Color center_background_pixel = pixelAt(28, 20);
@@ -1651,21 +1635,21 @@ TEST_F(RooWindowsRenderTest, PointClickAnimationSettlesIntoStaticPressOverlay) {
   EXPECT_EQ(QuantizeToArgb4444(color::Blue), center_background_pixel);
 
   front_ptr->onShowPress(front_ptr->width() / 2, front_ptr->height() / 2);
-  ASSERT_TRUE(refresh());
+  refresh();
 
   delay(kPressAnimationMillis / 2);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_NE(mid_animation_background_pixel, pixelAt(18, 20));
   EXPECT_NE(center_background_pixel, pixelAt(28, 20));
 
   delay(kPressAnimationMillis + 20);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_TRUE(front_ptr->isPressed());
   EXPECT_NE(outer_background_pixel, pixelAt(12, 20));
   EXPECT_NE(center_background_pixel, pixelAt(28, 20));
 
   front_ptr->setPressed(false);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(outer_background_pixel, pixelAt(12, 20));
   EXPECT_EQ(center_background_pixel, pixelAt(28, 20));
 }
@@ -1688,7 +1672,7 @@ TEST_F(RooWindowsRenderTest, PointOverlayCanTintFlexOwnedGapSpace) {
 
   app_.add(std::move(layout), Box(8, 8, 55, 39));
 
-  ASSERT_TRUE(refresh());
+  refresh();
 
   XDim abs_x;
   YDim abs_y;
@@ -1710,11 +1694,11 @@ TEST_F(RooWindowsRenderTest, PointOverlayCanTintFlexOwnedGapSpace) {
   Color gap_background_pixel = pixelAt(gap_x, gap_y);
 
   front_ptr->setActivated(true);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_NE(gap_background_pixel, pixelAt(gap_x, gap_y));
 
   front_ptr->setActivated(false);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(gap_background_pixel, pixelAt(gap_x, gap_y));
 }
 
@@ -1736,7 +1720,7 @@ TEST_F(RooWindowsRenderTest,
   app_.add(std::move(back), Box(0, 0, 63, 47));
   app_.add(std::move(layout), Box(20, 12, 37, 29));
 
-  ASSERT_TRUE(refresh());
+  refresh();
 
   XDim abs_x;
   YDim abs_y;
@@ -1754,11 +1738,11 @@ TEST_F(RooWindowsRenderTest,
   EXPECT_EQ(QuantizeToArgb4444(color::Red), outside_background_pixel);
 
   front_ptr->setActivated(true);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_NE(outside_background_pixel, pixelAt(overflow_x, overflow_y));
 
   front_ptr->setActivated(false);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(outside_background_pixel, pixelAt(overflow_x, overflow_y));
 }
 

@@ -42,13 +42,13 @@ TEST_F(ResourceTest, WarmedEditorUpdatesDoNotAllocate) {
   SecureTextField field(context(), "Password", TextFieldVariant::kOutlined);
   field.setText("a sufficiently long password to avoid small string storage");
   Task& task = app_.addTaskFullScreen(field);
-  ASSERT_TRUE(refresh());
+  refresh();
   ASSERT_TRUE(field.requestFocus());
   KeyEvent key;
   key.code = KeyCode::kEnter;
   key.phase = KeyPhase::kDown;
   ASSERT_TRUE(field.onKeyEvent(key));
-  ASSERT_TRUE(refresh());
+  refresh();
   for (int pass = 0; pass < 2; ++pass) {
     allocations = 0;
     tracking = pass == 1;
@@ -62,7 +62,7 @@ TEST_F(ResourceTest, WarmedEditorUpdatesDoNotAllocate) {
   }
   EXPECT_EQ(0u, allocations);
 
-  ASSERT_TRUE(refresh());
+  refresh();
   allocations = 0;
   for (int i = 0; i < 20; ++i) {
     field.setRevealed(i % 2);

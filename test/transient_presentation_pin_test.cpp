@@ -175,7 +175,7 @@ TEST_F(RooWindowsRenderTest, HideBeforeFirstPaintLeavesNoPixels) {
   ASSERT_EQ(PresentationPinShowResult::kShown,
             raw->showPresentationPin(MakePin(state)));
   raw->hidePresentationPin();
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(0, state.painted);
   EXPECT_EQ(1, state.destroyed);
   EXPECT_EQ(QuantizeToArgb4444(roo_display::color::Red), pixelAt(4, 4));
@@ -197,7 +197,7 @@ TEST_F(RooWindowsRenderTest, EscapesClippedAncestorAndClipsAtWindow) {
   state.dirty = state.bounds;
   ASSERT_EQ(PresentationPinShowResult::kShown,
             raw->showPresentationPin(MakePin(state)));
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(QuantizeToArgb4444(roo_display::color::Green), pixelAt(0, 5));
   EXPECT_EQ(QuantizeToArgb4444(roo_display::color::Green), pixelAt(21, 5));
   EXPECT_EQ(ParentClipMode::kClipped, raw->getParentClipMode());
@@ -215,11 +215,11 @@ TEST_F(RooWindowsRenderTest, GeometryPreflightRestoresOldAndPaintsNewBounds) {
   MutablePinState state;
   ASSERT_EQ(PresentationPinShowResult::kShown,
             raw->showPresentationPin(MakePin(state)));
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(QuantizeToArgb4444(roo_display::color::Green), pixelAt(4, 4));
   state.bounds = Rect(40, 30, 45, 35);
   state.dirty = state.bounds;
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(QuantizeToArgb4444(roo_display::color::Red), pixelAt(4, 4));
   EXPECT_EQ(QuantizeToArgb4444(roo_display::color::Green), pixelAt(42, 32));
   raw->hidePresentationPin();
@@ -238,14 +238,14 @@ TEST_F(RooWindowsRenderTest, NarrowDirtyPreservesPresentedEnvelope) {
   state.dirty = Rect(4, 4, 4, 4);
   ASSERT_EQ(PresentationPinShowResult::kShown,
             raw->showPresentationPin(MakePin(state)));
-  ASSERT_TRUE(refresh());
+  refresh();
   state.color = roo_display::color::Yellow;
   raw->setPresentationPinDirty();
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(QuantizeToArgb4444(roo_display::color::Yellow), pixelAt(4, 4));
   EXPECT_EQ(QuantizeToArgb4444(roo_display::color::Green), pixelAt(8, 8));
   state.bounds = Rect(30, 30, 37, 37);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(QuantizeToArgb4444(roo_display::color::Red), pixelAt(8, 8));
   raw->hidePresentationPin();
 }
@@ -262,13 +262,13 @@ TEST_F(RooWindowsRenderTest, AncestorVisibilitySuppressesAndResumesPin) {
   MutablePinState state;
   ASSERT_EQ(PresentationPinShowResult::kShown,
             raw->showPresentationPin(MakePin(state)));
-  ASSERT_TRUE(refresh());
+  refresh();
   panel_raw->setVisibility(Visibility::kInvisible);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_NE(QuantizeToArgb4444(roo_display::color::Green), pixelAt(4, 4));
   EXPECT_TRUE(raw->hasPresentationPin());
   panel_raw->setVisibility(Visibility::kVisible);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(QuantizeToArgb4444(roo_display::color::Green), pixelAt(4, 4));
   raw->hidePresentationPin();
 }
@@ -291,10 +291,10 @@ TEST_F(RooWindowsRenderTest, SameRootPinsUseReverseRegistrationOrder) {
             low->showPresentationPin(MakePin(low_state)));
   ASSERT_EQ(PresentationPinShowResult::kShown,
             high->showPresentationPin(MakePin(high_state)));
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(QuantizeToArgb4444(roo_display::color::Green), pixelAt(4, 4));
   high->hidePresentationPin();
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(QuantizeToArgb4444(roo_display::color::Red), pixelAt(4, 4));
   low->hidePresentationPin();
 }
@@ -315,13 +315,13 @@ TEST_F(RooWindowsRenderTest, PinsRespectTaskAndPopupLayerOrdering) {
   MutablePinState task_state;
   ASSERT_EQ(PresentationPinShowResult::kShown,
             task_raw->showPresentationPin(MakePin(task_state)));
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_NE(QuantizeToArgb4444(roo_display::color::Green), pixelAt(4, 4));
   MutablePinState popup_state;
   popup_state.color = roo_display::color::Yellow;
   ASSERT_EQ(PresentationPinShowResult::kShown,
             popup_raw->showPresentationPin(MakePin(popup_state)));
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(QuantizeToArgb4444(roo_display::color::Yellow), pixelAt(4, 4));
   popup_raw->hidePresentationPin();
   task_raw->hidePresentationPin();
@@ -342,7 +342,7 @@ TEST_F(RooWindowsRenderTest, DialogPinIsHighestInDialogLayer) {
   state.color = roo_display::color::Yellow;
   ASSERT_EQ(PresentationPinShowResult::kShown,
             dialog.showPresentationPin(MakePin(state)));
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(QuantizeToArgb4444(roo_display::color::Yellow), pixelAt(4, 4));
   dialog.hidePresentationPin();
   dialog.close();
@@ -374,9 +374,8 @@ TEST_F(RooWindowsRenderTest, AncestorDetachDeletesSubtreePins) {
   EXPECT_EQ(1, second_state.destroyed);
 }
 
-// Verifies an interrupted frame keeps the pin pending and the following
-// unrestricted frame paints it normally.
-TEST_F(RooWindowsRenderTest, DeadlineInterruptionRetainsPendingPin) {
+// Verifies a newly presented pin is painted by the next complete refresh.
+TEST_F(RooWindowsRenderTest, RefreshPaintsPendingPin) {
   auto panel = std::make_unique<TestPanel>(context(), roo_display::color::Red);
   auto anchor = std::make_unique<PinAnchor>(context());
   PinAnchor* raw = anchor.get();
@@ -385,9 +384,8 @@ TEST_F(RooWindowsRenderTest, DeadlineInterruptionRetainsPendingPin) {
   MutablePinState state;
   ASSERT_EQ(PresentationPinShowResult::kShown,
             raw->showPresentationPin(MakePin(state)));
-  EXPECT_FALSE(refresh(roo_time::Uptime::Start()));
   EXPECT_EQ(0, state.painted);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_GT(state.painted, 0);
   EXPECT_EQ(QuantizeToArgb4444(roo_display::color::Green), pixelAt(4, 4));
   raw->hidePresentationPin();
@@ -409,7 +407,7 @@ TEST_F(RooWindowsRenderTest, RepeatedShowHideUsesActiveOnlyStorage) {
     ASSERT_EQ(PresentationPinShowResult::kShown,
               raw->showPresentationPin(MakePin(state)));
     raw->setPresentationPinDirty();
-    ASSERT_TRUE(refresh());
+    refresh();
     raw->hidePresentationPin();
   }
   EXPECT_EQ(8, state.destroyed);

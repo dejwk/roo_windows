@@ -1,5 +1,11 @@
 # Widget animation registry
 
+> **Painting update, 2026-10-05:** refresh now paints to completion. References
+> below to interrupted paint, continuation, and frozen samples across attempts
+> describe the former implementation. Animation sampling before layout, frame
+> cadence, and click settlement after drawing remain; see the
+> [current paint contract](../README.md#current-paint-contract).
+
 Status: implemented. The [animation survey](../../animation_framework_survey.md)
 records the original use cases and comparisons, and the
 [acceptance report](../../animation_registry_acceptance.md) records the final

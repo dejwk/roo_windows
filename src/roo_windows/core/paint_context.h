@@ -63,12 +63,6 @@ class PaintContext {
   /// Returns the current clip rectangle expressed in local coordinates.
   Rect localClip() const;
 
-  /// Returns true once the enclosing paint deadline has elapsed.
-  bool isDeadlineExceeded() const;
-
-  /// Reports that this widget stopped painting because the deadline elapsed.
-  void markPaintInterrupted() const;
-
   /// Returns a copy of this context shifted by `(dx, dy)` in local space.
   PaintContext translated(XDim dx, YDim dy) const;
 

@@ -353,7 +353,7 @@ TEST_F(HostTest, ActionCloseWaitsForImmediateClicksForcedFinalFrame) {
   ASSERT_EQ(PresentationStartResult::kStarted,
             host_.show(registration, owner_, root, Rect(8, 8, 23, 23), scope,
                        kTransparentReject));
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
 
   action.onShowPress(3, 3);
   action.onSingleTapUp(3, 3);
@@ -365,12 +365,12 @@ TEST_F(HostTest, ActionCloseWaitsForImmediateClicksForcedFinalFrame) {
   ASSERT_EQ(&action, app_.root().click_animation().target());
   EXPECT_FLOAT_EQ(1.0f, action.getClickAnimation()->progress());
 
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   EXPECT_EQ(TransientPresentationState::kFinishing, registration.state());
   EXPECT_EQ(0, registration.detach_count);
   EXPECT_FALSE(app_.root().click_animation().isBusy());
 
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   EXPECT_FALSE(registration.isActive());
   EXPECT_EQ(1, registration.detach_count);
   EXPECT_EQ(1, registration.finish_count);
@@ -388,7 +388,7 @@ TEST_F(HostTest, ConfirmedClickIsDeliveredBeforeDeferredExternalClose) {
   ASSERT_EQ(PresentationStartResult::kStarted,
             host_.show(registration, owner_, root, Rect(8, 8, 23, 23), scope,
                        kTransparentReject));
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
 
   action.onShowPress(3, 3);
   action.onSingleTapUp(3, 3);
@@ -400,12 +400,12 @@ TEST_F(HostTest, ConfirmedClickIsDeliveredBeforeDeferredExternalClose) {
   ASSERT_NE(nullptr, action.getClickAnimation());
   EXPECT_FLOAT_EQ(1.0f, action.getClickAnimation()->progress());
 
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   EXPECT_EQ(1, action.click_count);
   EXPECT_EQ(0, registration.detach_count);
   EXPECT_EQ(TransientPresentationState::kFinishing, registration.state());
 
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   EXPECT_FALSE(registration.isActive());
   EXPECT_EQ(1, registration.detach_count);
   EXPECT_EQ(PresentationFinishReason::kCancel, registration.detach_reason);
@@ -422,7 +422,7 @@ TEST_F(HostTest, UnconfirmedClickGetsFinalFrameWithoutSemanticDelivery) {
   ASSERT_EQ(PresentationStartResult::kStarted,
             host_.show(registration, owner_, root, Rect(8, 8, 23, 23), scope,
                        kTransparentReject));
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
 
   action.onShowPress(3, 3);
   registration.finish(PresentationFinishReason::kOutsideInteraction);
@@ -431,12 +431,12 @@ TEST_F(HostTest, UnconfirmedClickGetsFinalFrameWithoutSemanticDelivery) {
   ASSERT_NE(nullptr, action.getClickAnimation());
   EXPECT_FLOAT_EQ(1.0f, action.getClickAnimation()->progress());
 
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   EXPECT_EQ(0, action.click_count);
   EXPECT_EQ(0, registration.detach_count);
   EXPECT_FALSE(app_.root().click_animation().isBusy());
 
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   EXPECT_FALSE(registration.isActive());
   EXPECT_EQ(0, action.click_count);
   EXPECT_EQ(PresentationFinishReason::kOutsideInteraction,
@@ -457,7 +457,7 @@ TEST_F(HostTest, ReplacementCancelsFeedbackAndDetachesSynchronously) {
   ASSERT_EQ(PresentationStartResult::kStarted,
             host_.show(first, owner_, first_root, Rect(8, 8, 23, 23),
                        first_scope, kTransparentReplaceable));
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   action.onShowPress(3, 3);
   ASSERT_EQ(&action, app_.root().click_animation().target());
 
@@ -479,7 +479,7 @@ TEST_F(HostTest, ReplacementCancelsFeedbackAndDetachesSynchronously) {
 TEST_F(HostTest, AttachesOwnerBoundRootAndRestoresFocus) {
   FocusableWidget base_focus(app_.context());
   task_content_.add(WidgetRef(base_focus), Rect(0, 0, 7, 7));
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   ASSERT_TRUE(base_focus.requestFocus());
 
   TestPanel root(app_.context());
@@ -665,7 +665,7 @@ TEST_F(HostTest, HostedAdmissionDoesNotReplaceStandaloneParticipant) {
 TEST_F(HostTest, CapturesOnlyOwnerTaskSourceGeometry) {
   FocusableWidget source(app_.context());
   task_content_.add(WidgetRef(source), Rect(4, 5, 11, 14));
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   TransientSourceGeometry output{Rect(90, 91, 92, 93)};
 
   ASSERT_TRUE(CaptureTransientSourceGeometry(owner_, source, output));
@@ -698,7 +698,7 @@ TEST_F(HostTest, RejectsDetachedAndHostedSourceChains) {
 
   TransientHostLayer nested_host(app_.context());
   task_content_.add(WidgetRef(nested_host), Rect(0, 0, 8, 8));
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   EXPECT_FALSE(CaptureTransientSourceGeometry(owner_, nested_host, output));
   task_content_.removeLast();
 
@@ -739,7 +739,7 @@ TEST_F(HostTest, TransparentBarrierPreservesUnderlyingPaint) {
   test_support::ColorBoxWidget base(app_.context(), roo_display::color::Red,
                                     Dimensions(64, 48));
   task_content_.add(WidgetRef(base), Rect(0, 0, 63, 47));
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   test_support::ColorBoxWidget root(app_.context(), roo_display::color::Blue,
                                     Dimensions(16, 16));
   FocusScope scope;
@@ -747,12 +747,12 @@ TEST_F(HostTest, TransparentBarrierPreservesUnderlyingPaint) {
   ASSERT_EQ(PresentationStartResult::kStarted,
             host_.show(registration, owner_, root, Rect(16, 12, 31, 27), scope,
                        kTransparentReject));
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
 
   EXPECT_EQ(QuantizeToArgb4444(roo_display::color::Red), pixelAt(4, 4));
   EXPECT_EQ(QuantizeToArgb4444(roo_display::color::Blue), pixelAt(20, 16));
   registration.finish(PresentationFinishReason::kCancel);
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   EXPECT_EQ(QuantizeToArgb4444(roo_display::color::Red), pixelAt(20, 16));
   task_content_.removeLast();
 }
@@ -763,7 +763,7 @@ TEST_F(HostTest, ScrimBarrierOverlaysUnderlyingPaint) {
   test_support::ColorBoxWidget base(app_.context(), roo_display::color::Red,
                                     Dimensions(64, 48));
   task_content_.add(WidgetRef(base), Rect(0, 0, 63, 47));
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   test_support::ColorBoxWidget root(app_.context(), roo_display::color::Blue,
                                     Dimensions(16, 16));
   FocusScope scope;
@@ -771,7 +771,7 @@ TEST_F(HostTest, ScrimBarrierOverlaysUnderlyingPaint) {
   ASSERT_EQ(PresentationStartResult::kStarted,
             host_.show(registration, owner_, root, Rect(16, 12, 31, 27), scope,
                        kScrimReject));
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
 
   EXPECT_NE(QuantizeToArgb4444(roo_display::color::Red), pixelAt(4, 4));
   EXPECT_EQ(QuantizeToArgb4444(roo_display::color::Blue), pixelAt(20, 16));
@@ -890,7 +890,7 @@ TEST_F(HostTest, AdmissionCancelsArmedKeysInEveryTask) {
   QueuedKeySource other_keys;
   owner_keys.connect(owner_);
   other_keys.connect(other);
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   ASSERT_TRUE(owner_control.requestFocus());
   ASSERT_TRUE(other_control.requestFocus());
   owner_keys.push(
@@ -927,7 +927,7 @@ TEST_F(HostTest, HostedSurfaceIsolatesOwnerAndNonOwnerKeys) {
   QueuedKeySource other_keys;
   owner_keys.connect(owner_);
   other_keys.connect(other);
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   ASSERT_TRUE(owner_base.requestFocus());
   ASSERT_TRUE(other_focus.requestFocus());
 
@@ -963,7 +963,7 @@ TEST_F(HostTest, HostedBackHasDisplayWidePrecedence) {
   Task& other = app_.addTaskFullScreen(*auxiliary_task_content_);
   QueuedKeySource other_keys;
   other_keys.connect(other);
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   ASSERT_TRUE(other_focus.requestFocus());
 
   TestPanel root(app_.context());
@@ -1031,7 +1031,7 @@ TEST_F(HostTest, SemanticTextInputIsContainedByHostedRoot) {
   root.preferred_ = &presenter_field;
   FocusScope scope;
   TestRegistration registration;
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   ASSERT_EQ(PresentationStartResult::kStarted,
             host_.show(registration, owner_, root, Rect(0, 0, 31, 15), scope,
                        kTransparentReject));
@@ -1266,7 +1266,7 @@ TEST(TransientSurfaceHost, CancellationMutationFailsRepeatedPreflight) {
     lower_target->cancellation = [&]() {
       content->add(WidgetRef(*incoming_root), Rect(0, 0, 10, 10));
     };
-    ASSERT_TRUE(app.refresh());
+    app.refresh();
     touch.set(true, 4, 4);
     app.start();
     for (int i = 0;

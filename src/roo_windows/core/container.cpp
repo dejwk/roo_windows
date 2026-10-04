@@ -94,11 +94,6 @@ void Container::paintWidgetContents(PaintContext& ctx) {
       markClean();
       // Draw the panel's children.
       paintChildren(ctx);
-      if (ctx.isDeadlineExceeded()) {
-        markDirty();
-        ctx.markPaintInterrupted();
-        return;
-      }
     }
   } else {
     bool dirty = isDirty();
@@ -108,13 +103,6 @@ void Container::paintWidgetContents(PaintContext& ctx) {
     if (dirty || !bounds().contains(maxBounds())) {
       // Draw the panel's children.
       paintChildren(ctx);
-      if (ctx.isDeadlineExceeded()) {
-        markDirty();
-        markInvalidated();
-        invalid_region_ = invalid_region;
-        ctx.markPaintInterrupted();
-        return;
-      }
     }
     // Paint the surface.
     PaintContext surface_ctx = prepareSurfaceContext(ctx, invalid_region);
@@ -128,7 +116,6 @@ void Container::paintChildren(PaintContext& ctx) {
   PaintContext clipped_ctx = ctx.clipped(bounds());
   bool fast_render = isDirty() && respectsChildrenBoundaries();
   for (int i = getChildrenCount() - 1; i >= 0; --i) {
-    if (ctx.isDeadlineExceeded()) return;
     Widget& child = getChild(i);
     if (child.getParentClipMode() == ParentClipMode::kClipped) {
       child.paintWidget(clipped_ctx.canvas(),
@@ -239,9 +226,7 @@ Rect Container::getMaxSloppyTouchParentBounds() const {
 // are dirty, but a relatively small area actually gets invalidated (e.g.
 // because something moved).
 void Container::propagateDirty(const Widget* child, const Rect& rect) {
-  const MainWindow* root = getMainWindow();
-  if (isDirty() && invalid_region_.contains(rect) &&
-      (root == nullptr || !root->hasPaintContinuation())) {
+  if (isDirty() && invalid_region_.contains(rect)) {
     // Already fully invalidated, thus dirty.
     return;
   }

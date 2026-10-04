@@ -60,7 +60,7 @@ class DockedDatePickerTest : public testing::Test {
 // Verifies focus-triggered admission is deferred and restoration does not
 // reopen.
 TEST_F(DockedDatePickerTest, FocusTakeoverAndRestoration) {
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   EXPECT_TRUE(field_->requestFocus());
   EXPECT_EQ(field_, owner_.focus().focused());
   scheduler_.executeEligibleTasks(10);
@@ -77,7 +77,7 @@ TEST_F(DockedDatePickerTest, FocusTakeoverAndRestoration) {
 
 // Verifies calendar edits remain drafts and cancellation preserves typed text.
 TEST_F(DockedDatePickerTest, CancelPreservesUnconfirmedText) {
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   field_->setText("incomplete");
   ASSERT_EQ(PresentationStartResult::kStarted, field_->openPicker());
   panel().selectDate(CivilDay::FromYmd(2024, 2, 15));
@@ -89,7 +89,7 @@ TEST_F(DockedDatePickerTest, CancelPreservesUnconfirmedText) {
 
 // Verifies acceptance updates the typed value only after the calendar detaches.
 TEST_F(DockedDatePickerTest, ConfirmUpdatesField) {
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   ASSERT_EQ(PresentationStartResult::kStarted, field_->openPicker());
   CivilDay selected = CivilDay::FromYmd(2024, 2, 15);
   panel().selectDate(selected);
@@ -105,7 +105,7 @@ TEST_F(DockedDatePickerTest, ConfirmUpdatesField) {
 
 // Verifies pending focus admission is canceled when the field is destroyed.
 TEST_F(DockedDatePickerTest, PendingAdmissionDoesNotOutliveField) {
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   field_->requestFocus();
   content_.removeLast();
   scheduler_.executeEligibleTasks(10);
@@ -115,7 +115,7 @@ TEST_F(DockedDatePickerTest, PendingAdmissionDoesNotOutliveField) {
 
 // Verifies destruction of an open field silently detaches its calendar.
 TEST_F(DockedDatePickerTest, ActiveFieldDestruction) {
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   field_->onClicked();
   ASSERT_TRUE(field_->isPickerOpen());
   content_.removeLast();
@@ -126,7 +126,7 @@ TEST_F(DockedDatePickerTest, ActiveFieldDestruction) {
 
 // Verifies a calendar ends editing and rejects further underlying field input.
 TEST_F(DockedDatePickerTest, EditorIsInactiveWhileCalendarIsOpen) {
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
   field_->requestFocus();
   scheduler_.executeEligibleTasks(10);
   field_->dismissPicker();

@@ -48,9 +48,9 @@ TEST(Material3SnackbarGolden, Configurations) {
     SnackbarRequest request;
     ASSERT_TRUE(request.configure(c.text, c.action,
                                   SnackbarDuration::kPersistent, c.close));
-    ASSERT_TRUE(app.refresh());
+    app.refresh();
     ASSERT_EQ(SnackbarShowResult::kShown, host.snackbars().show(request));
-    ASSERT_TRUE(app.refresh());
+    app.refresh();
     auto capture =
         ::roo_windows::test::CaptureRgb(device.raster(), 0, 0, c.width, 240);
     EXPECT_TRUE(::roo_windows::test::CompareOrUpdateGolden(

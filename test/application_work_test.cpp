@@ -9,13 +9,6 @@
 #include "roo_windows/core/widget.h"
 
 namespace roo_windows {
-namespace test {
-struct ApplicationWorkTestAccess {
-  static void SetPaintBudget(Application& app, roo_time::Duration budget) {
-    app.window_.paint_interval_ = budget;
-  }
-};
-}  // namespace test
 namespace {
 
 class WorkKeys : public KeySource {
@@ -336,32 +329,33 @@ TEST_F(ApplicationWorkTest, CleanTransientActivityIsDeliveredInBoundedBatches) {
   expectDormant();
 }
 
-// Verifies each dispatch emits at most one short slice, continuation bypasses
-// the throttle and retains samples, then new-frame sampling waits for cadence.
-TEST_F(ApplicationWorkTest, ShortSlicesResumeImmediatelyWithFrozenSamples) {
+// Verifies a slow automatic refresh finishes in one dispatch, services input
+// on the next dispatch, and samples the latest animation state without retries.
+TEST_F(ApplicationWorkTest,
+       SlowRefreshCompletesAndNextDispatchSamplesNewFrame) {
   advance(20);
-  test::ApplicationWorkTestAccess::SetPaintBudget(app_, roo_time::Millis(5));
-  widget_->paint_delay_us = 6000;
-  widget_->onShowPress(4, 4);
-  AnimationSpec spec = AnimationSpec::Value(0, 1, roo_time::Millis(100));
+  widget_->paint_delay_us = 250000;
+  AnimationSpec spec = AnimationSpec::Value(0, 1, roo_time::Millis(1000));
   spec.minimum_interval = roo_time::Millis(0);
   ASSERT_EQ(AnimationStatus::kOk, animations().start(*widget_, 0, spec));
+  int paints = widget_->paints;
   int dispatches = keys_.dispatches;
   dispatchOne();
   EXPECT_EQ(dispatches + 1, keys_.dispatches);
-  ASSERT_TRUE(app_.root().hasPaintContinuation());
-  EXPECT_EQ(1u, widget_->samples.size());
+  EXPECT_EQ(paints + 1, widget_->paints);
+  EXPECT_FALSE(app_.root().isDirty());
+  ASSERT_EQ(1u, widget_->samples.size());
   EXPECT_EQ(roo_time::Uptime::Now(), next());
-  float click_sample = app_.root().click_animation().progress();
+
   widget_->paint_delay_us = 0;
+  keys_.post();
   dispatchOne();
-  EXPECT_FALSE(app_.root().hasPaintContinuation());
-  EXPECT_FLOAT_EQ(click_sample, app_.root().click_animation().progress());
-  EXPECT_EQ(1u, widget_->samples.size());
+  EXPECT_EQ(1, keys_.delivered);
+  ASSERT_EQ(2u, widget_->samples.size());
+  EXPECT_GE(widget_->samples.back().elapsed.inMillis(), 250);
+  EXPECT_EQ(paints + 2, widget_->paints);
+  EXPECT_FALSE(app_.root().isDirty());
   EXPECT_EQ(roo_time::Uptime::Now() + roo_time::Millis(20), next());
-  runAtNext();
-  EXPECT_EQ(2u, widget_->samples.size());
-  EXPECT_GT(app_.root().click_animation().progress(), click_sample);
 }
 
 // Verifies a non-animated deferred click is work even when the root was clean

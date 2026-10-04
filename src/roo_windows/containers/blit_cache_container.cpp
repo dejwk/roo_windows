@@ -544,13 +544,6 @@ void BlitCacheContainer::paintWidgetContents(PaintContext& ctx) {
   PaintContext paint_ctx(paint_canvas, clipper);
   Container::paintWidgetContents(paint_ctx);
 
-  if (clipper.wasPaintInterrupted()) {
-    // Preserve incremental frame recovery but disable blit reuse after an
-    // aborted frame; the exclusions/content set may be only partially updated.
-    blit_safe_region_ = Box(0, 0, -1, -1);
-    return;
-  }
-
   // After painting, update blit_safe_region_ for next frame.
   // For non-blit paints with an existing safe region, shrinkSafeRegion()
   // already accounted for dirty areas. Recomputing from the current (possibly

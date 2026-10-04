@@ -39,7 +39,7 @@ class Material3NavigationRailGoldenTest : public testing::Test {
                    nullptr, false, false, false, true,
                    NavigationRailLayout::kCollapsed);
 
-    EXPECT_TRUE(app.refresh());
+    app.refresh();
     return test::CaptureRgb(offscreen_.raster(), 0, 0, 440, Scaled(64));
   }
 
@@ -61,7 +61,7 @@ class Material3NavigationRailGoldenTest : public testing::Test {
                    nullptr, false, false, false, true,
                    NavigationRailLayout::kExpanded);
 
-    EXPECT_TRUE(app.refresh());
+    app.refresh();
     return test::CaptureRgb(offscreen_.raster(), 0, 0, 700, Scaled(64));
   }
 
@@ -73,7 +73,7 @@ class Material3NavigationRailGoldenTest : public testing::Test {
     AddBadgedDestination(app, 88, 0, 87, "Inbox",
                          &ic_outlined_24_action_bookmark(), false,
                          NavigationRailLayout::kCollapsed);
-    EXPECT_TRUE(app.refresh());
+    app.refresh();
     return test::CaptureRgb(offscreen_.raster(), 0, 0, 176, Scaled(64));
   }
 
@@ -85,7 +85,7 @@ class Material3NavigationRailGoldenTest : public testing::Test {
     AddBadgedDestination(app, 192, 0, 191, "Inbox",
                          &ic_outlined_24_action_bookmark(), false,
                          NavigationRailLayout::kExpanded);
-    EXPECT_TRUE(app.refresh());
+    app.refresh();
     return test::CaptureRgb(offscreen_.raster(), 0, 0, 384, Scaled(64));
   }
 
@@ -100,7 +100,7 @@ class Material3NavigationRailGoldenTest : public testing::Test {
     EXPECT_TRUE(rail->add(WidgetRef(std::move(destination))));
     app.add(std::move(rail),
             roo_display::Box(0, 0, Scaled(320) - 1, Scaled(96) - 1));
-    EXPECT_TRUE(app.refresh());
+    app.refresh();
     return test::CaptureRgb(offscreen_.raster(), 0, 0, Scaled(320), Scaled(96));
   }
 

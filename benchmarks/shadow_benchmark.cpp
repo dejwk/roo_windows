@@ -123,9 +123,9 @@ class BenchmarkScene {
     app_.refresh();
   }
 
-  bool RenderOneFrame() {
+  void RenderOneFrame() {
     card_->invalidateInterior();
-    return app_.refresh();
+    app_.refresh();
   }
 
  private:
@@ -179,11 +179,7 @@ BenchmarkResult RunCase(const BenchmarkCase& c, int warmup, int iterations) {
 
   for (int i = 0; i < iterations; ++i) {
     uint32_t start = micros();
-    if (!scene.RenderOneFrame()) {
-      Serial.print("Refresh did not finish within deadline in case: ");
-      Serial.println(c.name);
-      break;
-    }
+    scene.RenderOneFrame();
     uint32_t elapsed = micros() - start;
     double us = elapsed;
     total_us += us;

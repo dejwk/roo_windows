@@ -9,27 +9,21 @@
 namespace roo_windows {
 namespace {
 
-constexpr roo_time::Duration kMinRefreshDuration = roo_time::Millis(200);
 constexpr long kMinRefreshTimeDeltaMs = 20;
 
-/// Adapts the root widget's bounded paint operation to DrawingContext.
+/// Adapts the root widget's complete paint operation to DrawingContext.
 class Adapter final : public roo_display::Drawable {
  public:
-  Adapter(MainWindow& root, roo_time::Uptime deadline)
-      : root_(root), deadline_(deadline) {}
+  explicit Adapter(MainWindow& root) : root_(root) {}
 
   roo_display::Box extents() const override { return root_.bounds().asBox(); }
 
   void drawTo(const roo_display::Surface& surface) const override {
-    completed_ = root_.paintWindow(surface, deadline_);
+    root_.paintWindow(surface);
   }
-
-  bool completed() const { return completed_; }
 
  private:
   MainWindow& root_;
-  roo_time::Uptime deadline_;
-  mutable bool completed_ = false;
 };
 
 }  // namespace
@@ -66,7 +60,6 @@ void DisplayWindow::stop() {
   root_.beginShutdown();
   gesture_detector_.cancel();
   root_.click_animation().cancelForWindowTeardown();
-  root_.cancelPaintContinuation();
 }
 
 void DisplayWindow::servicePointerInput() {
@@ -76,7 +69,6 @@ void DisplayWindow::servicePointerInput() {
 
 roo_time::Uptime DisplayWindow::nextPaintDeadline() const {
   roo_time::Uptime now = roo_time::Uptime::Now();
-  if (root_.hasPaintContinuation()) return now;
   roo_time::Uptime desired =
       std::min(root_.app().context().animations().nextFrameDeadline(),
                root_.click_animation().nextFrameDeadline());
@@ -106,12 +98,7 @@ roo_time::Uptime DisplayWindow::nextWorkDeadline() const {
 void DisplayWindow::refreshIfDue() {
   if (serviceDeferredWork()) return;
   if (nextPaintDeadline() > roo_time::Uptime::Now()) return;
-  bool completed = refreshPaint(roo_time::Uptime::Now() + paint_interval_);
-  if (!completed) {
-    paint_interval_ = paint_interval_ * 2;
-  } else {
-    paint_interval_ = kMinRefreshDuration;
-  }
+  refreshPaint();
 }
 
 void DisplayWindow::cancelGestureTargetsInSubtree(Widget& subtree) {
@@ -128,42 +115,37 @@ bool DisplayWindow::serviceDeferredWork() {
   return root_.transient_presentation_slot().finishDeferredIfReady();
 }
 
-bool DisplayWindow::refresh(roo_time::Uptime deadline) {
-  if (serviceDeferredWork()) return true;
-  return refreshPaint(deadline);
+void DisplayWindow::refresh() {
+  if (serviceDeferredWork()) return;
+  refreshPaint();
 }
 
-bool DisplayWindow::refreshPaint(roo_time::Uptime deadline) {
+void DisplayWindow::refreshPaint() {
   refreshing_ = true;
   AnimationRegistry& animations = root_.app().context().animations();
-  if (!root_.hasPaintContinuation()) {
-    root_.refreshClickAnimation();
-    animations.beginFrame(roo_time::Uptime::Now());
-    while (animations.dispatchNext()) {
-      root_.app().context().presentations().deliverPendingChanges();
-    }
-    animations.endFrame();
+  root_.refreshClickAnimation();
+  animations.beginFrame(roo_time::Uptime::Now());
+  while (animations.dispatchNext()) {
+    root_.app().context().presentations().deliverPendingChanges();
   }
+  animations.endFrame();
   root_.updateLayout();
   // Layout can change effective presentation. Deliver that state before paint,
   // but do not run a second animation pass in the same logical frame.
   root_.app().context().presentations().deliverPendingChanges();
   last_time_refreshed_ms_ = millis();
   ClickAnimation& click_animation = root_.click_animation();
-  bool completed;
   {
     roo_display::DrawingContext context(display_);
     context.setFillMode(roo_display::FillMode::kExtents);
-    Adapter adapter(root_, deadline);
+    Adapter adapter(root_);
     context.draw(adapter);
-    completed = adapter.completed();
   }
   refreshing_ = false;
   root_.app().requestAnimationFrameAt(nextWorkDeadline());
   // Semantic delivery can destroy the application; do not touch members after
   // it.
-  if (completed) click_animation.notifyRefreshCompleted();
-  return completed;
+  click_animation.notifyRefreshCompleted();
 }
 
 void DisplayWindow::requestRefresh() { root_.invalidateInterior(); }

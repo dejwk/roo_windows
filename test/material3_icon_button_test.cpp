@@ -52,7 +52,7 @@ class Material3IconButtonRenderTest : public testing::Test {
 
   ApplicationContext& context() { return app_.context(); }
 
-  bool refresh() { return app_.refresh(roo_time::Uptime::Max()); }
+  void refresh() { app_.refresh(); }
 
   roo_display::Color pixelAt(int16_t x, int16_t y) const {
     int16_t px[] = {x};
@@ -172,7 +172,7 @@ TEST_F(Material3IconButtonRenderTest, FilledButtonPaintsTheEntireContainer) {
   button_ptr->setShape(ButtonShape::kSquare);
   app_.add(std::move(button), roo_display::Box(20, 20, 59, 59));
 
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(QuantizeToArgb4444(button_ptr->background()), pixelAt(21, 40));
 }
 
@@ -224,7 +224,7 @@ TEST_F(Material3IconButtonRenderTest, ShapeMorphCanChangeDuringClickAnimation) {
   IconButton* button_ptr = button.get();
   button_ptr->setShape(ButtonShape::kSquare);
   app_.add(std::move(button), roo_display::Box(20, 20, 59, 59));
-  ASSERT_TRUE(refresh());
+  refresh();
   button_ptr->onShowPress(20, 20);
   delay(kPressAnimationMillis / 4 + 20);
   app_.root().refreshClickAnimation();

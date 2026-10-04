@@ -47,11 +47,11 @@ TEST_F(DatePickerResource, NavigationDoesNotAllocate) {
   Task& task = app_.addTaskFullScreen(content);
   ModalDatePicker picker(context());
   picker.setValue(roo_time::CivilDay::FromYmd(2024, 2, 29));
-  ASSERT_TRUE(refresh());
+  refresh();
   ASSERT_EQ(PresentationStartResult::kStarted, picker.open(task));
   auto& panel =
       *static_cast<internal::DatePickerPanel*>(task.focus().scopeRoot());
-  ASSERT_TRUE(refresh());
+  refresh();
   for (int pass = 0; pass < 2; ++pass) {
     allocations = 0;
     tracking = pass == 1;
@@ -81,9 +81,9 @@ TEST_F(DatePickerResource, IncrementalPaintMatchesInvalidation) {
   Task& task = app_.addTaskFullScreen(content);
   ModalDatePicker picker(context());
   picker.setValue(roo_time::CivilDay::FromYmd(2024, 2, 14));
-  ASSERT_TRUE(refresh());
+  refresh();
   ASSERT_EQ(PresentationStartResult::kStarted, picker.open(task));
-  ASSERT_TRUE(refresh());
+  refresh();
   auto& panel =
       *static_cast<internal::DatePickerPanel*>(task.focus().scopeRoot());
   Widget* body = task.focus().focused();
@@ -99,7 +99,7 @@ TEST_F(DatePickerResource, IncrementalPaintMatchesInvalidation) {
                         1);
   panel.selectDate(roo_time::CivilDay::FromYmd(2024, 2, 15));
   panel.selectDate(roo_time::CivilDay::FromYmd(2024, 2, 16));
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(test_support::QuantizeToArgb4444(sentinel), pixelAt(x, y));
   // Restore just the deliberately corrupted pixel for a whole-raster
   // comparison.
@@ -107,26 +107,26 @@ TEST_F(DatePickerResource, IncrementalPaintMatchesInvalidation) {
                         &y, 1);
   std::vector<roo::byte> incremental(raster_, raster_ + sizeof(raster_));
   panel.invalidateInterior();
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(incremental,
             std::vector<roo::byte>(raster_, raster_ + sizeof(raster_)));
   body->onKeyEvent({KeyPhase::kDown, KeyCode::kLeft, 0, 0});
   body->onKeyEvent({KeyPhase::kDown, KeyCode::kLeft, 0, 0});
-  ASSERT_TRUE(refresh());
+  refresh();
   incremental.assign(raster_, raster_ + sizeof(raster_));
   panel.invalidateInterior();
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(incremental,
             std::vector<roo::byte>(raster_, raster_ + sizeof(raster_)));
   Widget* header = static_cast<Widget&>(panel).focusChildAt(0);
   ASSERT_TRUE(header->requestFocus());
-  ASSERT_TRUE(refresh());
+  refresh();
   header->onKeyEvent({KeyPhase::kDown, KeyCode::kRight, 0, 0});
   header->onKeyEvent({KeyPhase::kDown, KeyCode::kRight, 0, 0});
-  ASSERT_TRUE(refresh());
+  refresh();
   incremental.assign(raster_, raster_ + sizeof(raster_));
   panel.invalidateInterior();
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(incremental,
             std::vector<roo::byte>(raster_, raster_ + sizeof(raster_)));
   picker.dismiss();

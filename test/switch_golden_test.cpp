@@ -65,14 +65,14 @@ class SwitchGoldenTest : public testing::Test {
                   Rect(178, 14, 178 + Scaled(42) - 1, 14 + Scaled(24) - 1));
     app.add(std::move(backdrop),
             roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
-    EXPECT_TRUE(app.refresh());
+    app.refresh();
 
     if (animate_on) {
       material_on_ptr->onClicked();
       legacy_on_ptr->onClicked();
-      EXPECT_TRUE(app.refresh());
+      app.refresh();
       delay(130);
-      EXPECT_TRUE(app.refresh());
+      app.refresh();
     }
     return test::CaptureRgb(offscreen_.raster(), 0, 0, kWidth, kHeight);
   }

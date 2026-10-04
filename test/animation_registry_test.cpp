@@ -298,28 +298,27 @@ TEST(AnimationRegistry, ManualRefreshDispatchesBeforeLayoutAndPaint) {
       AnimationStatus::kOk,
       fixture.registry().start(
           widget, 0, AnimationSpec::Value(0.0f, 1.0f, roo_time::Duration())));
-  ASSERT_TRUE(fixture.app().refresh());
+  fixture.app().refresh();
   ASSERT_EQ(widget.frames.size(), 1u);
   EXPECT_EQ(widget.finishes.size(), 1u);
 }
 
-// Verifies a retained paint continuation consumes its original logical-frame
-// values before an overdue new animation sample is applied.
-TEST(AnimationRegistry, PaintContinuationFreezesAnimationSamples) {
+// Verifies a newly started animation is sampled by the very next refresh.
+TEST(AnimationRegistry, NextRefreshSamplesNewAnimation) {
   TestApplication fixture;
   auto widget = std::make_unique<RecordingWidget>(fixture.app().context());
   RecordingWidget* raw = widget.get();
   fixture.app().add(WidgetRef(std::move(widget)),
                     roo_display::Box(0, 0, 15, 15));
-  ASSERT_FALSE(fixture.app().refresh(roo_time::Uptime::Start()));
+  fixture.app().refresh();
   ASSERT_EQ(
       AnimationStatus::kOk,
       fixture.registry().start(
           *raw, 0, AnimationSpec::Value(0.0f, 1.0f, roo_time::Duration())));
 
-  ASSERT_TRUE(fixture.app().refresh());
-  EXPECT_TRUE(raw->frames.empty());
-  ASSERT_TRUE(fixture.app().refresh());
+  fixture.app().refresh();
+  EXPECT_EQ(raw->frames.size(), 1u);
+  fixture.app().refresh();
   EXPECT_EQ(raw->frames.size(), 1u);
 }
 

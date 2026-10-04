@@ -77,12 +77,12 @@ class Material3ToggleIconButtonGoldenTest : public testing::Test {
         AddButton(app, 100, 80, IconButtonStyle::kFilled, !animate_selection,
                   ButtonSize::kMedium, ButtonShape::kRound, true,
                   &ic_outlined_48_action_favorite());
-    EXPECT_TRUE(app.refresh());
+    app.refresh();
     if (animate_selection) {
       button->setSelected(true);
-      EXPECT_TRUE(app.refresh());
+      app.refresh();
       delay(110);
-      EXPECT_TRUE(app.refresh());
+      app.refresh();
     }
     return Capture();
   }
@@ -107,7 +107,7 @@ TEST_F(Material3ToggleIconButtonGoldenTest, SelectedAndUnselectedStyles) {
   AddButton(app, 124, 84, IconButtonStyle::kFilledTonal, true);
   AddButton(app, 180, 84, IconButtonStyle::kOutlined, true);
 
-  ASSERT_TRUE(app.refresh());
+  app.refresh();
   EXPECT_TRUE(test::CompareOrUpdateGolden(
       Capture(), "test/goldens/material3_toggle_icon_button/styles.ppm",
       "material3_toggle_icon_button_styles"));
@@ -127,7 +127,7 @@ TEST_F(Material3ToggleIconButtonGoldenTest, IconsAndSelectedShapes) {
   AddButton(app, 100, 96, IconButtonStyle::kOutlined, true, ButtonSize::kMedium,
             ButtonShape::kRound);
 
-  ASSERT_TRUE(app.refresh());
+  app.refresh();
   EXPECT_TRUE(test::CompareOrUpdateGolden(
       Capture(),
       "test/goldens/material3_toggle_icon_button/icons_and_shapes.ppm",
@@ -149,7 +149,7 @@ TEST_F(Material3ToggleIconButtonGoldenTest, DisabledAndOutlinedSelection) {
   AddButton(app, 84, 96, IconButtonStyle::kOutlined, true, ButtonSize::kMedium,
             ButtonShape::kSquare, false);
 
-  ASSERT_TRUE(app.refresh());
+  app.refresh();
   EXPECT_TRUE(test::CompareOrUpdateGolden(
       Capture(),
       "test/goldens/material3_toggle_icon_button/disabled_and_outlined.ppm",

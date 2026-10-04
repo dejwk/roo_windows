@@ -77,7 +77,7 @@ void ExpectDestinationPaintsEveryPixel(NavigationRailLayout layout,
       roo_display::FillMode::kExtents, roo_display::BlendingMode::kSourceOver);
   Canvas canvas(&surface);
   roo_windows::internal::ClipperState clipper_state;
-  Clipper clipper(clipper_state, canvas.out(), roo_time::Uptime::Max());
+  Clipper clipper(clipper_state, canvas.out());
   canvas.set_out(clipper.out());
   PaintContext paint_context(canvas, clipper);
   NavigationRailDestinationTestAccess::paint(destination, paint_context);
@@ -391,21 +391,21 @@ TEST(Material3NavigationRail,
   NavigationRailDestination* home_raw = home.get();
   ASSERT_TRUE(rail->add(WidgetRef(std::move(home))));
   app.add(std::move(rail), roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
-  ASSERT_TRUE(app.refresh());
+  app.refresh();
   ASSERT_TRUE(home_raw->selected());
   ASSERT_FALSE(home_raw->isDirty());
 
   home_raw->onShowPress(home_raw->width() / 2, home_raw->height() / 2);
   NavigationRailDestinationTestAccess::tapUp(*home_raw, home_raw->width() / 2,
                                              home_raw->height() / 2);
-  ASSERT_TRUE(app.refresh());
+  app.refresh();
   EXPECT_TRUE(home_raw->selected());
   EXPECT_EQ(std::vector<int>({0}),
             static_cast<TestNavigationRail*>(home_raw->parent())->reselected);
 
   delay(kPressAnimationMillis + 20);
   app.root().refreshClickAnimation();
-  ASSERT_TRUE(app.refresh());
+  app.refresh();
   ASSERT_FALSE(home_raw->isClicking());
   EXPECT_FALSE(home_raw->isDirty());
 }
@@ -431,7 +431,7 @@ TEST(Material3NavigationRail, TouchReleaseDefersSelectionUntilClickCompletes) {
   ASSERT_TRUE(rail->add(WidgetRef(std::move(home))));
   ASSERT_TRUE(rail->add(WidgetRef(std::move(inbox))));
   app.add(std::move(rail), roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
-  ASSERT_TRUE(app.refresh());
+  app.refresh();
 
   inbox_raw->onShowPress(inbox_raw->width() / 2, inbox_raw->height() / 2);
   NavigationRailDestinationTestAccess::tapUp(*inbox_raw, inbox_raw->width() / 2,
@@ -450,7 +450,7 @@ TEST(Material3NavigationRail, TouchReleaseDefersSelectionUntilClickCompletes) {
   // while the deferred selection waits for a clean widget.
   EXPECT_TRUE(inbox_raw->isClicking());
   EXPECT_GE(animation->progress(), 1.0f);
-  ASSERT_TRUE(app.refresh());
+  app.refresh();
   EXPECT_FALSE(inbox_raw->isClicking());
 
   // The completed final refresh invalidates and invokes after drawing returns.
@@ -461,7 +461,7 @@ TEST(Material3NavigationRail, TouchReleaseDefersSelectionUntilClickCompletes) {
   EXPECT_TRUE(inbox_raw->isDirty());
   EXPECT_EQ(std::vector<int>({1}), rail_raw->invoked);
   EXPECT_TRUE(rail_raw->reselected.empty());
-  ASSERT_TRUE(app.refresh());
+  app.refresh();
   EXPECT_FALSE(inbox_raw->isDirty());
 }
 
@@ -487,11 +487,11 @@ TEST(Material3NavigationRail,
   ASSERT_TRUE(rail->add(WidgetRef(std::move(home))));
   ASSERT_TRUE(rail->add(WidgetRef(std::move(inbox))));
   app.add(std::move(rail), roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
-  ASSERT_TRUE(app.refresh());
+  app.refresh();
 
   inbox_raw->onShowPress(inbox_raw->width() / 2, inbox_raw->height() / 2);
   delay(kPressAnimationMillis + 20);
-  ASSERT_TRUE(app.refresh());
+  app.refresh();
   ASSERT_FALSE(inbox_raw->isClicking());
   ASSERT_TRUE(inbox_raw->isDirty());
   ASSERT_EQ(0, rail_raw->selectedIndex());
@@ -508,7 +508,7 @@ TEST(Material3NavigationRail,
   EXPECT_EQ(nullptr, inbox_raw->getClickAnimation());
   EXPECT_TRUE(inbox_raw->isDirty());
 
-  ASSERT_TRUE(app.refresh());
+  app.refresh();
   EXPECT_FALSE(inbox_raw->isDirty());
 }
 
@@ -537,9 +537,9 @@ TEST(Material3NavigationRail,
   ASSERT_TRUE(rail->add(WidgetRef(std::move(home))));
   ASSERT_TRUE(rail->add(WidgetRef(std::move(inbox))));
   app.add(std::move(rail), roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
-  ASSERT_TRUE(app.refresh());
+  app.refresh();
   ASSERT_TRUE(inbox_raw->requestFocus());
-  ASSERT_TRUE(app.refresh());
+  app.refresh();
 
   keys.push(KeyEvent{KeyPhase::kDown, KeyCode::kEnter, 0, 0});
   app.start();
@@ -550,7 +550,7 @@ TEST(Material3NavigationRail,
 
   delay(kPressAnimationMillis + 20);
   app.root().refreshClickAnimation();
-  ASSERT_TRUE(app.refresh());
+  app.refresh();
   ASSERT_TRUE(inbox_raw->isPressed());
   ASSERT_FALSE(inbox_raw->isClicking());
   ASSERT_TRUE(inbox_raw->isDirty());
@@ -567,7 +567,7 @@ TEST(Material3NavigationRail,
   EXPECT_EQ(nullptr, inbox_raw->getClickAnimation());
   // Input dispatch may leave painting for a later frame. Complete that frame
   // explicitly so this assertion does not depend on scheduler timing.
-  ASSERT_TRUE(app.refresh());
+  app.refresh();
   EXPECT_FALSE(inbox_raw->isDirty());
 }
 
@@ -593,7 +593,7 @@ TEST(Material3NavigationRail,
   ASSERT_TRUE(rail->add(WidgetRef(std::move(home))));
   ASSERT_TRUE(rail->add(WidgetRef(std::move(inbox))));
   app.add(std::move(rail), roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
-  ASSERT_TRUE(app.refresh());
+  app.refresh();
 
   inbox_raw->onShowPress(inbox_raw->width() / 2, inbox_raw->height() / 2);
   NavigationRailDestinationTestAccess::tapUp(*inbox_raw, inbox_raw->width() / 2,

@@ -36,7 +36,6 @@ roo_time::Uptime ClickAnimation::nextFrameDeadline() const {
 ClickAnimation::ClickAnimation()
     : target_(nullptr),
       phase_(Phase::kIdle),
-      finishing_sampled_(false),
       previous_transient_footprint_(0, 0, -1, -1),
       click_anim_start_millis_(0),
       sampled_elapsed_millis_(0),
@@ -96,7 +95,6 @@ void ClickAnimation::sampleFrameTime() {
   if (!isAnimationPending()) return;
   sampled_elapsed_millis_ = static_cast<uint32_t>(millis()) -
                             static_cast<uint32_t>(click_anim_start_millis_);
-  if (isFinishing()) finishing_sampled_ = true;
 }
 
 void ClickAnimation::invalidateTransientFootprint() {
@@ -117,7 +115,6 @@ void ClickAnimation::resetTransientFootprint() {
 void ClickAnimation::reset() {
   target_ = nullptr;
   phase_ = Phase::kIdle;
-  finishing_sampled_ = false;
   resetTransientFootprint();
   sampled_elapsed_millis_ = 0;
 }
@@ -134,7 +131,7 @@ void ClickAnimation::deliverClick() {
 
 float ClickAnimation::progress() const {
   if (target() == nullptr) return 1.0f;
-  if (isFinishing() && finishing_sampled_) return 1.0f;
+  if (isFinishing()) return 1.0f;
   float result = (float)sampled_elapsed_millis_ / kPressAnimationMillis;
   if (result > 1.0f) result = 1.0f;
   return result;
@@ -207,12 +204,6 @@ bool ClickAnimation::forceFinalFrame(const Widget& widget) {
     case Phase::kAwaitingRelease:
     case Phase::kAwaitingRefresh:
       return false;
-  }
-  // A forced finish is sampled immediately unless a logical paint still owns
-  // the old value. In that case the next new frame applies the finishing phase.
-  const MainWindow* window = widget.getMainWindow();
-  if (window == nullptr || !window->hasPaintContinuation()) {
-    finishing_sampled_ = true;
   }
   target_->invalidateInterior();
   RequestFrame(*target_);

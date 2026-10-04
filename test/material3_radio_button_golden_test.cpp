@@ -56,7 +56,7 @@ class Material3RadioButtonGoldenTest : public testing::Test {
     AddRadioButton(app, kX0 + 1 * kStride, RadioButton::OnOffState::kOn,
                    enabled);
 
-    EXPECT_TRUE(app.refresh());
+    app.refresh();
     return test::CaptureRgb(offscreen_.raster(), 0, 0, kWidth, kHeight);
   }
 

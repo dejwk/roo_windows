@@ -53,9 +53,7 @@ class Material3ButtonClickAnimationTest : public testing::Test {
 
   ApplicationContext& context() { return app_.context(); }
 
-  bool refresh(roo_time::Uptime deadline = roo_time::Uptime::Max()) {
-    return app_.refresh(deadline);
-  }
+  void refresh() { app_.refresh(); }
 
   roo_display::Color pixelAt(int16_t x, int16_t y) const {
     int16_t px[] = {x};
@@ -316,9 +314,9 @@ TEST_F(Material3ButtonClickAnimationTest, DisabledTextUsesResolvedPaletteOnce) {
       std::make_unique<Button>(context(), "Connect", ButtonVariant::kText);
   Button* button_ptr = button.get();
   app_.add(std::move(button), roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
-  ASSERT_TRUE(refresh());
+  refresh();
   button_ptr->setEnabled(false);
-  ASSERT_TRUE(refresh());
+  refresh();
 
   const auto& colors = context().theme().material3Theme().color;
   const Color expected = QuantizeToArgb4444(
@@ -357,7 +355,7 @@ TEST_F(Material3ButtonClickAnimationTest,
   button_ptr->setShape(ButtonShape::kSquare);
 
   app_.add(std::move(button), roo_display::Box(20, 20, 139, 59));
-  ASSERT_TRUE(refresh());
+  refresh();
 
   uint8_t resting_radius =
       button_ptr->getBorderStyle().top_left_corner_radius();
@@ -387,7 +385,7 @@ TEST_F(Material3ButtonClickAnimationTest,
   Button* button_ptr = button.get();
 
   app_.add(std::move(button), roo_display::Box(20, 20, 139, 59));
-  ASSERT_TRUE(refresh());
+  refresh();
 
   uint8_t pressed_radius = (uint8_t)Scaled(8);
   EXPECT_EQ(0xFF, button_ptr->getBorderStyle().top_left_corner_radius());
@@ -412,11 +410,11 @@ TEST_F(Material3ButtonClickAnimationTest,
   auto button = std::make_unique<FinalFrameRecordingButton>(context(), "Save");
   FinalFrameRecordingButton* button_ptr = button.get();
   app_.add(std::move(button), roo_display::Box(20, 20, 139, 59));
-  ASSERT_TRUE(refresh());
+  refresh();
 
   button_ptr->onSingleTapUp(button_ptr->width() / 2, button_ptr->height() / 2);
   ASSERT_TRUE(button_ptr->isClicking());
-  ASSERT_TRUE(refresh());
+  refresh();
 
   EXPECT_EQ((uint8_t)Scaled(8), button_ptr->radius_at_last_paint());
   EXPECT_FALSE(button_ptr->isClicking());
@@ -439,14 +437,14 @@ TEST_F(Material3ButtonClickAnimationTest,
   Button* button_ptr = button.get();
   app_.add(std::move(button), roo_display::Box(20, 20, 139, 59));
 
-  ASSERT_TRUE(refresh());
+  refresh();
 
   Color expected_backdrop = QuantizeToArgb4444(kBackdropColor);
   EXPECT_EQ(expected_backdrop, pixelAt(21, 21));
 
   button_ptr->onShowPress(button_ptr->width() / 2, button_ptr->height() / 2);
   delay(kPressAnimationMillis / 4);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(expected_backdrop, pixelAt(21, 21));
 }
 
@@ -484,7 +482,7 @@ TEST_F(Material3ButtonClickAnimationTest,
   Button* button_ptr = button.get();
   button_ptr->setShape(ButtonShape::kSquare);
   app_.add(std::move(button), roo_display::Box(20, 20, 59, 59));
-  ASSERT_TRUE(refresh());
+  refresh();
   button_ptr->onShowPress(20, 20);
   delay(kPressAnimationMillis / 4 + 20);
   app_.root().refreshClickAnimation();

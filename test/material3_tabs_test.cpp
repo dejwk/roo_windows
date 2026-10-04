@@ -344,7 +344,7 @@ TEST_F(Material3TabsRenderTest, TapUpCommitsSelectionImmediatelyByDefault) {
   tabs->addTab(std::move(second));
 
   app_.add(std::move(tabs), roo_display::Box(0, 0, 179, Scaled(48) - 1));
-  EXPECT_TRUE(refresh());
+  refresh();
 
   second_raw->tapUpForTest();
 
@@ -366,7 +366,7 @@ TEST_F(Material3TabsRenderTest, CanDeferSelectionUntilClickAnimationCompletes) {
   tabs->addTab(std::move(second));
 
   app_.add(std::move(tabs), roo_display::Box(0, 0, 179, Scaled(48) - 1));
-  EXPECT_TRUE(refresh());
+  refresh();
 
   second_raw->tapUpForTest();
 
@@ -474,16 +474,16 @@ TEST_F(Material3TabsRenderTest, HorizontalPageHostGestureDrivesSelection) {
   pages_ptr->addPage(std::make_unique<ProbePage>(context()));
   app_.add(WidgetRef(std::move(pages)),
            roo_display::Box(0, 0, 179, Scaled(48) - 1));
-  ASSERT_TRUE(refresh());
+  refresh();
 
   ASSERT_EQ(0, tabs.selectedIndex());
   ASSERT_EQ(0, pages_ptr->currentIndex());
 
   pages_ptr->onDragStart(0, 0);
   pages_ptr->onFling(0, 0, -1200, 0);
-  ASSERT_TRUE(refresh());
+  refresh();
   delay(220);
-  ASSERT_TRUE(refresh());
+  refresh();
 
   EXPECT_EQ(1, tabs.selectedIndex());
   EXPECT_EQ(1, pages_ptr->currentIndex());
@@ -548,7 +548,7 @@ TEST_F(Material3TabsRenderTest,
   tabs_ptr->addTab(std::make_unique<Tab>(context(), "Heating"));
   tabs_ptr->addTab(std::make_unique<Tab>(context(), "Long history"));
   app_.add(std::move(tabs), roo_display::Box(0, 0, 139, Scaled(48) - 1));
-  ASSERT_TRUE(refresh());
+  refresh();
 
   ASSERT_TRUE(tabs_ptr->setSelectedIndex(2, true));
   EXPECT_EQ(2, tabs_ptr->selectedIndex());
@@ -556,10 +556,10 @@ TEST_F(Material3TabsRenderTest,
   EXPECT_TRUE(tabs_ptr->indicatorActive());
   EXPECT_TRUE(tabs_ptr->scrollActive());
 
-  ASSERT_TRUE(refresh());
+  refresh();
   tabs_ptr->resetFrameCounts();
   delay(65);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_GT(tabs_ptr->indicatorFrameCount(), 0);
   EXPECT_GT(tabs_ptr->scrollFrameCount(), 0);
   EXPECT_LT(tabs_ptr->scrollOffsetForTest(), 0);
@@ -569,7 +569,7 @@ TEST_F(Material3TabsRenderTest,
   EXPECT_TRUE(tabs_ptr->indicatorActive());
   EXPECT_FALSE(tabs_ptr->scrollActive());
   delay(170);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(interrupted, tabs_ptr->scrollOffsetForTest());
   EXPECT_FALSE(tabs_ptr->indicatorActive());
 }
@@ -583,23 +583,23 @@ TEST_F(Material3TabsRenderTest, RepeatedSelectionRevealRetargetsContinuously) {
   tabs_ptr->addTab(std::make_unique<Tab>(context(), "Heating"));
   tabs_ptr->addTab(std::make_unique<Tab>(context(), "Long history"));
   app_.add(std::move(tabs), roo_display::Box(0, 0, 139, Scaled(48) - 1));
-  ASSERT_TRUE(refresh());
+  refresh();
 
   ASSERT_TRUE(tabs_ptr->setSelectedIndex(2, true));
-  ASSERT_TRUE(refresh());
+  refresh();
   delay(65);
-  ASSERT_TRUE(refresh());
+  refresh();
   const XDim before_retarget = tabs_ptr->scrollOffsetForTest();
   ASSERT_LT(before_retarget, 0);
 
   ASSERT_TRUE(tabs_ptr->setSelectedIndex(1, true));
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(before_retarget, tabs_ptr->scrollOffsetForTest());
   EXPECT_TRUE(tabs_ptr->indicatorActive());
   EXPECT_TRUE(tabs_ptr->scrollActive());
 
   delay(270);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(1, tabs_ptr->selectedIndex());
   EXPECT_FALSE(tabs_ptr->indicatorActive());
   EXPECT_FALSE(tabs_ptr->scrollActive());
@@ -614,24 +614,24 @@ TEST_F(Material3TabsRenderTest, ScrollableFlingSettlesAndRemovesChannel) {
   tabs_ptr->addTab(std::make_unique<Tab>(context(), "Heating"));
   tabs_ptr->addTab(std::make_unique<Tab>(context(), "Long history"));
   app_.add(std::move(tabs), roo_display::Box(0, 0, 139, Scaled(48) - 1));
-  ASSERT_TRUE(refresh());
+  refresh();
 
   tabs_ptr->onDragStart(20, 20);
   tabs_ptr->onDrag(20, 20, -30, 0);
   tabs_ptr->onFling(20, 20, -5000, 0);
   tabs_ptr->onDragFinished(20, 20);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_TRUE(tabs_ptr->scrollActive());
 
   delay(650);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_TRUE(tabs_ptr->scrollActive());
   delay(550);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_FALSE(tabs_ptr->scrollActive());
   const XDim settled = tabs_ptr->scrollOffsetForTest();
   delay(80);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(settled, tabs_ptr->scrollOffsetForTest());
 }
 
@@ -644,12 +644,12 @@ TEST_F(Material3TabsRenderTest, RelayoutCancelsOnlyStripMotion) {
   tabs_ptr->addTab(std::make_unique<Tab>(context(), "Heating"));
   tabs_ptr->addTab(std::make_unique<Tab>(context(), "Long history"));
   app_.add(std::move(tabs), roo_display::Box(0, 0, 139, Scaled(48) - 1));
-  ASSERT_TRUE(refresh());
+  refresh();
 
   ASSERT_TRUE(tabs_ptr->setSelectedIndex(2, true));
-  ASSERT_TRUE(refresh());
+  refresh();
   delay(65);
-  ASSERT_TRUE(refresh());
+  refresh();
   ASSERT_TRUE(tabs_ptr->indicatorActive());
   ASSERT_TRUE(tabs_ptr->scrollActive());
 
@@ -657,7 +657,7 @@ TEST_F(Material3TabsRenderTest, RelayoutCancelsOnlyStripMotion) {
   EXPECT_TRUE(tabs_ptr->indicatorActive());
   EXPECT_FALSE(tabs_ptr->scrollActive());
   delay(170);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_FALSE(tabs_ptr->indicatorActive());
 }
 
@@ -670,7 +670,7 @@ TEST_F(Material3TabsRenderTest, HiddenScrollableTabsCancelAndClampChannels) {
   tabs_ptr->addTab(std::make_unique<Tab>(context(), "Heating"));
   tabs_ptr->addTab(std::make_unique<Tab>(context(), "Long history"));
   app_.add(std::move(tabs), roo_display::Box(0, 0, 139, Scaled(48) - 1));
-  ASSERT_TRUE(refresh());
+  refresh();
 
   tabs_ptr->onDragStart(20, 20);
   tabs_ptr->onDrag(20, 20, -1000, 0);
@@ -682,16 +682,16 @@ TEST_F(Material3TabsRenderTest, HiddenScrollableTabsCancelAndClampChannels) {
   ASSERT_TRUE(tabs_ptr->scrollActive());
 
   tabs_ptr->setVisibility(Visibility::kInvisible);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_FALSE(tabs_ptr->indicatorActive());
   EXPECT_FALSE(tabs_ptr->scrollActive());
   EXPECT_GT(tabs_ptr->scrollOffsetForTest(), overshoot);
   const XDim clamped = tabs_ptr->scrollOffsetForTest();
 
   tabs_ptr->setVisibility(Visibility::kVisible);
-  ASSERT_TRUE(refresh());
+  refresh();
   delay(270);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(clamped, tabs_ptr->scrollOffsetForTest());
   EXPECT_FALSE(tabs_ptr->indicatorActive());
   EXPECT_FALSE(tabs_ptr->scrollActive());
@@ -705,22 +705,22 @@ TEST_F(Material3TabsRenderTest, DetachedScrollableTabsCancelBothChannels) {
   tabs.addTab(std::make_unique<Tab>(context(), "Heating"));
   tabs.addTab(std::make_unique<Tab>(context(), "Long history"));
   Task& task = app_.addTaskFullScreen(tabs);
-  ASSERT_TRUE(refresh());
+  refresh();
 
   ASSERT_TRUE(tabs.setSelectedIndex(2, true));
-  ASSERT_TRUE(refresh());
+  refresh();
   delay(65);
-  ASSERT_TRUE(refresh());
+  refresh();
   ASSERT_TRUE(tabs.indicatorActive());
   ASSERT_TRUE(tabs.scrollActive());
 
   task.navigation().clear();
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_FALSE(tabs.indicatorActive());
   EXPECT_FALSE(tabs.scrollActive());
   const XDim detached = tabs.scrollOffsetForTest();
   delay(270);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(detached, tabs.scrollOffsetForTest());
 }
 
@@ -915,7 +915,7 @@ TEST_F(Material3TabsRenderTest, PrimaryFixedRowPaintsIndicatorAndDivider) {
 
   app_.add(std::move(tabs), roo_display::Box(0, 0, 179, Scaled(48) - 1));
 
-  EXPECT_TRUE(refresh());
+  refresh();
 
   EXPECT_EQ(QuantizeToArgb4444(env_.theme().material3Theme().color.primary),
             pixelAt(30, Scaled(45)));
@@ -926,14 +926,14 @@ TEST_F(Material3TabsRenderTest, PrimaryFixedRowPaintsIndicatorAndDivider) {
             pixelAt(0, Scaled(45)));
 
   first_raw->setLabel("Uno");
-  EXPECT_TRUE(refresh());
+  refresh();
 
   EXPECT_EQ(
       QuantizeToArgb4444(env_.theme().material3Theme().color.outlineVariant),
       pixelAt(30, Scaled(47)));
 
   first_raw->setPressed(true);
-  EXPECT_TRUE(refresh());
+  refresh();
 
   roo_display::Color pressed_indicator = roo_display::AlphaBlend(
       env_.theme().material3Theme().color.primary,
@@ -959,7 +959,7 @@ TEST_F(Material3TabsRenderTest, SecondaryNoDividerPaintsTwoPixelIndicator) {
 
   app_.add(std::move(tabs), roo_display::Box(0, 0, 179, Scaled(48) - 1));
 
-  EXPECT_TRUE(refresh());
+  refresh();
 
   EXPECT_EQ(QuantizeToArgb4444(env_.theme().material3Theme().color.surface),
             pixelAt(0, Scaled(45)));
@@ -983,10 +983,10 @@ TEST_F(Material3TabsRenderTest, ProgrammaticSelectionSnapsIndicator) {
   tabs->addTab(std::make_unique<Tab>(context(), "Three"));
 
   app_.add(std::move(tabs), roo_display::Box(0, 0, 179, Scaled(48) - 1));
-  EXPECT_TRUE(refresh());
+  refresh();
 
   EXPECT_TRUE(tabs_raw->setSelectedIndex(1, false));
-  EXPECT_TRUE(refresh());
+  refresh();
 
   EXPECT_EQ(QuantizeToArgb4444(env_.theme().material3Theme().color.surface),
             pixelAt(30, Scaled(45)));
@@ -1003,23 +1003,23 @@ TEST_F(Material3TabsRenderTest, RapidSelectionReplacesIndicatorContinuously) {
   tabs->addTab(std::make_unique<Tab>(context(), "Two"));
   tabs->addTab(std::make_unique<Tab>(context(), "Three"));
   app_.add(std::move(tabs), roo_display::Box(0, 0, 179, Scaled(48) - 1));
-  ASSERT_TRUE(refresh());
+  refresh();
 
   ASSERT_TRUE(tabs_raw->setSelectedIndex(1, true));
-  ASSERT_TRUE(refresh());
+  refresh();
   delay(65);
-  ASSERT_TRUE(refresh());
+  refresh();
   std::vector<roo_display::Color> before(180);
   for (int x = 0; x < 180; ++x) before[x] = pixelAt(x, Scaled(45));
 
   ASSERT_TRUE(tabs_raw->setSelectedIndex(2, true));
-  ASSERT_TRUE(refresh());
+  refresh();
   for (int x = 0; x < 180; ++x) {
     EXPECT_EQ(before[x], pixelAt(x, Scaled(45))) << "x=" << x;
   }
 
   delay(220);
-  ASSERT_TRUE(refresh());
+  refresh();
   const roo_display::Color primary =
       QuantizeToArgb4444(env_.theme().material3Theme().color.primary);
   const roo_display::Color surface =
@@ -1038,14 +1038,14 @@ TEST_F(Material3TabsRenderTest, IndicatorInterpolatesTowardLowerCoordinates) {
   tabs->addTab(std::make_unique<Tab>(context(), "Two"));
   tabs->addTab(std::make_unique<Tab>(context(), "Three"));
   app_.add(std::move(tabs), roo_display::Box(0, 0, 179, Scaled(48) - 1));
-  ASSERT_TRUE(refresh());
+  refresh();
   ASSERT_TRUE(tabs_raw->setSelectedIndex(2, false));
-  ASSERT_TRUE(refresh());
+  refresh();
 
   ASSERT_TRUE(tabs_raw->setSelectedIndex(0, true));
-  ASSERT_TRUE(refresh());
+  refresh();
   delay(90);
-  ASSERT_TRUE(refresh());
+  refresh();
   const roo_display::Color primary =
       QuantizeToArgb4444(env_.theme().material3Theme().color.primary);
   bool has_middle_indicator = false;
@@ -1055,7 +1055,7 @@ TEST_F(Material3TabsRenderTest, IndicatorInterpolatesTowardLowerCoordinates) {
   EXPECT_TRUE(has_middle_indicator);
 
   delay(130);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(primary, pixelAt(30, Scaled(45)));
   EXPECT_NE(primary, pixelAt(150, Scaled(45)));
 }
@@ -1069,15 +1069,15 @@ TEST_F(Material3TabsRenderTest, IndicatorTracksResizedTargetDuringAnimation) {
   tabs->addTab(std::make_unique<Tab>(context(), "Two"));
   tabs->addTab(std::make_unique<Tab>(context(), "Three"));
   app_.add(std::move(tabs), roo_display::Box(0, 0, 179, Scaled(48) - 1));
-  ASSERT_TRUE(refresh());
+  refresh();
 
   ASSERT_TRUE(tabs_raw->setSelectedIndex(2, true));
-  ASSERT_TRUE(refresh());
+  refresh();
   delay(55);
-  ASSERT_TRUE(refresh());
+  refresh();
   tabs_raw->layout(Rect(0, 0, 119, Scaled(48) - 1));
   delay(170);
-  ASSERT_TRUE(refresh());
+  refresh();
 
   const roo_display::Color primary =
       QuantizeToArgb4444(env_.theme().material3Theme().color.primary);
@@ -1093,25 +1093,25 @@ TEST_F(Material3TabsRenderTest, HiddenAndClearedTabsCancelIndicator) {
   tabs->addTab(std::make_unique<Tab>(context(), "One"));
   tabs->addTab(std::make_unique<Tab>(context(), "Two"));
   app_.add(std::move(tabs), roo_display::Box(0, 0, 179, Scaled(48) - 1));
-  ASSERT_TRUE(refresh());
+  refresh();
 
   ASSERT_TRUE(tabs_raw->setSelectedIndex(1, true));
-  ASSERT_TRUE(refresh());
+  refresh();
   delay(45);
-  ASSERT_TRUE(refresh());
+  refresh();
   tabs_raw->setVisibility(Visibility::kInvisible);
-  ASSERT_TRUE(refresh());
+  refresh();
   delay(220);
-  ASSERT_TRUE(refresh());
+  refresh();
   tabs_raw->setVisibility(Visibility::kVisible);
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(QuantizeToArgb4444(env_.theme().material3Theme().color.primary),
             pixelAt(135, Scaled(45)));
 
   tabs_raw->setSelectedIndex(0, true);
-  ASSERT_TRUE(refresh());
+  refresh();
   tabs_raw->clearTabs();
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_EQ(-1, tabs_raw->selectedIndex());
   EXPECT_EQ(0, tabs_raw->tabCount());
 }

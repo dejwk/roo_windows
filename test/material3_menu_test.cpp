@@ -118,7 +118,7 @@ class Material3MenuTest : public testing::Test {
     row_.setMenuItem(item_);
     group_.add(row_);
     menu_.addGroup(group_);
-    EXPECT_TRUE(app_.refresh());
+    app_.refresh();
   }
 
   ~Material3MenuTest() override {
@@ -146,8 +146,8 @@ class Material3MenuTest : public testing::Test {
 
   void CompleteRowTap() {
     row_.Tap();
-    ASSERT_TRUE(app_.refresh());
-    ASSERT_TRUE(app_.refresh());
+    app_.refresh();
+    app_.refresh();
   }
 
   roo::byte raster_[320 * 240 * 2] = {};
@@ -331,7 +331,7 @@ TEST_F(Material3MenuTest, HeldThenQuickTapEachToggleMultipleSelectionOnce) {
   row_.onShowPress(1, 1);
   delay(kPressAnimationMillis + 120);
   app_.root().refreshClickAnimation();
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
 
   CompleteRowTap();
   EXPECT_TRUE(item_.isSelected());
@@ -370,8 +370,8 @@ TEST_F(Material3MenuTest, SubmenuOpensAndBackClosesDeepestFirst) {
   EXPECT_EQ(&row_, owner_.focus().focused());
   EXPECT_EQ(0, menu_.finishes());
   EXPECT_EQ(BackResult::kHandled, owner_.requestBack(BackSource::kBackKey));
-  ASSERT_TRUE(app_.refresh());
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
+  app_.refresh();
   EXPECT_EQ(1, menu_.finishes());
 }
 

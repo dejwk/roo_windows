@@ -25,7 +25,12 @@ TEST(DisplayWindow, OwnsDisplayLocalRuntimeAndCompatibilityForwarders) {
   EXPECT_EQ(&app.window().root(), &app.root());
   EXPECT_EQ(&app.window().gestureDetector(), &app.gesture_detector());
   EXPECT_EQ(display.extents(), app.window().root().bounds().asBox());
-  EXPECT_EQ(app.window().refresh(), app.refresh());
+  app.window().refresh();
+  EXPECT_FALSE(app.root().isDirty());
+  app.root().invalidateInterior();
+  EXPECT_TRUE(app.root().isDirty());
+  app.refresh();
+  EXPECT_FALSE(app.root().isDirty());
 }
 
 #if defined(ROO_THREADS_SINGLETHREADED)

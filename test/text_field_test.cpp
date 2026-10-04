@@ -118,7 +118,7 @@ TEST_F(TextFieldTest, MaskExpiryPreservesSelectionAndFiltersControls) {
   editor.setSelection(0, 1);
   delay(1600);
   scheduler_.executeEligibleTasksUpToNow();
-  ASSERT_TRUE(refresh());
+  refresh();
   EXPECT_FALSE(editor.lastGlyphRecentlyEntered());
   EXPECT_EQ(0, editor.selection_begin());
   EXPECT_EQ(1, editor.selection_end());

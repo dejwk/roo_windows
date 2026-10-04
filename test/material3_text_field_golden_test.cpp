@@ -41,7 +41,7 @@ TEST(Material3TextFieldGolden, VariantsAndStates) {
       }
       if (state == 7) field.setLayoutDirection(LayoutDirection::kRightToLeft);
       Task& task = app.addTaskFullScreen(field);
-      ASSERT_TRUE(app.refresh());
+      app.refresh();
       if (state == 1) field.requestFocus();
       if (state == 2 || state == 8 || state == 9) {
         KeyEvent key;
@@ -51,7 +51,7 @@ TEST(Material3TextFieldGolden, VariantsAndStates) {
         field.onKeyEvent(key);
         if (state == 8) task.textFieldEditor().setSelection(2, 7);
       }
-      ASSERT_TRUE(app.refresh());
+      app.refresh();
       std::string name = std::string(outlined ? "outlined_" : "filled_") +
                          std::to_string(state);
       if (ROO_WINDOWS_ZOOM != 100)
@@ -83,7 +83,7 @@ TEST(Material3TextFieldGolden, SecureMaskAndReveal) {
       field.setErrorText("Check password");
       if (rtl) field.setLayoutDirection(LayoutDirection::kRightToLeft);
       Task& task = app.addTaskFullScreen(field);
-      ASSERT_TRUE(app.refresh());
+      app.refresh();
       std::string name = std::string("secure_") +
                          (revealed ? "revealed" : "masked") +
                          (rtl ? "_rtl" : "_ltr");

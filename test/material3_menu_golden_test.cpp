@@ -104,7 +104,7 @@ TEST_F(Material3MenuGoldenTest, SelectedRowWithTrailingAdornments) {
   MenuEntry row(app_.context());
   row.setMenuItem(item);
   panel_.add(WidgetRef(row));
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
 
   EXPECT_TRUE(::roo_windows::test::CompareOrUpdateGolden(
       Capture(), "test/goldens/material3_menu/selected_adornments.ppm",
@@ -123,14 +123,14 @@ TEST_F(Material3MenuGoldenTest, ActiveCascadingSubmenu) {
   ASSERT_EQ(MenuShowResult::kShown,
             menu.showFromRect(owner_, Rect(8, 8, 8, 8)));
   row.Tap();
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
 
   EXPECT_TRUE(::roo_windows::test::CompareOrUpdateGolden(
       Capture(), "test/goldens/material3_menu/active_submenu.ppm",
       "material3_menu_active_submenu"));
   menu.dismissChain();
-  ASSERT_TRUE(app_.refresh());
-  ASSERT_TRUE(app_.refresh());
+  app_.refresh();
+  app_.refresh();
   menu.clearGroups();
   group.clear();
 }

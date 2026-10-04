@@ -118,7 +118,6 @@ MainWindow::~MainWindow() {
 }
 
 void MainWindow::prepareForDestruction() {
-  cancelPaintContinuation();
   while (active_pins_ != nullptr) {
     active_pins_ = std::move(active_pins_->next_);
   }
@@ -166,11 +165,6 @@ void MainWindow::flushPendingOutsideInteraction() {
   transient_surface_host_.flushPendingOutsideInteraction();
 }
 
-void MainWindow::cancelPaintContinuation() {
-  paint_continuation_ = false;
-  continuation_invalid_bounds_ = Rect(0, 0, -1, -1);
-}
-
 Application& MainWindow::app() const { return app_; }
 const Theme& MainWindow::theme() const { return app().context().theme(); }
 
@@ -193,9 +187,7 @@ void MainWindow::removeTask(Widget& child) { removeFromLayer(tasks_, child); }
 
 void MainWindow::removePopup(Widget& child) { removeFromLayer(popups_, child); }
 
-void MainWindow::refreshClickAnimation() {
-  if (!hasPaintContinuation()) click_animation_.tick();
-}
+void MainWindow::refreshClickAnimation() { click_animation_.tick(); }
 
 void MainWindow::updateLayout() {
   if (isLayoutRequested()) {
@@ -204,46 +196,22 @@ void MainWindow::updateLayout() {
   }
 }
 
-bool MainWindow::paintWindow(const roo_display::Surface& s,
-                             roo_time::Uptime deadline) {
+void MainWindow::paintWindow(const roo_display::Surface& s) {
   preparePresentationPinsForPaint();
-  if (paint_continuation_ && !continuation_invalid_bounds_.empty()) {
-    // Preserve the completed prefix outside the newly invalidated area. Inside
-    // it, remove stale exclusions/overlays and reopen just the affected widget
-    // subtrees for this continuation.
-    clipper_state_.invalidate(continuation_invalid_bounds_.asBox());
-    invalidateDescending(continuation_invalid_bounds_);
-    continuation_invalid_bounds_ = Rect(0, 0, -1, -1);
-  }
   if (!initialized_) {
     initialized_ = true;
     s.drawObject(roo_display::Fill(
         theme().framework.color.resolve(FrameworkColorRole::kCanvas)));
   }
-  if (!isDirty()) {
-    paint_continuation_ = false;
-    continuation_invalid_bounds_ = Rect(0, 0, -1, -1);
-    return true;
-  }
+  if (!isDirty()) return;
   Canvas canvas(&s);
   canvas.clipToExtents(redraw_bounds_);
-  Rect old_redraw_bounds = redraw_bounds_;
+  // New invalidations raised during painting belong to the next refresh.
   redraw_bounds_ = Rect(0, 0, -1, -1);
-  Clipper clipper(clipper_state_, s.out(), deadline, paint_continuation_);
+  Clipper clipper(clipper_state_, s.out());
   canvas.set_out(clipper.out());
   paintWidget(canvas, clipper);
-  if (clipper.isDeadlineExceeded()) {
-    // Keep exclusions and clipper-owned overlays from the completed foreground
-    // prefix. Clean children remain skipped on retry while their preserved
-    // exclusions protect them from the remaining lower-z paint.
-    paint_continuation_ = true;
-    redraw_bounds_ = UnionNonEmpty(old_redraw_bounds, redraw_bounds_);
-    return false;
-  }
-  paint_continuation_ = false;
-  continuation_invalid_bounds_ = Rect(0, 0, -1, -1);
   commitPresentationPinBounds();
-  return true;
 }
 
 namespace {
@@ -394,7 +362,6 @@ void MainWindow::paintChildren(PaintContext& ctx) {
   PaintContext clipped_ctx = ctx.clipped(bounds());
   bool fast_render = isDirty() && respectsChildrenBoundaries();
   for (int i = getChildrenCount() - 1; i >= 0; --i) {
-    if (ctx.isDeadlineExceeded()) return;
     Widget& child = getChild(i);
     paintPinsBeforeScopeRoot(child, ctx);
     if (child.getParentClipMode() == ParentClipMode::kClipped) {
@@ -414,12 +381,6 @@ void MainWindow::propagateDirty(const Widget* child, const Rect& rect) {
   }
   setDirty(clipped);
   if (!clipped.empty()) {
-    if (paint_continuation_) {
-      continuation_invalid_bounds_ =
-          continuation_invalid_bounds_.empty()
-              ? clipped
-              : Rect::Extent(continuation_invalid_bounds_, clipped);
-    }
     if (redraw_bounds_.empty()) {
       redraw_bounds_ = clipped;
     } else {
@@ -431,12 +392,6 @@ void MainWindow::propagateDirty(const Widget* child, const Rect& rect) {
 void MainWindow::childInvalidatedRegion(const Widget* child, Rect rect) {
   rect = Rect::Intersect(rect, bounds());
   if (!rect.empty()) {
-    if (paint_continuation_) {
-      continuation_invalid_bounds_ =
-          continuation_invalid_bounds_.empty()
-              ? rect
-              : Rect::Extent(continuation_invalid_bounds_, rect);
-    }
     if (redraw_bounds_.empty()) {
       redraw_bounds_ = rect;
     } else {

@@ -405,14 +405,13 @@ after applying the pin clip and window clip, not merely the current frame's
 dirty intersection. This preserves pixels written by earlier partial redraws.
 The envelope union handles an empty operand explicitly rather than passing an
 empty sentinel directly to `Rect::Extent()`.
-After the entire window paint completes before its deadline, the host commits
-each eligible pin's `presented_bounds_` to its current clipped bounds and clears
-the envelope for pins suppressed by anchor visibility or task coverage. If the
-deadline interrupts the frame, the host does not commit: the conservative union
-remains, and `paintWindow()` already retains the interrupted frame's redraw
-bounds.
+After the synchronous window paint completes, the host commits each eligible
+pin's `presented_bounds_` to its current clipped bounds and clears the envelope
+for pins suppressed by anchor visibility or task coverage. Framework paint
+interruption has been removed; there is no pending continuation to repair.
 Hiding before the first paint therefore restores an empty envelope; hiding
-after a partial frame restores every region that the pin may have touched.
+after a partial dirty-region redraw restores every region that the pin may
+have touched.
 
 `MainWindow::paintWindow()` runs `preparePresentationPinsForPaint()` before its
 clean-window early return and before it constructs the redraw-clipped canvas.
@@ -721,7 +720,7 @@ the override can preserve the single-child optimization; its implementation
 and call conditions do not change.
 The Phase 1 implementation must keep the override structurally aligned with
 the base loop, and focused tests cover both clipping branches, fast-shadow
-behavior, and deadline interruption so later changes cannot silently make the
+behavior, and complete traversal so later changes cannot silently make the
 two traversal contracts diverge.
 
 Recommended helper pattern for widget-anchored visuals:
@@ -813,8 +812,8 @@ Scope:
 Focused Phase 1 cases verify:
 
 - clean-window show schedules dirty, invalidated, and redraw-clip state,
-- hide before first paint, partial dirty repaint, and interrupted paint use the
-  conservative presented-bounds envelope,
+- hide before first paint and partial dirty repaint use the conservative
+  presented-bounds envelope,
 - null, duplicate, and unavailable-anchor show return explicit errors, destroy
   any rejected non-null candidate, and leave the list unchanged,
 - a default pin dirty request repaints its full current bounds, while a pin
@@ -830,7 +829,7 @@ Focused Phase 1 cases verify:
   allocate nothing during intermediate invalidation and paint,
 - task, popup, dialog, and same-root pin ordering is deterministic,
 - the root override preserves clipped and unclipped child paint, fast-shadow
-  handling, and deadline interruption from the base child loop,
+  handling, and complete traversal from the base child loop,
 - clipped-ancestor escape, window clipping, and old-pixel restoration render
   correctly,
 - and the 32-bit persistent-size ceilings hold while the active allocation

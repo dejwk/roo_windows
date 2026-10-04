@@ -35,15 +35,7 @@ class MainWindow : public Container {
   void onSingleTapUp(XDim x, YDim y) override;
 
   /// Samples and invalidates click feedback for a new logical frame.
-  /// Leaves a retained paint continuation on its original sample.
   void refreshClickAnimation();
-
-  /// Returns true while a deadline-interrupted logical paint is awaiting
-  /// continuation with its completed foreground state preserved.
-  bool hasPaintContinuation() const { return paint_continuation_; }
-
-  /// Drops retained interrupted-paint state before the window tears down.
-  void cancelPaintContinuation();
 
   /// Applies any pending layout requests in the widget tree.
   void updateLayout();
@@ -55,9 +47,8 @@ class MainWindow : public Container {
     return transient_presentation_slot_.isAdmissionClosed();
   }
 
-  /// Performs a single paint pass onto the supplied display surface, bounded
-  /// by `deadline`. Returns false when the deadline interrupted painting.
-  bool paintWindow(const roo_display::Surface& s, roo_time::Uptime deadline);
+  /// Paints all current damage onto @p s before returning.
+  void paintWindow(const roo_display::Surface& s);
 
   Application& app() const;
   const Theme& theme() const override;
@@ -206,9 +197,6 @@ class MainWindow : public Container {
   // Maintains the area that encapsulates all content that needs to be
   // (re)drawn.
   Rect redraw_bounds_;
-
-  bool paint_continuation_ = false;
-  Rect continuation_invalid_bounds_ = Rect(0, 0, -1, -1);
 
   bool initialized_ = false;
 
