@@ -177,6 +177,23 @@ static_assert(sizeof(PaintContext) <= sizeof(Canvas) + sizeof(void*),
 
 namespace internal {
 
+/// Reconstructs clean rounded-surface contributors without changing masking.
+class RoundedRepaintScope {
+ public:
+  /// Forces repaint through @p clipper for this scope and its descendants.
+  explicit RoundedRepaintScope(Clipper& clipper);
+
+  /// Restores the enclosing scope's repaint policy, including on interruption.
+  ~RoundedRepaintScope();
+
+  RoundedRepaintScope(const RoundedRepaintScope&) = delete;
+  RoundedRepaintScope& operator=(const RoundedRepaintScope&) = delete;
+
+ private:
+  Clipper& clipper_;
+  bool previous_repaint_;
+};
+
 /// Activates one prepared rounded mask and output route for a lexical scope.
 class RoundedClipScope {
  public:

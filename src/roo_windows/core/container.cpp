@@ -250,6 +250,9 @@ void Container::paintRoundedChildren(PaintContext& ctx,
   }
   if (clip.phase == RoundedPaintPhase::kUnclippedChildren) {
     DCHECK(grouped);
+    // Rebuild deferred foreground overlays even when only a clipped sibling
+    // changed. Descendants inherit repaint, but only the ancestor masks apply.
+    internal::RoundedRepaintScope repaint(ctx.clipperForFramework());
     while (clip.next_child >= 0) {
       if (ctx.isDeadlineExceeded()) return;
       Widget& child = getChild(clip.next_child);

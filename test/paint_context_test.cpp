@@ -195,6 +195,57 @@ TEST_F(PaintContextTest, RoundedClipPreparationSurvivesBeforeActivation) {
   EXPECT_FALSE(fresh);
 }
 
+// Verifies foreground reconstruction is independent of masking and restores the
+// previous repaint policy after nested scopes and interruption.
+TEST_F(PaintContextTest, RoundedRepaintScopesRestoreWithoutChangingMask) {
+  Surface surface(display_.output(), 0, 0, display_.extents(),
+                  /*is_write_once=*/false, display_.getBackgroundColor(),
+                  FillMode::kVisible, BlendingMode::kSourceOver);
+  Canvas canvas(&surface);
+  internal::ClipperState state;
+  Clipper clipper(state, canvas.out(), roo_time::Uptime::Max());
+  PaintContext ctx(canvas, clipper);
+  roo_display::DisplayOutput* original = &ctx.canvas().out();
+  EXPECT_FALSE(clipper.needsRoundedRepaint());
+  {
+    internal::RoundedRepaintScope outer(clipper);
+    EXPECT_TRUE(clipper.needsRoundedRepaint());
+    EXPECT_FALSE(clipper.hasRoundedClip());
+    EXPECT_EQ(original, &ctx.canvas().out());
+    {
+      internal::RoundedRepaintScope inner(clipper);
+      EXPECT_TRUE(clipper.needsRoundedRepaint());
+      clipper.markPaintInterrupted();
+    }
+    EXPECT_TRUE(clipper.needsRoundedRepaint());
+  }
+  EXPECT_FALSE(clipper.needsRoundedRepaint());
+  EXPECT_FALSE(clipper.hasRoundedClip());
+  EXPECT_EQ(original, &ctx.canvas().out());
+
+  int owner = 0;
+  bool fresh = false;
+  internal::RoundedClip& clip = clipper.prepareRoundedClip(
+      &owner, Box(0, 0, 31, 23), BorderStyle(8, 0), fresh);
+  clip.fresh = false;
+  {
+    internal::RoundedClipScope mask(ctx, clip);
+    roo_display::DisplayOutput* masked = &ctx.canvas().out();
+    {
+      internal::RoundedRepaintScope repaint(clipper);
+      EXPECT_TRUE(clipper.needsRoundedRepaint());
+      EXPECT_TRUE(clipper.hasRoundedClip());
+      EXPECT_EQ(masked, &ctx.canvas().out());
+    }
+    EXPECT_FALSE(clipper.needsRoundedRepaint());
+    EXPECT_TRUE(clipper.hasRoundedClip());
+    EXPECT_EQ(masked, &ctx.canvas().out());
+  }
+  EXPECT_FALSE(clipper.needsRoundedRepaint());
+  EXPECT_FALSE(clipper.hasRoundedClip());
+  EXPECT_EQ(original, &ctx.canvas().out());
+}
+
 // Verifies nested scopes restore both the previous output and mask, while a
 // second activation reuses the first activation's captured boundary colors.
 TEST_F(PaintContextTest, RoundedClipScopesRestoreAndRetainColors) {

@@ -22,6 +22,8 @@ class Clipper;
 
 namespace internal {
 
+class RoundedRepaintScope;
+
 struct OverlaySpecStackEntry {
   OverlaySpecStackEntry(OverlaySpec overlay_spec, uint16_t refcount)
       : overlay_spec(std::move(overlay_spec)), refcount(refcount) {}
@@ -660,7 +662,8 @@ class Clipper {
           roo_time::Uptime deadline, bool resume = false)
       : out_(state, out, resume),
         deadline_(deadline),
-        paint_interrupted_(false) {}
+        paint_interrupted_(false),
+        rounded_repaint_(false) {}
 
   /// Hints that subsequent draws will be confined to `bounds` (device
   /// coordinates). Lets the clipper temporarily ignore exclusions that fall
@@ -747,10 +750,11 @@ class Clipper {
     return out_.maskedExclusions();
   }
 
-  /// Reconstructs clean contributors in the one normal traversal of a new
-  /// scope.
+  /// Reconstructs clean contributors while rebuilding a rounded surface,
+  /// including its unclipped foreground whose paint must bypass that mask.
   bool needsRoundedRepaint() const {
-    return hasRoundedClip() && out_.activeRoundedClip()->fresh;
+    return rounded_repaint_ ||
+           (hasRoundedClip() && out_.activeRoundedClip()->fresh);
   }
 
   /// Finds retained boundary colors for a previously entered container.
@@ -805,9 +809,12 @@ class Clipper {
   }
 
  private:
+  friend class internal::RoundedRepaintScope;
+
   internal::ClipperOutput out_;
   roo_time::Uptime deadline_;
   bool paint_interrupted_;
+  bool rounded_repaint_;
 };
 
 }  // namespace roo_windows

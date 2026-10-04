@@ -7,6 +7,15 @@ PaintContext::PaintContext(Canvas canvas, Clipper& clipper)
 
 namespace internal {
 
+RoundedRepaintScope::RoundedRepaintScope(Clipper& clipper)
+    : clipper_(clipper), previous_repaint_(clipper.rounded_repaint_) {
+  clipper_.rounded_repaint_ = true;
+}
+
+RoundedRepaintScope::~RoundedRepaintScope() {
+  clipper_.rounded_repaint_ = previous_repaint_;
+}
+
 RoundedClipScope::RoundedClipScope(PaintContext& context, RoundedClip& clip)
     : context_(&context),
       previous_output_(&context.canvas().out()),

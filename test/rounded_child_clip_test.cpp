@@ -3,12 +3,14 @@
 #include <cstdio>
 #include <cstdlib>
 #include <string>
+#include <tuple>
 #include <vector>
 
 #include "gtest/gtest.h"
 #include "roo_display/core/offscreen.h"
 #include "roo_display/shape/smooth.h"
 #include "roo_windows.h"
+#include "roo_windows/containers/scrollable_panel.h"
 #include "roo_windows/core/panel.h"
 #include "roo_windows/core/rounded_clip.h"
 #include "roo_windows/material3/menu/menu_surface.h"
@@ -209,6 +211,40 @@ class SloppyPaintBlock : public PaintBlock {
     return Rect(parent_bounds().xMin() - 8, parent_bounds().yMin(),
                 parent_bounds().xMax(), parent_bounds().yMax());
   }
+};
+
+class ScrollContent : public PaintBlock {
+ public:
+  explicit ScrollContent(ApplicationContext& context)
+      : PaintBlock(context, kRed) {}
+
+  Dimensions getSuggestedMinimumDimensions() const override {
+    return Dimensions(64, 96);
+  }
+};
+
+class OverlayMarker : public Widget {
+ public:
+  OverlayMarker(ApplicationContext& context, Color color)
+      : Widget(context), color_(color) {}
+
+  Dimensions getSuggestedMinimumDimensions() const override {
+    return Dimensions(32, 20);
+  }
+
+  void paint(PaintContext& ctx) const override {
+    ++paint_count;
+    ctx.addOverlayShape(roo_display::SmoothFilledRoundRect(
+        0, 0, width() - 1, height() - 1, 10, color_));
+  }
+
+  mutable int paint_count = 0;
+
+ protected:
+  Rect getDirectPaintExclusionBounds() const override { return Rect(); }
+
+ private:
+  Color color_;
 };
 
 class FixedRoundedPanel : public RoundedPanel {
@@ -569,6 +605,74 @@ TEST_F(RoundedClipTest, TranslucentUnclippedForegroundComposesOutsideMask) {
               8);
   expectSingleWrite();
 }
+
+class RoundedScrollingTest
+    : public RoundedClipTest,
+      public testing::WithParamInterface<std::tuple<bool, bool>> {};
+
+// Verifies scrolling reconstructs clean opaque/translucent foreground overlays,
+// including those in an unclipped subtree, without replaying them on
+// continuation.
+TEST_P(RoundedScrollingTest, ScrollingPreservesCleanUnclippedOverlay) {
+  const bool translucent = std::get<0>(GetParam());
+  const bool nested = std::get<1>(GetParam());
+  auto panel = std::make_unique<RoundedPanel>(app_.context());
+  auto marker = std::make_unique<OverlayMarker>(
+      app_.context(), translucent ? kTranslucentOrange : kBlue);
+  OverlayMarker* marker_ptr = marker.get();
+  if (nested) {
+    auto subtree = std::make_unique<PlainGroupedPanel>(app_.context());
+    subtree->setParentClipMode(ParentClipMode::kUnclipped);
+    subtree->add(std::move(marker), Rect(0, 0, 31, 19));
+    panel->add(std::move(subtree), Rect(40, -6, 71, 13));
+  } else {
+    marker->setParentClipMode(ParentClipMode::kUnclipped);
+    panel->add(std::move(marker), Rect(40, -6, 71, 13));
+  }
+  auto content = std::make_unique<ScrollContent>(app_.context());
+  ScrollContent* content_ptr = content.get();
+  auto viewport = std::make_unique<SimpleScrollablePanel>(app_.context(),
+                                                          std::move(content));
+  SimpleScrollablePanel* viewport_ptr = viewport.get();
+  panel->add(std::move(viewport), Rect(0, 0, 63, 43));
+  app_.add(std::move(panel), Box(16, 12, 79, 55));
+  ASSERT_TRUE(app_.refresh());
+  EXPECT_EQ(marker_ptr->paint_count, 1);
+  if (!translucent) {
+    EXPECT_EQ(pixel(72, 14), kBlue);
+  }
+
+  std::array<Color, kWidth * kHeight> expected;
+  for (int16_t y = 0; y < kHeight; ++y) {
+    for (int16_t x = 0; x < kWidth; ++x) expected[y * kWidth + x] = pixel(x, y);
+  }
+  for (int offset : {8, 16, 0}) {
+    SCOPED_TRACE(offset);
+    viewport_ptr->scrollTo(0, -offset);
+    ASSERT_EQ(viewport_ptr->contents()->offsetTop(), -offset);
+    ASSERT_FALSE(marker_ptr->isDirty());
+    const int before = marker_ptr->paint_count;
+    device_.reset();
+    if (offset == 16) {
+      content_ptr->delay_ms = 40;
+      EXPECT_FALSE(
+          app_.refresh(roo_time::Uptime::Now() + roo_time::Millis(20)));
+      EXPECT_EQ(marker_ptr->paint_count, before + 1);
+      content_ptr->delay_ms = 0;
+    }
+    ASSERT_TRUE(app_.refresh());
+    EXPECT_EQ(marker_ptr->paint_count, before + 1);
+    for (int16_t y = 0; y < kHeight; ++y) {
+      for (int16_t x = 0; x < kWidth; ++x) {
+        expectColor(pixel(x, y), expected[y * kWidth + x], x, y);
+      }
+    }
+    expectSingleWrite();
+  }
+}
+
+INSTANTIATE_TEST_SUITE_P(ForegroundVariants, RoundedScrollingTest,
+                         testing::Combine(testing::Bool(), testing::Bool()));
 
 // Verifies an unclipped descendant bypasses only its immediate rounded parent;
 // the enclosing rounded ancestor still masks the escaped pixels.
