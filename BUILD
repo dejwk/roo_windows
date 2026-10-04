@@ -1251,3 +1251,36 @@ cc_test(
     linkstatic = 1,
     deps = [":roo_windows", "@roo_testing//:arduino_gtest_main"],
 )
+
+cc_test(
+    name = "rounded_child_clip_test",
+    srcs = ["test/rounded_child_clip_test.cpp"],
+    linkstatic = 1,
+    deps = [
+        ":roo_windows",
+        "@roo_testing//:arduino_gtest_main",
+    ],
+)
+
+cc_test(
+    name = "rounded_child_clip_resource_test",
+    srcs = ["test/rounded_child_clip_resource_test.cpp"],
+    linkstatic = 1,
+    deps = [
+        ":roo_windows",
+        "@roo_testing//:arduino_gtest_main",
+    ],
+)
+
+cc_test(
+    name = "masked_exclusion_test",
+    srcs = [
+        "test/masked_exclusion_test.cpp",
+        "test/masked_exclusion_subdivision_test.cpp",
+    ],
+    linkstatic = 1,
+    deps = [
+        ":roo_windows",
+        "@roo_testing//:arduino_gtest_main",
+    ],
+)

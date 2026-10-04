@@ -1,8 +1,8 @@
 #pragma once
 
 #include "roo_windows/containers/scrollable_panel.h"
-#include "roo_windows/core/widget.h"
 #include "roo_windows/core/transient_surface_host.h"
+#include "roo_windows/core/widget.h"
 #include "roo_windows/material3/button/button.h"
 #include "roo_windows/material3/container.h"
 #include "roo_windows/material3/date_picker/date_picker.h"
@@ -135,6 +135,9 @@ class DatePickerPanel final : public Material3Container {
 
   /// Detaches borrowed children before their member storage is destroyed.
   ~DatePickerPanel() override;
+
+  /// Keeps internally controlled direct children on the single-scan path.
+  bool mayHaveUnclippedChildren() const override { return false; }
 
   /// Uses the Material 3 high surface-container role.
   ColorToken containerRole() const override;

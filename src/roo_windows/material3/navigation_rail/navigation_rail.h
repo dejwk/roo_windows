@@ -121,6 +121,9 @@ class NavigationRail : public Material3Container {
   /// Detaches its header and destinations before destruction.
   ~NavigationRail() override;
 
+  /// Allows caller-configured header and destinations to be unclipped.
+  bool mayHaveUnclippedChildren() const override { return true; }
+
   /// Returns the configured rail layout mode.
   NavigationRailLayout layout() const;
 

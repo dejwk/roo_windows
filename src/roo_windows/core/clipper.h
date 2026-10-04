@@ -8,10 +8,11 @@
 #include "roo_display/composition/rasterizable_stack.h"
 #include "roo_display/core/box.h"
 #include "roo_display/core/rasterizable.h"
-#include "roo_display/filter/clip_exclude_rects.h"
 #include "roo_display/filter/foreground.h"
 #include "roo_display/shape/smooth.h"
+#include "roo_windows/core/exclusion_filter.h"
 #include "roo_windows/core/press_overlay.h"
+#include "roo_windows/core/rounded_clip.h"
 #include "roo_windows/decoration/decoration.h"
 
 namespace roo_windows {
@@ -20,6 +21,8 @@ class ClipperOutput;
 class Clipper;
 
 namespace internal {
+
+class RoundedRepaintScope;
 
 struct OverlaySpecStackEntry {
   OverlaySpecStackEntry(OverlaySpec overlay_spec, uint16_t refcount)
@@ -107,6 +110,7 @@ class ClipperState {
 
   std::vector<ClippedOverlay> overlays_;
   PressOverlay press_overlay_;
+  std::unique_ptr<RoundedPaintState> rounded_;
 };
 
 /// Internal helper: `DisplayOutput` filter that combines exclusion rectangles
@@ -119,7 +123,8 @@ class ClipperOutput : public roo_display::DisplayOutput {
  public:
   /// Wraps @p out with fresh paint state, reusing the buffers in @p state.
   ClipperOutput(internal::ClipperState& state, roo_display::DisplayOutput& out)
-      : orig_output_(out),
+      : state_(state),
+        orig_output_(out),
         bounds_(0, 0, -1, -1),
         press_overlay_(state.press_overlay_),
         exclusions_(state.exclusions_),
@@ -134,9 +139,9 @@ class ClipperOutput : public roo_display::DisplayOutput {
         valid_(false),
         overlay_stack_(state.overlay_stack_),
         overlay_filter_(out, &overlay_stack_),
-        rect_union_(nullptr, nullptr),
-        rect_union_filter_(overlay_filter_, &rect_union_),
-        output_(&rect_union_filter_),
+        exclusion_union_(nullptr, nullptr),
+        exclusion_filter_(overlay_filter_, &exclusion_union_),
+        output_(&exclusion_filter_),
         capabilities_(out.getCapabilities().supportsBlending(), false) {
     bounded_exclusions_.clear();
     overlay_specs_.clear();
@@ -145,6 +150,15 @@ class ClipperOutput : public roo_display::DisplayOutput {
     overlays_.clear();
     decorations_.clear();
     shape_overlay_count_ = 0;
+    if (state_.rounded_ != nullptr) {
+      state_.rounded_->exclusions.clear();
+      state_.rounded_->bounded_exclusions.clear();
+      state_.rounded_->clip_count = 0;
+      state_.rounded_->overlay_count = 0;
+      state_.rounded_->decoration_count = 0;
+      state_.rounded_->active = nullptr;
+      state_.rounded_->press_target = nullptr;
+    }
   }
 
   /// Narrows subsequent sync work to overlays and exclusions intersecting
@@ -157,23 +171,14 @@ class ClipperOutput : public roo_display::DisplayOutput {
 
   /// Records a device-space exclusion rectangle.
   void addExclusion(const roo_display::Box& exclusion) {
-    // Simple folding, effective because we're adding exlusion rects in the
-    // order of floaters -> children -> parent, so that adding the parent will
-    // always fold the children, and it may also fold the floaters, and even
-    // possibly some siblings.
-    while (!exclusions_.empty() && exclusion.contains(exclusions_.back())) {
-      exclusions_.pop_back();
+    if (activeRoundedClip() != nullptr) {
+      addRoundedExclusion(exclusion);
+      return;
     }
-    exclusions_.push_back(exclusion);
-    // See if we can opportunistically remove some overlays that might have been
-    // fully clipped out.
-    while (!overlays_.empty() &&
-           exclusion.contains(overlays_.back().extents())) {
-      overlays_.pop_back();
-    }
-
-    valid_ = false;
+    addRectExclusion(exclusion);
   }
+
+  void addRectExclusion(const roo_display::Box& exclusion);
 
   /// Stores a decoration overlay owned by the clipper.
   void addDecoration(roo_display::Box clip_box, roo_display::Box extents,
@@ -196,6 +201,9 @@ class ClipperOutput : public roo_display::DisplayOutput {
   /// Adds an overlay with an optional local-to-device translation.
   void addOverlay(const roo_display::Rasterizable* overlay,
                   roo_display::Box clip_box, int16_t dx = 0, int16_t dy = 0) {
+    if (activeRoundedClip() != nullptr) {
+      overlay = maskRoundedOverlay(overlay, clip_box, dx, dy);
+    }
     overlays_.emplace_back(overlay, clip_box, dx, dy);
     if (overlays_.back().extents().empty()) {
       overlays_.pop_back();
@@ -254,8 +262,51 @@ class ClipperOutput : public roo_display::DisplayOutput {
     configurePressOverlay(spec);
     scoped_press_overlay_active_ = true;
     scoped_press_overlay_clip_ = std::move(clip_box);
+    if (activeRoundedClip() != nullptr) {
+      state_.rounded_->press_target = activeRoundedClip();
+      activeRoundedClip()->direct_press = &press_overlay_;
+      activeRoundedClip()->direct_press_clip = scoped_press_overlay_clip_;
+    }
     valid_ = false;
   }
+
+  /// Reports masked exclusions registered in this paint.
+  bool hasMaskedExclusions() const {
+    return state_.rounded_ != nullptr && !state_.rounded_->exclusions.empty();
+  }
+
+  /// Returns masked exclusions in device coordinates, borrowing retained
+  /// geometry for inspection and blit safety checks.
+  const std::vector<MaskedExclusion>& maskedExclusions() const {
+    static const std::vector<MaskedExclusion> empty;
+    return state_.rounded_ == nullptr ? empty : state_.rounded_->exclusions;
+  }
+
+  /// Retains one record for @p owner_key without activating its mask.
+  /// Each owner prepares exactly once per synchronous paint. Preparation is
+  /// separate because unclipped children must paint before mask activation.
+  RoundedClip& prepareRoundedClip(const void* owner_key,
+                                  roo_display::Box bounds, BorderStyle style);
+
+  /// Activates a prepared mask for clipped children or the owner surface.
+  void activateRoundedClip(RoundedClip& clip);
+
+  /// Restores the enclosing mask without changing the prepared geometry.
+  void deactivateRoundedClip();
+
+  /// Returns the current clip, or null on ordinary rectangular paths.
+  RoundedClip* activeRoundedClip() const {
+    return state_.rounded_ == nullptr ? nullptr : state_.rounded_->active;
+  }
+
+  /// Finds a prepared record by identity after nested owners append records.
+  RoundedClip* roundedClip(const void* owner_key) const;
+
+  /// Publishes captured colors as the owner's one rounded decoration.
+  void addRoundedDecoration(const void* owner, roo_display::Box clip_box,
+                            roo_display::Box extents, int elevation,
+                            roo_display::Color bgcolor, BorderStyle border,
+                            roo_display::Color outline_color);
 
   /// Forwards the address window after applying pending clipper state.
   void setAddress(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1,
@@ -316,7 +367,8 @@ class ClipperOutput : public roo_display::DisplayOutput {
   /// Returns the clipper-adjusted output capabilities.
   const Capabilities& getCapabilities() const override { return capabilities_; }
 
-  /// Returns the current device-space exclusion list.
+  /// Returns ordinary exclusions in device coordinates; maskedExclusions()
+  /// supplies the rest.
   const std::vector<roo_display::Box>& exclusions() const {
     return exclusions_;
   }
@@ -349,6 +401,11 @@ class ClipperOutput : public roo_display::DisplayOutput {
     if (scoped_press_overlay_active_ &&
         overlay_specs_.back().overlay_spec.has_press_overlay()) {
       scoped_press_overlay_active_ = false;
+      if (state_.rounded_ != nullptr &&
+          state_.rounded_->press_target != nullptr) {
+        state_.rounded_->press_target->direct_press = nullptr;
+        state_.rounded_->press_target = nullptr;
+      }
       valid_ = false;
     }
     overlay_specs_.pop_back();
@@ -361,6 +418,11 @@ class ClipperOutput : public roo_display::DisplayOutput {
   }
 
  private:
+  void addRoundedExclusion(const roo_display::Box& exclusion);
+  const roo_display::Rasterizable* maskRoundedOverlay(
+      const roo_display::Rasterizable* source, roo_display::Box clip,
+      int16_t& dx, int16_t& dy);
+
   static const OverlaySpec& InertOverlaySpec() {
     static const OverlaySpec kInertOverlaySpec;
     return kInertOverlaySpec;
@@ -380,7 +442,24 @@ class ClipperOutput : public roo_display::DisplayOutput {
     if (exclusion_end != nullptr) {
       exclusion_end += bounded_exclusions_.size();
     }
-    rect_union_.reset(exclusion_begin, exclusion_end);
+    // ExclusionUnion borrows contiguous arrays until the next rebuild. Copy
+    // only masked descriptors intersecting the current output bounds so the
+    // subtraction walk does not inspect unrelated rounded regions.
+    const MaskedExclusion* masked_begin = nullptr;
+    const MaskedExclusion* masked_end = nullptr;
+    if (state_.rounded_ != nullptr) {
+      auto& bounded = state_.rounded_->bounded_exclusions;
+      bounded.clear();
+      for (const MaskedExclusion& e : state_.rounded_->exclusions) {
+        if (e.bounds.intersects(bounds_)) bounded.push_back(e);
+      }
+      if (!bounded.empty()) {
+        masked_begin = bounded.data();
+        masked_end = masked_begin + bounded.size();
+      }
+    }
+    exclusion_union_.reset(exclusion_begin, exclusion_end, masked_begin,
+                           masked_end);
 
     // Rebuild active overlays directly into a reusable RasterizableStack,
     // preserving clipper's "earlier overlays stay above later overlays"
@@ -421,24 +500,25 @@ class ClipperOutput : public roo_display::DisplayOutput {
 
     if (!has_overlays) {
       overlay_stack_.setExtents(roo_display::Box(0, 0, -1, -1));
-      if (bounded_exclusions_.empty()) {
+      if (bounded_exclusions_.empty() && masked_begin == masked_end) {
         output_ = &orig_output_;
       } else {
-        rect_union_filter_.setOutput(orig_output_);
-        output_ = &rect_union_filter_;
+        exclusion_filter_.setOutput(orig_output_);
+        output_ = &exclusion_filter_;
       }
     } else {
       overlay_stack_.setExtents(overlay_extents);
-      if (bounded_exclusions_.empty()) {
+      if (bounded_exclusions_.empty() && masked_begin == masked_end) {
         output_ = &overlay_filter_;
       } else {
-        rect_union_filter_.setOutput(overlay_filter_);
-        output_ = &rect_union_filter_;
+        exclusion_filter_.setOutput(overlay_filter_);
+        output_ = &exclusion_filter_;
       }
     }
     valid_ = true;
   }
 
+  ClipperState& state_;
   roo_display::DisplayOutput& orig_output_;
   roo_display::Box bounds_;
   PressOverlay& press_overlay_;
@@ -454,8 +534,8 @@ class ClipperOutput : public roo_display::DisplayOutput {
   bool valid_;
   roo_display::RasterizableStack& overlay_stack_;
   roo_display::ForegroundFilter overlay_filter_;
-  roo_display::RectUnion rect_union_;
-  roo_display::RectUnionFilter rect_union_filter_;
+  ExclusionUnion exclusion_union_;
+  ExclusionFilter exclusion_filter_;
   roo_display::DisplayOutput* output_;
 
   roo_display::DisplayOutput::Capabilities capabilities_;
@@ -535,6 +615,51 @@ class Clipper {
                        corner_radii, outline_width, outline_color);
   }
 
+  /// Retains one rounded record without activating its output mask.
+  internal::RoundedClip& prepareRoundedClip(const void* owner_key,
+                                            roo_display::Box bounds,
+                                            BorderStyle style) {
+    return out_.prepareRoundedClip(owner_key, bounds, style);
+  }
+
+  /// Activates a prepared rounded mask for one scoped paint operation.
+  void activateRoundedClip(internal::RoundedClip& clip) {
+    out_.activateRoundedClip(clip);
+  }
+
+  /// Restores the enclosing mask after the scoped operation completes.
+  void deactivateRoundedClip() { out_.deactivateRoundedClip(); }
+
+  /// Identifies output paths that cannot bypass rounded filtering.
+  bool hasRoundedClip() const { return out_.activeRoundedClip() != nullptr; }
+
+  /// Reports retained masked exclusions, including previously painted siblings.
+  bool hasMaskedExclusions() const { return out_.hasMaskedExclusions(); }
+
+  /// Returns masked exclusions in device coordinates, borrowing geometry
+  /// valid through this paint.
+  const std::vector<internal::MaskedExclusion>& maskedExclusions() const {
+    return out_.maskedExclusions();
+  }
+
+  /// Reconstructs clean contributors while rebuilding a rounded surface,
+  /// including its unclipped foreground whose paint must bypass that mask.
+  bool needsRoundedRepaint() const { return rounded_repaint_; }
+
+  /// Finds retained boundary colors by a previously entered owner's identity.
+  internal::RoundedClip* roundedClip(const void* owner_key) const {
+    return out_.roundedClip(owner_key);
+  }
+
+  /// Publishes a completed rounded surface using its sparse boundary colors.
+  void addRoundedDecoration(const void* owner, roo_display::Box clip_box,
+                            roo_display::Box extents, int elevation,
+                            roo_display::Color background, BorderStyle border,
+                            roo_display::Color outline) {
+    out_.addRoundedDecoration(owner, clip_box, extents, elevation, background,
+                              border, outline);
+  }
+
   /// Returns the filtered output that exclusions and overlays apply to.
   roo_display::DisplayOutput* out() { return &out_; }
 
@@ -542,7 +667,8 @@ class Clipper {
   /// overlays).
   roo_display::DisplayOutput& rawOut() { return out_.rawOut(); }
 
-  /// Returns the currently active exclusion rectangles (device coordinates).
+  /// Returns ordinary exclusions in device coordinates; maskedExclusions()
+  /// supplies the rest.
   const std::vector<roo_display::Box>& exclusions() const {
     return out_.exclusions();
   }
@@ -561,7 +687,10 @@ class Clipper {
   }
 
  private:
+  friend class internal::RoundedRepaintScope;
+
   internal::ClipperOutput out_;
+  bool rounded_repaint_ = false;
 };
 
 }  // namespace roo_windows

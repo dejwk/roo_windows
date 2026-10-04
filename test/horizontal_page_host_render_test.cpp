@@ -6,6 +6,7 @@
 #include "roo_windows/containers/blit_cache_container.h"
 #include "roo_windows/containers/horizontal_page_host.h"
 #include "roo_windows/core/destination.h"
+#include "roo_windows/core/panel.h"
 #include "roo_windows_render_test_support.h"
 
 using namespace roo_display;
@@ -213,6 +214,65 @@ TEST_F(HorizontalPageHostRenderTest,
     EXPECT_EQ(before,
               std::vector<roo::byte>(std::begin(raster_), std::end(raster_)));
   }
+}
+
+class RoundedTestPanel : public Panel {
+ public:
+  using Panel::add;
+  using Panel::Panel;
+  bool clipsChildrenToRoundedBounds() const override { return true; }
+  BorderStyle getBorderStyle() const override { return BorderStyle(16, 0); }
+};
+
+// Verifies masks introduced by cached descendants prevent later raw blits from
+// copying their partially composited corners to a different backdrop position.
+TEST_F(HorizontalPageHostRenderTest, RoundedDescendantDisablesBlitReuse) {
+  auto cache = std::make_unique<BlitCacheContainer>(context());
+  BlitCacheContainer* moving = cache.get();
+  auto rounded = std::make_unique<RoundedTestPanel>(context());
+  rounded->add(std::make_unique<ColorBoxWidget>(context(), color::Red,
+                                                Dimensions(100, 48)),
+               Rect(0, 0, 99, 47));
+  cache->setChild(std::move(rounded));
+  app_.add(std::move(cache), Box(0, 0, 99, 47));
+  refresh();
+  for (int x : {4, 8, 2}) {
+    moving->moveTo(Rect(x, 0, x + 99, 47));
+    offscreen_.resetCounters();
+    refresh();
+    EXPECT_EQ(offscreen_.blitCalls(), 0u);
+    const std::vector<roo::byte> before(std::begin(raster_), std::end(raster_));
+    app_.root().invalidateInterior();
+    refresh();
+    EXPECT_EQ(before,
+              std::vector<roo::byte>(std::begin(raster_), std::end(raster_)));
+  }
+}
+
+// Verifies retained masks from a foreground sibling also guard a later cache;
+// raw blits must not overwrite settled pixels after the rounded scope closes.
+TEST_F(HorizontalPageHostRenderTest, RoundedForegroundDisablesCoveredBlit) {
+  auto cache = std::make_unique<BlitCacheContainer>(context());
+  BlitCacheContainer* moving = cache.get();
+  cache->setChild(std::make_unique<ColorBoxWidget>(context(), color::Blue,
+                                                   Dimensions(110, 60)));
+  app_.add(std::move(cache), Box(0, 0, 109, 59));
+  refresh();
+  auto rounded = std::make_unique<RoundedTestPanel>(context());
+  rounded->add(std::make_unique<ColorBoxWidget>(context(), color::Red,
+                                                Dimensions(32, 32)),
+               Rect(0, 0, 31, 31));
+  app_.add(std::move(rounded), Box(24, 8, 55, 39));
+  refresh();
+  moving->moveTo(Rect(4, 0, 113, 59));
+  offscreen_.resetCounters();
+  refresh();
+  EXPECT_EQ(offscreen_.blitCalls(), 0u);
+  const std::vector<roo::byte> before(std::begin(raster_), std::end(raster_));
+  app_.root().invalidateInterior();
+  refresh();
+  EXPECT_EQ(before,
+            std::vector<roo::byte>(std::begin(raster_), std::end(raster_)));
 }
 
 // Verifies horizontal drag reveals the adjacent page strip with correct colors

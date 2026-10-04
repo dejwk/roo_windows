@@ -107,6 +107,9 @@ class NavigationBar : public Material3Container {
   /// Detaches all borrowed or owned destinations before destruction.
   ~NavigationBar() override;
 
+  /// Allows caller-configured destinations to be unclipped.
+  bool mayHaveUnclippedChildren() const override { return true; }
+
   /// Returns the configured destination layout mode.
   NavigationBarLayout layout() const;
 

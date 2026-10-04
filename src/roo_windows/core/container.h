@@ -31,6 +31,20 @@ class Container : public SurfaceWidget {
  public:
   Container(ApplicationContext& context);
 
+  /// Clips direct clipped children to this surface's rounded content bounds.
+  /// Direct unclipped children bypass this container's clip while retaining
+  /// ancestor clips.
+  virtual bool clipsChildrenToRoundedBounds() const { return false; }
+
+  /// Reports whether any direct child can be explicitly unclipped.
+  ///
+  /// False guarantees that every direct child remains clipped in every
+  /// supported configuration. Containers accepting caller-provided children
+  /// must override this with a constant-time true result. When true, unclipped
+  /// direct children form a foreground group above all clipped siblings,
+  /// regardless of this container's own clipping policy.
+  virtual bool mayHaveUnclippedChildren() const { return false; }
+
   /// Allows an owning container to route an accepted direct-child invocation.
   /// Return true after handling the action; the caller must then return without
   /// touching the child because application callbacks may have destroyed it.
@@ -117,6 +131,8 @@ class Container : public SurfaceWidget {
   bool isScrollable() const;
 
  protected:
+  void emitPersistentDecoration(PaintContext& ctx) const override;
+
   int focusChildCount() const override { return getChildrenCount(); }
   Widget* focusChildAt(int index) override { return &getChild(index); }
   void attachChild(WidgetRef child,
@@ -207,6 +223,13 @@ class Container : public SurfaceWidget {
   virtual Widget& getChild(int idx) = 0;
 
  private:
+  bool usesChildGroups() const;
+  void paintChildrenWithoutRoundedClip(PaintContext& ctx);
+  void paintRoundedChildren(PaintContext& ctx, internal::RoundedClip& clip);
+  void paintSurface(PaintContext& ctx);
+  void paintContentsWithoutRoundedClip(PaintContext& ctx);
+  void paintRoundedContents(PaintContext& ctx);
+
   void invalidateCachedMaxBounds() { cached_max_bounds_ = Rect(0, 0, -1, -1); }
 
   PaintContext prepareSurfaceContext(const PaintContext& in,

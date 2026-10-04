@@ -235,6 +235,7 @@ filegroup(
         "//examples/material3/menus/nested_settings",
         "//examples/material3/menus/alert_filters",
         "//examples/material3/menus/operating_mode",
+        "//examples/material3/menus/rounded_scrolling",
         "//examples/material3/navigation_bar/app_navigation",
         "//examples/material3/navigation_rail/app_navigation",
         "//examples/material3/pane_layout/equipment_list_detail",

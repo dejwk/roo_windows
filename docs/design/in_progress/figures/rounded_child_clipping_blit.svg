@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="496" viewBox="0 0 1000 496">
+  <title>Safe interior copy during vertical scrolling</title>
+  <desc>A 192 by 128 rounded panel with radius 16 scrolls upward eight pixels.
+    The fully opaque core is [5,187) by [5,123). A 182 by 110 source rectangle
+    at [5,187) by [13,123) moves to [5,187) by [5,115), copying 20,020 pixels.
+    The remaining area is repainted. There are no foreground obstacles.</desc>
+  <!-- Geometry uses two SVG units per display pixel. Panel origins are
+       (40,106) and (576,106). All display-coordinate intervals are half-open.
+       Source: x=5, y=13, w=182, h=110. Destination: x=5, y=5, w=182, h=110.
+       The outer curves are schematic; candidate coverage is checked against
+       the renderer's exact opaque spans, not SVG antialiasing. -->
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#334155"/>
+    </marker>
+  </defs>
+  <rect width="1000" height="496" fill="white"/>
+  <g font-family="DejaVu Sans, sans-serif" fill="#172b4d">
+    <text x="40" y="32" font-size="23" font-weight="bold">Safe interior copy during vertical scrolling</text>
+    <text x="40" y="59" font-size="16">192 × 128 panel · radius 16 · no outline or foreground obstacles · geometry at 2×</text>
+    <text x="40" y="88" font-size="18" font-weight="bold">Previous completed frame</text>
+    <text x="576" y="88" font-size="18" font-weight="bold">After scrolling up 8 pixels</text>
+
+    <rect x="40" y="106" width="384" height="256" rx="32" fill="#fff1d6" stroke="#334155" stroke-width="2"/>
+    <rect x="50" y="132" width="364" height="220" fill="#bde7d4"/>
+    <rect x="50" y="116" width="364" height="236" fill="none" stroke="#21669b" stroke-width="2" stroke-dasharray="7 5"/>
+    <text x="232" y="232" text-anchor="middle" font-size="20" font-weight="bold">Source: D − Δ</text>
+    <text x="232" y="260" text-anchor="middle" font-size="17">182 × 110 pixels</text>
+
+    <path d="M449,235 H550" stroke="#334155" stroke-width="2" marker-end="url(#arrow)"/>
+    <text x="500" y="216" text-anchor="middle" font-size="16">Δy = −8</text>
+    <text x="500" y="263" text-anchor="middle" font-size="15">blitCopy</text>
+
+    <rect x="576" y="106" width="384" height="256" rx="32" fill="#fff1d6" stroke="#334155" stroke-width="2"/>
+    <rect x="586" y="116" width="364" height="220" fill="#bde7d4"/>
+    <rect x="586" y="116" width="364" height="236" fill="none" stroke="#21669b" stroke-width="2" stroke-dasharray="7 5"/>
+    <text x="768" y="224" text-anchor="middle" font-size="20" font-weight="bold">Destination: D</text>
+    <text x="768" y="252" text-anchor="middle" font-size="17">182 × 110 pixels</text>
+
+    <text x="40" y="391" font-size="17">Source: [5,187) × [13,123)</text>
+    <text x="576" y="391" font-size="17">Destination: [5,187) × [5,115)</text>
+
+    <rect x="40" y="419" width="22" height="16" fill="#bde7d4"/>
+    <text x="73" y="433" font-size="16">20,020 pixels copied (81.5%)</text>
+    <rect x="390" y="419" width="22" height="16" fill="#fff1d6" stroke="#a07b3a"/>
+    <text x="423" y="433" font-size="16">Outside the copy</text>
+    <path d="M655,427 H689" stroke="#21669b" stroke-width="2" stroke-dasharray="7 5"/>
+    <text x="700" y="433" font-size="16">Opaque core C</text>
+    <text x="40" y="474" font-size="16">Both endpoints stay in C. Repaint the remaining strips and curved boundary with normal antialiasing.</text>
+  </g>
+</svg>

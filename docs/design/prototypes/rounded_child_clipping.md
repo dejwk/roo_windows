@@ -1,0 +1,475 @@
+# Sparse rounded child clipping prototype
+
+The [production plan](../in_progress/rounded_child_clipping_design.md) tracks
+remaining work. P0 integrates this prototype with synchronous refreshes on
+2026-10-05: traversal checkpoints and interruption repair are removed. Historical
+measurements below identify the earlier implementation; current costs are in
+[Synchronous integration](#synchronous-integration).
+
+## Result
+
+A scrolling row can meet its container's rounded edge with smooth coverage,
+while its ordinary paint code runs once. Direct children explicitly marked
+`ParentClipMode::kUnclipped` can now escape that rounded edge: the container
+paints them as a foreground group before its clipped children and surface. The
+same unclipped-above-clipped stacking rule applies to containers without
+rounded clipping.
+
+![Three tested scroll positions, enlarged four times without interpolation](figures/rounded_child_clipping.png)
+
+The pictures are actual test output. The selected row has its own rounded
+corners; the parent clips both its flat fill and its antialiased decoration.
+The checkerboard remains visible through fractional coverage.
+
+## How it works
+
+The [existing renderer](../implemented/paint_context_design.md) traverses
+foreground first, retains translucent decorations as overlays, and excludes
+settled pixels from subsequent output. The prototype adds three decisions to
+that path:
+
+| Parent coverage | Child output |
+| --- | --- |
+| Zero | Discard it. |
+| Full | Forward it through the existing renderer. |
+| Fractional | Accumulate its color in a sparse boundary array. |
+
+The array contains unmasked content. Suppose a selected row contributes color
+`S` with its own coverage `b`, over panel color `P`. The saved boundary color
+becomes `C = b*S + (1-b)*P`. When the backdrop `B` arrives, parent coverage `a`
+is applied once: `a*C + (1-a)*B`. Multiplying each child contribution by `a`
+independently would give a different result where layers overlap.
+
+[The implementation](../../../src/roo_windows/core/rounded_clip.cpp) wraps
+`DisplayOutput`, so ordinary streamed writes, sparse pixels, and rectangles
+all use the same rule. Fully covered rectangles bypass boundary processing.
+Cached row geometry distinguishes exterior, fractional, and opaque pixels
+without a square root in the output routing path. Geometry setup uses the
+same coverage routine as `Decoration`.
+
+Child decorations are deferred raster overlays, so output interception alone
+would miss them. Registering an overlay also samples its fractional boundary
+contributions into the array. Its retained raster wrapper then contributes
+only to fully covered interior pixels. This samples raster data; it does not
+call a child's paint function again.
+
+When a container finishes, one retained decoration resolves its boundary
+colors over the panel background, then applies the existing outline and shadow
+rasterization. It stays deferred until the lower scene supplies the backdrop.
+Boundary pixels therefore reach the display only with their settled color.
+Nested rounded containers use the same rule: each completed inner boundary
+becomes a contribution to the enclosing scope.
+
+Each paint reconstructs clean contributors as the traversal reaches them.
+There is no preliminary traversal or replay. RoundedRepaintScope covers the
+owner's complete traversal, so both clipped children and clean unclipped
+foreground overlays supply their contributions. Composition records remain
+alive until the paint finishes; the next paint clears descriptors and colors
+while reusing capacity.
+
+Record preparation is separate from activation. The unclipped group uses the
+incoming ancestor context, then a scoped adapter activates this owner's mask for
+the clipped group and later for the surface. Scope exit restores output and
+mask. Local loops finish both groups in one synchronous refresh, with no saved
+phase, child cursor, fresh flag, or publication checkpoint.
+
+## Compact exclusions
+
+The first prototype expanded an exclusion crossing a corner into O(radius)
+rectangles. A menu with many child draws could therefore retain many copies of
+the same curved edge. Exclusions now keep the original rectangle plus a pointer
+to the rounded scope's existing opaque spans. All exclusions in that scope
+share the same geometry:
+
+```mermaid
+flowchart LR
+    A["Exclusion A: bounds + mask pointer"] --> M["RoundedClip: opaque begin/end per corner row"]
+    B["Exclusion B: bounds + mask pointer"] --> M
+    M --> P["Enclosing RoundedClip, when nested"]
+```
+
+On row `y`, the excluded interval is the intersection of the rectangle's
+horizontal extent and each enclosing mask's opaque interval. The straight
+middle has an implicit full-width interval. Only fully opaque pixels belong
+to this mask; fractional edge pixels still use the boundary composition above.
+The mask therefore adds no aliased boundary and no extra child traversal.
+
+[`ExclusionUnion`](../../../src/roo_windows/core/exclusion.h) and
+[`ExclusionFilter`](../../../src/roo_windows/core/exclusion_filter.h) live in
+`roo_windows`. Their rectangular paths are adapted from `roo_display`'s existing
+filter; `roo_display` has no new rounded-corner API. Rectangles entirely inside
+the opaque region keep the ordinary representation.
+
+Pruning keeps the existing tail-folding strategy, with cheap conservative tests:
+
+- A new ordinary rectangle removes older masked entries whose bounding boxes
+  it contains.
+- A new masked entry first checks the candidate's bounding box. It only removes
+  a candidate when all four corners of that box are opaque in every enclosing
+  mask. A failed test keeps the candidate; there is no row-by-row containment
+  search between curved shapes.
+- Overlay pruning uses the same proof, so an overlay touching an antialiased
+  corner survives.
+
+Output queries reject unrelated bounding boxes before reading row geometry.
+Streamed pixels use cached visible/excluded runs. Sparse pixels query the same
+union. Uniform rectangle output uses recursive subtraction:
+
+1. Subtract all ordinary rectangle exclusions with the original recursive
+   splitting algorithm.
+2. For each remaining piece, find the next intersecting masked bounding box.
+   Split off up to four exterior rectangles and check them against later masks.
+3. Inside that bounding box, discard regions proven fully opaque. Otherwise,
+   read this mask's opaque interval row by row, skipping its constant middle
+   as one band. Combine consecutive equal clipped intervals before proceeding.
+4. Pass each surviving rectangle to the remaining masks. Emit it through the
+   shared buffered writer when no exclusions remain.
+
+![Four exterior rectangles and the corner regions inside masked bounds](figures/rounded_exclusion_subdivision.svg)
+
+The previous implementation also skipped horizontal runs, but each run searched
+the entire exclusion union. A small mask could split wide free regions into
+many bands. Recursive subtraction keeps those exterior regions intact, and
+only reads row geometry inside mask bounds. Every recursive call advances to
+the next exclusion; earlier exclusions are already absent from the piece.
+The pieces are disjoint, preserving one write per settled pixel. Antialiased
+pixels still use the boundary composition above.
+
+There is one buffered writer per input batch, outside the recursion. Pieces
+are passed directly down the call stack and never stored in an exclusion or
+scratch vector. Stack depth grows with intersecting exclusions; the scanline
+loop is iterative, so neither panel height nor corner radius adds stack levels.
+Empty clipped intervals coalesce too, so a fully unmasked region inside a
+bounding box can pass to later masks as one rectangle.
+
+Masked descriptors live for one complete paint. At the next paint the clipper
+clears old descriptors and cached composition inputs before reusing geometry.
+There is no between-attempt invalidation or repair path.
+
+## Trying it
+
+Material 3 `MenuPanel` opts in. An ordinary container opts in by
+overriding `clipsChildrenToRoundedBounds()`; its border supplies the radii and
+outline. A direct child uses `ParentClipMode::kUnclipped` when it must overhang
+its immediate parent's boundary and stack above clipped siblings. Containers
+accepting configurable direct children return true from
+`mayHaveUnclippedChildren()`; fixed all-clipped components retain one scan.
+
+Menus retain horizontal gutters, while their top and bottom padding scrolls
+with the rows. The viewport spans the panel's full height, allowing moving
+rows to reach its rounded edge. The initial prototype kept a stationary 4 dp
+inset around this viewport, which largely hid the new clipping in real menus,
+including **Add network → Security** in `roo_windows_wifi`. At the start and
+end of the list, the original padding remains visible. This layout adjustment
+adds no per-instance state.
+
+The [scrolling example](../../../examples/material3/menus/rounded_scrolling/rounded_scrolling.ino)
+uses selected Material rows over a patterned backdrop and an unclipped status
+marker inserted below the scrolling body in collection order. Run from
+`roo_windows`:
+
+```sh
+bazel run //examples/material3/menus/rounded_scrolling:rounded_scrolling
+```
+
+Drag the list vertically. The example is included in the existing Material 3
+example build group. Its emulator build has been checked; touchscreen behavior
+on physical hardware has not been measured.
+
+## RAM
+
+Colors and geometry scale with corner radius, rather than panel area. These
+are measured capacities for four equal radii, without an outline:
+
+| Radius | Color bytes | Geometry + color capacity |
+| ---: | ---: | ---: |
+| 8 | 112 | 292 |
+| 16 | 320 | 660 |
+| 24 | 512 | 1,012 |
+| 32 | 624 | 1,284 |
+| 64 | 1,344 | 2,644 |
+
+These figures are **not the total renderer overhead**. The ESP32 RISC-V
+cross-compiler measured the following object sizes:
+
+| Item | Bytes |
+| --- | ---: |
+| Nullable pointer in retained `ClipperState` | 4 |
+| Shared arena, allocated when rounded clipping is first used | 80 |
+| Record per retained rounded container | 84 |
+| Replacement decoration per rounded container | 100 |
+| Raster wrapper for a child overlay that meets a clip edge | 24 |
+| Output adapter on the stack per active rounded scope | 40 |
+| Ordinary exclusion | 8 |
+| Masked exclusion (bounds + shared mask pointer) | 12 |
+| Exclusion union on the clipper output stack | 16 |
+
+The replacement decoration includes the ordinary surface decoration data; its
+size is not a net delta against the old decoration pool.
+
+The target compiler's `-Os -fstack-usage` report gives 128 bytes for
+`RoundedClipOutput::fillRect`, plus its callees. Its initial implementation used
+368 bytes; direct emission of coalesced runs removed the large temporary batch.
+The exclusion filter's `writeRects` and `fillRects` frames measure 464 and 304
+bytes, respectively, versus 448 and 304 in the original rectangular filter.
+They include the existing buffered writers. Recursive ordinary subtraction uses
+80 bytes per call; masked subtraction uses 96 bytes for colored rectangles and
+80 bytes for uniform fills. These are individual function frames, not a complete
+worst-case paint stack measurement. Intersecting exclusions can accumulate
+multiple frames; no row-sized temporary array or extra heap storage is used.
+
+Arena vectors also retain their pointer capacity. Radius 16 requires 844 bytes
+for its arrays, record, and replacement decoration, before the shared arena,
+pointer slots, allocation metadata, and exclusion descriptors. `Widget`
+remains 24 bytes and `Container` 44 bytes on that ABI, unchanged from the base
+commit. The [size probe](../../../benchmarks/rounded_child_clip_size_probe.cpp)
+records the measured types.
+
+A corner-crossing rectangle now adds one 12-byte descriptor, independent of
+radius. The existing row geometry is shared, including enclosing masks for
+nested scopes. The bounded working list can hold another 12-byte copy for each
+masked exclusion relevant to the current draw. Both vectors retain spare
+capacity; allocation metadata is additional.
+
+Relative to the original prototype, the optional arena grows from 56 to 80
+bytes for those two vectors. `ClipperState` remains 240 bytes, and no fields are
+added to `Widget` or `Container`. The union on the clipper output stack grows
+by 8 bytes; its filter remains 44 bytes. Ordinary exclusion records remain
+8 bytes and require no optional arena.
+
+Historically, grouped continuation replaced the record's completion byte with a one-byte
+phase and adds a 32-bit child cursor. Alignment grows the target record from 76
+to 84 bytes, exactly the accepted 8-byte limit. `Widget` remains 24 bytes,
+`Container` 44 bytes, and `ClipperState` 240 bytes. The `Container` vtable grows
+from 440 to 444 bytes for the capability entry; every emitted derived-container
+vtable likewise carries one additional 4-byte slot.
+
+With `-Os`, the target `container.cpp` translation unit grows from 9,706 to
+10,995 text bytes. This is an object-file comparison before linker garbage
+collection, so it includes every traversal variant whether a final firmware
+uses it or not. The reusable
+[probe script](../../../benchmarks/rounded_child_clip_size_probe.sh) reports the
+object, vtable, function, and stack symbols.
+
+The arena and geometry/color arrays retain their peak capacities for reuse.
+First use or increased requirements can allocate. Reusing unchanged boundary
+geometry allocates nothing in the dedicated test. There is no full framebuffer,
+corner-square color buffer, or area-sized coverage mask.
+
+## CPU and allocations
+
+### Rounded clipping baseline
+
+The resource test uses a 240×160 ARGB8888 memory display, a 192×128 panel with
+radius 16, and five rounded rows. It invalidates the whole panel for 200
+measured refreshes after warming the renderer. These are host CPU measurements;
+they exclude a physical display bus and are not ESP32 timing estimates.
+
+Three isolated runs using thread CPU time produced:
+
+| Run | Clipping off (µs/frame) | Clipping on (µs/frame) | Added CPU (µs/frame) |
+| ---: | ---: | ---: | ---: |
+| 1 | 106.21 | 120.00 | 13.79 |
+| 2 | 98.88 | 124.73 | 25.85 |
+| 3 | 125.40 | 146.35 | 20.95 |
+
+The median times are about 106 and 125 µs/frame with recursive masked subtraction
+and equal-span coalescing.
+Treat these as a small host characterization, not a stable performance guarantee;
+even CPU time varies with processor frequency and cache state. The test prints
+wall time separately.
+Mixed fills coalesce opaque scanline runs and visit only fractional samples;
+fully exterior spans are dropped without scanning their pixels. Geometry setup
+still scans corner regions (O(radius²)), but reuses unchanged geometry.
+
+The first refresh requested 1,696 bytes in 18 allocations without clipping,
+and 2,844 bytes in 31 allocations with clipping. This is cumulative requested
+memory during that call, not retained heap or peak RAM. Both warmed paths made
+one existing 480-byte allocation per frame. The prototype added no warmed
+allocations in this scene, and the test now asserts that clipping adds no warmed
+allocations or requested bytes. This is not a general allocation-free renderer
+claim.
+
+To reproduce the optimized measurement:
+
+```sh
+bazel test //:rounded_child_clip_resource_test -c opt \
+  --per_file_copt='external/roo_testing.*/.*@-Wno-error=stringop-truncation' \
+  --runs_per_test=3 --local_test_jobs=1 --test_output=all
+```
+
+The warning override is needed for an existing `roo_testing` Wi-Fi shim warning
+with this host GCC. It does not change the prototype code.
+
+### Grouped traversal
+
+The phase-3 resource matrix uses the same 240×160 memory display and a 192×128
+radius-16 owner, with 0, 8, or 32 four-pixel-high direct children. Each scenario
+warms ten frames, then measures five 400-frame thread-CPU batches. The table is
+the median result across three isolated test processes; each process already
+reports the median of its five batches. The pre-grouping column uses commit
+`bffbe0a7` with the same geometry and batching.
+
+| Children | Pre-grouping all clipped | Guaranteed clipped | Grouped all clipped | Grouped all unclipped | Grouped mixed |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 0 | 24.81 µs | 25.34 µs | 25.58 µs | 25.52 µs | 27.21 µs |
+| 8 | 25.67 µs | 27.19 µs | 28.04 µs | 18.52 µs | 23.90 µs |
+| 32 | 28.78 µs | 29.83 µs | 29.84 µs | 11.11 µs | 20.97 µs |
+
+The guaranteed-clipped path is 2.1%, 5.9%, and 3.6% above the pre-grouping
+branch for 0, 8, and 32 children. The grouped all-clipped path is 3.1%, 9.2%,
+and 3.7% above that branch. All-unclipped and mixed results are lower because
+some or all child output bypasses rounded boundary capture; they do not measure
+the filtered-loop cost in isolation. These host measurements exclude a display
+bus and are not ESP32 timing estimates.
+
+Every warmed scenario made zero allocations and requested zero heap bytes. The
+first all-clipped refresh made the same number of allocations as the
+pre-grouping branch and requested exactly 8 more bytes, matching the retained
+record growth. The resource test also proves, over 2,000 frames per scenario,
+one capability query per traversal, exactly `n` indexed paint visits on the
+guaranteed-clipped path, exactly `2n` on grouped paths, and exactly one paint per
+child. A real `MenuPanel` is checked to retain the guaranteed-clipped path.
+
+Target stack frames changed as follows:
+
+| Function | Pre-grouping | Grouped implementation |
+| --- | ---: | ---: |
+| `Container::paintChildren()` | 96 bytes | 16-byte dispatcher |
+| Non-rounded grouped child loop | included above | 112 bytes |
+| Rounded grouped child loop | included above | 144 bytes |
+| Exact touch search | 64 bytes | 96 bytes |
+| Sloppy touch search | 64 bytes | 96 bytes |
+| Reverse invalidation | 80 bytes | 96 bytes |
+
+These are individual `-fstack-usage` frames rather than a summed worst-case
+call chain. To reproduce the target ABI, code, and stack report with the local
+ESP32-C3 toolchain:
+
+```sh
+benchmarks/rounded_child_clip_size_probe.sh \
+  /path/to/riscv32-esp-elf-g++ \
+  /path/to/riscv32-esp-elf-nm \
+  /path/to/riscv32-esp-elf-size
+```
+
+## Synchronous integration
+
+Production-plan P0 merges the prototype through 8a61b433 with the synchronous
+refresh change from 15a71e91. Local loops replace the rounded phase/cursor;
+fresh/publication flags and resume constructors are removed. A scoped
+reconstruction flag preserves clean clipped and unclipped contributors.
+Descriptors are fresh for every paint, while geometry and buffer capacity are
+reused. The former round-repair branch is outside this integration.
+
+The ESP32-C3 probe, GCC 14.2.0 with -Os, -fno-exceptions and -fno-rtti, reports:
+
+| Object | Prototype I9 | Synchronous integration |
+| --- | ---: | ---: |
+| Widget | 24 B | 24 B |
+| Container | 44 B | 44 B |
+| ClipperState | 240 B | 240 B |
+| RoundedClip | 84 B | 72 B |
+| Optional rounded arena | 80 B | 80 B |
+| Masked exclusion | 12 B | 12 B |
+
+Radius-16 geometry/color capacity remains 660 B; including the rounded record
+and replacement decoration gives 832 B before arena/vector/allocation overhead.
+The container object file contains 10,545 text bytes. Individual traversal
+frames are 144 B for rounded children, 112 B for ordinary grouped children,
+and 16 B for the paintChildren dispatcher. These are compiler frames, not
+maximum call-chain stack measurements. This standalone ABI probe uses local
+roo dependencies, including roo_display d1000f9.
+
+Synchronous regressions cover slow children finishing in one refresh, changes
+between refreshes, old mask/overlay cleanup before capacity reuse, and damage
+raised during painting surviving until the next refresh. They retain the
+existing independent pixel oracle, grouped traversal counts, write-count
+checks, and warmed allocation matrix.
+
+Validation of the synchronous integration:
+
+- All 103 root test targets pass in the optimized build, including the pixel,
+  grouped traversal, single-write, and warmed-allocation checks. The rounded
+  scrolling example builds. These use the declared roo_display 3.3.2 dependency.
+- rounded_child_clip_test, masked_exclusion_test, paint_context_test, and
+  application_test pass with AddressSanitizer.
+- roo_windows_wifi's material3_flow_test, material3_config_form_test,
+  material3_edit_network_test, and material3_resource_test pass; its
+  network_settings example builds. This consumer uses its existing local
+  roo_windows and roo_display overrides (roo_display d1000f9).
+
+The optimized builds suppress the existing external roo_testing GCC
+stringop-truncation diagnostic with
+`--per_file_copt='external/roo_testing.*/.*@-Wno-error=stringop-truncation'`.
+No on-device scrolling or maximum call-chain stack measurements were performed.
+
+## Validation and limits
+
+[Pixel tests](../../../test/rounded_child_clip_test.cpp) compare every output
+pixel with independently composed parent and child raster layers. They allow
+two 8-bit color levels for blend rounding. They also count child paint calls
+and physical display writes. Covered cases include scrolling, nested clips,
+opaque and translucent unclipped overhangs, interleaved group order,
+restoration and clip-mode changes, exact versus sloppy touch precedence, a
+higher sibling, descendant press feedback, a patterned backdrop, all six output
+entry points, translucent overlays, outlines (including an outline matching the
+fill), shadows, clean foreground reconstruction, slow children in both groups,
+changes between refreshes, and damage raised while painting. Geometry tests
+include asymmetric radii, fractional outlines, and very small bounds.
+
+The tests assert one child paint per completed scene and no repeated physical
+writes for settled pixels within each synchronous paint.
+Test output includes PPM frames used for the illustration above.
+
+The [masked-exclusion tests](../../../test/masked_exclusion_test.cpp) exercise all
+six output paths against a coverage oracle, nested and asymmetric geometry,
+fractional outlines, disconnected intervals, conservative pruning, and fresh
+paint cleanup after deferred sources have been destroyed. They verify that 20
+corner-crossing exclusions stay 20 shared descriptors at radii 8 through 64. A display-command test checks that two uniform side strips
+remain two tall rectangles. Additional
+[subdivision tests](../../../test/masked_exclusion_subdivision_test.cpp) verify
+that large exterior regions stay whole, equal corner spans coalesce, and
+ordinary, overlapping, and nested masked exclusions preserve pixel colors and
+single writes across both rectangle output methods. Blit tests compare incremental
+rendering with a complete repaint when masks belong to descendants or foreground siblings.
+
+Validation completed for recursive subtraction and span coalescing:
+
+- All 103 root regression test targets passed in the optimized build.
+- The masked-exclusion and rounded-clipping targets passed with AddressSanitizer.
+- The Wi-Fi flow and configuration-form tests passed, and the network-settings
+  example compiled for the emulator.
+- The routing implementation compiled with the ESP32 RISC-V compiler using
+  `-fno-exceptions -fno-rtti`; object sizes and selected stack frames were measured.
+
+The sanitizer command is:
+
+```sh
+bazel test //:masked_exclusion_test //:rounded_child_clip_test --config=asan
+```
+
+Menu goldens already include the earlier scrolling-viewport adjustment. The
+compact exclusion representation preserves those images, including the Wi-Fi
+Security dropdown.
+
+The rounded compositor retains these deliberately narrow constraints:
+
+- Use an opaque, enabled clipping owner with feedback on its children. Owner
+  ripple and disabled-group composition remain unsupported.
+- An unclipped direct child escapes only its immediate parent's mask. Its whole
+  subtree stays in that local foreground group and continues to obey rounded
+  ancestors.
+- Direct writes follow the widget-authoring opaque-output contract; arbitrary
+  destination-dependent blend operations are outside the prototype.
+- Blit caching and immediate child-shadow shortcuts are disabled inside a
+  rounded scope. Blit caching also bypasses reuse when masked exclusions from
+  foreground siblings or cached descendants are present. Its rectangular
+  safety proof needs separate integration with masks.
+- Allocation failure behavior follows the existing vector/new usage. A bounded
+  pool or explicit RAM budget has not been added.
+
+The next engineering step is to measure real scrolling menus on the target
+board, especially display command overhead and peak descriptor capacity with
+many overlapping widgets. Retained exclusions no longer expand with radius;
+corner output commands and geometry setup still depend on radius.

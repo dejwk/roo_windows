@@ -156,6 +156,174 @@ TEST_F(PaintContextTest, DerivedContextsUpdateOriginAndLocalClip) {
   EXPECT_EQ(Rect(0, 0, 4, 4), clipped.localClip());
 }
 
+// Verifies preparation leaves output unmasked and a new paint drops prior
+// exclusions/colors while reusing the same geometry storage.
+TEST_F(PaintContextTest, RoundedClipPreparationAndFreshPaintReuse) {
+  internal::ClipperState state;
+  int owner = 0;
+  internal::RoundedClip* prepared = nullptr;
+  int16_t boundary_x = -1;
+  int16_t boundary_y = -1;
+  {
+    Clipper clipper(state, display_.output());
+    prepared = &clipper.prepareRoundedClip(&owner, Box(0, 0, 31, 23),
+                                           BorderStyle(8, 0));
+    EXPECT_FALSE(clipper.hasRoundedClip());
+    clipper.addExclusion(Box(0, 0, 3, 3));
+    EXPECT_EQ(1u, clipper.exclusions().size());
+    EXPECT_FALSE(clipper.hasMaskedExclusions());
+    for (int16_t y = 0; y < 24 && boundary_x < 0; ++y) {
+      for (int16_t x = 0; x < 32; ++x) {
+        if (prepared->coverage(x, y) == 1) {
+          boundary_x = x;
+          boundary_y = y;
+          break;
+        }
+      }
+    }
+    ASSERT_GE(boundary_x, 0);
+    prepared->accumulate(boundary_x, boundary_y, color::Red);
+    Color captured;
+    ASSERT_TRUE(
+        prepared->contentAt(boundary_x, boundary_y, color::Black, captured));
+    EXPECT_EQ(color::Red, captured);
+    clipper.activateRoundedClip(*prepared);
+    clipper.addExclusion(Box(0, 0, 31, 23));
+    EXPECT_TRUE(clipper.hasMaskedExclusions());
+    clipper.deactivateRoundedClip();
+  }
+
+  Clipper next(state, display_.output());
+  EXPECT_EQ(nullptr, next.roundedClip(&owner));
+  EXPECT_TRUE(next.exclusions().empty());
+  EXPECT_FALSE(next.hasMaskedExclusions());
+  internal::RoundedClip& reused =
+      next.prepareRoundedClip(&owner, Box(0, 0, 31, 23), BorderStyle(8, 0));
+  EXPECT_EQ(prepared, &reused);
+  EXPECT_FALSE(next.hasRoundedClip());
+  Color captured;
+  ASSERT_TRUE(reused.contentAt(boundary_x, boundary_y, color::Black, captured));
+  EXPECT_EQ(color::Black, captured);
+  next.activateRoundedClip(reused);
+  EXPECT_TRUE(next.hasRoundedClip());
+  next.deactivateRoundedClip();
+  EXPECT_FALSE(next.hasRoundedClip());
+  EXPECT_EQ(&reused, next.roundedClip(&owner));
+}
+
+// Verifies foreground reconstruction is independent of masking and restores the
+// previous repaint policy after nested scopes.
+TEST_F(PaintContextTest, RoundedRepaintScopesRestoreWithoutChangingMask) {
+  Surface surface(display_.output(), 0, 0, display_.extents(),
+                  /*is_write_once=*/false, display_.getBackgroundColor(),
+                  FillMode::kVisible, BlendingMode::kSourceOver);
+  Canvas canvas(&surface);
+  internal::ClipperState state;
+  Clipper clipper(state, canvas.out());
+  PaintContext ctx(canvas, clipper);
+  roo_display::DisplayOutput* original = &ctx.canvas().out();
+  EXPECT_FALSE(clipper.needsRoundedRepaint());
+  {
+    internal::RoundedRepaintScope outer(clipper);
+    EXPECT_TRUE(clipper.needsRoundedRepaint());
+    EXPECT_FALSE(clipper.hasRoundedClip());
+    EXPECT_EQ(original, &ctx.canvas().out());
+    {
+      internal::RoundedRepaintScope inner(clipper);
+      EXPECT_TRUE(clipper.needsRoundedRepaint());
+    }
+    EXPECT_TRUE(clipper.needsRoundedRepaint());
+  }
+  EXPECT_FALSE(clipper.needsRoundedRepaint());
+  EXPECT_FALSE(clipper.hasRoundedClip());
+  EXPECT_EQ(original, &ctx.canvas().out());
+
+  int owner = 0;
+  internal::RoundedClip& clip =
+      clipper.prepareRoundedClip(&owner, Box(0, 0, 31, 23), BorderStyle(8, 0));
+  {
+    internal::RoundedClipScope mask(ctx, clip);
+    roo_display::DisplayOutput* masked = &ctx.canvas().out();
+    {
+      internal::RoundedRepaintScope repaint(clipper);
+      EXPECT_TRUE(clipper.needsRoundedRepaint());
+      EXPECT_TRUE(clipper.hasRoundedClip());
+      EXPECT_EQ(masked, &ctx.canvas().out());
+    }
+    EXPECT_FALSE(clipper.needsRoundedRepaint());
+    EXPECT_TRUE(clipper.hasRoundedClip());
+    EXPECT_EQ(masked, &ctx.canvas().out());
+  }
+  EXPECT_FALSE(clipper.needsRoundedRepaint());
+  EXPECT_FALSE(clipper.hasRoundedClip());
+  EXPECT_EQ(original, &ctx.canvas().out());
+}
+
+// Verifies nested scopes restore both the previous output and mask, while a
+// second activation reuses the first activation's captured boundary colors.
+TEST_F(PaintContextTest, RoundedClipScopesRestoreAndRetainColors) {
+  Surface surface(display_.output(), 0, 0, display_.extents(),
+                  /*is_write_once=*/false, display_.getBackgroundColor(),
+                  FillMode::kVisible, BlendingMode::kSourceOver);
+  Canvas canvas(&surface);
+  internal::ClipperState state;
+  Clipper clipper(state, canvas.out());
+  PaintContext ctx(canvas, clipper);
+  roo_display::DisplayOutput* original = &ctx.canvas().out();
+  int outer_owner = 0;
+  int inner_owner = 0;
+  internal::RoundedClip& outer = clipper.prepareRoundedClip(
+      &outer_owner, Box(0, 0, 31, 23), BorderStyle(8, 0));
+
+  {
+    internal::RoundedClipScope outer_scope(ctx, outer);
+    EXPECT_TRUE(clipper.hasRoundedClip());
+    EXPECT_NE(original, &ctx.canvas().out());
+    roo_display::DisplayOutput* outer_output = &ctx.canvas().out();
+    ctx.fillRect(Rect(0, 0, 31, 23), Color(0xFF336699));
+
+    internal::RoundedClip& inner = clipper.prepareRoundedClip(
+        &inner_owner, Box(4, 4, 27, 19), BorderStyle(6, 0));
+    EXPECT_EQ(&outer, inner.parent);
+    EXPECT_EQ(&outer, clipper.roundedClip(&outer_owner));
+    EXPECT_EQ(&inner, clipper.roundedClip(&inner_owner));
+    {
+      internal::RoundedClipScope inner_scope(ctx, inner);
+      EXPECT_NE(outer_output, &ctx.canvas().out());
+      EXPECT_TRUE(clipper.hasRoundedClip());
+    }
+    EXPECT_EQ(outer_output, &ctx.canvas().out());
+    EXPECT_TRUE(clipper.hasRoundedClip());
+  }
+  EXPECT_EQ(original, &ctx.canvas().out());
+  EXPECT_FALSE(clipper.hasRoundedClip());
+
+  int16_t boundary_x = -1;
+  int16_t boundary_y = -1;
+  for (int16_t y = 0; y < 24 && boundary_x < 0; ++y) {
+    for (int16_t x = 0; x < 32; ++x) {
+      if (outer.coverage(x, y) == 1) {
+        boundary_x = x;
+        boundary_y = y;
+        break;
+      }
+    }
+  }
+  ASSERT_GE(boundary_x, 0);
+  Color captured;
+  ASSERT_TRUE(outer.contentAt(boundary_x, boundary_y, color::Black, captured));
+
+  {
+    internal::RoundedClipScope repeated_scope(ctx, outer);
+    EXPECT_TRUE(clipper.hasRoundedClip());
+  }
+  Color retained;
+  ASSERT_TRUE(outer.contentAt(boundary_x, boundary_y, color::Black, retained));
+  EXPECT_EQ(captured, retained);
+  EXPECT_EQ(original, &ctx.canvas().out());
+  EXPECT_FALSE(clipper.hasRoundedClip());
+}
+
 TEST_F(PaintContextTest, AddExclusionTranslatesAndClipsLocalBounds) {
   Surface surface(display_.output(), 10, 20, Box(12, 22, 18, 23),
                   /*is_write_once=*/false, display_.getBackgroundColor(),

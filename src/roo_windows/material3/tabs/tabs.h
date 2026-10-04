@@ -148,6 +148,9 @@ class Tabs : public Container {
   /// Detaches and deletes any owned tab children.
   ~Tabs() override;
 
+  /// Allows caller-configured tab children to be unclipped.
+  bool mayHaveUnclippedChildren() const override { return true; }
+
   /// Returns the configured Material 3 tab visual variant.
   TabsVariant variant() const { return (TabsVariant)variant_; }
 

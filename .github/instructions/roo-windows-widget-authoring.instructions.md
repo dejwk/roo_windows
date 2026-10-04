@@ -86,6 +86,30 @@ This is the canonical widget-authoring guidance for the repository.
 - Container destructors detach each stored child pointer. They must not delete
   children directly: `detachChild()` applies the parent-owned ownership policy.
 
+## Child Clipping and Stacking
+
+Direct children marked `ParentClipMode::kUnclipped` paint in a foreground group
+above all clipped direct children in every container. Descendants stay with
+their direct-child subtree, and unclipped children still obey ancestor clips.
+Paint and touch traverse unclipped then clipped groups, descending by child
+index inside each group; restoration traverses the exact reverse order.
+`clipsChildrenToRoundedBounds()` additionally applies a rounded boundary to the
+clipped group.
+
+`mayHaveUnclippedChildren()` is the constant-time capability contract selecting
+the grouped traversal. The default false result guarantees that every direct
+child remains clipped in every supported configuration. Override it with true
+when the container accepts caller-provided children or slots, exposes mutable
+direct children, or owns any child that can be unclipped. Do not scan children,
+cache a count, or base the result on the current collection. A fixed component
+may return false only when it controls every direct child's clip mode.
+
+An override of `paintChildren()` must invoke the base implementation once or
+reproduce the same group order and, when applicable, rounded-mask scopes.
+Each synchronous traversal completes both groups and the surface. Do not invoke
+the whole virtual hook once per group. Layout, focus, and ordinary collection
+access retain insertion order.
+
 ## Surface Ownership
 
 Be explicit about whether the widget owns a surface.

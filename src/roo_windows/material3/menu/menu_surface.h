@@ -27,6 +27,9 @@ class MenuGroupStack final : public Container {
   explicit MenuGroupStack(ApplicationContext& context);
   ~MenuGroupStack() override;
 
+  /// Allows caller-provided menu groups to be unclipped.
+  bool mayHaveUnclippedChildren() const override { return true; }
+
   void addGroup(MenuGroup& group);
   void addGroup(std::unique_ptr<MenuGroup> group);
   void clearGroups();
@@ -67,6 +70,12 @@ class MenuPanel final : public Material3Container {
  public:
   explicit MenuPanel(ApplicationContext& context);
   ~MenuPanel() override;
+
+  /// Lets scrolling rows meet the panel curve with antialiased clipping.
+  bool clipsChildrenToRoundedBounds() const override { return true; }
+
+  /// Keeps the internally controlled viewport on the single-scan path.
+  bool mayHaveUnclippedChildren() const override { return false; }
 
   void setPolicy(const MenuPolicy& policy);
   void addGroup(MenuGroup& group);
@@ -110,6 +119,9 @@ class MenuOverlay final : public Container {
  public:
   explicit MenuOverlay(ApplicationContext& context);
   ~MenuOverlay() override;
+
+  /// Allows caller-provided menu panels to be unclipped.
+  bool mayHaveUnclippedChildren() const override { return true; }
 
   void addPanel(MenuPanel& panel, const Rect& bounds);
   void setPanelBounds(MenuPanel& panel, const Rect& bounds);

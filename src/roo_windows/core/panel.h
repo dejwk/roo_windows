@@ -32,6 +32,9 @@ class Panel : public Container {
   /// those members are destroyed.
   ~Panel() override;
 
+  /// Allows caller-provided children to opt out of this panel's clip.
+  bool mayHaveUnclippedChildren() const override { return true; }
+
   /// Returns the panel's child vector.
   const std::vector<Widget*>& children() const { return children_; }
 

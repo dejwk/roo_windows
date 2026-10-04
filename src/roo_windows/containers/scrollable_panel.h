@@ -96,6 +96,9 @@ class SimpleScrollablePanel : public Container,
                         false);  // Delete if owned, without events.
   }
 
+  /// Allows caller-provided contents to opt out of the viewport clip.
+  bool mayHaveUnclippedChildren() const override { return true; }
+
   /// Replaces the content and reports any resulting change of scroll origin.
   void setContents(WidgetRef new_contents) {
     setContentsInternal(std::move(new_contents), true);

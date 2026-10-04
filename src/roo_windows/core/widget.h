@@ -87,6 +87,9 @@ static const uint16_t kInvalidated = 0x2000;
 static const uint16_t kLayoutRequested = 0x4000;
 static const uint16_t kLayoutRequired = 0x8000;
 
+/// Selects whether a child obeys its immediate parent's clipping boundary.
+/// Unclipped direct children form a stable foreground group above clipped
+/// siblings while still obeying ancestor clips.
 enum class ParentClipMode { kClipped, kUnclipped };
 enum class Visibility { kVisible, kInvisible, kGone };
 

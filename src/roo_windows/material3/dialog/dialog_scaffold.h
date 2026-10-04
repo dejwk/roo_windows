@@ -41,6 +41,9 @@ class DialogScaffold : public Material3Container {
  public:
   ~DialogScaffold() override;
 
+  /// Allows caller-provided body and derived chrome to be unclipped.
+  bool mayHaveUnclippedChildren() const override { return true; }
+
   /// Publishes the Material 3 surface-container-high semantic role.
   ColorToken containerRole() const override;
 
@@ -221,6 +224,9 @@ class DialogActionStrip final : public Container {
   DialogActionStrip(ApplicationContext& context, DialogActionDelegate& owner,
                     const DialogActionSpec* actions, uint8_t action_count);
   ~DialogActionStrip() override;
+
+  /// Conservatively permits mutable action controls to become unclipped.
+  bool mayHaveUnclippedChildren() const override { return true; }
 
   /// Enables or disables a confirming action by ID.
   ///

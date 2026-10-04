@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="650" viewBox="0 0 960 650">
+  <title>Rounded child clipping geometry and paint order</title>
+  <desc>A 120 by 80 menu has four radius 16 corners. A top row ten pixels tall
+  requires two 16 by 10 captures. Other pixels paint directly. Corner buffers
+  remain pending until normal painting finishes, then composite over the scene.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 Z" fill="#526174"/></marker>
+  </defs>
+  <rect width="960" height="650" fill="white"/>
+  <g font-family="DejaVu Sans, sans-serif" fill="#182538">
+    <text x="30" y="32" font-size="21" font-weight="bold">Rounded child clipping</text>
+    <text x="30" y="60" font-size="14">Integer radii, no outline. Dimensions are logical pixels; geometry is shown at 3× scale.</text>
+    <text x="42" y="85" font-size="15" font-weight="bold">Corner intersections</text>
+    <rect x="42" y="96" width="360" height="240" fill="#f3f5f8"/>
+    <rect x="42" y="96" width="360" height="30" fill="#ccebdd"/>
+
+<rect x="42" y="96" width="48" height="48" fill="none" stroke="#8594a5" stroke-dasharray="4 3"/>
+<rect x="354" y="96" width="48" height="48" fill="none" stroke="#8594a5" stroke-dasharray="4 3"/>
+<rect x="354" y="288" width="48" height="48" fill="none" stroke="#8594a5" stroke-dasharray="4 3"/>
+<rect x="42" y="288" width="48" height="48" fill="none" stroke="#8594a5" stroke-dasharray="4 3"/>
+<rect x="42" y="96" width="48" height="30" fill="#e8d9fd" stroke="#7951a8"/>
+<rect x="354" y="96" width="48" height="30" fill="#e8d9fd" stroke="#7951a8"/>
+<rect x="42" y="96" width="360" height="240" rx="48" fill="none" stroke="#243d59" stroke-width="2.5"/>
+    <text x="222.0" y="117" text-anchor="middle" font-size="13">selected row: direct interior</text>
+    <text x="222.0" y="234" text-anchor="middle" font-size="16">120 × 80 menu</text>
+    <text x="222.0" y="257" text-anchor="middle" font-size="14">radius 16 at every corner</text>
+    <path d="M66 128 L66 356 L96 356" fill="none" stroke="#7951a8"/>
+    <text x="104" y="361" font-size="14">Each purple patch is 16 × 10.</text>
+    <text x="42" y="393" font-size="14">The row misses the bottom corners.</text>
+    <text x="42" y="416" font-size="14">Captured rectangles stay out of direct writes</text>
+    <text x="42" y="436" font-size="14">and persistent opaque exclusions.</text>
+    <text x="485" y="85" font-size="15" font-weight="bold">Order within one container</text>
+
+<rect x="485" y="96" width="442" height="64" rx="6" fill="#f3f5f8" stroke="#aeb9c6"/>
+        <text x="500" y="120" font-size="15" font-weight="bold">1  Discover and reserve</text>
+        <text x="500" y="142" font-size="12.5">Intersect corner squares with clip and children.</text>
+<path d="M706 161 V177" stroke="#526174" marker-end="url(#arrow)"/>
+<rect x="485" y="182" width="442" height="64" rx="6" fill="#f3f5f8" stroke="#aeb9c6"/>
+        <text x="500" y="206" font-size="15" font-weight="bold">2  Capture complete content</text>
+        <text x="500" y="228" font-size="12.5">Finish each started capture; retain buffers.</text>
+<path d="M706 247 V263" stroke="#526174" marker-end="url(#arrow)"/>
+<rect x="485" y="268" width="442" height="64" rx="6" fill="#f3f5f8" stroke="#aeb9c6"/>
+        <text x="500" y="292" font-size="15" font-weight="bold">3  Paint the remaining area</text>
+        <text x="500" y="314" font-size="12.5">Omit captured rectangles. Keep buffers pending.</text>
+<path d="M706 333 V349" stroke="#526174" marker-end="url(#arrow)"/>
+<rect x="485" y="354" width="442" height="64" rx="6" fill="#f3f5f8" stroke="#aeb9c6"/>
+        <text x="500" y="378" font-size="15" font-weight="bold">4  Publish completed corners</text>
+        <text x="500" y="400" font-size="12.5">Add remaining decoration outside the patches.</text>
+<path d="M706 419 V435" stroke="#526174" marker-end="url(#arrow)"/>
+<rect x="485" y="440" width="442" height="64" rx="6" fill="#f3f5f8" stroke="#aeb9c6"/>
+        <text x="500" y="464" font-size="15" font-weight="bold">5  Paint underlying scene</text>
+        <text x="500" y="486" font-size="12.5">Retained corners and higher overlays composite.</text>
+<rect x="30" y="543" width="897" height="80" rx="6" fill="#edf5fc"/>
+      <text x="46" y="568" font-size="15" font-weight="bold">Soft deadline</text>
+      <text x="46" y="591" font-size="14">Yield between captures or during ordinary traversal. A started capture and its nested work finish.</text>
+      <text x="46" y="612" font-size="14">No capture marker survives a yield; completed buffers do.</text>
+    </g>
+  </svg>

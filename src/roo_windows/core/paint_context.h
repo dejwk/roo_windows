@@ -169,4 +169,43 @@ class PaintContext {
 static_assert(sizeof(PaintContext) <= sizeof(Canvas) + sizeof(void*),
               "PaintContext must stay within Canvas plus one pointer");
 
+namespace internal {
+
+/// Reconstructs clean rounded-surface contributors without changing masking.
+class RoundedRepaintScope {
+ public:
+  /// Forces repaint through @p clipper for this scope and its descendants.
+  explicit RoundedRepaintScope(Clipper& clipper);
+
+  /// Restores the enclosing scope's repaint policy.
+  ~RoundedRepaintScope();
+
+  RoundedRepaintScope(const RoundedRepaintScope&) = delete;
+  RoundedRepaintScope& operator=(const RoundedRepaintScope&) = delete;
+
+ private:
+  Clipper& clipper_;
+  bool previous_repaint_;
+};
+
+/// Activates one prepared rounded mask and output route for a lexical scope.
+class RoundedClipScope {
+ public:
+  /// Routes @p context through @p clip until this scope is destroyed.
+  RoundedClipScope(PaintContext& context, RoundedClip& clip);
+
+  /// Restores the previous canvas output and enclosing rounded mask.
+  ~RoundedClipScope();
+
+  RoundedClipScope(const RoundedClipScope&) = delete;
+  RoundedClipScope& operator=(const RoundedClipScope&) = delete;
+
+ private:
+  PaintContext* context_;
+  roo_display::DisplayOutput* previous_output_;
+  RoundedClipOutput output_;
+};
+
+}  // namespace internal
+
 }  // namespace roo_windows

@@ -2,11 +2,12 @@
 
 Shared terminology is defined in the [Roo Windows design glossary](glossary.md).
 
-Design documents are filed by implementation status:
+Design documents are filed by status:
 
 - `implemented/`: the design's defined scope is implemented. Later extensions do not change that status.
 - `in_progress/`: a usable subset or prerequisite has landed, but part of the defined scope remains.
 - `proposed/`: none of the design's own scope is implemented. Existing prerequisites may still be available.
+- `abandoned/`: the design was set aside and is retained for reference.
 
 Status was audited against the source tree and tests on 2026-09-12. “Dependency status” distinguishes implemented prerequisites from proposed or partially implemented work; a design can be proposed even when all of its prerequisites are available.
 
@@ -68,6 +69,7 @@ baseline.
 | Application-owned physical input routing | Producer-owned `KeySource` connections, readiness-handler quiescence, bounded application-owned draining, and FLTK's `HostEventEndpoint`/SPSC handoff are implemented. |
 | Emulator native-host event injection | `roo_testing`'s fixed endpoint table, tick handoff, and shared FreeRTOS delivery task are implemented, and Roo Windows uses them for FLTK key input. The published `roo_testing` 1.3.7 and `roo_io` 2.2.5 modules require no local overrides. |
 | Paint context | Clipper/overlay integration and the widget paint-hook migration are implemented. |
+| [Unclipped children above clipped siblings](implemented/rounded_unclipped_children_design.md) | Global unclipped-over-clipped grouping, rounded-mask bypass, matching touch and invalidation order, synchronous painting, capability fast paths, examples, and target/host resource acceptance are implemented. |
 | Semantic software text input | Application-scoped active-editor selection, producer-owned emitter connections, semantic keyboard operations, teardown, and cross-application integration are implemented. |
 | Slider | Paint context, Material 3 theme support, declarative drag ownership, lifecycle-safe terminal delivery, and transient-pin value indicators are implemented. |
 | Surface-widget refactor | The surface-ownership split is implemented; the broader visual-overflow design remains in progress. |
@@ -90,6 +92,7 @@ baseline.
 
 | Design | Dependency status |
 | --- | --- |
+| [Sparse rounded child clipping](in_progress/rounded_child_clipping_design.md) | Prototype stages I1–I9 and synchronous integration P0 are implemented. P2 repair helpers are retired and P3 is cancelled. P1 and P4–P8 cover bounded subtraction, owner effects, interior blit reuse, menu adoption and production resource acceptance. |
 | Display runtime and cross-application input | Phases 1–6 are implemented. Explicit modal coverage and the final migration/cost audit remain proposed. |
 | Text system | `TextBlock` wrapping, justification, max-lines, ellipsis, caching, and golden coverage are implemented; shared rich paragraph layout and `RichTextBlock` remain. |
 | Transient presentation pins | The shared layer-scoped host, slider/range-slider indicators, and keyboard press-highlighter adoption are implemented. Visual overflow prerequisites are in progress. |
@@ -115,3 +118,9 @@ baseline.
 | Time pickers | Buttons, icon buttons, basic dialogs, and shared back behavior are implemented; single-line text fields are implemented; picker-specific integration remains proposed. |
 | Toolbars | Buttons, icon buttons, and menus are implemented; FABs and toolbars are proposed. |
 | [Wi-Fi configuration UI](proposed/material3_wifi_configuration_design.md) | The `roo_wifi` 2.0 backend, including allocation-free saved-profile enumeration, has landed locally and `roo_windows_wifi` already declares it; publication still awaits its documented hardware gates. Material 3 fields, dialogs and navigation are implemented. UI presentation, legacy-consumer integration, forms and application-policy integration remain proposed. |
+
+## Abandoned
+
+| Design | Status |
+| --- | --- |
+| [Rounded container child clipping: corner capture alternative](abandoned/rounded_child_clipping_design.md) | Unimplemented. Set aside in favor of the [sparse rounded child clipping prototype](prototypes/rounded_child_clipping.md), which intercepts child output during a single traversal. |

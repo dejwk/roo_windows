@@ -24,6 +24,21 @@ Rect ExpandBySloppyTouchHalfExtent(const Rect& rect) {
               rect.yMax() + Widget::kMaxSloppyTouchHalfExtent);
 }
 
+enum class ChildGroup { kUnclipped, kClipped };
+
+ChildGroup FrontToBackGroup(int index) {
+  return index == 0 ? ChildGroup::kUnclipped : ChildGroup::kClipped;
+}
+
+ChildGroup BackToFrontGroup(int index) {
+  return index == 0 ? ChildGroup::kClipped : ChildGroup::kUnclipped;
+}
+
+bool IsInGroup(const Widget& child, ChildGroup group) {
+  return (child.getParentClipMode() == ParentClipMode::kUnclipped) ==
+         (group == ChildGroup::kUnclipped);
+}
+
 }  // namespace
 
 Container::Container(ApplicationContext& context)
@@ -88,6 +103,45 @@ PaintContext Container::prepareSurfaceContext(const PaintContext& in,
 }
 
 void Container::paintWidgetContents(PaintContext& ctx) {
+  if (clipsChildrenToRoundedBounds() && getBorderStyle().hasRoundedCorners()) {
+    paintRoundedContents(ctx);
+    return;
+  }
+  paintContentsWithoutRoundedClip(ctx);
+}
+
+void Container::paintRoundedContents(PaintContext& ctx) {
+  Clipper& clipper = ctx.clipperForFramework();
+  clipper.prepareRoundedClip(
+      this, bounds().translate(ctx.canvas().dx(), ctx.canvas().dy()).asBox(),
+      getBorderStyle().trim(width(), height()));
+  // Rebuild clean contributors, including unclipped foreground overlays, as
+  // the normal traversal reaches them. No preliminary invalidation walk.
+  markInvalidated();
+  invalid_region_ = ctx.localClip();
+  internal::RoundedRepaintScope repaint(clipper);
+  paintContentsWithoutRoundedClip(ctx);
+}
+
+void Container::emitPersistentDecoration(PaintContext& ctx) const {
+  Clipper& clipper = ctx.clipperForFramework();
+  if (!clipsChildrenToRoundedBounds() || clipper.roundedClip(this) == nullptr) {
+    SurfaceWidget::emitPersistentDecoration(ctx);
+    return;
+  }
+  const BorderStyle border = getBorderStyle().trim(width(), height());
+  clipper.addRoundedDecoration(
+      this, ctx.canvas().clip_box(),
+      bounds().translate(ctx.canvas().dx(), ctx.canvas().dy()).asBox(),
+      getElevation(), ctx.bgcolor(), border,
+      AlphaBlend(ctx.bgcolor(), getOutlineColor()));
+}
+
+void Container::paintContentsWithoutRoundedClip(PaintContext& ctx) {
+  if (ctx.clipperForFramework().needsRoundedRepaint()) {
+    markInvalidated();
+    invalid_region_ = ctx.localClip();
+  }
   if (!isInvalidated()) {
     // Faster path with less stack overhead; repaint the children.
     if (isDirty() || !bounds().contains(maxBounds())) {
@@ -107,28 +161,89 @@ void Container::paintWidgetContents(PaintContext& ctx) {
     // Paint the surface.
     PaintContext surface_ctx = prepareSurfaceContext(ctx, invalid_region);
     if (!surface_ctx.empty()) {
-      paint(surface_ctx);
+      paintSurface(surface_ctx);
     }
   }
 }
 
 void Container::paintChildren(PaintContext& ctx) {
+  internal::RoundedClip* rounded = ctx.clipperForFramework().roundedClip(this);
+  if (rounded != nullptr) {
+    paintRoundedChildren(ctx, *rounded);
+    return;
+  }
+  paintChildrenWithoutRoundedClip(ctx);
+}
+
+bool Container::usesChildGroups() const { return mayHaveUnclippedChildren(); }
+
+void Container::paintChildrenWithoutRoundedClip(PaintContext& ctx) {
   PaintContext clipped_ctx = ctx.clipped(bounds());
-  bool fast_render = isDirty() && respectsChildrenBoundaries();
-  for (int i = getChildrenCount() - 1; i >= 0; --i) {
-    Widget& child = getChild(i);
-    if (child.getParentClipMode() == ParentClipMode::kClipped) {
-      child.paintWidget(clipped_ctx.canvas(),
-                        clipped_ctx.clipperForFramework());
-      if (fast_render) {
-        // Decorations are guaranteed not to overlap with siblings, so we can
-        // draw them right away.
-        fastDrawChildShadow(child, clipped_ctx);
+  bool fast_render = isDirty() && respectsChildrenBoundaries() &&
+                     !ctx.clipperForFramework().hasRoundedClip();
+  const bool grouped = usesChildGroups();
+  const int group_count = grouped ? 2 : 1;
+  for (int group = 0; group < group_count; ++group) {
+    const ChildGroup selected =
+        grouped ? FrontToBackGroup(group) : ChildGroup::kClipped;
+    for (int i = getChildrenCount() - 1; i >= 0; --i) {
+      Widget& child = getChild(i);
+      if (grouped && !IsInGroup(child, selected)) continue;
+      if (!grouped) {
+        DCHECK(child.getParentClipMode() == ParentClipMode::kClipped);
       }
-    } else {
-      child.paintWidget(ctx.canvas(), ctx.clipperForFramework());
+      const bool clipped =
+          grouped ? selected == ChildGroup::kClipped
+                  : child.getParentClipMode() == ParentClipMode::kClipped;
+      if (clipped) {
+        child.paintWidget(clipped_ctx.canvas(),
+                          clipped_ctx.clipperForFramework());
+        if (fast_render) {
+          // Decorations are guaranteed not to overlap with siblings, so we can
+          // draw them right away.
+          fastDrawChildShadow(child, clipped_ctx);
+        }
+      } else {
+        child.paintWidget(ctx.canvas(), ctx.clipperForFramework());
+      }
     }
   }
+}
+
+void Container::paintRoundedChildren(PaintContext& ctx,
+                                     internal::RoundedClip& clip) {
+  const bool grouped = mayHaveUnclippedChildren();
+  if (grouped) {
+    // Foreground children bypass this owner's mask and retain ancestor masks.
+    for (int i = getChildrenCount() - 1; i >= 0; --i) {
+      Widget& child = getChild(i);
+      if (child.getParentClipMode() == ParentClipMode::kUnclipped) {
+        child.paintWidget(ctx.canvas(), ctx.clipperForFramework());
+      }
+    }
+  }
+
+  internal::RoundedClipScope scope(ctx, clip);
+  PaintContext clipped_ctx = ctx.clipped(bounds());
+  for (int i = getChildrenCount() - 1; i >= 0; --i) {
+    Widget& child = getChild(i);
+    if (grouped) {
+      if (child.getParentClipMode() != ParentClipMode::kClipped) continue;
+    } else {
+      DCHECK(child.getParentClipMode() == ParentClipMode::kClipped);
+    }
+    child.paintWidget(clipped_ctx.canvas(), clipped_ctx.clipperForFramework());
+  }
+}
+
+void Container::paintSurface(PaintContext& ctx) {
+  internal::RoundedClip* clip = ctx.clipperForFramework().roundedClip(this);
+  if (clip == nullptr) {
+    paint(ctx);
+    return;
+  }
+  internal::RoundedClipScope scope(ctx, *clip);
+  paint(ctx);
 }
 
 void Container::fastDrawChildShadow(Widget& child, PaintContext& ctx) {
@@ -157,32 +272,52 @@ bool Container::fillTouchTargetPath(XDim x, YDim y,
                                     std::vector<Widget*>& path) {
   if (!isVisible() || !isEnabled() || !bounds().contains(x, y)) return false;
   path.push_back(this);
-  for (int i = getChildrenCount() - 1; i >= 0; --i) {
-    Widget& child = getChild(i);
-    if (!child.isVisible() || !child.isEnabled()) continue;
-    if (child.getParentClipMode() == ParentClipMode::kClipped &&
-        !bounds().contains(x, y)) {
-      continue;
+  const bool grouped = usesChildGroups();
+  const int group_count = grouped ? 2 : 1;
+  bool blocked = false;
+  for (int group = 0; group < group_count && !blocked; ++group) {
+    const ChildGroup selected =
+        grouped ? FrontToBackGroup(group) : ChildGroup::kClipped;
+    for (int i = getChildrenCount() - 1; i >= 0; --i) {
+      Widget& child = getChild(i);
+      if (grouped && !IsInGroup(child, selected)) continue;
+      if (!child.isVisible() || !child.isEnabled()) continue;
+      if (child.getParentClipMode() == ParentClipMode::kClipped &&
+          !bounds().contains(x, y)) {
+        continue;
+      }
+      if (!child.maxParentBounds().contains(x, y)) continue;
+      if (child.fillTouchTargetPath(x - child.offsetLeft(),
+                                    y - child.offsetTop(), path)) {
+        return true;
+      }
+      if (child.parent_bounds().contains(x, y)) {
+        blocked = true;
+        break;
+      }
     }
-    if (!child.maxParentBounds().contains(x, y)) continue;
-    if (child.fillTouchTargetPath(x - child.offsetLeft(), y - child.offsetTop(),
-                                  path)) {
-      return true;
-    }
-    if (child.parent_bounds().contains(x, y)) break;
   }
-  for (int i = getChildrenCount() - 1; i >= 0; --i) {
-    Widget& child = getChild(i);
-    if (!child.isVisible() || !child.isEnabled() ||
-        child.parent_bounds().contains(x, y) ||
-        !child.getMaxSloppyTouchParentBounds().contains(x, y)) {
-      continue;
+  blocked = false;
+  for (int group = 0; group < group_count && !blocked; ++group) {
+    const ChildGroup selected =
+        grouped ? FrontToBackGroup(group) : ChildGroup::kClipped;
+    for (int i = getChildrenCount() - 1; i >= 0; --i) {
+      Widget& child = getChild(i);
+      if (grouped && !IsInGroup(child, selected)) continue;
+      if (!child.isVisible() || !child.isEnabled() ||
+          child.parent_bounds().contains(x, y) ||
+          !child.getMaxSloppyTouchParentBounds().contains(x, y)) {
+        continue;
+      }
+      if (child.fillSloppyTouchTargetPath(x - child.offsetLeft(),
+                                          y - child.offsetTop(), path)) {
+        return true;
+      }
+      if (child.getSloppyTouchParentBounds().contains(x, y)) {
+        blocked = true;
+        break;
+      }
     }
-    if (child.fillSloppyTouchTargetPath(x - child.offsetLeft(),
-                                        y - child.offsetTop(), path)) {
-      return true;
-    }
-    if (child.getSloppyTouchParentBounds().contains(x, y)) break;
   }
   return true;
 }
@@ -193,21 +328,30 @@ bool Container::fillSloppyTouchTargetPath(XDim x, YDim y,
     return false;
   }
   path.push_back(this);
-  for (int i = getChildrenCount() - 1; i >= 0; --i) {
-    Widget& child = getChild(i);
-    if (!child.isVisible() || !child.isEnabled() ||
-        !child.getMaxSloppyTouchParentBounds().contains(x, y)) {
-      continue;
-    }
-    bool within_bounds = child.parent_bounds().contains(x, y);
-    bool hit = within_bounds
-                   ? child.fillTouchTargetPath(x - child.offsetLeft(),
-                                               y - child.offsetTop(), path)
-                   : child.fillSloppyTouchTargetPath(
-                         x - child.offsetLeft(), y - child.offsetTop(), path);
-    if (hit) return true;
-    if (within_bounds || child.getSloppyTouchParentBounds().contains(x, y)) {
-      break;
+  const bool grouped = usesChildGroups();
+  const int group_count = grouped ? 2 : 1;
+  bool blocked = false;
+  for (int group = 0; group < group_count && !blocked; ++group) {
+    const ChildGroup selected =
+        grouped ? FrontToBackGroup(group) : ChildGroup::kClipped;
+    for (int i = getChildrenCount() - 1; i >= 0; --i) {
+      Widget& child = getChild(i);
+      if (grouped && !IsInGroup(child, selected)) continue;
+      if (!child.isVisible() || !child.isEnabled() ||
+          !child.getMaxSloppyTouchParentBounds().contains(x, y)) {
+        continue;
+      }
+      bool within_bounds = child.parent_bounds().contains(x, y);
+      bool hit = within_bounds
+                     ? child.fillTouchTargetPath(x - child.offsetLeft(),
+                                                 y - child.offsetTop(), path)
+                     : child.fillSloppyTouchTargetPath(
+                           x - child.offsetLeft(), y - child.offsetTop(), path);
+      if (hit) return true;
+      if (within_bounds || child.getSloppyTouchParentBounds().contains(x, y)) {
+        blocked = true;
+        break;
+      }
     }
   }
   return true;
@@ -240,6 +384,11 @@ void Container::propagateDirty(const Widget* child, const Rect& rect) {
     }
   }
   setDirty(clipped);
+  if (clipsChildrenToRoundedBounds() && !clipped.empty()) {
+    // Deferred boundary colors need lower scene pixels even for a state-only
+    // child change. Schedule the backdrop before entering the paint traversal.
+    notifyParentInvalidatedRegion(clipped.translate(offsetLeft(), offsetTop()));
+  }
 }
 
 void Container::invalidateDescending() {
@@ -386,14 +535,20 @@ bool Container::invalidateBeneathDescending(const Rect& rect,
   } else {
     invalid_region_ = Rect::Extent(invalid_region_, clipped);
   }
-  // for (auto& child : children_) {
-  for (int i = 0; i < getChildrenCount(); ++i) {
-    Widget& child = getChild(i);
-    if (&child == subject) return true;
-    if (child.isVisible()) {
-      Rect adjusted =
-          clipped.translate(-child.offsetLeft(), -child.offsetTop());
-      if (child.invalidateBeneathDescending(adjusted, subject)) return true;
+  const bool grouped = usesChildGroups();
+  const int group_count = grouped ? 2 : 1;
+  for (int group = 0; group < group_count; ++group) {
+    const ChildGroup selected =
+        grouped ? BackToFrontGroup(group) : ChildGroup::kClipped;
+    for (int i = 0; i < getChildrenCount(); ++i) {
+      Widget& child = getChild(i);
+      if (grouped && !IsInGroup(child, selected)) continue;
+      if (&child == subject) return true;
+      if (child.isVisible()) {
+        Rect adjusted =
+            clipped.translate(-child.offsetLeft(), -child.offsetTop());
+        if (child.invalidateBeneathDescending(adjusted, subject)) return true;
+      }
     }
   }
   return false;

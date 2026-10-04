@@ -32,6 +32,9 @@ class BlitCacheContainer : public Container {
   BlitCacheContainer(ApplicationContext& context);
   ~BlitCacheContainer() override;
 
+  /// Allows caller-provided cached content to opt out of this clip.
+  bool mayHaveUnclippedChildren() const override { return true; }
+
   /// Replaces the held child widget. Detaches the previous child (if any).
   void setChild(WidgetRef child);
   /// Detaches the current child, leaving the container empty.

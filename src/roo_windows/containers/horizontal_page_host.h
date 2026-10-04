@@ -23,6 +23,9 @@ class HorizontalPageHost : public Container {
 
   ~HorizontalPageHost() override;
 
+  /// Allows caller-provided pages to opt out of this host's clip.
+  bool mayHaveUnclippedChildren() const override { return true; }
+
   /// Appends a page to the host's backing page list.
   ///
   /// The first page added becomes the current page.

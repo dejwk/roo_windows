@@ -90,6 +90,9 @@ class AppBar : public Material3Container {
   /// Detaches hosted child slots before their references are released.
   ~AppBar() override;
 
+  /// Allows caller-provided leading and trailing slots to be unclipped.
+  bool mayHaveUnclippedChildren() const override { return true; }
+
   /// Changes the title-based app-bar variant and requests layout.
   void setVariant(AppBarVariant variant);
 
@@ -176,6 +179,9 @@ class SearchBar : public Material3Container {
   /// Detaches hosted child slots before their references are released.
   ~SearchBar() override;
 
+  /// Allows caller-provided leading and trailing slots to be unclipped.
+  bool mayHaveUnclippedChildren() const override { return true; }
+
   /// Replaces the non-owning text displayed by the search entry surface.
   void setDisplayText(roo::string_view text);
 
@@ -227,6 +233,9 @@ class SearchAppBar : public Material3Container {
 
   /// Detaches hosted child slots before their references are released.
   ~SearchAppBar() override;
+
+  /// Allows caller-provided outer and embedded slots to be unclipped.
+  bool mayHaveUnclippedChildren() const override { return true; }
 
   /// Changes the outer app-bar surface state and repaints it.
   void setSurfaceState(AppBarSurfaceState state);

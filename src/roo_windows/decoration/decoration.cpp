@@ -251,6 +251,17 @@ inline uint8_t calcShadowAlpha(const ShadowSpec& spec, int16_t x, int16_t y) {
 
 }  // namespace
 
+uint8_t internal::RoundedFillCoverage(roo_display::Box bounds,
+                                      BorderStyle::CornerRadii radii,
+                                      SmallNumber outline, int16_t x,
+                                      int16_t y) {
+  const int inset = outline.floor();
+  return calcRoundRectAlpha(bounds.xMin() + inset, bounds.yMin() + inset,
+                            bounds.xMax() - inset, bounds.yMax() - inset,
+                            radii.inset(outline), 15 - outline.frac_16ths(), x,
+                            y);
+}
+
 Rect CalculateShadowExtents(const Rect& extents, int elevation) {
   return Rect(extents.xMin() - kHorizShadowExtents[elevation],
               extents.yMin() - kTopExtents[elevation],
@@ -264,13 +275,11 @@ Decoration::Decoration()
                  BorderStyle::CornerRadii{0, 0, 0, 0}, 0,
                  roo_display::color::Transparent) {}
 
-Decoration::Decoration(roo_display::Box extents, int elevation,
-                       const OverlaySpec& overlay_spec,
-                       const PressOverlay* press_overlay,
-                       roo_display::Color bgcolor,
-                       BorderStyle::CornerRadii corner_radii,
-                       SmallNumber outline_width,
-                       roo_display::Color outline_color)
+Decoration::Decoration(
+    roo_display::Box extents, int elevation, const OverlaySpec& overlay_spec,
+    const PressOverlay* press_overlay, roo_display::Color bgcolor,
+    BorderStyle::CornerRadii corner_radii, SmallNumber outline_width,
+    roo_display::Color outline_color, bool preserve_fill_boundary)
     : widget_extents_(extents),
       bgcolor_(bgcolor),
       corner_radii_(corner_radii),
@@ -278,7 +287,7 @@ Decoration::Decoration(roo_display::Box extents, int elevation,
       outline_width_frac_(15 - outline_width.frac_16ths()),
       outline_color_(outline_color),
       press_overlay_(press_overlay) {
-  if (outline_color == bgcolor) {
+  if (outline_color == bgcolor && !preserve_fill_boundary) {
     outline_width_ = 0;
     outline_width_frac_ = 15;
   }
@@ -466,6 +475,11 @@ void Decoration::readColors(const int16_t* x, const int16_t* y, uint32_t count,
 }
 
 roo_display::Color Decoration::read(int16_t x, int16_t y) const {
+  return readWithContent(x, y, bgcolor_);
+}
+
+roo_display::Color Decoration::readWithContent(
+    int16_t x, int16_t y, roo_display::Color content) const {
   int16_t xMin_interior = widget_extents_.xMin() + outline_width_;
   int16_t xMax_interior = widget_extents_.xMax() - outline_width_;
   int16_t yMin_interior = widget_extents_.yMin() + outline_width_;
@@ -476,7 +490,7 @@ roo_display::Color Decoration::read(int16_t x, int16_t y) const {
   uint8_t outline_alpha = bg_alpha;
   // Fast-path for the common-case: solid interior.
   if (bg_alpha == 0xFF && press_overlay_ == nullptr) {
-    return bgcolor_;
+    return content;
   }
   // Calculate shadow alpha.
   uint8_t key_shadow_alpha = calcShadowAlpha(key_shadow_, x, y);
@@ -498,9 +512,9 @@ roo_display::Color Decoration::read(int16_t x, int16_t y) const {
   }
   // We need to put the background, if any, in front of the shadow.
   if (bg_alpha == 0xFF) {
-    c = AlphaBlend(c, bgcolor_.withA(bg_alpha));
+    c = AlphaBlend(c, content.withA(bg_alpha));
   } else if (bg_alpha != 0) {
-    roo_display::Color bg = bgcolor_;
+    roo_display::Color bg = content;
     bg.set_a((uint16_t(bg.a()) * bg_alpha + 127) / 255);
     c = AlphaBlend(c, bg);
   }

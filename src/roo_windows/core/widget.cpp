@@ -714,6 +714,10 @@ PaintContext Widget::preparePaintContext(const Canvas& in, Clipper& clipper) {
 void Widget::paint(PaintContext&) const {}
 
 void Widget::paintWidget(const Canvas& canvas, Clipper& clipper) {
+  // Reconstruct contributors as traversal reaches them, with no preliminary
+  // invalidation walk or second paint. Clean children must still supply their
+  // edge colors and deferred overlays when a rounded surface is reconstructed.
+  if (clipper.needsRoundedRepaint()) markInvalidated();
   if (!isVisible()) {
     markCleanDescending();
     return;
