@@ -180,6 +180,29 @@ class ExclusionUnion {
     return pixels;
   }
 
+  /// Returns the last row in @p bounds with the same exclusion spans as
+  /// row @p y. Ignores descriptors outside the horizontal range. The bound is
+  /// conservative: adjacent bands can still have equal combined membership.
+  int16_t bandEnd(const Box& bounds, int16_t y) const {
+    int16_t last = bounds.yMax();
+    for (const Box* box = begin_; box != end_; ++box) {
+      if (box->xMin() > bounds.xMax() || box->xMax() < bounds.xMin()) continue;
+      if (y < box->yMin()) {
+        last = std::min<int16_t>(last, box->yMin() - 1);
+      } else if (y <= box->yMax()) {
+        last = std::min(last, box->yMax());
+      }
+    }
+    for (const MaskedExclusion* e = masked_begin_; e != masked_end_; ++e) {
+      if (e->bounds.xMin() > bounds.xMax() ||
+          e->bounds.xMax() < bounds.xMin()) {
+        continue;
+      }
+      last = std::min(last, e->bandEnd(y));
+    }
+    return last;
+  }
+
   /// Conservatively detects overlap using exclusion bounds, without row scans.
   inline bool intersects(const Box& rect) const {
     for (const Box* box = begin_; box != end_; ++box) {

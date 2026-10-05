@@ -18,6 +18,9 @@ using roo_display::DisplayOutput;
 /// exclusions first, then split around masked bounds and visit their row spans.
 class ExclusionFilter : public DisplayOutput {
  public:
+  /// Maximum live subtraction frames, shared by ordinary and masked paths.
+  static constexpr uint8_t kMaxSubtractionDepth = 8;
+
   /// Creates an adapter suppressing pixels in @p exclusion before forwarding
   /// to @p output. Both borrowed objects must outlive this filter.
   ExclusionFilter(DisplayOutput& output, const ExclusionUnion* exclusion)
@@ -99,7 +102,7 @@ class ExclusionFilter : public DisplayOutput {
     while (count-- > 0) {
       roo_display::BufferedRectWriterFillAdapter<BufferedRectWriter> filler(
           writer, *color++);
-      fillRect(*x0++, *y0++, *x1++, *y1++, 0, &filler);
+      fillRect(*x0++, *y0++, *x1++, *y1++, 0, kMaxSubtractionDepth, &filler);
     }
   }
 
@@ -108,7 +111,7 @@ class ExclusionFilter : public DisplayOutput {
                  int16_t* x1, int16_t* y1, uint16_t count) override {
     BufferedRectFiller filler(*output_, color, mode);
     while (count-- > 0) {
-      fillRect(*x0++, *y0++, *x1++, *y1++, 0, &filler);
+      fillRect(*x0++, *y0++, *x1++, *y1++, 0, kMaxSubtractionDepth, &filler);
     }
   }
 
@@ -167,6 +170,8 @@ class ExclusionFilter : public DisplayOutput {
   }
 
  private:
+  friend class ExclusionFilterTestPeer;
+
   void resetRunState() {
     run_remaining_ = 0;
     run_excluded_ = false;
@@ -222,11 +227,49 @@ class ExclusionFilter : public DisplayOutput {
     }
   }
 
+  // At the budget limit, use constant scratch and the caller's writer.
+  // A band ends before any exclusion can change its horizontal row span.
+  template <typename Filler>
+  void fillRectIteratively(const Box& bounds, Filler* filler) {
+    if (bounds.empty()) return;
+    if (!exclusion_->intersects(bounds)) {
+      filler->fillRect(bounds.xMin(), bounds.yMin(), bounds.xMax(),
+                       bounds.yMax());
+      return;
+    }
+    if (exclusion_->contains(bounds)) return;
+    for (int32_t y = bounds.yMin(); y <= bounds.yMax();) {
+      const int16_t last_y = exclusion_->bandEnd(bounds, y);
+      for (int32_t x = bounds.xMin(); x <= bounds.xMax();) {
+        size_t same_count;
+        const bool excluded = exclusion_->contains(x, y, &same_count);
+        const int32_t count = std::min<size_t>(
+            same_count, static_cast<int32_t>(bounds.xMax()) - x + 1);
+        const int32_t last_x = x + count - 1;
+        if (!excluded) filler->fillRect(x, y, last_x, last_y);
+        x = last_x + 1;
+      }
+      y = static_cast<int32_t>(last_y) + 1;
+    }
+  }
+
+  // Dispatch without entering another subtraction frame when the shared
+  // budget is exhausted. Earlier exclusions are safe to recheck in fallback.
+  template <typename Filler>
+  void fillRect(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int mask_idx,
+                uint8_t remaining_depth, Filler* filler) {
+    if (remaining_depth == 0) {
+      fillRectIteratively(Box(x0, y0, x1, y1), filler);
+    } else {
+      subtractRect(x0, y0, x1, y1, mask_idx, remaining_depth - 1, filler);
+    }
+  }
+
   // Subtract ordinary rectangles before visiting masks. Both rectangle entry
   // points share this traversal and keep their buffered writer in the caller.
   template <typename Filler>
-  void fillRect(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int mask_idx,
-                Filler* filler) {
+  void subtractRect(int16_t x0, int16_t y0, int16_t x1, int16_t y1,
+                    int mask_idx, uint8_t remaining_depth, Filler* filler) {
     {
       Box rect(x0, y0, x1, y1);
       while (mask_idx < (int)exclusion_->size() &&
@@ -238,26 +281,28 @@ class ExclusionFilter : public DisplayOutput {
       if (exclusion_->maskedSize() == 0) {
         filler->fillRect(x0, y0, x1, y1);
       } else {
-        fillMaskedRect(Box(x0, y0, x1, y1), 0, filler);
+        fillMaskedRect(Box(x0, y0, x1, y1), 0, remaining_depth, filler);
       }
       return;
     }
     Box intruder =
         Box::Intersect(exclusion_->at(mask_idx), Box(x0, y0, x1, y1));
     if (intruder.yMin() > y0) {
-      fillRect(x0, y0, x1, intruder.yMin() - 1, mask_idx + 1, filler);
+      fillRect(x0, y0, x1, intruder.yMin() - 1, mask_idx + 1, remaining_depth,
+               filler);
       y0 = intruder.yMin();
     }
     if (intruder.xMin() > x0) {
       fillRect(x0, y0, intruder.xMin() - 1, intruder.yMax(), mask_idx + 1,
-               filler);
+               remaining_depth, filler);
     }
     if (intruder.xMax() < x1) {
       fillRect(intruder.xMax() + 1, y0, x1, intruder.yMax(), mask_idx + 1,
-               filler);
+               remaining_depth, filler);
     }
     if (intruder.yMax() < y1) {
-      fillRect(x0, intruder.yMax() + 1, x1, y1, mask_idx + 1, filler);
+      fillRect(x0, intruder.yMax() + 1, x1, y1, mask_idx + 1, remaining_depth,
+               filler);
     }
   }
 
@@ -278,7 +323,18 @@ class ExclusionFilter : public DisplayOutput {
   // call advances mask_idx, so pieces only test the remaining masks. The one
   // buffered writer belongs to writeRects/fillRects, outside this recursion.
   template <typename Filler>
-  void fillMaskedRect(const Box& bounds, size_t mask_idx, Filler* filler) {
+  void fillMaskedRect(const Box& bounds, size_t mask_idx,
+                      uint8_t remaining_depth, Filler* filler) {
+    if (remaining_depth == 0) {
+      fillRectIteratively(bounds, filler);
+    } else {
+      subtractMaskedRect(bounds, mask_idx, remaining_depth - 1, filler);
+    }
+  }
+
+  template <typename Filler>
+  void subtractMaskedRect(const Box& bounds, size_t mask_idx,
+                          uint8_t remaining_depth, Filler* filler) {
     while (mask_idx < exclusion_->maskedSize() &&
            !exclusion_->maskedAt(mask_idx).bounds.intersects(bounds)) {
       ++mask_idx;
@@ -295,22 +351,22 @@ class ExclusionFilter : public DisplayOutput {
     if (bounds.yMin() < inside.yMin()) {
       fillMaskedRect(
           Box(bounds.xMin(), bounds.yMin(), bounds.xMax(), inside.yMin() - 1),
-          mask_idx, filler);
+          mask_idx, remaining_depth, filler);
     }
     if (bounds.xMin() < inside.xMin()) {
       fillMaskedRect(
           Box(bounds.xMin(), inside.yMin(), inside.xMin() - 1, inside.yMax()),
-          mask_idx, filler);
+          mask_idx, remaining_depth, filler);
     }
     if (inside.xMax() < bounds.xMax()) {
       fillMaskedRect(
           Box(inside.xMax() + 1, inside.yMin(), bounds.xMax(), inside.yMax()),
-          mask_idx, filler);
+          mask_idx, remaining_depth, filler);
     }
     if (inside.yMax() < bounds.yMax()) {
       fillMaskedRect(
           Box(bounds.xMin(), inside.yMax() + 1, bounds.xMax(), bounds.yMax()),
-          mask_idx, filler);
+          mask_idx, remaining_depth, filler);
     }
     if (mask.contains(inside)) return;
 
@@ -333,15 +389,15 @@ class ExclusionFilter : public DisplayOutput {
       }
       if (hi < lo) {
         fillMaskedRect(Box(inside.xMin(), y, inside.xMax(), last_y), mask_idx,
-                       filler);
+                       remaining_depth, filler);
       } else {
         if (inside.xMin() < lo) {
           fillMaskedRect(Box(inside.xMin(), y, lo - 1, last_y), mask_idx,
-                         filler);
+                         remaining_depth, filler);
         }
         if (hi < inside.xMax()) {
           fillMaskedRect(Box(hi + 1, y, inside.xMax(), last_y), mask_idx,
-                         filler);
+                         remaining_depth, filler);
         }
       }
       y = int32_t(last_y) + 1;

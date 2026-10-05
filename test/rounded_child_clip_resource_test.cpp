@@ -8,6 +8,7 @@
 #include "gtest/gtest.h"
 #include "roo_display/core/offscreen.h"
 #include "roo_windows.h"
+#include "roo_windows/core/exclusion_filter.h"
 #include "roo_windows/core/panel.h"
 #include "roo_windows/core/rounded_clip.h"
 #include "roo_windows/material3/menu/menu_surface.h"
@@ -285,6 +286,44 @@ TEST(RoundedClipResources, WarmedBoundaryDoesNotAllocate) {
   }
   tracking = false;
   EXPECT_EQ(allocations, 0u);
+}
+
+// Verifies deep subtraction and its fallback allocate no memory, even on the
+// first draw. Geometry and output storage are supplied before measurement.
+TEST(RoundedClipResources, BoundedExclusionFallbackDoesNotAllocate) {
+  std::array<roo::byte, 64 * 48 * 4> pixels{};
+  roo_display::OffscreenDevice<roo_display::Argb8888> device(
+      64, 48, pixels.data(), roo_display::Argb8888());
+  internal::RoundedClip clip;
+  clip.reset(&clip, roo_display::Box(0, 0, 63, 47), BorderStyle(16, 0));
+  std::array<roo_display::Box, 16> rectangles;
+  std::array<internal::MaskedExclusion, 16> masks;
+  for (int i = 0; i < 16; ++i) {
+    rectangles[i] = roo_display::Box(4 * i, 0, 4 * i, 47);
+    masks[i] = {roo_display::Box(4 * i + 2, 0, 4 * i + 2, 47), &clip};
+  }
+  internal::ExclusionUnion exclusions(rectangles.data(),
+                                      rectangles.data() + rectangles.size());
+  exclusions.reset(rectangles.data(), rectangles.data() + rectangles.size(),
+                   masks.data(), masks.data() + masks.size());
+  internal::ExclusionFilter filter(device, &exclusions);
+  int16_t x0 = 0;
+  int16_t y0 = 0;
+  int16_t x1 = 63;
+  int16_t y1 = 47;
+  Color color(0xFF123456);
+  allocations = 0;
+  allocated_bytes = 0;
+  tracking = true;
+  for (int i = 0; i < 32; ++i) {
+    filter.fillRects(roo_display::BlendingMode::kSource, color, &x0, &y0, &x1,
+                     &y1, 1);
+    filter.writeRects(roo_display::BlendingMode::kSource, &color, &x0, &y0, &x1,
+                      &y1, 1);
+  }
+  tracking = false;
+  EXPECT_EQ(allocations, 0u);
+  EXPECT_EQ(allocated_bytes, 0u);
 }
 
 }  // namespace

@@ -232,6 +232,53 @@ TEST(MaskedExclusion, AllOutputPathsMatchCoverage) {
   }
 }
 
+// Verifies large mixed lists retain exact coverage and single writes for
+// fragmented streams, sparse pixels, and both buffered rectangle entry points.
+TEST(MaskedExclusion, LargeListsAcrossAllOutputMethods) {
+  const Box bounds(0, 0, kWidth - 1, kHeight - 1);
+  const BorderStyle style(12, 0);
+  RoundedClip clip;
+  clip.reset(&clip, bounds, style);
+  std::vector<Box> rectangles;
+  std::vector<MaskedExclusion> masks;
+  for (int i = 0; i < 256; ++i) {
+    const int x = (i * 11) % 80 - 8;
+    const int y = (i * 13) % 64 - 8;
+    const Box box(x, y, x + 2, y + 3);
+    if (i % 2 == 0) {
+      rectangles.push_back(box);
+    } else {
+      masks.push_back({box, &clip});
+    }
+  }
+  ExclusionUnion exclusions(rectangles.data(),
+                            rectangles.data() + rectangles.size());
+  exclusions.reset(rectangles.data(), rectangles.data() + rectangles.size(),
+                   masks.data(), masks.data() + masks.size());
+  for (int method = 0; method < 6; ++method) {
+    SCOPED_TRACE(testing::Message() << "method=" << method);
+    std::array<roo::byte, kWidth * kHeight * 4> data{};
+    RecordingDevice device(data.data());
+    ExclusionFilter filter(device, &exclusions);
+    Draw(filter, method);
+    for (int16_t y = 0; y < kHeight; ++y) {
+      for (int16_t x = 0; x < kWidth; ++x) {
+        const bool excluded =
+            Excluded(rectangles, masks, x, y, bounds, style, bounds, style);
+        Color actual;
+        device.raster().readColors(&x, &y, 1, &actual);
+        const Color expected =
+            excluded ? Color(0)
+                     : (method == 0 || method == 2 ? PixelColor(y * kWidth + x)
+                                                   : kPaint);
+        EXPECT_EQ(actual, expected) << x << ',' << y;
+        EXPECT_EQ(device.writes[y * kWidth + x], excluded ? 0 : 1)
+            << x << ',' << y;
+      }
+    }
+  }
+}
+
 // Verifies streamed full-height interior and exterior bands retain large
 // writes.
 TEST(MaskedExclusion, StraightMiddleKeepsMultirowBatches) {
