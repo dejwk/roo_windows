@@ -264,6 +264,13 @@ bool MayHaveNonTransparentOverlayOutsideBounds(const Widget& widget) {
   return false;
 }
 
+// Keep the point shape's temporary storage off each area-owner paint frame.
+void AddPointOverlay(const Widget& widget, Canvas& canvas, Clipper& clipper,
+                     Color color) {
+  clipper.addOverlayShape(MakePointOverlay(widget, canvas, color),
+                          canvas.clip_box());
+}
+
 }  // namespace
 
 bool Widget::hasTransientPaintOverflow() const {
@@ -786,9 +793,7 @@ void Widget::paintWidgetModded(PaintContext& ctx) {
       paintWidgetContents(ctx);
     } else if (overlay_spec.base_overlay().a() > 0) {
       if (overlay_spec.is_point()) {
-        clipper.addOverlayShape(
-            MakePointOverlay(*this, canvas, overlay_spec.base_overlay()),
-            canvas.clip_box());
+        AddPointOverlay(*this, canvas, clipper, overlay_spec.base_overlay());
         paintWidgetContents(ctx);
       } else if (overlay_spec.is_area()) {
         roo_display::DisplayOutput& out = canvas.out();

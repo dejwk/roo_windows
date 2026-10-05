@@ -1,9 +1,82 @@
 #include "roo_windows/core/clipper.h"
 
 #include "roo_logging.h"
+#include "roo_windows/core/canvas.h"
+#include "roo_windows/core/widget.h"
 
 namespace roo_windows {
 namespace internal {
+
+RoundedPaintState& ClipperOutput::roundedArena() {
+  if (state_.rounded_ == nullptr) {
+    state_.rounded_.reset(new RoundedPaintState());
+  }
+  return *state_.rounded_;
+}
+
+const PressOverlay* ClipperOutput::configurePressOverlay(
+    const PressOverlaySpec& spec) {
+  if (!spec.enabled) return nullptr;
+  press_overlay_ =
+      PressOverlay(spec.center_x, spec.center_y, spec.radius, spec.color);
+  if (spec.clipped_to_circle) {
+    press_overlay_.setClipCircle(spec.clip_circle_center_x,
+                                 spec.clip_circle_center_y,
+                                 spec.clip_circle_radius);
+  }
+  return &press_overlay_;
+}
+
+void ClipperOutput::pushOverlaySpec(Widget& widget, const Canvas& canvas) {
+  OverlaySpec overlay_spec(widget, canvas);
+  if (!overlay_spec.is_modded()) {
+    if (!overlay_specs_.empty() &&
+        !overlay_specs_.back().overlay_spec.is_modded()) {
+      ++overlay_specs_.back().refcount;
+      return;
+    }
+    overlay_specs_.emplace_back(OverlaySpec(), 1);
+    return;
+  }
+  overlay_specs_.emplace_back(std::move(overlay_spec), 1);
+}
+
+void ClipperOutput::popOverlaySpec() {
+  if (overlay_specs_.empty()) return;
+  if (overlay_specs_.back().refcount > 1) {
+    --overlay_specs_.back().refcount;
+    return;
+  }
+  if (scoped_press_overlay_active_ &&
+      overlay_specs_.back().overlay_spec.has_press_overlay()) {
+    scoped_press_overlay_active_ = false;
+    if (state_.rounded_ != nullptr &&
+        state_.rounded_->press_target != nullptr) {
+      state_.rounded_->press_target->direct_press = nullptr;
+      state_.rounded_->press_target = nullptr;
+    }
+    valid_ = false;
+  }
+  overlay_specs_.pop_back();
+}
+
+void ClipperOutput::addDecoration(roo_display::Box clip_box,
+                                  roo_display::Box extents, int elevation,
+                                  roo_display::Color bgcolor,
+                                  BorderStyle::CornerRadii corner_radii,
+                                  SmallNumber outline_width,
+                                  roo_display::Color outline_color) {
+  const OverlaySpec& overlay_spec = currentOverlaySpec();
+  bool apply_press_overlay =
+      (overlay_spec.is_area() && overlay_spec.has_press_overlay()) ||
+      scoped_press_overlay_active_;
+  const PressOverlay* press_overlay =
+      apply_press_overlay ? &press_overlay_ : nullptr;
+  decorations_.emplace_back(std::move(extents), elevation, overlay_spec,
+                            press_overlay, bgcolor, corner_radii, outline_width,
+                            outline_color);
+  addOverlay(&decorations_.back(), clip_box);
+}
 
 RoundedClip* ClipperOutput::roundedClip(const void* owner_key) const {
   if (state_.rounded_ == nullptr) return nullptr;
@@ -20,10 +93,7 @@ RoundedClip* ClipperOutput::roundedClip(const void* owner_key) const {
 RoundedClip& ClipperOutput::prepareRoundedClip(const void* owner_key,
                                                roo_display::Box bounds,
                                                BorderStyle style) {
-  if (state_.rounded_ == nullptr) {
-    state_.rounded_.reset(new RoundedPaintState());
-  }
-  RoundedPaintState& arena = *state_.rounded_;
+  RoundedPaintState& arena = roundedArena();
   // clip_count partitions retained slots into records used by this paint and
   // reusable records left from a previous paint. Grow only when this paint
   // exceeds the previous high-water mark.
