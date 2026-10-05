@@ -30,3 +30,9 @@ using namespace roo_windows;
     sizeof_exclusion_union[sizeof(roo_windows::internal::ExclusionUnion)];
 [[gnu::used]] char
     sizeof_exclusion_filter[sizeof(roo_windows::internal::ExclusionFilter)];
+
+[[gnu::used]] char
+    sizeof_paint_effect[sizeof(roo_windows::internal::PaintEffect)];
+[[gnu::used]] char
+    sizeof_paint_effect_stack[sizeof(roo_windows::internal::PaintEffectStack)];
+[[gnu::used]] char sizeof_press_overlay[sizeof(PressOverlay)];

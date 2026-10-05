@@ -10,7 +10,12 @@ repair helpers were committed on round-repair as [9d484e25](https://github.com/d
 and are now retired from this plan. P3 continuation repair is cancelled.
 
 P0 is implemented by merging the synchronous and rounded-prototype histories.
-The remaining stages are P1 and P4–P8; their IDs are preserved for delegation.
+P1 implements bounded subtraction in
+[baf5c3ab](https://github.com/dejwk/roo_windows/commit/baf5c3ab).
+P4 implements owner-effect composition in five reviewable commits: existing
+helper extraction, the effect primitive, optional rasterizer support, renderer
+integration, and resource checks/documentation. The remaining stages are
+P5–P8; their IDs are preserved for delegation.
 No remaining stage depends on interruption or its possible future replacement.
 
 This document captures the original output-interception proposal and its
@@ -92,12 +97,11 @@ grouped containers inspect direct-child indices in two filtered scans.
 
 ### Remaining work
 
-1. Bound subtraction recursion.
-2. Complete owner ripple and disabled-group composition; the prototype's
+1. Complete owner ripple and disabled-group composition; the prototype's
    intended owner is opaque and enabled.
-3. Replace the prototype's blanket rejection of rounded/masked blit reuse with
+2. Replace the prototype's blanket rejection of rounded/masked blit reuse with
    a proof for safe interior rectangles, and connect menus to the cache.
-4. Measure complete device scroll performance, peak stack, and retained RAM
+3. Measure complete device scroll performance, peak stack, and retained RAM
    after integration. Historical measurements include now-obsolete state.
 
 ## Requirements
@@ -200,23 +204,34 @@ Do not flatten masks back into retained corner rectangles.
 
 ![Existing recursive subdivision](../prototypes/figures/rounded_exclusion_subdivision.svg)
 
-P1 adds one shared depth budget to both subtraction helpers. Start with a limit
-of eight live subtraction frames; a transition from ordinary to masked
-subtraction consumes the same budget. At the limit, process the remaining
-rectangle iteratively through ExclusionUnion membership and next-change
-queries. Rechecking earlier exclusions is safe because the rectangle already
-excludes them. Clamp all runs to the input rectangle using wide intermediates.
+P1 implements one shared budget of eight live subtraction frames.
+ExclusionFilter::fillRect and fillMaskedRect dispatch to their respective
+subtraction helpers only while budget remains; the ordinary-to-masked
+transition does not reset it. At zero, fillRectIteratively processes the
+remaining rectangle through ExclusionUnion membership and next-change queries.
+Rechecking earlier exclusions is safe because the rectangle already excludes
+them. Runs are clamped to the input rectangle with 32-bit intermediates, even
+when membership reports an unlimited visible suffix.
+
+ExclusionUnion::bandEnd bounds the rows with identical exclusion spans: it
+stops at ordinary rectangle edges or the earliest masked band boundary.
+Fallback emits each visible horizontal run across that whole band. For example,
+two exclusions covering adjacent center strips leave two full-height exterior
+rectangles, even when no single descriptor covers their combined middle.
+The depth parameter lives on the call stack; no filter or widget field is added.
 
 Use the caller's existing buffered writer. Fully visible/covered rectangles
 retain their bulk paths; the fallback advances through horizontal runs and
 proven constant row bands. It allocates no fragment list or row-sized array
 and invokes no child paint hook. Different recursive pieces remain disjoint.
 
-The prototype's recorded subtraction frames are 80–96 bytes. Eight frames cost
-at most 768 bytes of that component, before the writer, fallback, and callers.
-P1 must demonstrate a filter-only maximum below 2 KiB on ESP32-C3 with -Os;
-reduce the depth limit until that gate passes. This is a proposed acceptance
-limit, not an existing measurement. Total renderer stack is measured in P8.
+The ESP32-C3 GCC 14.2.0 -Os probe records 96-byte subtraction frames and
+64-byte fallback frames. Its conservative call-chain bounds are 1,504 B for
+fillRects and 1,664 B for writeRects, including dispatch, buffered writers, and
+mask-query callees. Both pass the 2 KiB filter-only gate, so the limit remains
+eight. The wrapped output and complete renderer call chain are outside this
+gate; P8 measures those. See the [P1 resource report](../prototypes/rounded_child_clipping.md#bounded-subtraction-p1)
+for methodology and reproduction.
 
 ### Synchronous state and lifetime
 
@@ -225,7 +240,11 @@ the incoming mask, activates its own mask for clipped children and surface,
 and publishes its decoration. Ordinary local loops perform these steps once.
 There is no saved RoundedPaintPhase, next_child cursor, or resume-only
 publication flag. Keep the separation between preparation and activation:
-unclipped children still need the incoming ancestor mask.
+unclipped children still need the incoming ancestor mask. Each owner prepares
+exactly one record; same-owner reuse within a paint was continuation state and
+is removed. The owner pointer remains only as an identity key. Nested owners
+append later records before the outer surface and decoration retrieve theirs,
+so the required record is not necessarily the arena's last entry.
 
 Retain reconstruction of clean contributors whenever a rounded boundary must
 be rebuilt. This supplies missing fractional colors and deferred foreground
@@ -256,26 +275,101 @@ sampling and click settlement follow the current synchronous refresh path.
 
 ### Owner interaction effects
 
-P4 resolves owner state once per paint, using the existing OverlaySpec
-semantics. Apply the same owner color transformation to resolved clipped
-content before parent coverage and to the ordinary interior path. Outline and
-shadow behavior must match existing Decoration semantics. Do not tint or ripple
-the boundary a second time when its replacement decoration is published.
+P4 captures each participating widget's OverlaySpec once when entering its
+paint scope. An immutable `PaintEffect` stores its device clip rectangle, flat
+tint or a borrowed pointer to the paint's shared ripple, and a pointer to its
+enclosing effect.
+Disabled styling is a tint toward the already prepared canvas background,
+with the existing disabled-content opacity. Point feedback retains its
+existing overlay geometry and receives ancestor effects like other foreground.
 
-Unclipped children bypass this owner's geometry, not the existing inheritance
-rules for owner styling. Use the non-rounded renderer as the reference for
-effect order within each group. Child effects remain inside their owner's
-effect; ancestor effects remain outside it. Deferred foreground overlays and
-direct output must use the same ordering and sampled animation time.
+The snapshot chain is separate from the rounded-mask chain. For example, an
+ordinary pressed child inside a disabled rounded owner needs both effects,
+even though only the owner contributes a mask. An unclipped child still
+inherits its owner's styling while escaping that owner's mask.
 
-Retain effect values required by deferred reads in stable optional arena
-storage until this paint finishes. A pointer to the shared mutable press-overlay
-scratch object is not a retained snapshot. Allocate effect records only for
-participating owners; do not copy OverlaySpec or ripple state into every Widget
-or Container.
-Unsupported direct blend operations must not be advertised as supported by the
-rounded adapter. This stage closes the owner-effect gap, without introducing
-general transparent-group compositing.
+![Effect application across the three output paths](figures/rounded_owner_effects.svg)
+
+For a tint color $t$ and opacity $a$, the straight-RGB transform is
+$T(c) = (1-a)c + at$. Source alpha describes coverage and is preserved.
+This lets deferred foreground and its background receive the same effect:
+
+$$T(hc + (1-h)b) = hT(c) + (1-h)T(b).$$
+
+Here $h$ is foreground coverage, $c$ its straight RGB, and $b$ the underlying
+resolved color. This property avoids a group framebuffer. Integer rounding can
+differ from composing the complete group first; reference tests allow two
+ARGB8888 channel units, or one RGB565 channel code, for the tested combinations.
+This is not a general transparent-group or destination-dependent blend API.
+
+The implementation applies that rule in three places:
+
+1. **Direct interior pixels.** The current effect chain is the bottom input of
+   the clipper's foreground stack. Deferred overlays above it already carry
+   their own sampled effects. Uniform tints keep uniform-rectangle queries.
+2. **Fractional boundary pixels.** Each rounded record remembers the active
+   effect at preparation. Captured contributors receive only effects inside
+   that limit. `RoundedDecoration` resolves the owner's background with those
+   contributors, applies its own effect once, then applies fill/outline
+   coverage and shadow. The published decoration inherits remaining ancestor
+   effects through its wrapper or an enclosing boundary capture.
+3. **Deferred overlays.** `RoundedOverlay` retains the appropriate effect chain
+   as well as its source translation and masks. Point, rectangle, and uniform
+   reads apply effects using device coordinates, preserving source alpha.
+   Ordinary decorations resolve their own styling and receive only ancestor
+   effects from this wrapper. Their existing ripple geometry is retained.
+
+`PaintEffect` is a plain retained scope record. `PaintEffectStack` is the
+rasterizable adapter for an explicit `[first, limit)` slice. Raster reads and
+modulation use the same slice: ordinary overlays select all ancestors, while
+boundary capture excludes the owner whose group is still being resolved. The
+clipper keeps one paint-local stack adapter for direct foreground; deferred
+wrappers create short-lived adapters over their retained records.
+
+Rectangle evaluation traverses scopes layer by layer, carrying a uniform
+accumulator until a partial or varying layer actually changes pixel values.
+Flat layers blend constant colors into clipped row spans using roo_display's
+bulk operators. Ripples provide a rectangle at a time; an opaque full layer
+can restore uniformity. Large queries use bounded tiles. For example, a small
+flat scope inside a larger flat scope needs clipped span blends, not a chain
+walk for every pixel. Point batches gather surviving ripple coordinates and
+use indexed bulk blends, including interleaved inside/outside coordinates.
+
+`PaintEffectStack::applyRect` resolves the tint before applying it with
+`roo_display`'s SourceAtop bulk operators, so chain rounding remains identical
+to sparse point application. A uniform
+chain costs $O(S)$ to resolve for $S$ scopes, plus $O(N)$ modulation for $N$
+varying source pixels. Varying layers still require pixel arithmetic, but
+virtual sampling calls occur per layer/tile, not per pixel. SourceAtop preserves
+the source coverage and exact transparent RGB while sharing `roo_display`'s
+precision setting with the rest of the compositor.
+
+A partially masked overlay evaluates only surviving opaque spans. Rejected
+pixels remain transparent. Rectangle scratch is bounded at 64 colors per
+buffer; point gathering uses 32 entries. There are no heap scratch buffers,
+child replays, or recursion through effect depth. RoundedDecoration checks its
+uniform interior before sampling fill/outline boundaries. See the
+[bulk-path measurements](../prototypes/rounded_child_clipping.md#bulk-effect-composition)
+for the RAM/CPU tradeoff and target-stack limits.
+
+Outline colors receive owner styling; the owner's own shadow keeps Decoration's
+shadow color and coverage. Ancestor styling affects the child's complete layer,
+including its shadow. The ordinary path uses the same retained effect scopes,
+so enabling rounded clipping does not change interior effect ordering. This
+also fixes inherited styling on ordinary deferred foreground. Goldens remain
+unchanged for the existing scenes.
+
+Effect snapshots live in stable optional arena slots. The input model permits
+one active press animation, so every ripple effect borrows the single
+`PressOverlay` stored inline in `ClipperState`; that object remains unchanged
+until the paint consumes all deferred sources. A new paint clears previous
+dependent overlays and resets the effect slot count, while preserving vector
+capacity for reuse. Ripples require no arena slot or heap allocation. No fields
+are added to Widget or Container. `hasContentEffects()` also guards
+raw cache copies, including caches in an unclipped child group. Active inherited
+styling uses ordinary painting until copy eligibility is proven in P5/P6.
+The rounded adapter advertises neither destination blending nor blit copying;
+interior-copy support remains P6.
 
 ### Blit geometry: prove both endpoints
 
@@ -404,6 +498,9 @@ I9. Its batched point reader adds two 32-element int16 arrays, 128 source bytes
 of local storage before compiler layout. P8 remeasures complete call chains,
 retained capacity, effect snapshots, and cache state after synchronous
 integration.
+P4 records current effect storage and complete host paint high-water samples
+in the [owner-effects resource report](../prototypes/rounded_child_clipping.md#owner-effects-p4).
+Target-board maximum stack, driver cost, and final blit state remain P8 gates.
 Report first-use growth separately from warmed allocations and peak live RAM.
 P0 also records savings from deleting traversal/repair state. Treat the values
 above as historical costs, not the sizes of the current synchronous baseline.
@@ -442,8 +539,10 @@ contracts, introduced with their implementation and tests, are:
 
 P5 introduces the tested private blit planner while ordinary painting remains
 the safe fallback. P6 enables copies with integration tests. Do not expose
-placeholder public methods. Public comments retain the actual opaque-owner
-and effect restrictions until P4 lands.
+placeholder public methods. Public comments now allow owner tint, ripple, and
+disabled styling. Resolved opaque direct output is still required; arbitrary
+transparent groups and destination-dependent direct blending remain outside
+the contract.
 
 ## Implementation Plan
 
@@ -451,8 +550,8 @@ Authoring references: [C++ guidance](../../../.github/instructions/general-cpp-c
 [widget guidance](../../../.github/instructions/roo-windows-widget-authoring.instructions.md),
 [example guidance](../../../.github/instructions/embedded-example-authoring.instructions.md),
 and [design guidance](../../../.github/instructions/general-design-authoring-instructions.md).
-Each stage is one reviewable commit containing its focused tests and relevant
-documentation/example updates. Preserve unrelated work and local overrides.
+Each implementation step is one reviewable commit containing its focused tests
+and relevant documentation/example updates. Preserve unrelated work and local overrides.
 
 ### Implemented stages, mapped to history
 
@@ -517,6 +616,15 @@ grouping contracts, and remove obsolete traversal and repair state.
 
 ### P1. Bound recursive subtraction
 
+**Status: Code and tests committed in
+[baf5c3ab](https://github.com/dejwk/roo_windows/commit/baf5c3ab); supporting
+resource-report and documentation updates accompany P4e.**
+The shared eight-frame budget, iterative row-band fallback, depth-forcing and
+coverage regressions, allocation checks, and reproducible target stack gate
+are complete. [Results and resource deltas](../prototypes/rounded_child_clipping.md#bounded-subtraction-p1)
+record the acceptance evidence. The work description below defines this stage's
+completed scope.
+
 **Depends on:** P0; algorithm from I4. **Files:** [exclusion_filter.h](../../../src/roo_windows/core/exclusion_filter.h),
 [exclusion.h](../../../src/roo_windows/core/exclusion.h),
 [masked exclusion tests](../../../test/masked_exclusion_test.cpp),
@@ -556,6 +664,13 @@ does not implement a smaller version of continuation repair.
 
 ### P4. Complete owner-effect composition
 
+**Status: P4a–P4e implemented; bulk effect fixes folded into their original stages.**
+The [owner-effects report](../prototypes/rounded_child_clipping.md#owner-effects-p4)
+records reference coverage, allocation costs, target sizes, and full-paint
+host stack measurements. The scrolling example demonstrates owner ripple
+and a pause/resume control for disabled styling. Target-board full-stack and
+display-bus acceptance remain P8.
+
 **Depends on:** P0. **Files:** [overlay_spec](../../../src/roo_windows/core/overlay_spec.h),
 widget modulation, rounded_clip, clipper,
 [decoration](../../../src/roo_windows/decoration/decoration.cpp);
@@ -569,10 +684,100 @@ of the routing implementation. Compare ordinary and rounded owners away from
 edges. Update public restrictions and demonstrate owner feedback in the example.
 Record effect storage and full stack cost; no fields on ordinary widgets.
 
-**Proposed commit:** Sparse rounded child clipping P4: compose owner effects consistently.
+#### P4a. Extract existing paint helpers
+
+**Commit:** [6a947b0c](https://github.com/dejwk/roo_windows/commit/6a947b0c).
+
+Move decoration, press-overlay configuration, and overlay-scope methods from
+clipper.h to clipper.cpp. Extract lazy arena access and point-overlay emission.
+Keep the existing modulation, shared ripple storage, mask routing, and paint
+order. The moved method bodies are unchanged apart from whitespace.
+
+Validation: rounded_child_clip_test, overlay_test, paint_context_test,
+rounded_child_clip_resource_test, and horizontal_page_host_render_test pass
+in an isolated source checkout containing only this refactoring.
+
+**Commit message:** Sparse rounded child clipping P4: extract paint helpers without changing rendering.
+
+Separate behavior-preserving paint preparation from owner-effect composition.
+
+#### P4b. Introduce the paint-effect primitive
+
+**Commit:** [f7fae558](https://github.com/dejwk/roo_windows/commit/f7fae558).
+
+Add [PaintEffect](../../../src/roo_windows/core/paint_effect.h) with immutable
+scope bounds and borrowed ripple/ancestor references. Add PaintEffectStack for
+explicit chain slices, coverage-preserving modulation, and bulk rectangle and
+point composition with bounded scratch. This is behavior-neutral preparation: the
+renderer still uses its existing modulation path. The primitive's new color
+semantics are exercised directly before any renderer integration.
+
+Validation: [paint_effect_test](../../../test/paint_effect_test.cpp) checks
+alpha preservation, inner-to-outer order, exclusive scope limits, disjoint
+bounds, partial flat scopes, restored uniformity, ripple rectangle/batch call
+counts, transparent RGB, and scalar-equivalent modulation. The primitive target
+passes in the intermediate checkout, which also builds the unchanged renderer.
+
+**Commit message:** Sparse rounded child clipping P4b: introduce the paint-effect primitive.
+
+Add bounded tint/ripple snapshots and composition tests without changing
+renderer call sites, as preparation for owner-effect composition.
+
+#### P4c. Prepare rasterizers for retained effects
+
+**Commit:** [f23122a7](https://github.com/dejwk/roo_windows/commit/f23122a7).
+
+Add optional effect-chain support to RoundedOverlay, including bulk point and
+surviving-span rectangle application, and a resolved-outline
+argument to Decoration. Existing callers use the null defaults and retain
+their rendering behavior. Keep effect scope capture and the rounded boundary
+routing on the old path until P4d.
+
+Validation: [paint_effect_rasterizer_test](../../../test/paint_effect_rasterizer_test.cpp)
+covers translated effect-only overlays, nested masks, point/rectangle/uniform
+reads, alpha preservation, and fractional outline substitution. Both new test targets pass in this intermediate checkout.
+
+**Commit message:** Sparse rounded child clipping P4c: prepare rasterizers for retained effects.
+
+Add optional overlay effects and resolved outlines, preserving existing caller
+defaults, with focused rasterizer coverage before renderer integration.
+
+#### P4d. Enable consistent owner-effect composition
+
+**Commit:** [b9a509b9](https://github.com/dejwk/roo_windows/commit/b9a509b9).
+
+Capture immutable effect scopes with the shared ripple and switch direct
+output, deferred overlays, rounded boundaries, and outlines together. Remove the old widget
+filters and include the conservative inherited-effect blit guard. These paths
+share effect ordering and must switch in the same commit. Update the public
+styling contract on Container.
+
+Validation: [rounded_owner_effect_test](../../../test/rounded_owner_effect_test.cpp)
+checks RGB565/ARGB8888 reference pixels and shared-ripple routing. The
+[page-host rendering regression](../../../test/horizontal_page_host_render_test.cpp)
+checks inherited-effect blit rejection against full repaint. All eight focused
+targets pass, including the primitive/rasterizer tests and P4a regressions.
+
+**Commit message:** Sparse rounded child clipping P4d: enable consistent owner-effect composition.
 
 Apply retained owner effects once to interior and boundary content, preserving
-group ordering, with reference pixels and resource accounting.
+group ordering and coverage, with reference pixels and the blit safety guard.
+
+#### P4e. Document and measure owner effects
+
+Add allocation checks, target size/frame probes, and the host full-stack probe,
+including the P1 stack-report helper used by the measurement script. Update
+the scrolling example and this design/report with the implementation sequence,
+resource costs, and remaining target-board acceptance work.
+
+Validation: all 106 root regression targets and the explicit host stack probe
+pass (107 targets total). The six affected rendering targets are checked under ASan. The emulator example build and target
+size/frame probe retain their existing results. No golden images change.
+
+**Commit message:** Sparse rounded child clipping P4e: document and measure owner effects.
+
+Record resource costs and incremental validation, add the reusable measurement
+support, and demonstrate owner feedback and disabled styling in the example.
 
 ### P5. Plan safe interior copies through masks
 
@@ -683,8 +888,7 @@ move this design to implemented only after every gate passes.
 | Blit execution and menus | P4 and P5 complete | P6 → P7 | Keep cache/copy changes together; coordinate Wi-Fi validation separately. |
 | Acceptance | All active code stages complete | P8 | Report exact dependencies, synchronous refresh duration, and hardware availability. |
 
-P1 and P4 can proceed independently after P0. P2 and P3 have no remaining
-dependants. An agent receives its stage, dependency commits, file ownership,
+P0, P1, and P4 are complete. P5 can proceed; P6 follows its tested planner. P2 and P3 have no remaining dependants. An agent receives its stage, dependency commits, file ownership,
 validation commands, and acceptance criteria from this document. It returns a
 commit, test results, and measured deltas. Concurrent agents must not rewrite
 shared renderer files independently. Rebase on accepted dependency commits and
@@ -697,7 +901,8 @@ prototype targets to the synchronous API. The focused set is:
 
 ~~~sh
 bazel test //:rounded_child_clip_test //:masked_exclusion_test \
-  //:paint_context_test //:overlay_test //:rounded_child_clip_resource_test \
+  //:paint_context_test //:overlay_test //:rounded_owner_effect_test \
+  //:rounded_child_clip_resource_test \
   //:horizontal_page_host_render_test //:application_test -c opt \
   --per_file_copt='external/roo_testing.*/.*@-Wno-error=stringop-truncation' \
   --test_output=errors

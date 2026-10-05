@@ -4,7 +4,9 @@ The [production plan](../in_progress/rounded_child_clipping_design.md) tracks
 remaining work. P0 integrates this prototype with synchronous refreshes on
 2026-10-05: traversal checkpoints and interruption repair are removed. Historical
 measurements below identify the earlier implementation; current costs are in
-[Synchronous integration](#synchronous-integration).
+[Synchronous integration](#synchronous-integration),
+[Bounded subtraction P1](#bounded-subtraction-p1), and
+[Owner effects P4](#owner-effects-p4).
 
 ## Result
 
@@ -172,8 +174,9 @@ marker inserted below the scrolling body in collection order. Run from
 bazel run //examples/material3/menus/rounded_scrolling:rounded_scrolling
 ```
 
-Drag the list vertically. The example is included in the existing Material 3
-example build group. Its emulator build has been checked; touchscreen behavior
+Drag the list vertically, press its footer for owner ripple feedback, and use
+Pause/Resume schedule to change disabled styling. The example is included in
+the existing Material 3 example build group. Its emulator build has been checked; touchscreen behavior
 on physical hardware has not been measured.
 
 ## RAM
@@ -404,6 +407,280 @@ stringop-truncation diagnostic with
 `--per_file_copt='external/roo_testing.*/.*@-Wno-error=stringop-truncation'`.
 No on-device scrolling or maximum call-chain stack measurements were performed.
 
+## Bounded subtraction P1
+
+P1 caps ordinary and masked subtraction at eight live subtraction frames in
+total. Budget exhaustion switches the remaining rectangle to iterative union
+membership and constant-band queries, using the existing buffered writer.
+Earlier exclusions can be queried again because subdivision has already
+removed their pixels. There are no retained fragments or row-sized arrays.
+The existing bulk paths and masked corner-span coalescing remain in use before
+the limit; fallback also forwards whole visible rectangles and straight bands.
+
+The [size probe](../../../benchmarks/rounded_child_clip_size_probe.sh) now
+compiles a [filter probe](../../../benchmarks/exclusion_filter_stack_probe.cpp)
+and mask helpers with GCC -fcallgraph-info=su, -Os, -fno-exceptions, and
+-fno-rtti. The probe now pins -march=rv32imc_zicsr_zifencei and -mabi=ilp32
+for ESP32-C3; earlier probes used the compiler's default ISA with the same ABI. Its [stack report](../../../benchmarks/exclusion_filter_stack_report.py)
+sums compiler frames along every reachable filter call chain, permitting at
+most eight live subtraction helpers across both kinds. It includes dispatch,
+fallback, membership queries, the existing buffered writer, and writer output
+helpers. It conservatively sums tail-call frames too. The selected RV32 libc
+memset object is checked for stack-register use and external references;
+unmeasured callees and unbounded cycles fail the probe.
+
+ESP32-C3 GCC 14.2.0, using local roo_display d1000f9, reports:
+
+| Item | P0 | P1 |
+| --- | ---: | ---: |
+| ExclusionFilter | 44 B | 44 B |
+| ExclusionUnion | 16 B | 16 B |
+| RoundedClip / Widget / Container | 72 / 24 / 44 B | 72 / 24 / 44 B |
+| Filter probe object text | 5,994 B | 7,236 B |
+| fillRects filter-stack bound | Unbounded with descriptor count | 1,504 B |
+| writeRects filter-stack bound | Unbounded with descriptor count | 1,664 B |
+
+The object comparison compiles the same probe against P0's exclusion headers
+from c5adbea8 and the P1 headers, both with the pinned ESP32-C3 flags.
+The 1,242-byte text increase includes both
+buffered writer specializations; it is an object-file comparison, not a linked
+firmware size delta. Allocation tests report zero allocations for repeated
+deep mixed-list filtering, including its first draw after geometry setup.
+
+Both stack bounds are below the 2 KiB acceptance gate. These are conservative
+compiler call-chain bounds, not measured device high-water marks. The wrapped
+DisplayOutput, its device driver, and callers above the filter are excluded;
+complete renderer stack and on-device CPU time remain P8 work. Mask ancestry
+is traversed iteratively, so it changes query time without adding stack frames.
+
+The new coverage matrix forces budgets 0, 1, and 8 with ordinary-only,
+masked-only, and mixed lists of 0/1/8/64/256 descriptors. Independent coverage
+checks include nested masks, asymmetric radii, fractional outlines, negative
+and offscreen bounds, and exact colors and single writes from both rectangle
+methods. Separate cases verify the shared ordinary-to-masked budget, the
+default eight-frame cutoff, preserved full-height strips, union coverage,
+signed-coordinate limits, and large-list fragmented streams through all six
+output methods. Existing exterior-rectangle and corner-coalescing tests remain.
+
+Validation commands (from roo_windows):
+
+```sh
+bazel test //:all -c opt --jobs=8 \
+  --per_file_copt='external/roo_testing.*/.*@-Wno-error=stringop-truncation' \
+  --test_output=errors
+bazel test //:masked_exclusion_test //:rounded_child_clip_test --config=asan \
+  --test_output=errors
+benchmarks/rounded_child_clip_size_probe.sh \
+  /path/to/riscv32-esp-elf-g++ /path/to/riscv32-esp-elf-nm \
+  /path/to/riscv32-esp-elf-size
+```
+
+All 103 root test targets pass, including the allocation and grouped traversal
+checks. Both masked_exclusion_test and rounded_child_clip_test pass with ASan.
+Host validation uses the existing local roo_display override at d1000f9.
+
+## Owner effects P4
+
+Implemented on 2026-10-05, based on P1 commit `baf5c3ab`, in five commits:
+
+1. [6a947b0c](https://github.com/dejwk/roo_windows/commit/6a947b0c) extracts existing paint helpers without changing rendering.
+2. [f7fae558](https://github.com/dejwk/roo_windows/commit/f7fae558) introduces PaintEffect and its focused tests without renderer integration.
+3. [f23122a7](https://github.com/dejwk/roo_windows/commit/f23122a7) adds optional rasterizer inputs and tests while existing callers retain their defaults.
+4. [b9a509b9](https://github.com/dejwk/roo_windows/commit/b9a509b9) enables consistent owner effects and the blit safety guard, with rendering regression tests.
+5. P4e adds the resource checks, scrolling example, and this report.
+
+The existing local `roo_display` override at `d1000f9` is preserved and remains
+uncommitted. The [production design](../in_progress/rounded_child_clipping_design.md#owner-interaction-effects)
+describes effect ordering and retained snapshot lifetime, and its
+[P4 implementation steps](../in_progress/rounded_child_clipping_design.md#p4-complete-owner-effect-composition)
+record each commit's scope and validation. The five existing focused targets
+pass at each preparation step, alongside the new tests introduced there.
+The history split preserves the completed runtime source exactly.
+
+Owner tint, ripple, and disabled styling now reach direct interior pixels,
+fractional boundary colors, deferred foreground, and outlines. Unclipped
+children inherit styling while bypassing the immediate owner's geometry.
+Ordinary owners share this effect path, keeping their interiors consistent
+with rounded owners. Effect records borrow the existing shared ripple for the
+duration of the synchronous paint. Raw cache copies are conservatively
+rejected under an active ancestor effect, including unclipped children; safe rounded interior
+copying remains P5/P6.
+
+### Pixel and lifetime coverage
+
+The [primitive tests](../../../test/paint_effect_test.cpp) check color semantics,
+bounds, and chain limits independently of the renderer. The
+[rasterizer tests](../../../test/paint_effect_rasterizer_test.cpp) cover optional
+effects and resolved outlines before renderer integration.
+
+The [owner-effect reference tests](../../../test/rounded_owner_effect_test.cpp)
+compose complete child layers independently of routing, masks, and sparse
+storage. Existing Decoration geometry supplies shape coverage. ARGB8888 checks
+allow two channel units for composition rounding; RGB565 checks allow one
+channel code after final quantization. Coverage includes:
+
+- Owner tint, active ripple, and disabled styling; child tint/ripple/disablement.
+- Nested owners, translucent deferred foreground, and immediate-parent clip
+  escape while retaining ancestor masks and styling.
+- Asymmetric corners, fractional outlines, shadows, and state changes across
+  successive complete refreshes.
+- One selected-child paint and no more than one physical write per pixel.
+- Ordinary/rounded owner interior equivalence, shared-ripple routing, and
+  effect-arena reuse on a following paint.
+
+The [cache regression](../../../test/horizontal_page_host_render_test.cpp)
+first proves that an unclipped child can copy without an effect, then verifies
+that inherited styling disables copying and matches a full repaint.
+
+### Retained storage on ESP32-C3 ABI
+
+Measured with esp-rv32/2507 GCC, `-march=rv32imc_zicsr_zifencei -mabi=ilp32`,
+GNU++17, `-Os -fno-exceptions -fno-rtti`, using the
+[size/frame probe](../../../benchmarks/rounded_child_clip_size_probe.sh).
+These are object sizes; vector elements, spare capacity, and allocator headers
+are additional.
+
+| Object | P1 baseline | P4 |
+| --- | ---: | ---: |
+| Widget | 24 B | 24 B |
+| Container | 44 B | 44 B |
+| ClipperState | 240 B | 240 B |
+| Optional rounded/effect arena | 80 B | 96 B |
+| RoundedClip | 72 B | 68 B |
+| RoundedDecoration | 100 B | 104 B |
+| RoundedOverlay | 24 B | 28 B |
+| PaintEffect | — | 20 B per retained effect |
+| PaintEffectStack | — | 12 B per paint-local adapter |
+| PressOverlay | One 44 B scratch in ClipperState | Same shared 44 B scratch |
+
+Each effect-arena vector element adds a 4 B pointer slot on this ABI. With $S$
+live effects, records cost $20S$ bytes plus vector capacity and allocator
+overhead. Capacity is retained at its high-water mark. Ripples reuse the inline
+`PressOverlay` and allocate no record. An otherwise ordinary window needs the
+lazy 96 B arena on first styled paint; unchanged widgets gain no fields. P4
+therefore preserves the baseline 44 B shared press storage.
+
+The warmed resource scene contains two rounded owners and eight pressed child
+surfaces, split between clipped and unclipped groups. Those pressed states use
+flat overlays; the ripple style activates the one click animation supported by
+the input model. Every style (inert, flat tint, ripple, disabled) must retain
+zero allocations over 100 forced paints after warm-up. A focused first-use
+check also requires ripple configuration to allocate nothing. Effect records
+are reused at the arena's high-water mark.
+
+### Stack measurement
+
+The target probe reports individual compiler frames for effect evaluation and
+routing. Current measurements are listed under [bulk effect composition](#bulk-effect-composition).
+P1's independent filter-only bounds remain 1,504 B for fill rectangles and
+1,664 B for write rectangles. Effect scratch is outside that filter-only bound.
+
+The [full-paint host probe](../../../benchmarks/rounded_owner_effect_stack_test.cpp)
+uses a caller-owned pthread stack, fills it before thread creation, and reads
+its high-water mark after joining. It exercises complete synchronous refreshes,
+including traversal, allocation/arena maintenance, mask routing, exclusions,
+composition, and an ARGB8888 offscreen driver. The origin is a local variable
+in the refresh caller; thread startup also touches the stack, so the probe
+reports an empty-thread floor separately. It adds no instrumentation to the
+renderer.
+
+Before bulk effect composition, an optimized x86-64 run measured a 1,879 B empty-thread floor and the following
+maximums across inert, tint, ripple, and disabled outer-owner states. Nested
+owners remain pressed in the depth-two and depth-four scenes:
+
+| Rounded owner depth | Observed complete paint high-water |
+| --- | ---: |
+| 1 | 4,999 B |
+| 2 | 5,955 B |
+| 4 | 7,751 B |
+
+These workload measurements include the actual host call chain, but are not
+ESP32 stack budgets or worst-case proofs. Widget nesting, driver stack, compiler
+inlining, and first-use allocation can change the maximum. P8 still requires
+the target-board high-water measurement with its real driver and menu tree.
+Do not run the raw-stack probe under ASan: sanitizer instrumentation changes
+the stack model. Its explicit target is separate from ordinary regression runs.
+
+Reproduce the resource checks from the canonical repository:
+
+```sh
+bazel test //:rounded_child_clip_resource_test \
+  //:rounded_owner_effect_stack_test -c opt --test_output=all \
+  --per_file_copt='external/roo_testing.*/.*@-Wno-error=stringop-truncation'
+```
+
+Validation covers all 106 root regression targets plus the explicit full-stack
+probe (107 targets total), six affected ASan targets, and the RV32 size/frame
+probe with exceptions and RTTI disabled. No golden images change.
+
+The rounded-scrolling example now has a tappable footer for owner feedback and
+a separate pause/resume button for disabled styling. Its emulator build is
+checked; interactive hardware validation remains manual.
+
+## Bulk effect composition
+
+The P4b primitive uses plain retained `PaintEffect` records and a non-owning
+`PaintEffectStack` for a chosen ancestor slice. Raster reads produce a tint;
+application modulates RGB once with that resolved tint, preserving source
+coverage and integer rounding. P4c routes optional overlay effects through
+bulk reads, while P4d connects retained scopes to the renderer. These changes
+are folded into the original stages, rather than a separate follow-up stage.
+
+Rectangles retain uniformity across layers, blend partial flat scopes in row
+spans, and call ripple rectangle reads per tile. Scattered point batches gather
+surviving coordinates for indexed blending. Fixed scratch replaces repeated
+per-pixel chain traversal; no allocations or additional child passes are used.
+A paint-local adapter serves the clipper's foreground stack. Deferred wrappers
+retain only their existing scope pointers.
+
+The [manual CPU benchmark](../../../benchmarks/paint_effect_rect_benchmark.cpp)
+checks exact pixel equivalence before timing. It covers flat/ripple effects,
+full/partial scopes, uniform/varying sources, 8×8 and 64×32 queries, and chain
+depths one and four. Its scalar reference walks the chain for every varying
+pixel. Results use median thread CPU time over five batches with identical
+source preparation, pinned to one CPU core without concurrent builds. They
+describe host execution, not device timing guarantees.
+
+| 8×8 workload, four scopes | Scalar reference | Bulk path |
+| --- | ---: | ---: |
+| Varying source, full flat | 1.891 µs | 0.155 µs |
+| Varying source, partial flat | 1.545 µs | 0.938 µs |
+| Varying source, partial ripple | 1.661 µs | 1.010 µs |
+| Tint raster, partial flat | 1.079 µs | 0.733 µs |
+
+Uniform-source/full-flat calls already needed only one chain query; this path
+remains constant in rectangle area. Small dispatch overhead can dominate such
+nanosecond-scale calls. The improvements concern materialized pixels and
+spatially varying chains. Modulation uses `roo_display`'s SourceAtop scalar and
+bulk operators, including their configured blending precision.
+
+Reproduce with `bazel run //:paint_effect_rect_benchmark -c opt`.
+
+On ESP32-C3, the scope record shrinks from 24 to 20 B and the paint-local
+stack adapter occupies 12 B. Widget, Container, RoundedOverlay, the 240 B
+ClipperState, and the 96 B optional arena retain the sizes reported above. The
+RV32 probe reports individual frames of 384 B for tile composition, 352 B for
+rectangle reads, and 336 B for
+rectangle application, 464 B for point reads, and 304 B for point application.
+Caller/callee buffers coexist; these figures must not be mistaken for complete
+paint-stack bounds. The fixed scratch trades stack space for fewer dispatches.
+The filter-only 1,504/1,664 B gates still pass; target-board acceptance remains P8.
+
+The current host stack probe observed maxima of 7,639/5,987/7,783 B at rounded
+depths 1/2/4, including an unusually high disabled-style sample at depth one.
+These are workload observations, sensitive to thread/runtime behavior, rather
+than a monotonic depth bound. The warmed resource scene still reports zero
+allocations in every style. Its first inert paint requests 3,032 B in 41
+allocations; adding a flat outer owner requests one 32 B record on this host.
+Timing from the full regression run is intentionally omitted because other
+build/test processes were running concurrently.
+
+Focused tests verify ripple call counts, exclusive chain slices, partial flat
+scopes, opaque ancestors that restore uniformity, sentinel storage for compact
+results, transparent source RGB, and rejection of masked-out spans. Existing
+reference scenes check antialiasing and single physical writes. No golden
+images change.
+
 ## Validation and limits
 
 [Pixel tests](../../../test/rounded_child_clip_test.cpp) compare every output
@@ -455,8 +732,9 @@ Security dropdown.
 
 The rounded compositor retains these deliberately narrow constraints:
 
-- Use an opaque, enabled clipping owner with feedback on its children. Owner
-  ripple and disabled-group composition remain unsupported.
+- Use a surface whose background resolves to an opaque color. Owner tint,
+  ripple, and disabled styling are supported, including inherited effects on
+  deferred foreground. Arbitrary transparent groups remain unsupported.
 - An unclipped direct child escapes only its immediate parent's mask. Its whole
   subtree stays in that local foreground group and continues to obey rounded
   ancestors.

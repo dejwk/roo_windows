@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 380" width="960" height="380">
+<rect width="960" height="380" fill="white"/>
+<defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8" fill="none" stroke="#455a64"/></marker></defs>
+<g font-family="sans-serif" font-size="16" fill="#263238">
+<text x="24" y="30" font-size="21">One child traversal; effect snapshots follow each contribution</text>
+<g stroke="#78909c" fill="#eef5fa">
+<rect x="24" y="60" width="178" height="68" rx="8"/>
+<rect x="24" y="150" width="178" height="90" rx="8"/>
+<rect x="24" y="270" width="178" height="68" rx="8"/>
+<rect x="252" y="60" width="276" height="68" rx="8"/>
+<rect x="252" y="150" width="276" height="90" rx="8"/>
+<rect x="252" y="270" width="276" height="68" rx="8"/>
+<rect x="580" y="150" width="350" height="90" rx="8"/>
+<rect x="580" y="60" width="350" height="68" rx="8"/>
+<rect x="580" y="270" width="350" height="68" rx="8"/>
+</g>
+<g stroke="#455a64" fill="none" marker-end="url(#arrow)">
+<path d="M202 94H242"/><path d="M528 94H570"/>
+<path d="M202 195H242"/><path d="M528 195H570"/>
+<path d="M202 304H242"/><path d="M528 304H570"/>
+</g>
+<text x="38" y="89">Direct pixels</text><text x="38" y="113">full parent coverage</text>
+<text x="38" y="178">Boundary colors</text><text x="38" y="202">fractional coverage</text><text x="38" y="226">stored sparsely</text>
+<text x="38" y="299">Deferred source</text><text x="38" y="323">translated overlay</text>
+<text x="268" y="88">Child → owner → ancestors</text><text x="268" y="113">current effect chain</text>
+<text x="268" y="178">Child effects at capture</text><text x="268" y="202">resolve with owner background</text><text x="268" y="226">then apply owner effect</text>
+<text x="268" y="299">Retained source + effect chain</text><text x="268" y="323">source alpha is preserved</text>
+<text x="596" y="88">Composite retained foreground</text><text x="596" y="113">write the settled pixel once</text>
+<text x="596" y="178">Owner coverage + outline + shadow</text><text x="596" y="202">then ancestor effects / coverage</text><text x="596" y="226">publish as a deferred decoration</text>
+<text x="596" y="299">Fractional part captured above</text><text x="596" y="323">opaque part stays in foreground stack</text>
+<text x="24" y="368" font-size="14">Unclipped children bypass the immediate owner's mask and retain its effect snapshot.</text>
+</g></svg>

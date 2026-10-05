@@ -95,6 +95,8 @@ class ResourcePanel : public Panel {
       : Panel(context), grouped_(grouped) {}
   using Panel::add;
 
+  bool isClickable() const override { return true; }
+
   bool clipsChildrenToRoundedBounds() const override { return true; }
 
   bool mayHaveUnclippedChildren() const override {
@@ -256,6 +258,99 @@ TEST(RoundedClipResources, CharacterizeGroupedTraversal) {
       sizeof(internal::RoundedClip), sizeof(internal::RoundedClipOutput),
       sizeof(internal::RoundedOverlay), sizeof(internal::RoundedDecoration),
       sizeof(internal::RoundedPaintState));
+}
+
+// Verifies the single active press ripple uses the retained inline slot, with
+// no allocation even on its first configuration.
+TEST(RoundedClipResources, PressOverlayUsesInlineStorage) {
+  std::array<roo::byte, 4> pixels{};
+  roo_display::OffscreenDevice<roo_display::Argb8888> device(
+      1, 1, pixels.data(), roo_display::Argb8888());
+  internal::ClipperState state;
+  internal::ClipperOutput output(state, device);
+  PressOverlaySpec spec{};
+  spec.enabled = true;
+  spec.center_x = 0;
+  spec.center_y = 0;
+  spec.radius = 1;
+  spec.color = Color(0x803060F0);
+
+  allocations = 0;
+  allocated_bytes = 0;
+  tracking = true;
+  const PressOverlay* press = output.configurePressOverlay(spec);
+  tracking = false;
+
+  ASSERT_NE(press, nullptr);
+  EXPECT_NE(press->get(0, 0), Color(0));
+  EXPECT_EQ(allocations, 0u);
+  EXPECT_EQ(allocated_bytes, 0u);
+}
+
+// Verifies retained owner effects and ripples allocate nothing on warmed
+// paints, including nested masks, ordinary child effects, and escaped
+// foreground.
+TEST(RoundedClipResources, WarmedOwnerEffectsDoNotAllocate) {
+  std::array<roo::byte, 240 * 160 * 4> pixels{};
+  roo_display::OffscreenDevice<roo_display::Argb8888> device(
+      240, 160, pixels.data(), roo_display::Argb8888());
+  roo_display::Display display(device);
+  roo_scheduler::SchedulingService scheduler;
+  Environment env(scheduler);
+  Application app(&env, display);
+  app.refresh();
+  auto outer = std::make_unique<ResourcePanel>(app.context(), true);
+  ResourcePanel* owner = outer.get();
+  auto inner = std::make_unique<ResourcePanel>(app.context(), true);
+  ResourcePanel* nested = inner.get();
+  for (int i = 0; i < 8; ++i) {
+    auto row = std::make_unique<ResourceRow>(app.context());
+    row->setPressed(true);
+    if (i % 2 != 0) row->setParentClipMode(ParentClipMode::kUnclipped);
+    inner->add(std::move(row), Rect(-4, i * 12 - 4, 159, i * 12 + 7));
+  }
+  outer->add(std::move(inner), Rect(-4, -4, 159, 111));
+  app.add(std::move(outer), roo_display::Box(24, 16, 215, 143));
+  nested->setPressed(true);
+  for (int style = 0; style < 4; ++style) {
+    owner->setEnabled(true);
+    owner->setPressed(style == 1);
+    if (style == 2) owner->onShowPress(8, 8);
+    if (style == 3) owner->setEnabled(false);
+    owner->invalidateInterior();
+    allocations = 0;
+    allocated_bytes = 0;
+    tracking = true;
+    app.refresh();
+    tracking = false;
+    std::printf("owner_style=%d first_new_calls=%zu requested_bytes=%zu\n",
+                style, allocations, allocated_bytes);
+    for (int i = 0; i < 10; ++i) {
+      owner->invalidateInterior();
+      app.refresh();
+    }
+    allocations = 0;
+    allocated_bytes = 0;
+    timespec start{};
+    timespec end{};
+    clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
+    tracking = true;
+    for (int frame = 0; frame < 100; ++frame) {
+      owner->invalidateInterior();
+      app.refresh();
+    }
+    tracking = false;
+    clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
+    const double cpu_us = ((end.tv_sec - start.tv_sec) * 1e6 +
+                           (end.tv_nsec - start.tv_nsec) / 1e3) /
+                          100;
+    std::printf(
+        "owner_style=%d warm_new_calls=%zu requested_bytes=%zu "
+        "mean_cpu_us=%.2f\n",
+        style, allocations, allocated_bytes, cpu_us);
+    EXPECT_EQ(allocations, 0u);
+    EXPECT_EQ(allocated_bytes, 0u);
+  }
 }
 
 // Verifies the real fixed-child rounded component retains the single-scan

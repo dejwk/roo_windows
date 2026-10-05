@@ -34,7 +34,10 @@ includes=(
   -I"${roo_dir}/roo_time/src"
 )
 
+target_arch=-march=rv32imc_zicsr_zifencei
 common=(
+  "${target_arch}"
+  -mabi=ilp32
   -std=gnu++17
   -Os
   -fno-exceptions
@@ -68,3 +71,41 @@ grep -E 'Container::(paintChildren|paintRoundedChildren|paintChildrenWithoutRoun
 
 echo "Container translation-unit section sizes:"
 "${size_tool}" "${probe_dir}/container.o"
+
+# Include the buffered entry frames, subtraction dispatch, fallback queries,
+# and iterative mask-chain helpers in the P1 filter-only stack bound.
+for source in exclusion rounded_clip; do
+  "${compiler}" "${common[@]}" -fcallgraph-info=su \
+    -include "${repo_dir}/benchmarks/standalone_abi_logging_stub.h" \
+    "${includes[@]}" -c "${repo_dir}/src/roo_windows/core/${source}.cpp" \
+    -o "${probe_dir}/${source}.o"
+done
+"${compiler}" "${common[@]}" -fcallgraph-info=su \
+  -include "${repo_dir}/benchmarks/standalone_abi_logging_stub.h" \
+  "${includes[@]}" -c "${repo_dir}/benchmarks/exclusion_filter_stack_probe.cpp" \
+  -o "${probe_dir}/exclusion_filter.o"
+
+echo "Bounded exclusion filter stack (including buffered output):"
+"${compiler}" --version | head -1
+python3 "${repo_dir}/benchmarks/exclusion_filter_stack_report.py" \
+  "${compiler}" "${target_arch}" \
+  "${repo_dir}/src/roo_windows/core/exclusion_filter.h" \
+  "${probe_dir}/exclusion_filter.ci" "${probe_dir}/exclusion.ci" \
+  "${probe_dir}/rounded_clip.ci"
+
+echo "Exclusion filter probe section sizes:"
+"${size_tool}" "${probe_dir}/exclusion_filter.o"
+
+# P4 effect snapshots use the existing arena. Measure their target frames too;
+# these are individual frames, not a bound on the complete renderer/driver.
+for source in paint_effect clipper widget; do
+  "${compiler}" "${common[@]}" \
+    -include "${repo_dir}/benchmarks/standalone_abi_logging_stub.h" \
+    "${includes[@]}" -c "${repo_dir}/src/roo_windows/core/${source}.cpp" \
+    -o "${probe_dir}/${source}.o"
+done
+echo "P4 target frames (bytes, including existing nested traversal):"
+grep -E 'PaintEffectStack::|ClipperOutput::(pushOverlaySpec|configurePressOverlay|addRoundedDecoration|addDecoration)|Widget::paintWidget|RoundedClip::accumulate|RoundedDecoration::|RoundedOverlay::' \
+  "${probe_dir}"/{paint_effect,clipper,widget,rounded_clip}.su
+echo "P4 translation-unit section sizes:"
+"${size_tool}" "${probe_dir}"/{paint_effect,clipper,widget,rounded_clip}.o

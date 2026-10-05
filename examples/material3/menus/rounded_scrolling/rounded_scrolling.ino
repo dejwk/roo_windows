@@ -1,11 +1,15 @@
 // Learning goal: combine clipped scrolling content with an explicitly
-// unclipped status marker that can overhang a rounded container.
+// unclipped status marker and owner feedback. Press the card's footer to see
+// its ripple across the scrolling contents; pause it to see disabled styling.
 
 #include "examples/material3/menus/example_runtime.h"
 #include "roo_display/shape/smooth.h"
 #include "roo_windows/containers/scrollable_panel.h"
 #include "roo_windows/core/panel.h"
+#include "roo_windows/material3/button/button.h"
 #include "roo_windows/material3/menu/menu.h"
+#include "roo_windows/material3/typography.h"
+#include "roo_windows/widgets/text_label.h"
 
 using namespace roo_windows;
 
@@ -83,12 +87,36 @@ class ScheduleCard final : public Panel {
     // Insert the marker first. Rounded child grouping still paints it above the
     // later clipped scrolling body, so collection order remains layout order.
     add(std::move(marker), Rect(212, -8, 255, 11));
-    add(std::make_unique<ScheduleList>(context), Rect(0, 0, 239, 191));
+    add(std::make_unique<ScheduleList>(context), Rect(0, 0, 239, 135));
+    // This plain label leaves the footer's touch handling with its owner.
+    // Pressing it demonstrates a single owner ripple over both child groups.
+    add(std::make_unique<TextLabel>(context, "Weekly schedule",
+                                    material3::text_style_label_large()),
+        Rect(16, 136, 223, 167));
   }
 
+  bool isClickable() const override { return true; }
   bool clipsChildrenToRoundedBounds() const override { return true; }
   BorderStyle getBorderStyle() const override { return BorderStyle(24, 0); }
   Color background() const override { return Color(0xFFF8EFF8); }
+};
+
+// The toggle stays outside the card so it can resume a disabled schedule.
+// Parent styling also reaches the overhanging marker, without clipping it.
+class ScheduleToggle final : public material3::Button {
+ public:
+  ScheduleToggle(ApplicationContext& context, ScheduleCard& card)
+      : Button(context, "Pause schedule",
+               material3::ButtonVariant::kFilledTonal),
+        card_(card) {}
+
+  void onClicked() override {
+    card_.setEnabled(!card_.isEnabled());
+    setLabel(card_.isEnabled() ? "Pause schedule" : "Resume schedule");
+  }
+
+ private:
+  ScheduleCard& card_;
 };
 
 }  // namespace
@@ -97,8 +125,10 @@ void setup() {
   auto& app = material3_menu_example::app;
   app.add(std::make_unique<Backdrop>(app.context()),
           roo_display::Box(0, 0, 319, 239));
-  app.add(std::make_unique<ScheduleCard>(app.context()),
-          roo_display::Box(40, 24, 279, 215));
+  auto card = std::make_unique<ScheduleCard>(app.context());
+  auto toggle = std::make_unique<ScheduleToggle>(app.context(), *card);
+  app.add(std::move(card), roo_display::Box(40, 16, 279, 183));
+  app.add(std::move(toggle), roo_display::Box(72, 188, 247, 235));
   // Shared runtime configures the display/touch pins and the optional emulator.
   material3_menu_example::Start();
 }

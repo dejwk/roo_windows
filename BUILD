@@ -1305,3 +1305,18 @@ cc_test(
     linkstatic = 1,
     deps = [":roo_windows", "@roo_testing//:arduino_gtest_main"],
 )
+
+cc_test(
+    name = "rounded_owner_effect_stack_test",
+    srcs = ["benchmarks/rounded_owner_effect_stack_test.cpp"],
+    tags = ["manual"],
+    linkstatic = 1,
+    deps = [":roo_windows", "@roo_testing//:arduino_gtest_main"],
+)
+
+cc_binary(
+    name = "paint_effect_rect_benchmark",
+    srcs = ["benchmarks/paint_effect_rect_benchmark.cpp"],
+    tags = ["manual"],
+    deps = [":roo_windows"],
+)
