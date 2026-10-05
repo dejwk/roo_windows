@@ -1298,3 +1298,10 @@ cc_test(
     linkstatic = 1,
     deps = [":roo_windows", "@roo_testing//:arduino_gtest_main"],
 )
+
+cc_test(
+    name = "rounded_owner_effect_test",
+    srcs = ["test/rounded_owner_effect_test.cpp"],
+    linkstatic = 1,
+    deps = [":roo_windows", "@roo_testing//:arduino_gtest_main"],
+)

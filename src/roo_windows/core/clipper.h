@@ -134,8 +134,6 @@ class ClipperOutput : public roo_display::DisplayOutput {
         shape_overlay_count_(state.shape_overlay_count_),
         overlays_(state.overlays_),
         overlay_specs_(state.overlay_specs_),
-        scoped_press_overlay_active_(false),
-        scoped_press_overlay_clip_(0, 0, -1, -1),
         valid_(false),
         overlay_stack_(state.overlay_stack_),
         overlay_filter_(out, &overlay_stack_),
@@ -157,7 +155,8 @@ class ClipperOutput : public roo_display::DisplayOutput {
       state_.rounded_->overlay_count = 0;
       state_.rounded_->decoration_count = 0;
       state_.rounded_->active = nullptr;
-      state_.rounded_->press_target = nullptr;
+      state_.rounded_->effect_count = 0;
+      state_.rounded_->active_effect = nullptr;
     }
   }
 
@@ -190,15 +189,7 @@ class ClipperOutput : public roo_display::DisplayOutput {
   /// Adds an overlay with an optional local-to-device translation.
   void addOverlay(const roo_display::Rasterizable* overlay,
                   roo_display::Box clip_box, int16_t dx = 0, int16_t dy = 0) {
-    if (activeRoundedClip() != nullptr) {
-      overlay = maskRoundedOverlay(overlay, clip_box, dx, dy);
-    }
-    overlays_.emplace_back(overlay, clip_box, dx, dy);
-    if (overlays_.back().extents().empty()) {
-      overlays_.pop_back();
-      return;
-    }
-    valid_ = false;
+    addOverlayWithEffects(overlay, clip_box, dx, dy, activeEffect());
   }
 
   /// Adds an overlay with an optional local-to-device translation.
@@ -228,25 +219,14 @@ class ClipperOutput : public roo_display::DisplayOutput {
     addOverlay(&shape_overlays_[shape_overlay_count_++], clip_box);
   }
 
+  /// Configures the one shared ripple, which remains stable for this paint.
+  /// The input model permits at most one active press animation at a time.
   const PressOverlay* configurePressOverlay(const PressOverlaySpec& spec);
 
   void setPressOverlay(const PressOverlaySpec& spec,
                        roo_display::Box clip_box) {
-    const PressOverlay* press_overlay = configurePressOverlay(spec);
-    if (press_overlay != nullptr) addOverlay(press_overlay, clip_box);
-  }
-
-  void setScopedPressOverlay(const PressOverlaySpec& spec,
-                             roo_display::Box clip_box) {
-    configurePressOverlay(spec);
-    scoped_press_overlay_active_ = true;
-    scoped_press_overlay_clip_ = std::move(clip_box);
-    if (activeRoundedClip() != nullptr) {
-      state_.rounded_->press_target = activeRoundedClip();
-      activeRoundedClip()->direct_press = &press_overlay_;
-      activeRoundedClip()->direct_press_clip = scoped_press_overlay_clip_;
-    }
-    valid_ = false;
+    const PressOverlay* press = configurePressOverlay(spec);
+    if (press != nullptr) addOverlay(press, clip_box);
   }
 
   /// Reports masked exclusions registered in this paint.
@@ -352,13 +332,16 @@ class ClipperOutput : public roo_display::DisplayOutput {
     return exclusions_;
   }
 
+  /// Reports inherited content modulation that raw framebuffer copies bypass.
+  bool hasContentEffects() const { return activeEffect() != nullptr; }
+
   /// Returns the unfiltered downstream output.
   roo_display::DisplayOutput& rawOut() { return orig_output_; }
 
   /// Pushes this widget's resolved overlay state onto the per-paint stack.
   void pushOverlaySpec(Widget& widget, const Canvas& canvas);
 
-  /// Pops the overlay state for the current widget paint frame.
+  /// Restores the enclosing immutable effect scope and overlay specification.
   void popOverlaySpec();
 
   /// Returns the currently active widget overlay state.
@@ -368,18 +351,47 @@ class ClipperOutput : public roo_display::DisplayOutput {
   }
 
  private:
+  /// Records an exclusion through the active rounded-mask chain.
   void addRoundedExclusion(const roo_display::Box& exclusion);
+
+  /// Captures fractional overlay samples and returns a retained wrapper when
+  /// the source cannot bypass @p masks or must defer @p effects.
   const roo_display::Rasterizable* maskRoundedOverlay(
       const roo_display::Rasterizable* source, roo_display::Box clip,
-      int16_t& dx, int16_t& dy);
+      int16_t& dx, int16_t& dy, RoundedClip* masks, const PaintEffect* effects);
 
+  /// Retains an overlay with the active masks and selected effect chain.
+  void addOverlayWithEffects(const roo_display::Rasterizable* source,
+                             roo_display::Box clip, int16_t dx, int16_t dy,
+                             const PaintEffect* effects);
+
+  /// Returns this clipper state's lazily allocated arena, reused by paints.
   RoundedPaintState& roundedArena();
 
+  /// Returns the innermost active effect scope, or null outside effects.
+  const PaintEffect* activeEffect() const {
+    return state_.rounded_ == nullptr ? nullptr
+                                      : state_.rounded_->active_effect;
+  }
+
+  /// Returns the current widget's own effect, excluding inherited-only state.
+  const PaintEffect* ownEffect() const {
+    return HasContentEffect(currentOverlaySpec()) ? activeEffect() : nullptr;
+  }
+
+  /// Reports whether @p spec modulates the widget's complete content group.
+  static bool HasContentEffect(const OverlaySpec& spec) {
+    return spec.is_modded() && (spec.is_area() || spec.is_disabled());
+  }
+
+  /// Returns the shared unmodified overlay state for compressed stack frames.
   static const OverlaySpec& InertOverlaySpec() {
     static const OverlaySpec kInertOverlaySpec;
     return kInertOverlaySpec;
   }
 
+  /// Rebuilds bounded exclusions and overlay inputs after retained state
+  /// changes.
   void sync() {
     if (valid_) return;
     bounded_exclusions_.clear();
@@ -417,20 +429,21 @@ class ClipperOutput : public roo_display::DisplayOutput {
     // preserving clipper's "earlier overlays stay above later overlays"
     // contract by traversing descriptors in reverse insertion order.
     overlay_stack_.clearInputs();
+    const PaintEffect* effect = activeEffect();
+    effect_stack_ = PaintEffectStack(effect);
     overlay_stack_.reserveInputs(overlays_.size() +
-                                 (scoped_press_overlay_active_ ? 1 : 0));
+                                 (effect != nullptr ? 1 : 0));
     roo_display::Box overlay_extents(0, 0, -1, -1);
     bool has_overlays = false;
 
-    // The scoped press overlay represents a foreground applied to content
-    // writes. Add it first so all persistent clipper overlays, including
-    // decorations, remain above it in RasterizableStack composition order.
-    if (scoped_press_overlay_active_) {
-      roo_display::Box source_clip = roo_display::Box::Intersect(
-          press_overlay_.extents(), scoped_press_overlay_clip_);
-      if (!source_clip.empty() && source_clip.intersects(bounds_)) {
-        overlay_stack_.addInput(&press_overlay_, source_clip);
-        overlay_extents = source_clip;
+    // Direct pixels receive the current effects here. Deferred contributors
+    // already carry their own immutable effect chain and remain above them.
+    if (effect != nullptr) {
+      const roo_display::Box clip =
+          roo_display::Box::Intersect(effect_stack_.extents(), bounds_);
+      if (!clip.empty()) {
+        overlay_stack_.addInput(&effect_stack_, clip);
+        overlay_extents = clip;
         has_overlays = true;
       }
     }
@@ -481,9 +494,10 @@ class ClipperOutput : public roo_display::DisplayOutput {
   size_t& shape_overlay_count_;
   std::vector<ClippedOverlay>& overlays_;
   std::deque<internal::OverlaySpecStackEntry>& overlay_specs_;
-  bool scoped_press_overlay_active_;
-  roo_display::Box scoped_press_overlay_clip_;
   bool valid_;
+  // The raster stack borrows this effect stack until sync rebuilds its inputs.
+  // Scope records live in the retained arena; the adapter is paint-local.
+  PaintEffectStack effect_stack_;
   roo_display::RasterizableStack& overlay_stack_;
   roo_display::ForegroundFilter overlay_filter_;
   ExclusionUnion exclusion_union_;
@@ -548,13 +562,6 @@ class Clipper {
     out_.setPressOverlay(spec, clip_box);
   }
 
-  /// Sets a bottom-of-stack press foreground scoped to the current overlay
-  /// frame. Persistent overlays such as decorations remain above it.
-  void setScopedPressOverlay(const PressOverlaySpec& spec,
-                             roo_display::Box clip_box) {
-    out_.setScopedPressOverlay(spec, std::move(clip_box));
-  }
-
   /// Registers a fully-described decoration (shadow + outline + fill) clipped
   /// to `clip_box` and bounded by `extents`. The decoration is stored in the
   /// clipper arena and composited like any other overlay.
@@ -584,6 +591,9 @@ class Clipper {
 
   /// Identifies output paths that cannot bypass rounded filtering.
   bool hasRoundedClip() const { return out_.activeRoundedClip() != nullptr; }
+
+  /// Rejects raw cache reuse while inherited area/disabled effects are active.
+  bool hasContentEffects() const { return out_.hasContentEffects(); }
 
   /// Reports retained masked exclusions, including previously painted siblings.
   bool hasMaskedExclusions() const { return out_.hasMaskedExclusions(); }

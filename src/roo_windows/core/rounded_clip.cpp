@@ -59,7 +59,8 @@ void RoundedClip::reset(const void* owner_key, Box bounds, BorderStyle style) {
                   bounds.xMax() - inset, bounds.yMax() - inset);
   if (changed) buildRows();
   std::fill(colors_.begin(), colors_.end(), Color(0));
-  direct_press = nullptr;
+  effect_limit = nullptr;
+  active_effects = nullptr;
 }
 
 void RoundedClip::buildRows() {
@@ -188,12 +189,10 @@ void RoundedClip::accumulate(int16_t x, int16_t y, Color color) {
 
 void RoundedClip::accumulateDirect(int16_t x, int16_t y, Color color) {
   if (sampleIndex(x, y) < 0) return;
-  if (direct_press != nullptr && direct_press_clip.contains(x, y) &&
-      direct_press->extents().contains(x, y)) {
-    Color press;
-    direct_press->readColors(&x, &y, 1, &press);
-    color = AlphaBlend(color, press);
-  }
+  color =
+      PaintEffectStack(active_effects == nullptr ? nullptr : *active_effects,
+                       effect_limit)
+          .apply(x, y, color);
   accumulate(x, y, color);
 }
 
@@ -212,7 +211,8 @@ void RoundedClip::accumulateSpan(int16_t y, int16_t x0, int16_t x1,
 
 void RoundedClip::accumulateOverlay(const roo_display::Rasterizable& source,
                                     Box clip, int16_t dx, int16_t dy,
-                                    const RoundedClip* active) {
+                                    const RoundedClip* active,
+                                    const PaintEffect* effects) {
   const Box extents = Box::Intersect(source.extents().translate(dx, dy), clip);
   if (!extents.intersects(viewport_)) return;
   for (size_t i = 0; i < rows_.size(); ++i) {
@@ -238,7 +238,8 @@ void RoundedClip::accumulateOverlay(const roo_display::Rasterizable& source,
         const int16_t sy = y - dy;
         Color value;
         source.readColors(&sx, &sy, 1, &value);
-        accumulate(x, y, value);
+        accumulate(x, y,
+                   PaintEffectStack(effects, effect_limit).apply(x, y, value));
       }
     }
   }
@@ -260,7 +261,8 @@ RoundedClipOutput::RoundedClipOutput(roo_display::DisplayOutput& output,
                                      RoundedClip& clip)
     : output_(output),
       clip_(clip),
-      capabilities_(output.getCapabilities().supportsBlending(), false) {}
+      capabilities_(/*supports_blending=*/false, /*supports_blit_copy=*/false) {
+}
 
 const roo_display::DisplayOutput::ColorFormat&
 RoundedClipOutput::getColorFormat() const {
@@ -512,29 +514,48 @@ bool RoundedOverlay::readUniformColorRect(int16_t x0, int16_t y0, int16_t x1,
 
 RoundedDecoration::RoundedDecoration(Decoration decoration,
                                      const RoundedClip* clip, Color background,
-                                     Color tint)
+                                     Color outline, const PaintEffect* effect)
     : decoration_(std::move(decoration)),
       clip_(clip),
       background_(background),
-      tint_(tint) {}
+      outline_(outline),
+      effect_(effect) {}
 
 void RoundedDecoration::readColors(const int16_t* x, const int16_t* y,
                                    uint32_t count, Color* result) const {
   for (uint32_t i = 0; i < count; ++i) {
-    Color content;
-    if (clip_->contentAt(x[i], y[i], background_, content)) {
-      result[i] =
-          decoration_.readWithContent(x[i], y[i], AlphaBlend(content, tint_));
-    } else {
-      decoration_.readColors(x + i, y + i, 1, result + i);
+    Color content = background_;
+    clip_->contentAt(x[i], y[i], background_, content);
+    Color outline = outline_;
+    if (effect_ != nullptr) {
+      content = PaintEffectStack(effect_, effect_->parent())
+                    .apply(x[i], y[i], content);
+      outline = PaintEffectStack(effect_, effect_->parent())
+                    .apply(x[i], y[i], outline);
     }
+    result[i] = decoration_.readWithContent(x[i], y[i], content, &outline);
   }
+}
+
+bool RoundedDecoration::readColorRect(int16_t x0, int16_t y0, int16_t x1,
+                                      int16_t y1, Color* result) const {
+  if (readUniformColorRect(x0, y0, x1, y1, result)) return true;
+  return Rasterizable::readColorRect(x0, y0, x1, y1, result);
 }
 
 bool RoundedDecoration::readUniformColorRect(int16_t x0, int16_t y0, int16_t x1,
                                              int16_t y1, Color* result) const {
-  return clip_->containsOpaque(Box(x0, y0, x1, y1)) &&
-         decoration_.readUniformColorRect(x0, y0, x1, y1, result);
+  if (!clip_->containsOpaque(Box(x0, y0, x1, y1))) return false;
+  if (!decoration_.readUniformColorRect(x0, y0, x1, y1, result)) return false;
+  if (effect_ == nullptr) return true;
+  Color tint;
+  if (!PaintEffectStack(effect_, effect_->parent())
+           .readUniformColorRect(x0, y0, x1, y1, &tint))
+    return false;
+  *result =
+      roo_display::Blender<roo_display::BlendingMode::kSourceAtop>().apply(
+          *result, tint);
+  return true;
 }
 
 }  // namespace internal

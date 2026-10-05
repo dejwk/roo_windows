@@ -44,7 +44,7 @@ class RoundedClip {
   /// Accumulates the next lower layer at a boundary pixel, before parent mask.
   void accumulate(int16_t x, int16_t y, roo_display::Color color);
 
-  /// Adds current descendant press feedback before completing a direct sample.
+  /// Applies descendant effects before capturing a direct boundary sample.
   void accumulateDirect(int16_t x, int16_t y, roo_display::Color color);
 
   /// Captures only fractional runs of a row, skipping the exterior in bulk.
@@ -56,7 +56,8 @@ class RoundedClip {
   /// Accumulates this overlay only where this is the first fractional clip.
   void accumulateOverlay(const roo_display::Rasterizable& source,
                          roo_display::Box clip, int16_t dx, int16_t dy,
-                         const RoundedClip* active);
+                         const RoundedClip* active,
+                         const PaintEffect* effects = nullptr);
 
   /// Resolves a stored boundary contribution against the container background.
   bool contentAt(int16_t x, int16_t y, roo_display::Color background,
@@ -70,9 +71,10 @@ class RoundedClip {
 
   /// Parent mask is captured at preparation and kept until this paint finishes.
   RoundedClip* parent = nullptr;
-  /// Borrowed only while the descendant's press scope is active.
-  const roo_display::Rasterizable* direct_press = nullptr;
-  roo_display::Box direct_press_clip{0, 0, -1, -1};
+  /// Effects outside this boundary are applied when its decoration is emitted.
+  const PaintEffect* effect_limit = nullptr;
+  /// Borrows the current scope pointer from the stable optional paint arena.
+  const PaintEffect* const* active_effects = nullptr;
 
  private:
   struct Row {
@@ -173,11 +175,17 @@ class RoundedDecoration : public roo_display::Rasterizable {
  public:
   /// Keeps outline/shadow composition in the existing decoration rasterizer.
   RoundedDecoration(Decoration decoration, const RoundedClip* clip,
-                    roo_display::Color background, roo_display::Color tint);
+                    roo_display::Color background, roo_display::Color outline,
+                    const PaintEffect* effect);
 
   roo_display::Box extents() const override { return decoration_.extents(); }
   void readColors(const int16_t* x, const int16_t* y, uint32_t count,
                   roo_display::Color* result) const override;
+
+  /// Keeps uniform interior reads in rectangle form before sampling boundaries.
+  bool readColorRect(int16_t x0, int16_t y0, int16_t x1, int16_t y1,
+                     roo_display::Color* result) const override;
+
   bool readUniformColorRect(int16_t x0, int16_t y0, int16_t x1, int16_t y1,
                             roo_display::Color* result) const override;
 
@@ -185,7 +193,8 @@ class RoundedDecoration : public roo_display::Rasterizable {
   Decoration decoration_;
   const RoundedClip* clip_;
   roo_display::Color background_;
-  roo_display::Color tint_;
+  roo_display::Color outline_;
+  const PaintEffect* effect_;
 };
 
 /// Optional retained storage for rounded composition during one paint.
@@ -216,7 +225,12 @@ struct RoundedPaintState {
   size_t decoration_count = 0;
   /// Top of the currently activated mask chain; prepared records are absent.
   RoundedClip* active = nullptr;
-  RoundedClip* press_target = nullptr;
+  /// Stable immutable effect scopes borrowed by deferred rasterizers.
+  std::vector<std::unique_ptr<PaintEffect>> effects;
+  /// Number of leading effect slots used by the current paint.
+  size_t effect_count = 0;
+  /// Innermost effect scope active at the current traversal position.
+  const PaintEffect* active_effect = nullptr;
 };
 
 }  // namespace internal

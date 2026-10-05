@@ -8,6 +8,8 @@ namespace roo_windows {
 namespace internal {
 
 RoundedPaintState& ClipperOutput::roundedArena() {
+  // Keep rectangular-only paints free of rounded/effect arena storage. Once
+  // needed, the arena remains in ClipperState so later paints reuse its slots.
   if (state_.rounded_ == nullptr) {
     state_.rounded_.reset(new RoundedPaintState());
   }
@@ -17,6 +19,8 @@ RoundedPaintState& ClipperOutput::roundedArena() {
 const PressOverlay* ClipperOutput::configurePressOverlay(
     const PressOverlaySpec& spec) {
   if (!spec.enabled) return nullptr;
+  // PaintEffect records borrow this shared object. The input model permits one
+  // active press animation, so its sample remains unchanged for this paint.
   press_overlay_ =
       PressOverlay(spec.center_x, spec.center_y, spec.radius, spec.color);
   if (spec.clipped_to_circle) {
@@ -28,8 +32,10 @@ const PressOverlay* ClipperOutput::configurePressOverlay(
 }
 
 void ClipperOutput::pushOverlaySpec(Widget& widget, const Canvas& canvas) {
-  OverlaySpec overlay_spec(widget, canvas);
-  if (!overlay_spec.is_modded()) {
+  OverlaySpec spec(widget, canvas);
+  if (!spec.is_modded()) {
+    // Consecutive inert widget frames are indistinguishable. Compress them so
+    // ordinary deep trees do not grow the overlay-spec deque while painting.
     if (!overlay_specs_.empty() &&
         !overlay_specs_.back().overlay_spec.is_modded()) {
       ++overlay_specs_.back().refcount;
@@ -38,7 +44,34 @@ void ClipperOutput::pushOverlaySpec(Widget& widget, const Canvas& canvas) {
     overlay_specs_.emplace_back(OverlaySpec(), 1);
     return;
   }
-  overlay_specs_.emplace_back(std::move(overlay_spec), 1);
+  if (HasContentEffect(spec)) {
+    // Area overlays and disabled styling modulate the widget's complete
+    // subtree. Capture an immutable linked scope so deferred descendants can
+    // apply the same effect after this widget's call frame has returned.
+    RoundedPaintState& arena = roundedArena();
+    roo_display::Color tint = spec.base_overlay();
+    if (spec.is_disabled()) {
+      // Disabled content is faded toward its resolved background. SourceAtop
+      // with background alpha (1 - disabled opacity) implements that transform
+      // while preserving the source coverage used at rounded boundaries.
+      const uint8_t opacity =
+          widget.theme().framework.interaction.disabledContentOpacity;
+      tint = canvas.bgcolor().withA(255 - ((255 * opacity) >> 7));
+    }
+    const PressOverlay* press = configurePressOverlay(spec.press_overlay());
+    const PaintEffect snapshot(arena.active_effect, canvas.clip_box(), tint,
+                               press);
+    // Deferred overlays borrow effect nodes, so retain stable slots until the
+    // complete paint finishes and reuse them by high-water index next frame.
+    if (arena.effect_count == arena.effects.size()) {
+      arena.effects.emplace_back(new PaintEffect(snapshot));
+    } else {
+      *arena.effects[arena.effect_count] = snapshot;
+    }
+    arena.active_effect = arena.effects[arena.effect_count++].get();
+    valid_ = false;
+  }
+  overlay_specs_.emplace_back(std::move(spec), 1);
 }
 
 void ClipperOutput::popOverlaySpec() {
@@ -47,35 +80,58 @@ void ClipperOutput::popOverlaySpec() {
     --overlay_specs_.back().refcount;
     return;
   }
-  if (scoped_press_overlay_active_ &&
-      overlay_specs_.back().overlay_spec.has_press_overlay()) {
-    scoped_press_overlay_active_ = false;
-    if (state_.rounded_ != nullptr &&
-        state_.rounded_->press_target != nullptr) {
-      state_.rounded_->press_target->direct_press = nullptr;
-      state_.rounded_->press_target = nullptr;
-    }
+  if (HasContentEffect(overlay_specs_.back().overlay_spec)) {
+    // active_effect mirrors only frames that created PaintEffect nodes; inert
+    // and point/custom overlay frames do not change this linked stack.
+    state_.rounded_->active_effect = activeEffect()->parent();
     valid_ = false;
   }
   overlay_specs_.pop_back();
 }
 
-void ClipperOutput::addDecoration(roo_display::Box clip_box,
+void ClipperOutput::addOverlayWithEffects(
+    const roo_display::Rasterizable* source, roo_display::Box clip, int16_t dx,
+    int16_t dy, const PaintEffect* effects) {
+  RoundedClip* masks = activeRoundedClip();
+  if (masks != nullptr || effects != nullptr) {
+    // Masks and effects are independent: rounded content may have no styling,
+    // while an ordinary rectangular subtree may inherit an effect. A mask
+    // requires boundary capture and clipping; an effect requires deferred
+    // color modulation. Either one needs a wrapper that snapshots both chains.
+    source = maskRoundedOverlay(source, clip, dx, dy, masks, effects);
+  }
+  overlays_.emplace_back(source, clip, dx, dy);
+  if (overlays_.back().extents().empty()) {
+    overlays_.pop_back();
+    return;
+  }
+  valid_ = false;
+}
+
+void ClipperOutput::addDecoration(roo_display::Box clip,
                                   roo_display::Box extents, int elevation,
                                   roo_display::Color bgcolor,
-                                  BorderStyle::CornerRadii corner_radii,
+                                  BorderStyle::CornerRadii radii,
                                   SmallNumber outline_width,
                                   roo_display::Color outline_color) {
-  const OverlaySpec& overlay_spec = currentOverlaySpec();
-  bool apply_press_overlay =
-      (overlay_spec.is_area() && overlay_spec.has_press_overlay()) ||
-      scoped_press_overlay_active_;
-  const PressOverlay* press_overlay =
-      apply_press_overlay ? &press_overlay_ : nullptr;
-  decorations_.emplace_back(std::move(extents), elevation, overlay_spec,
-                            press_overlay, bgcolor, corner_radii, outline_width,
-                            outline_color);
-  addOverlay(&decorations_.back(), clip_box);
+  const PaintEffect* own = ownEffect();
+  if (own != nullptr && currentOverlaySpec().is_disabled()) {
+    // own identifies an effect created by this widget rather than an inherited
+    // one. Decoration handles area overlays itself, but disabled styling is a
+    // complete-content transform. Resolve that transform into this widget's
+    // fill and outline now; the wrapper below starts at own->parent() so the
+    // effect is not applied twice and the widget's own shadow stays unchanged.
+    roo_display::Blender<roo_display::BlendingMode::kSourceAtop> tint;
+    bgcolor = tint.apply(bgcolor, own->tint());
+    outline_color = tint.apply(outline_color, own->tint());
+  }
+  decorations_.emplace_back(extents, elevation, currentOverlaySpec(),
+                            own == nullptr ? nullptr : own->press(), bgcolor,
+                            radii, outline_width, outline_color);
+  // Decoration resolves its own fill/outline effect; inherited effects also
+  // apply to child decoration layers before their enclosing owner's coverage.
+  addOverlayWithEffects(&decorations_.back(), clip, 0, 0,
+                        own == nullptr ? activeEffect() : own->parent());
 }
 
 RoundedClip* ClipperOutput::roundedClip(const void* owner_key) const {
@@ -102,7 +158,16 @@ RoundedClip& ClipperOutput::prepareRoundedClip(const void* owner_key,
   }
   RoundedClip* clip = arena.clips[arena.clip_count++].get();
   clip->reset(owner_key, bounds, style);
+  // Preparation precedes activation so unclipped children bypass this mask.
+  // Remember the enclosing chain now; activation later verifies this nesting.
   clip->parent = arena.active;
+  // Boundary capture applies effects introduced by descendants, stopping
+  // before the owner's effect. RoundedDecoration applies that owner effect
+  // once after it resolves the complete child/background group. Borrow the
+  // mutable top pointer so samples captured inside child scopes see those
+  // descendant effects.
+  clip->effect_limit = arena.active_effect;
+  clip->active_effects = &arena.active_effect;
   return *clip;
 }
 
@@ -184,22 +249,30 @@ void ClipperOutput::addRectExclusion(const roo_display::Box& exclusion) {
 
 const roo_display::Rasterizable* ClipperOutput::maskRoundedOverlay(
     const roo_display::Rasterizable* source, roo_display::Box clip, int16_t& dx,
-    int16_t& dy) {
-  RoundedPaintState& arena = *state_.rounded_;
+    int16_t& dy, RoundedClip* masks, const PaintEffect* effects) {
+  RoundedPaintState& arena = roundedArena();
   bool direct = true;
   const roo_display::Box bounds =
       roo_display::Box::Intersect(source->extents().translate(dx, dy), clip);
-  for (RoundedClip* mask = arena.active; mask != nullptr; mask = mask->parent) {
-    mask->accumulateOverlay(*source, clip, dx, dy, arena.active);
+  // Fractional boundary pixels cannot be emitted later as ordinary opaque
+  // overlay pixels. Capture their contribution now in every mask they reach.
+  // A source wholly inside every opaque interior can still bypass masking.
+  for (RoundedClip* mask = masks; mask != nullptr; mask = mask->parent) {
+    mask->accumulateOverlay(*source, clip, dx, dy, masks, effects);
     direct = direct && mask->containsOpaque(bounds);
   }
-  if (direct) return source;
-  RoundedOverlay wrapper(source, clip, dx, dy, arena.active);
+  if (direct && effects == nullptr) return source;
+
+  // Retain a raster wrapper for the opaque spans and/or deferred effects. Its
+  // mask and effect pointers borrow stable arena nodes for the rest of paint.
+  RoundedOverlay wrapper(source, clip, dx, dy, masks, effects);
   if (arena.overlay_count == arena.overlays.size()) {
     arena.overlays.emplace_back(new RoundedOverlay(wrapper));
   } else {
     *arena.overlays[arena.overlay_count] = wrapper;
   }
+  // The wrapper stores the original translation and exposes device-space
+  // extents, so its ClippedOverlay descriptor must not translate it again.
   dx = 0;
   dy = 0;
   return arena.overlays[arena.overlay_count++].get();
@@ -211,24 +284,27 @@ void ClipperOutput::addRoundedDecoration(
     roo_display::Color outline_color) {
   RoundedClip* clip = roundedClip(owner);
   if (clip == nullptr) return;
-  const OverlaySpec& spec = currentOverlaySpec();
-  const PressOverlay* press = ((spec.is_area() && spec.has_press_overlay()) ||
-                               scoped_press_overlay_active_)
-                                  ? &press_overlay_
-                                  : nullptr;
-  Decoration decoration(extents, elevation, spec, press, bgcolor,
+  const PaintEffect* own = ownEffect();
+  // RoundedDecoration substitutes the sparsely captured child/background group
+  // before fill and outline coverage. Give Decoration an inert OverlaySpec;
+  // the wrapper applies the owner's complete-content effect exactly once after
+  // resolving that group.
+  Decoration decoration(extents, elevation, OverlaySpec(), nullptr, bgcolor,
                         border.corner_radii(), border.outline_width(),
                         outline_color, true);
-  RoundedDecoration wrapper(
-      std::move(decoration), clip, bgcolor,
-      spec.is_area() ? spec.base_overlay() : roo_display::Color(0));
+  RoundedDecoration wrapper(std::move(decoration), clip, bgcolor, outline_color,
+                            own);
   RoundedPaintState& arena = *state_.rounded_;
+  // ClippedOverlay borrows this rasterizer, so use a stable high-water slot
+  // rather than a local object or a movable vector element.
   if (arena.decoration_count == arena.decorations.size()) {
     arena.decorations.emplace_back(new RoundedDecoration(wrapper));
   } else {
     *arena.decorations[arena.decoration_count] = wrapper;
   }
-  addOverlay(arena.decorations[arena.decoration_count++].get(), clip_box);
+  addOverlayWithEffects(arena.decorations[arena.decoration_count++].get(),
+                        clip_box, 0, 0,
+                        own == nullptr ? activeEffect() : own->parent());
 }
 
 }  // namespace internal

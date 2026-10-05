@@ -755,61 +755,24 @@ void Widget::paintWidget(const Canvas& canvas, Clipper& clipper) {
 }
 
 void Widget::paintWidgetModded(PaintContext& ctx) {
-  // Keeping this in a separate methods sheds 32 bytes from the stack.
-  Canvas& canvas = ctx.canvas();
   Clipper& clipper = ctx.clipperForFramework();
-  const OverlaySpec& overlay_spec = clipper.currentOverlaySpec();
-  if (overlay_spec.is_disabled()) {
-    roo_display::DisplayOutput& out = canvas.out();
-    roo_display::TranslucencyFilter disablement_filter(
-        canvas.out(), theme().framework.interaction.disabledContentOpacity,
-        canvas.bgcolor());
-    canvas.set_out(&disablement_filter);
-    paintWidgetContents(ctx);
-    canvas.set_out(&out);
-  } else {
-    // If click_animation is true, we need to redraw the overlay.
-    bool click_animation = ((state_ & kWidgetClicking) != 0);
-    if (click_animation) {
-      // ClickAnimation invalidates feedback before the next logical frame.
-      // Painting consumes this sample without scheduling or self-dirtying.
-      if (overlay_spec.is_click_animation_in_progress()) {
-        if (overlay_spec.has_press_overlay() && overlay_spec.is_point()) {
-          clipper.setPressOverlay(overlay_spec.press_overlay(),
-                                  canvas.clip_box());
-        } else if (overlay_spec.has_press_overlay() && overlay_spec.is_area()) {
-          // Keep the ripple active through descendant painting. The owning
-          // overlay-spec frame clears it after decoration emission.
-          clipper.setScopedPressOverlay(overlay_spec.press_overlay(),
-                                        canvas.clip_box());
-        }
-      } else {
-        // Consume state-change invalidations in this final overlay paint.
-        // Semantic click delivery follows after the drawing context closes.
-        clearClicking();
-      }
-    }
-    if (overlay_spec.has_press_overlay()) {
-      paintWidgetContents(ctx);
-    } else if (overlay_spec.base_overlay().a() > 0) {
-      if (overlay_spec.is_point()) {
-        AddPointOverlay(*this, canvas, clipper, overlay_spec.base_overlay());
-        paintWidgetContents(ctx);
-      } else if (overlay_spec.is_area()) {
-        roo_display::DisplayOutput& out = canvas.out();
-        roo_display::OverlayFilter filter(canvas.out(),
-                                          overlay_spec.base_overlay(),
-                                          roo_display::color::Transparent);
-        canvas.set_out(&filter);
-        paintWidgetContents(ctx);
-        canvas.set_out(&out);
-      } else {
-        paintWidgetContents(ctx);
-      }
-    } else {
-      paintWidgetContents(ctx);
+  const OverlaySpec& spec = clipper.currentOverlaySpec();
+  if (isClicking() && !spec.is_disabled()) {
+    if (!spec.is_click_animation_in_progress()) {
+      // Consume state-change invalidations in this final overlay paint.
+      // Semantic click delivery follows after the drawing context closes.
+      clearClicking();
+    } else if (spec.has_press_overlay() && spec.is_point()) {
+      clipper.setPressOverlay(spec.press_overlay(), ctx.canvas().clip_box());
     }
   }
+  if (spec.is_point() && !spec.has_press_overlay() &&
+      spec.base_overlay().a() > 0) {
+    AddPointOverlay(*this, ctx.canvas(), clipper, spec.base_overlay());
+  }
+  // Area and disabled effects were snapshotted when this overlay frame was
+  // entered. Direct output and deferred contributors use that same scope.
+  paintWidgetContents(ctx);
 }
 
 void Widget::paintWidgetContents(PaintContext& ctx) {

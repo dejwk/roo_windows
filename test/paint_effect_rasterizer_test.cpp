@@ -189,5 +189,36 @@ TEST(PaintEffectRasterizerTest, ResolvesEffectsOnlyForSurvivingSpans) {
   }
 }
 
+// Verifies decorated interiors resolve to one color before the generic point
+// sampler, while outlines and antialiased corners retain their pixel values.
+TEST(PaintEffectRasterizerTest, RoundedDecorationKeepsUniformInterior) {
+  const Box bounds(0, 0, 31, 23);
+  const BorderStyle border(8, 1.5f);
+  RoundedClip mask;
+  mask.reset(&mask, bounds, border);
+  const SpanCountingPress press(16, 12, 100, Color(0x806040C0));
+  const PaintEffect effect(nullptr, bounds, Color(0), &press);
+  const Color background(0xFF42685C);
+  const Color outline(0xFFCC0033);
+  const Decoration decoration(bounds, 0, OverlaySpec(), nullptr, background,
+                              border.corner_radii(), border.outline_width(),
+                              outline, true);
+  const RoundedDecoration rounded(decoration, &mask, background, outline,
+                                  &effect);
+  std::vector<Color> pixels(bounds.area(), Color(0x12345678));
+  ASSERT_TRUE(rounded.readColorRect(12, 8, 19, 15, pixels.data()));
+  EXPECT_EQ(press.queries, 1);
+  EXPECT_EQ(pixels[0], PaintEffectStack(&effect).apply(12, 8, background));
+  for (int i = 1; i < 64; ++i) EXPECT_EQ(pixels[i], Color(0x12345678));
+  ASSERT_FALSE(rounded.readColorRect(0, 0, 31, 23, pixels.data()));
+  for (int i = 0; i < bounds.area(); ++i) {
+    const int16_t x = i % 32;
+    const int16_t y = i / 32;
+    Color expected;
+    rounded.readColors(&x, &y, 1, &expected);
+    EXPECT_EQ(pixels[i], expected);
+  }
+}
+
 }  // namespace
 }  // namespace roo_windows::internal

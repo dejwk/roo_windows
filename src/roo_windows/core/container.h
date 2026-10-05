@@ -33,7 +33,11 @@ class Container : public SurfaceWidget {
 
   /// Clips direct clipped children to this surface's rounded content bounds.
   /// Direct unclipped children bypass this container's clip while retaining
-  /// ancestor clips.
+  /// ancestor clips and this owner's tint, ripple, and disabled styling.
+  /// Clipped content receives antialiased fill coverage after its owner effect.
+  /// Children must produce resolved opaque direct pixels; deferred overlays
+  /// may be translucent. Arbitrary transparent groups and destination-dependent
+  /// direct blending are not supported.
   virtual bool clipsChildrenToRoundedBounds() const { return false; }
 
   /// Reports whether any direct child can be explicitly unclipped.

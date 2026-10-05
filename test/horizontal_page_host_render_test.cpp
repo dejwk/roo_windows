@@ -275,6 +275,38 @@ TEST_F(HorizontalPageHostRenderTest, RoundedForegroundDisablesCoveredBlit) {
             std::vector<roo::byte>(std::begin(raster_), std::end(raster_)));
 }
 
+// Verifies raw copies cannot bypass an ancestor's content effect, even when
+// this child opts out of the rounded geometry and could otherwise cache pixels.
+TEST_F(HorizontalPageHostRenderTest, OwnerEffectsDisableUnclippedBlitReuse) {
+  auto owner = std::make_unique<RoundedTestPanel>(context());
+  RoundedTestPanel* panel = owner.get();
+  auto cache = std::make_unique<BlitCacheContainer>(context());
+  BlitCacheContainer* moving = cache.get();
+  cache->setParentClipMode(ParentClipMode::kUnclipped);
+  cache->setChild(std::make_unique<ColorBoxWidget>(context(), color::Blue,
+                                                   Dimensions(80, 40)));
+  owner->add(std::move(cache), Rect(0, 0, 79, 39));
+  app_.add(std::move(owner), Box(0, 0, 119, 59));
+  refresh();
+  moving->moveTo(Rect(4, 0, 83, 39));
+  offscreen_.resetCounters();
+  refresh();
+  EXPECT_GT(offscreen_.blitCalls(), 0u);
+  panel->setPressed(true);
+  refresh();
+  for (int x : {8, 2}) {
+    moving->moveTo(Rect(x, 0, x + 79, 39));
+    offscreen_.resetCounters();
+    refresh();
+    EXPECT_EQ(offscreen_.blitCalls(), 0u);
+    const std::vector<roo::byte> before(std::begin(raster_), std::end(raster_));
+    app_.root().invalidateInterior();
+    refresh();
+    EXPECT_EQ(before,
+              std::vector<roo::byte>(std::begin(raster_), std::end(raster_)));
+  }
+}
+
 // Verifies horizontal drag reveals the adjacent page strip with correct colors
 // when the active-slot wrappers run on a blit-capable output.
 TEST_F(HorizontalPageHostRenderTest, RevealedStripRepaintsWithBlitSupport) {
