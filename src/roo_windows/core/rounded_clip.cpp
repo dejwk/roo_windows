@@ -409,12 +409,14 @@ void RoundedClipOutput::fillRects(BlendingMode mode, Color color, int16_t* x0,
 
 RoundedOverlay::RoundedOverlay(const roo_display::Rasterizable* source,
                                Box clip, int16_t dx, int16_t dy,
-                               const RoundedClip* mask)
+                               const RoundedClip* mask,
+                               const PaintEffect* effects)
     : source_(source),
       extents_(Box::Intersect(clip, source->extents().translate(dx, dy))),
       dx_(dx),
       dy_(dy),
-      mask_(mask) {}
+      mask_(mask),
+      effects_(effects) {}
 
 void RoundedOverlay::readColors(const int16_t* x, const int16_t* y,
                                 uint32_t count, Color* result) const {
@@ -435,6 +437,10 @@ void RoundedOverlay::readColors(const int16_t* x, const int16_t* y,
     } while (i < count && i - begin < kBatchSize &&
              extents_.contains(x[i], y[i]) && OpaqueThrough(mask_, x[i], y[i]));
     source_->readColors(sx, sy, i - begin, result + begin);
+    if (effects_ != nullptr) {
+      PaintEffectStack(effects_).applyColors(x + begin, y + begin, i - begin,
+                                             result + begin);
+    }
   }
 }
 
@@ -442,11 +448,14 @@ bool RoundedOverlay::readColorRect(int16_t x0, int16_t y0, int16_t x1,
                                    int16_t y1, Color* result) const {
   const Box box(x0, y0, x1, y1);
   if (extents_.contains(box) && ContainsOpaqueThrough(mask_, box)) {
-    return source_->readColorRect(x0 - dx_, y0 - dy_, x1 - dx_, y1 - dy_,
-                                  result);
+    const bool uniform =
+        source_->readColorRect(x0 - dx_, y0 - dy_, x1 - dx_, y1 - dy_, result);
+    if (effects_ == nullptr) return uniform;
+    return PaintEffectStack(effects_, nullptr).applyRect(box, result, uniform);
   }
-  // Only the intersection of the ancestor interiors reaches the deferred
-  // source. Edge colors were already composed before applying parent coverage.
+  // Fractional contributions were captured at registration. Modulate only
+  // surviving opaque spans, preserving uniform source/effect metadata until
+  // each span must be expanded into the caller's mixed rectangle.
   roo_display::FillColor(result, box.area(), Color(0));
   const Box clipped = Box::Intersect(box, extents_);
   for (int32_t y = clipped.yMin(); !clipped.empty() && y <= clipped.yMax();
@@ -456,9 +465,13 @@ bool RoundedOverlay::readColorRect(int16_t x0, int16_t y0, int16_t x1,
     IntersectOpaqueSpans(mask_, y, lo, hi);
     if (lo > hi) continue;
     Color* row = result + (y - y0) * box.width() + lo - x0;
-    if (source_->readColorRect(lo - dx_, y - dy_, hi - dx_, y - dy_, row)) {
-      roo_display::FillColor(row + 1, hi - lo, row[0]);
+    bool uniform =
+        source_->readColorRect(lo - dx_, y - dy_, hi - dx_, y - dy_, row);
+    if (effects_ != nullptr) {
+      uniform = PaintEffectStack(effects_, nullptr)
+                    .applyRect(Box(lo, y, hi, y), row, uniform);
     }
+    if (uniform) roo_display::FillColor(row + 1, hi - lo, row[0]);
   }
   for (int32_t i = 1; i < box.area(); ++i) {
     if (result[i] != result[0]) return false;
@@ -470,8 +483,18 @@ bool RoundedOverlay::readUniformColorRect(int16_t x0, int16_t y0, int16_t x1,
                                           int16_t y1, Color* result) const {
   const Box box(x0, y0, x1, y1);
   if (extents_.contains(box) && ContainsOpaqueThrough(mask_, box)) {
-    return source_->readUniformColorRect(x0 - dx_, y0 - dy_, x1 - dx_, y1 - dy_,
-                                         result);
+    if (!source_->readUniformColorRect(x0 - dx_, y0 - dy_, x1 - dx_, y1 - dy_,
+                                       result)) {
+      return false;
+    }
+    if (effects_ == nullptr) return true;
+    Color tint;
+    if (!PaintEffectStack(effects_).readUniformColorRect(x0, y0, x1, y1, &tint))
+      return false;
+    *result =
+        roo_display::Blender<roo_display::BlendingMode::kSourceAtop>().apply(
+            *result, tint);
+    return true;
   }
   // A rectangle outside every surviving span is transparent without sampling
   // the source. Mixed rectangles use readColorRect's row-span path instead.

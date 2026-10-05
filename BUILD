@@ -1291,3 +1291,10 @@ cc_test(
     linkstatic = 1,
     deps = [":roo_windows", "@roo_testing//:arduino_gtest_main"],
 )
+
+cc_test(
+    name = "paint_effect_rasterizer_test",
+    srcs = ["test/paint_effect_rasterizer_test.cpp"],
+    linkstatic = 1,
+    deps = [":roo_windows", "@roo_testing//:arduino_gtest_main"],
+)

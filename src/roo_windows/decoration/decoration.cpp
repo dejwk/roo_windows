@@ -479,7 +479,8 @@ roo_display::Color Decoration::read(int16_t x, int16_t y) const {
 }
 
 roo_display::Color Decoration::readWithContent(
-    int16_t x, int16_t y, roo_display::Color content) const {
+    int16_t x, int16_t y, roo_display::Color content,
+    const roo_display::Color* resolved_outline) const {
   int16_t xMin_interior = widget_extents_.xMin() + outline_width_;
   int16_t xMax_interior = widget_extents_.xMax() - outline_width_;
   int16_t yMin_interior = widget_extents_.yMin() + outline_width_;
@@ -505,7 +506,8 @@ roo_display::Color Decoration::readWithContent(
         widget_extents_.xMin(), widget_extents_.yMin(), widget_extents_.xMax(),
         widget_extents_.yMax(), corner_radii_, 15, x, y);
     if (outline_alpha != 0) {
-      roo_display::Color outline = outline_color_;
+      roo_display::Color outline =
+          resolved_outline == nullptr ? outline_color_ : *resolved_outline;
       outline.set_a(outline_alpha);
       c = AlphaBlend(c, outline);
     }

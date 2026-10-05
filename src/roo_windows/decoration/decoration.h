@@ -56,8 +56,11 @@ class Decoration : public roo_display::Rasterizable {
 
   /// Composes resolved subtree content with this surface's coverage and shadow.
   /// The content has not yet been multiplied by this surface's coverage.
-  roo_display::Color readWithContent(int16_t x, int16_t y,
-                                     roo_display::Color content) const;
+  /// Optional @p outline substitutes a resolved outline color before coverage;
+  /// shadows keep their existing color and alpha.
+  roo_display::Color readWithContent(
+      int16_t x, int16_t y, roo_display::Color content,
+      const roo_display::Color* outline = nullptr) const;
 
   roo_display::Box extents() const override { return shadow_extents_; }
 

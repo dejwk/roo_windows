@@ -8,6 +8,7 @@
 #include "roo_display/core/rasterizable.h"
 #include "roo_windows/core/border_style.h"
 #include "roo_windows/core/exclusion.h"
+#include "roo_windows/core/paint_effect.h"
 #include "roo_windows/decoration/decoration.h"
 
 namespace roo_windows {
@@ -144,7 +145,8 @@ class RoundedOverlay : public roo_display::Rasterizable {
  public:
   /// References a retained source and clip chain using device coordinates.
   RoundedOverlay(const roo_display::Rasterizable* source, roo_display::Box clip,
-                 int16_t dx, int16_t dy, const RoundedClip* mask);
+                 int16_t dx, int16_t dy, const RoundedClip* mask,
+                 const PaintEffect* effects = nullptr);
 
   roo_display::Box extents() const override { return extents_; }
   void readColors(const int16_t* x, const int16_t* y, uint32_t count,
@@ -163,6 +165,7 @@ class RoundedOverlay : public roo_display::Rasterizable {
   int16_t dx_;
   int16_t dy_;
   const RoundedClip* mask_;
+  const PaintEffect* effects_;
 };
 
 /// Replaces flat boundary fill with captured content before applying coverage.
