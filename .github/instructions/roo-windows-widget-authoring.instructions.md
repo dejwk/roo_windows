@@ -54,6 +54,11 @@ This is the canonical widget-authoring guidance for the repository.
 - Keep semantic timers (password masking, scrollbar hiding, snackbar expiry,
   keyboard repeat) as scheduled semantic work. Their callbacks can change state
   or start a registry track; they are not visual frame drivers.
+- `AcceleratedScrollablePanel` is the cleanup-only exception to paint-time
+  invalidation: actual omitted background output requests normal full viewport
+  damage for a later refresh. It owns no animation track or timer; an unchanged
+  sampled position completes cleanup. Consume old obligations before painting
+  so fresh invalidations survive.
 - Do not add a general widget wakeup API without a concrete consumer that cannot
   use the registry or the shared click controller. Paint eligibility and deferred
   framework wakeups belong in the application/display core.

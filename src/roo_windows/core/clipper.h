@@ -683,6 +683,7 @@ class Clipper {
  private:
   friend class internal::RoundedRepaintScope;
   friend class internal::BackgroundDeferralScope;
+  friend class internal::BackgroundDeferralSuspension;
   friend class PaintContext;
 
   /// Protects stale pixels from lower writes without certifying scene validity.

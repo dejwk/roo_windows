@@ -1325,12 +1325,14 @@ cc_test(
     name = "background_deferral_test",
     srcs = ["test/background_deferral_test.cpp"],
     linkstatic = 1,
-    deps = [":roo_windows", "@roo_testing//:arduino_gtest_main"],
+    deps = [":roo_windows", "@roo_testing//:arduino_gtest_main",
+            "@roo_testing//roo_testing/system:manual_time_mode"],
 )
 
 cc_test(
     name = "accelerated_scroll_state_test",
     srcs = ["test/accelerated_scroll_state_test.cpp", "test/roo_windows_render_test_support.h"],
     linkstatic = 1,
-    deps = [":roo_windows", "@roo_testing//:arduino_gtest_main"],
+    deps = [":roo_windows", "@roo_testing//:arduino_gtest_main",
+            "@roo_testing//roo_testing/system:manual_time_mode"],
 )

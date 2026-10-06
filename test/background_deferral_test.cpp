@@ -7,6 +7,7 @@
 #include "roo_display/shape/smooth.h"
 #include "roo_testing/system/timer.h"
 #include "roo_windows.h"
+#include "roo_windows/containers/accelerated_scrollable_panel.h"
 #include "roo_windows/containers/blit_cache_container.h"
 
 namespace roo_windows {
@@ -38,6 +39,7 @@ class RecordingDevice : public roo_display::OffscreenDevice<Argb8888> {
   void fill(Color value, uint32_t count) override {
     countPixels(count);
     OffscreenDevice::fill(value, count);
+    if (delay_per_fill_us != 0) system_time_delay_micros(delay_per_fill_us);
   }
 
   void writePixels(BlendingMode mode, Color* values, int16_t* x, int16_t* y,
@@ -78,6 +80,7 @@ class RecordingDevice : public roo_display::OffscreenDevice<Argb8888> {
   }
 
   int blits = 0;
+  int delay_per_fill_us = 0;
   std::array<uint16_t, kWidth * kHeight> writes{};
 
  private:
@@ -218,6 +221,27 @@ TEST_F(BackgroundDeferralTest, ExpiredBandsPreservePixelsAndCoalesce) {
   ctx.clear();
   for (uint16_t count : device_.writes) EXPECT_LE(count, 1);
   EXPECT_EQ(color::Blue, pixelAt(10, 40));
+}
+
+// Verifies a display operation crossing the advisory deadline completes; only
+// subsequent eligible bands skip, without checks inside physical writes.
+TEST_F(BackgroundDeferralTest, DeadlineExpiresBetweenIndivisibleBandWrites) {
+  Surface surface(device_, 0, 0, display_.extents(), false, color::Blue,
+                  FillMode::kVisible, BlendingMode::kSource);
+  Canvas canvas(&surface);
+  internal::ClipperState state;
+  Clipper clipper(state, device_,
+                  roo_time::Uptime::Now() + roo_time::Micros(1500));
+  canvas.set_out(clipper.out());
+  PaintContext ctx(canvas, clipper);
+  internal::BackgroundDeferralScope scope(clipper, display_.extents(),
+                                          display_.extents(), 0);
+  device_.delay_per_fill_us = 1000;
+  ctx.clearDeferrableBackground();
+  EXPECT_TRUE(scope.deferred());
+  EXPECT_EQ(1, device_.writes[5 * kWidth]);
+  EXPECT_EQ(1, device_.writes[20 * kWidth]);
+  EXPECT_EQ(0, device_.writes[40 * kWidth]);
 }
 
 // Verifies disabled helper output is complete, and eligibility requires an
@@ -418,6 +442,377 @@ TEST_F(BackgroundDeferralTest, SuspensionRestoresPermission) {
   ctx.clipped(Rect(0, 35, 20, 45)).clearDeferrableBackground();
   EXPECT_TRUE(scope.deferred());
   EXPECT_EQ(0, device_.writes[40 * kWidth + 3]);
+}
+
+class LogStripe : public Widget {
+ public:
+  using Widget::Widget;
+
+  Dimensions getSuggestedMinimumDimensions() const override { return {72, 9}; }
+
+  void paint(PaintContext& ctx) const override {
+    ctx.fillRect(bounds(), color::White);
+  }
+};
+
+class LogRow : public Panel {
+ public:
+  LogRow(ApplicationContext& ctx, Color color, bool rounded)
+      : Panel(ctx), color_(color), rounded_(rounded) {
+    add(std::make_unique<LogStripe>(ctx), Rect(0, 0, 71, 8));
+  }
+
+  Color background() const override { return color_; }
+
+  bool clipsChildrenToRoundedBounds() const override { return rounded_; }
+
+  BorderStyle getBorderStyle() const override { return BorderStyle(10, 1); }
+
+  uint8_t getElevation() const override { return 2; }
+
+ private:
+  Color color_;
+  bool rounded_;
+};
+
+class LogRows : public Panel {
+ public:
+  LogRows(ApplicationContext& ctx, bool rounded) : Panel(ctx) {
+    for (int i = 0; i < 8; ++i) {
+      add(std::make_unique<LogRow>(ctx, i % 2 == 0 ? color::Red : color::Green,
+                                   rounded),
+          Rect(12, 10 + i * 48, 83, 45 + i * 48));
+    }
+  }
+
+  Dimensions getSuggestedMinimumDimensions() const override {
+    return {96, 400};
+  }
+
+  Dimensions onMeasure(WidthSpec width, HeightSpec height) override {
+    Panel::onMeasure(width, height);
+    return {width.resolveSize(96), height.resolveSize(400)};
+  }
+
+  Color background() const override { return color::Blue; }
+
+  void paintWidgetContents(PaintContext& ctx) override {
+    // Models a slow mandatory draw consuming the allowance before optional
+    // fills.
+    system_time_delay_micros(1000);
+    ++paints;
+    Panel::paintWidgetContents(ctx);
+    if (during_paint != nullptr) {
+      std::function<void()> callback = std::move(during_paint);
+      callback();
+    }
+  }
+
+  void addWidget(WidgetRef widget, const Rect& bounds) {
+    add(std::move(widget), bounds);
+  }
+
+  int paints = 0;
+  std::function<void()> during_paint;
+};
+
+class ObservableAcceleratedPanel : public AcceleratedScrollablePanel {
+ public:
+  using AcceleratedScrollablePanel::AcceleratedScrollablePanel;
+  using AcceleratedScrollablePanel::cleanupPending;
+  using AcceleratedScrollablePanel::nextBand;
+  using AcceleratedScrollablePanel::paintWidgetContents;
+};
+
+class RoundedLogFrame : public Panel {
+ public:
+  using Panel::add;
+  using Panel::Panel;
+
+  bool clipsChildrenToRoundedBounds() const override { return true; }
+
+  BorderStyle getBorderStyle() const override { return BorderStyle(20, 1); }
+};
+
+struct LogWorld {
+  LogWorld(bool accelerated, bool rounded, bool rounded_parent = false)
+      : device(pixels.data()),
+        display(device),
+        env(scheduler),
+        app(&env, display) {
+    auto rows = std::make_unique<LogRows>(app.context(), rounded);
+    content = rows.get();
+    if (accelerated) {
+      auto widget = std::make_unique<ObservableAcceleratedPanel>(
+          app.context(), std::move(rows));
+      optional = widget.get();
+      panel = widget.get();
+      install(std::move(widget), rounded_parent);
+    } else {
+      auto widget = std::make_unique<SimpleScrollablePanel>(app.context(),
+                                                            std::move(rows));
+      panel = widget.get();
+      install(std::move(widget), rounded_parent);
+    }
+    app.window().setAdvisoryPaintBudget(roo_time::Micros(1));
+    app.refresh();
+  }
+
+  void install(WidgetRef widget, bool rounded_parent) {
+    if (rounded_parent) {
+      auto frame = std::make_unique<RoundedLogFrame>(app.context());
+      frame->add(std::move(widget), Rect(display.extents()));
+      app.add(std::move(frame), display.extents());
+    } else {
+      app.add(std::move(widget), display.extents());
+    }
+  }
+
+  Color pixelAt(int16_t x, int16_t y) const {
+    Color result;
+    device.raster().readColors(&x, &y, 1, &result);
+    return result;
+  }
+
+  void runNext() {
+    roo_time::Uptime next = scheduler.getNearestExecutionTime();
+    ASSERT_NE(roo_time::Uptime::Max(), next);
+    if (next > roo_time::Uptime::Now()) {
+      system_time_delay_micros((next - roo_time::Uptime::Now()).inMicros());
+    }
+    scheduler.executeEligibleTasksUpToNow(roo_scheduler::Priority::kMinimum, 1);
+  }
+
+  void runNextPaint() {
+    int previous = content->paints;
+    // An already queued input/application dispatch can precede the eligible
+    // paint deadline. Advance scheduled work until precisely one refresh runs.
+    for (int attempt = 0; attempt < 4 && content->paints == previous;
+         ++attempt) {
+      runNext();
+    }
+    EXPECT_EQ(previous + 1, content->paints);
+  }
+
+  std::array<roo::byte, kWidth * kHeight * 4> pixels{};
+  RecordingDevice device;
+  Display display;
+  roo_scheduler::SchedulingService scheduler;
+  Environment env;
+  Application app;
+  SimpleScrollablePanel* panel;
+  ObservableAcceleratedPanel* optional = nullptr;
+  LogRows* content;
+};
+
+// Verifies every selected band agrees with a fresh complete renderer through
+// sustained motion and reversal; no pixel's mismatching age reaches one cycle.
+// Stopping at each cursor position settles from scheduled work without input.
+TEST(AcceleratedScrolling, MovingBandsAndScheduledSettlementMatchReference) {
+  for (int variant = 0; variant < 3; ++variant) {
+    bool rounded = variant != 0;
+    LogWorld current(true, rounded, variant == 2);
+    LogWorld reference(false, rounded, variant == 2);
+    current.app.start();
+    current.runNext();
+    std::array<int, kWidth * kHeight> ages{};
+    for (int frame = 0; frame < 30; ++frame) {
+      int delta = frame < 15 ? -2 : 2;
+      int band = current.optional->nextBand();
+      current.panel->scrollBy(0, delta);
+      reference.panel->scrollBy(0, delta);
+      reference.app.refresh();
+      current.device.reset();
+      current.app.refresh();
+      ASSERT_TRUE(current.optional->cleanupPending());
+      EXPECT_TRUE(current.app.root().isDirty());
+      for (int y = 0; y < kHeight; ++y) {
+        for (int x = 0; x < kWidth; ++x) {
+          int index = y * kWidth + x;
+          Color actual = current.pixelAt(x, y);
+          Color expected = reference.pixelAt(x, y);
+          EXPECT_LE(current.device.writes[index], 1);
+          if (current.device.writes[index] != 0 || y / 16 == band) {
+            ASSERT_EQ(expected, actual) << x << "," << y << " frame " << frame;
+          }
+          ages[index] = actual == expected ? 0 : ages[index] + 1;
+          ASSERT_LT(ages[index], (kHeight + 15) / 16);
+        }
+      }
+    }
+    for (int stop = 1; stop <= (kHeight + 15) / 16; ++stop) {
+      current.optional->requestCompleteRedraw();
+      current.app.refresh();
+      for (int frame = 0; frame < stop; ++frame) {
+        current.panel->scrollBy(0, -2);
+        reference.panel->scrollBy(0, -2);
+        current.app.refresh();
+        reference.app.refresh();
+      }
+      current.device.reset();
+      current.runNextPaint();
+      EXPECT_FALSE(current.optional->cleanupPending());
+      EXPECT_FALSE(current.app.root().isDirty());
+      EXPECT_EQ(roo_time::Uptime::Max(),
+                current.scheduler.getNearestExecutionTime());
+      EXPECT_EQ(reference.pixels, current.pixels);
+      for (uint16_t writes : current.device.writes) EXPECT_LE(writes, 1);
+    }
+  }
+}
+
+// Verifies content damage from a callback and fresh damage raised inside a
+// complete cleanup survive the consumed old obligation and remain scheduled.
+TEST(AcceleratedScrolling,
+     ForeignDamageAndPaintTimeMutationRequireCompleteRepair) {
+  LogWorld current(true, true);
+  LogWorld reference(false, true);
+  current.app.start();
+  current.runNext();
+  current.panel->scrollBy(0, -8);
+  reference.panel->scrollBy(0, -8);
+  current.app.refresh();
+  reference.app.refresh();
+  ASSERT_TRUE(current.optional->cleanupPending());
+  current.content->during_paint = [&]() {
+    current.content->invalidateInterior();
+  };
+  current.runNextPaint();
+  EXPECT_TRUE(current.app.root().isDirty());
+  EXPECT_NE(roo_time::Uptime::Max(),
+            current.scheduler.getNearestExecutionTime());
+  current.runNextPaint();
+  EXPECT_FALSE(current.app.root().isDirty());
+  EXPECT_EQ(reference.pixels, current.pixels);
+  current.panel->setOnScrollPositionChanged(
+      [&](ScrollPosition, ScrollPosition) {
+        current.content->invalidateInterior();
+      });
+  current.panel->scrollBy(0, -8);
+  reference.panel->scrollBy(0, -8);
+  current.app.refresh();
+  reference.app.refresh();
+  EXPECT_FALSE(current.optional->cleanupPending());
+  EXPECT_EQ(reference.pixels, current.pixels);
+}
+
+// Verifies explicit complete redraw overrides moving-frame advice, while an
+// unlimited budget never opts a scroller into approximate output.
+TEST(AcceleratedScrolling, ForcedCompleteAndUnlimitedBudgetsRemainExact) {
+  LogWorld current(true, true);
+  LogWorld reference(false, true);
+  current.panel->scrollBy(0, -8);
+  reference.panel->scrollBy(0, -8);
+  current.optional->requestCompleteRedraw();
+  current.app.refresh();
+  reference.app.refresh();
+  EXPECT_FALSE(current.optional->cleanupPending());
+  EXPECT_EQ(reference.pixels, current.pixels);
+  current.app.window().setAdvisoryPaintBudget(roo_time::Duration());
+  current.panel->scrollBy(0, -8);
+  reference.panel->scrollBy(0, -8);
+  current.app.refresh();
+  reference.app.refresh();
+  EXPECT_FALSE(current.optional->cleanupPending());
+  EXPECT_EQ(reference.pixels, current.pixels);
+}
+
+// Verifies a narrowed cleanup cannot discard the remaining viewport obligation.
+TEST(AcceleratedScrolling, PartialCleanupReissuesFullViewportDamage) {
+  LogWorld current(true, true);
+  LogWorld reference(false, true);
+  current.app.start();
+  current.runNext();
+  current.panel->scrollBy(0, -8);
+  reference.panel->scrollBy(0, -8);
+  current.app.refresh();
+  reference.app.refresh();
+  ASSERT_TRUE(current.optional->cleanupPending());
+  Surface surface(current.device, 0, 0, Box(0, 16, 95, 31), false,
+                  current.optional->effectiveBackground(), FillMode::kVisible,
+                  BlendingMode::kSource);
+  Canvas canvas(&surface);
+  internal::ClipperState state;
+  Clipper clipper(state, current.device, roo_time::Uptime::Now());
+  canvas.set_out(clipper.out());
+  PaintContext ctx(canvas, clipper);
+  current.optional->paintWidgetContents(ctx);
+  EXPECT_TRUE(current.optional->cleanupPending());
+  EXPECT_TRUE(current.app.root().isDirty());
+  current.runNextPaint();
+  EXPECT_EQ(reference.pixels, current.pixels);
+  EXPECT_FALSE(current.optional->cleanupPending());
+  EXPECT_EQ(roo_time::Uptime::Max(),
+            current.scheduler.getNearestExecutionTime());
+}
+
+// Verifies nested opt-in scrollers suspend their own fills and leave one
+// cleanup owner; final settlement reconstructs both scenes using current
+// inputs.
+TEST(AcceleratedScrolling, NestedOptInHasOneCleanupOwner) {
+  LogWorld current(true, true);
+  LogWorld reference(false, true);
+  auto inner = std::make_unique<ObservableAcceleratedPanel>(
+      current.app.context(),
+      std::make_unique<LogRows>(current.app.context(), true));
+  ObservableAcceleratedPanel* nested = inner.get();
+  current.content->addWidget(std::move(inner), Rect(25, 5, 85, 60));
+  reference.content->addWidget(
+      std::make_unique<SimpleScrollablePanel>(
+          reference.app.context(),
+          std::make_unique<LogRows>(reference.app.context(), true)),
+      Rect(25, 5, 85, 60));
+  current.optional->requestCompleteRedraw();
+  current.app.refresh();
+  reference.app.refresh();
+  current.panel->scrollBy(0, -8);
+  reference.panel->scrollBy(0, -8);
+  current.app.refresh();
+  reference.app.refresh();
+  EXPECT_TRUE(current.optional->cleanupPending());
+  EXPECT_FALSE(nested->cleanupPending());
+  current.app.refresh();
+  EXPECT_EQ(reference.pixels, current.pixels);
+  EXPECT_FALSE(current.optional->cleanupPending());
+}
+
+// Verifies a held-still drag needs no release event for cleanup, and the final
+// sampled fling position settles without requiring another animation sample.
+TEST(AcceleratedScrolling, HeldStillDragAndTerminalFlingSettleWithoutInput) {
+  LogWorld current(true, true);
+  LogWorld reference(false, true);
+  current.app.start();
+  current.runNext();
+  current.panel->onDragStart(0, 0);
+  reference.panel->onDragStart(0, 0);
+  current.panel->onDrag(0, 0, 0, -8);
+  reference.panel->onDrag(0, 0, 0, -8);
+  current.app.refresh();
+  reference.app.refresh();
+  ASSERT_TRUE(current.optional->cleanupPending());
+  current.runNextPaint();
+  EXPECT_EQ(reference.pixels, current.pixels);
+  EXPECT_EQ(roo_time::Uptime::Max(),
+            current.scheduler.getNearestExecutionTime());
+  current.panel->onFling(0, 0, 0, -1800);
+  reference.panel->onFling(0, 0, 0, -1800);
+  // Establish the registry anchors before advancing custom animation time.
+  current.app.refresh();
+  reference.app.refresh();
+  system_time_delay_micros(5000000);
+  current.app.refresh();
+  reference.app.refresh();
+  // The overshooting terminal fling sample starts a spring-back. Finish that
+  // final track too before checking cleanup alone returns the app to idle.
+  system_time_delay_micros(600000);
+  current.app.refresh();
+  reference.app.refresh();
+  if (current.optional->cleanupPending()) current.runNextPaint();
+  EXPECT_EQ(reference.panel->getScrollPosition().y,
+            current.panel->getScrollPosition().y);
+  EXPECT_EQ(reference.pixels, current.pixels);
+  EXPECT_EQ(roo_time::Uptime::Max(),
+            current.scheduler.getNearestExecutionTime());
 }
 
 }  // namespace

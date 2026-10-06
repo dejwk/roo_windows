@@ -1,16 +1,42 @@
-#include "roo_windows/containers/accelerated_scroll_state.h"
+#include "roo_windows/containers/accelerated_scrollable_panel.h"
 
 #include "roo_windows/core/application.h"
 #include "roo_windows/core/paint_context.h"
 
-namespace roo_windows::internal {
+namespace roo_windows {
 
-AcceleratedScrollState::AcceleratedScrollState(ApplicationContext& context,
-                                               WidgetRef contents,
-                                               Direction direction)
+AcceleratedScrollablePanel::AcceleratedScrollablePanel(
+    ApplicationContext& context, WidgetRef contents, Direction direction)
     : SimpleScrollablePanel(context, std::move(contents), direction) {}
 
-roo_display::Box AcceleratedScrollState::visibleViewport(
+void AcceleratedScrollablePanel::requestCompleteRedraw() {
+  requireCompleteRedraw();
+}
+
+void AcceleratedScrollablePanel::paintWidgetContents(PaintContext& ctx) {
+  PaintMode mode = beginPaint(ctx);
+  Clipper& clipper = ctx.clipperForFramework();
+  if (mode == PaintMode::kAccelerated) {
+    bool deferred;
+    {
+      internal::BackgroundDeferralScope scope(clipper, viewport(),
+                                              opaqueInterior(), nextBand());
+      SimpleScrollablePanel::paintWidgetContents(ctx);
+      deferred = scope.deferred();
+    }
+    finishAcceleratedPaint(deferred);
+    return;
+  }
+  if (clipper.hasBackgroundDeferralScope()) {
+    internal::BackgroundDeferralSuspension suspension(clipper);
+    SimpleScrollablePanel::paintWidgetContents(ctx);
+  } else {
+    SimpleScrollablePanel::paintWidgetContents(ctx);
+  }
+  if (mode == PaintMode::kPartial && cleanupPending()) requestCleanup();
+}
+
+roo_display::Box AcceleratedScrollablePanel::visibleViewport(
     const PaintContext& ctx) const {
   XDim x = ctx.canvas().dx();
   YDim y = ctx.canvas().dy();
@@ -28,7 +54,7 @@ roo_display::Box AcceleratedScrollState::visibleViewport(
       visible.asBox(), getApplication()->window().display().extents());
 }
 
-AcceleratedScrollState::PaintMode AcceleratedScrollState::beginPaint(
+AcceleratedScrollablePanel::PaintMode AcceleratedScrollablePanel::beginPaint(
     PaintContext& ctx) {
   Clipper& clipper = ctx.clipperForFramework();
   if (presentationState() != PresentationState::kPresented ||
@@ -65,45 +91,45 @@ AcceleratedScrollState::PaintMode AcceleratedScrollState::beginPaint(
   return accelerated ? PaintMode::kAccelerated : PaintMode::kComplete;
 }
 
-void AcceleratedScrollState::observeDamage() {
+void AcceleratedScrollablePanel::observeDamage() {
   if (in_scroll_update_ || requesting_cleanup_) return;
   complete_required_ = true;
   baseline_valid_ = false;
 }
 
-void AcceleratedScrollState::propagateDirty(const Widget* child,
-                                            const Rect& rect) {
+void AcceleratedScrollablePanel::propagateDirty(const Widget* child,
+                                                const Rect& rect) {
   observeDamage();
   SimpleScrollablePanel::propagateDirty(child, rect);
 }
 
-void AcceleratedScrollState::invalidateDescending() {
+void AcceleratedScrollablePanel::invalidateDescending() {
   observeDamage();
   SimpleScrollablePanel::invalidateDescending();
 }
 
-void AcceleratedScrollState::invalidateDescending(const Rect& rect) {
+void AcceleratedScrollablePanel::invalidateDescending(const Rect& rect) {
   observeDamage();
   SimpleScrollablePanel::invalidateDescending(rect);
 }
 
-bool AcceleratedScrollState::invalidateBeneathDescending(
+bool AcceleratedScrollablePanel::invalidateBeneathDescending(
     const Rect& rect, const Widget* subject) {
   observeDamage();
   return SimpleScrollablePanel::invalidateBeneathDescending(rect, subject);
 }
 
-void AcceleratedScrollState::onScrollUpdate(bool active) {
+void AcceleratedScrollablePanel::onScrollUpdate(bool active) {
   SimpleScrollablePanel::onScrollUpdate(active);
   in_scroll_update_ = active;
 }
 
-void AcceleratedScrollState::onLayout(bool changed, const Rect& rect) {
+void AcceleratedScrollablePanel::onLayout(bool changed, const Rect& rect) {
   if (changed) observeDamage();
   SimpleScrollablePanel::onLayout(changed, rect);
 }
 
-void AcceleratedScrollState::onPresentationChanged(
+void AcceleratedScrollablePanel::onPresentationChanged(
     const PresentationChange& change) {
   if (change.state != PresentationState::kPresented ||
       change.detached_since_delivery) {
@@ -115,12 +141,12 @@ void AcceleratedScrollState::onPresentationChanged(
   SimpleScrollablePanel::onPresentationChanged(change);
 }
 
-void AcceleratedScrollState::requireCompleteRedraw() {
+void AcceleratedScrollablePanel::requireCompleteRedraw() {
   complete_required_ = true;
   invalidateInterior();
 }
 
-void AcceleratedScrollState::requestCleanup() {
+void AcceleratedScrollablePanel::requestCleanup() {
   requesting_cleanup_ = true;
   // Full descending invalidation rebuilds foreground and retained rounded
   // contributors too. A background-only repaint cannot settle this policy.
@@ -128,7 +154,7 @@ void AcceleratedScrollState::requestCleanup() {
   requesting_cleanup_ = false;
 }
 
-void AcceleratedScrollState::finishAcceleratedPaint(bool deferred) {
+void AcceleratedScrollablePanel::finishAcceleratedPaint(bool deferred) {
   next_band_ = (next_band_ + 1) % ((last_viewport_.height() + 15) / 16);
   if (deferred) {
     cleanup_pending_ = true;
@@ -136,4 +162,4 @@ void AcceleratedScrollState::finishAcceleratedPaint(bool deferred) {
   }
 }
 
-}  // namespace roo_windows::internal
+}  // namespace roo_windows

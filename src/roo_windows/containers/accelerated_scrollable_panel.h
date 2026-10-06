@@ -2,17 +2,30 @@
 
 #include "roo_windows/containers/scrollable_panel.h"
 
-namespace roo_windows::internal {
+namespace roo_windows {
 
-/// Internal scroller state for admission and cleanup; owns no paint records.
-/// This helper does not enable optional output. Its consumer must finish every
-/// traversal and request cleanup after any actual deferral.
-class AcceleratedScrollState : public SimpleScrollablePanel {
+/// Opt-in scrolling that trades temporary background and pending-composition
+/// trails for more frequent display updates. With a finite advisory paint
+/// budget, moving paints progressively repair 16-pixel bands. The next
+/// scheduled paint at an unchanged position completes the entire current image,
+/// even during a held-still drag. Ordinary scrollers retain complete-paint
+/// behavior. No framebuffer cache or frame-spanning paint records are retained.
+class AcceleratedScrollablePanel : public SimpleScrollablePanel {
  public:
-  AcceleratedScrollState(ApplicationContext& context, WidgetRef contents,
-                         Direction direction = Direction::kVertical);
+  /// Creates a scroll viewport around @p contents with the given axis policy.
+  /// Contents use normal WidgetRef ownership; an unlimited window budget keeps
+  /// all background operations complete.
+  AcceleratedScrollablePanel(ApplicationContext& context, WidgetRef contents,
+                             Direction direction = Direction::kVertical);
+
+  /// Requests a complete viewport redraw asynchronously, without stopping
+  /// motion. Use before capture or when application policy requires a clean
+  /// frame.
+  void requestCompleteRedraw();
 
  protected:
+  void paintWidgetContents(PaintContext& ctx) override;
+
   enum class PaintMode { kUnavailable, kPartial, kComplete, kAccelerated };
 
   /// Consumes the old complete-paint obligation before traversal so new damage
@@ -67,4 +80,4 @@ class AcceleratedScrollState : public SimpleScrollablePanel {
   bool requesting_cleanup_ = false;
 };
 
-}  // namespace roo_windows::internal
+}  // namespace roo_windows

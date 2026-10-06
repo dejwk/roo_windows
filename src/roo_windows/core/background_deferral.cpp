@@ -7,14 +7,13 @@ namespace roo_windows::internal {
 BackgroundDeferralScope::BackgroundDeferralScope(Clipper& clipper,
                                                  roo_display::Box viewport,
                                                  roo_display::Box interior,
-                                                 uint16_t band, bool suspension)
+                                                 uint16_t band)
     : clipper_(clipper),
       previous_(clipper.background_scope_),
       viewport_(viewport),
       interior_(interior),
       band_(band) {
-  clipper_.background_scope_ =
-      suspension && previous_ == nullptr ? nullptr : this;
+  clipper_.background_scope_ = this;
 }
 
 BackgroundDeferralScope::~BackgroundDeferralScope() {
@@ -22,7 +21,15 @@ BackgroundDeferralScope::~BackgroundDeferralScope() {
 }
 
 BackgroundDeferralSuspension::BackgroundDeferralSuspension(Clipper& clipper)
-    : scope_(clipper, roo_display::Box(0, 0, -1, -1),
-             roo_display::Box(0, 0, -1, -1), 0, true) {}
+    : scope_(clipper.background_scope_), previous_interior_(0, 0, -1, -1) {
+  if (scope_ != nullptr) {
+    previous_interior_ = scope_->interior_;
+    scope_->interior_ = roo_display::Box(0, 0, -1, -1);
+  }
+}
+
+BackgroundDeferralSuspension::~BackgroundDeferralSuspension() {
+  if (scope_ != nullptr) scope_->interior_ = previous_interior_;
+}
 
 }  // namespace roo_windows::internal

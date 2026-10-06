@@ -1,6 +1,5 @@
-#include "roo_windows/containers/accelerated_scroll_state.h"
-
 #include "gtest/gtest.h"
+#include "roo_windows/containers/accelerated_scrollable_panel.h"
 #include "roo_windows_render_test_support.h"
 
 namespace roo_windows {
@@ -19,12 +18,12 @@ class StateContent : public SurfaceWidget {
   void paint(PaintContext& ctx) const override { ctx.clear(); }
 };
 
-class StateHarness : public internal::AcceleratedScrollState {
+class StateHarness : public AcceleratedScrollablePanel {
  public:
-  using AcceleratedScrollState::AcceleratedScrollState;
-  using AcceleratedScrollState::beginPaint;
-  using AcceleratedScrollState::PaintMode;
-  using AcceleratedScrollState::viewport;
+  using AcceleratedScrollablePanel::AcceleratedScrollablePanel;
+  using AcceleratedScrollablePanel::beginPaint;
+  using AcceleratedScrollablePanel::PaintMode;
+  using AcceleratedScrollablePanel::viewport;
 
   PaintMode last_mode = PaintMode::kUnavailable;
 
