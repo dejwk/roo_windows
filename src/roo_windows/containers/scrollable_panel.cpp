@@ -425,6 +425,7 @@ void SimpleScrollablePanel::applyScrollResult(
                                std::min<YDim>(result.y, 0));
   }
 
+  onScrollUpdate(true);
   const YDim content_height = c->height() + m.top() + m.bottom();
   if (content_height <= height()) {
     scroll_bar_.setRange(0, height() - 1);
@@ -439,9 +440,13 @@ void SimpleScrollablePanel::applyScrollResult(
   }
   const XDim new_x = visual_x + m.left();
   const YDim new_y = visual_y + m.top();
-  if (c->offsetLeft() == new_x && c->offsetTop() == new_y) return;
+  if (c->offsetLeft() == new_x && c->offsetTop() == new_y) {
+    onScrollUpdate(false);
+    return;
+  }
   ScrollPosition previous = currentScrollPosition();
   c->moveTo(c->bounds().translate(new_x, new_y));
+  onScrollUpdate(false);
   notifyScrollPositionChanged(previous);
 }
 

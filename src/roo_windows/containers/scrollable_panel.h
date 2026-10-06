@@ -246,6 +246,12 @@ class SimpleScrollablePanel : public Container,
   bool supportsFling() const override { return true; }
 
  protected:
+  /// Brackets framework-owned movement and scrollbar range invalidations only.
+  /// User position callbacks run after active becomes false. Overrides must
+  /// chain this no-op base hook; no budget state is retained by ordinary
+  /// panels.
+  virtual void onScrollUpdate(bool active) {}
+
   PreferredSize getPreferredSize() const override;
 
   Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
