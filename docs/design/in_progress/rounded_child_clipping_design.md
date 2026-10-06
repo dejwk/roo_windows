@@ -14,8 +14,9 @@ P1 implements bounded subtraction in
 [baf5c3ab](https://github.com/dejwk/roo_windows/commit/baf5c3ab).
 P4 implements owner-effect composition in five reviewable commits: existing
 helper extraction, the effect primitive, optional rasterizer support, renderer
-integration, and resource checks/documentation. The remaining stages are
-P5–P8; their IDs are preserved for delegation.
+integration, and resource checks/documentation. P5 implements the private,
+non-executing safe-copy planner. The remaining stages are P6–P8; their IDs are
+preserved for delegation.
 No remaining stage depends on interruption or its possible future replacement.
 
 This document captures the original output-interception proposal and its
@@ -97,10 +98,8 @@ grouped containers inspect direct-child indices in two filtered scans.
 
 ### Remaining work
 
-1. Complete owner ripple and disabled-group composition; the prototype's
-   intended owner is opaque and enabled.
-2. Replace the prototype's blanket rejection of rounded/masked blit reuse with
-   a proof for safe interior rectangles, and connect menus to the cache.
+1. Execute the implemented safe-copy plans in synchronous paints.
+2. Connect menus to the existing cache using the certified interior region.
 3. Measure complete device scroll performance, peak stack, and retained RAM
    after integration. Historical measurements include now-obsolete state.
 
@@ -385,8 +384,9 @@ For a content translation Δ, let:
   current visible viewport. Relevant clip geometry must match its certificate;
   geometry changes invalidate reuse.
 - F be current foreground pixels that copying must neither read nor overwrite.
-  Use ordinary exclusions, actual masked opaque spans, and conservative extents
-  of translucent overlays, pins, unclipped foreground, and active effects.
+  Use ordinary exclusions, conservative masked-exclusion bounds, and
+  conservative extents of translucent overlays, pins, unclipped foreground,
+  and active effects. Precise masked spans remain a paint-filter concern.
 
 Choose a destination rectangle D within:
 
@@ -407,13 +407,14 @@ D = [5,187)×[5,115), sourced from [5,187)×[13,123): 20,020 pixels, or 81.5%
 of the panel. These are half-open mathematical rectangles; roo_display::Box
 uses inclusive maxima. Repaint the remaining strips and fractional corners.
 
-P5 keeps one certified rectangle per existing cache. Evaluate the current
-clean-band candidate, horizontal and vertical opaque cores, and the existing
-border-thickness inset candidate; prove candidate coverage against exact
-mask spans. Intersect ancestor candidates, subtract foreground safely, and
-select the largest valid resulting rectangle. Use bounded subtraction and an
-area accumulator rather than retaining all fragments. Exact maximum-area
-packing of every curved sliver is outside this release.
+P5 keeps one certified rectangle per existing cache. Within the current
+translated overlap, the planner evaluates a balanced inscribed core and
+horizontal and vertical opaque cores. Each builder intersects exact ancestor
+mask spans at the source and destination. The planner then subtracts foreground
+safely and selects the largest proven result. Its recursive search is limited
+to eight levels and 256 visited nodes; a constant-stack iterative fallback
+keeps the largest safe remainder after either limit. Exact maximum-area packing
+of every curved sliver is outside this release.
 
 Certification requires unchanged translated content and either an opaque cached
 composition or a uniform, unchanged opaque backdrop behind its transparent
@@ -781,18 +782,35 @@ support, and demonstrate owner feedback and disabled styling in the example.
 
 ### P5. Plan safe interior copies through masks
 
-**Depends on:** P1. **Files:** [blit_cache_container](../../../src/roo_windows/containers/blit_cache_container.cpp)
-and private geometry helpers; new blit-plan tests. Coordinate read-only clipper
-queries with the P4 owner.
+**Status: Implemented.**
+`Clipper::planBlitCopy()` returns a device-coordinate source/destination pair
+without executing it. The planner borrows current masks, exclusions, and
+overlay descriptors. It allocates no heap storage and adds no persistent cache
+field: the existing 8-byte source certificate remains sufficient, while the
+returned two-box plan is 16 transient bytes. Active content effects and
+background-deferral scopes conservatively return an empty plan.
+
+**Depends on:** P1. **Files:** [blit_plan](../../../src/roo_windows/core/blit_plan.cpp),
+[clipper](../../../src/roo_windows/core/clipper.h), and
+[blit-plan tests](../../../test/blit_plan_test.cpp). Coordinate read-only
+clipper queries with the P4 owner.
 
 Implement the source/destination proof, foreground subtraction, and one-rectangle
 selection, without enabling device copies yet. Include previous/current
 occlusion, translucent foreground, masks above and inside the cache, positive
 and negative motion on both axes, diagonal motion, outlines and nested clips.
-For every planned pixel assert both endpoint proofs against a pixel oracle.
+For every planned pixel, assert both endpoint proofs against an independent,
+test-only per-pixel oracle; production planning uses rectangles and row spans.
 The 192×128/radius-16/eight-pixel example must recover at least its 20,020-pixel
 core. Return an empty plan for stale or unprovable inputs. Document the private
 planner contract and proposed per-cache metadata cost.
+
+Validation: `//:blit_plan_test` covers the reference 20,020-pixel core, both
+axes and both directions, diagonal motion, asymmetric nested masks, outlines,
+previous source validity, ordinary foreground, conservative masked-exclusion
+bounds, translucent overlay extents, bounded-search fallback, and stale inputs.
+Every selected pixel is checked by the independent oracle. Existing rounded
+rendering still rejects device copies until P6.
 
 **Proposed commit:** Sparse rounded child clipping P5: prove safe interior blit regions.
 
@@ -884,11 +902,12 @@ move this design to implemented only after every gate passes.
 | Synchronous integration | I1–I9 and synchronous contract from 15a71e91 | P0 | One owner simplifies renderer state and ports tests; exclude retired P2. |
 | Exclusion filtering | P0 complete | P1 | Own exclusion_filter and masked tests; publish the depth/fallback contract before P5. |
 | Owner composition | P0 complete | P4 | Own rounded_clip, clipper, widget effects and decoration. |
-| Blit planning | P1 complete | P5 | Own planner/tests; coordinate shared clipper queries with P4. |
+| Blit planning | P1 complete | P5 complete | Planner and independent geometry-oracle tests prove the safe-copy contract; no device copy is enabled. |
 | Blit execution and menus | P4 and P5 complete | P6 → P7 | Keep cache/copy changes together; coordinate Wi-Fi validation separately. |
 | Acceptance | All active code stages complete | P8 | Report exact dependencies, synchronous refresh duration, and hardware availability. |
 
-P0, P1, and P4 are complete. P5 can proceed; P6 follows its tested planner. P2 and P3 have no remaining dependants. An agent receives its stage, dependency commits, file ownership,
+P0, P1, P4, and P5 are complete. P6 follows the tested planner. P2 and P3 have no remaining dependants. An agent receives
+its stage, dependency commits, file ownership,
 validation commands, and acceptance criteria from this document. It returns a
 commit, test results, and measured deltas. Concurrent agents must not rewrite
 shared renderer files independently. Rebase on accepted dependency commits and

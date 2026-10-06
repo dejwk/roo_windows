@@ -24,6 +24,8 @@ class Clipper;
 
 namespace internal {
 
+struct BlitPlan;
+
 class RoundedRepaintScope;
 
 struct OverlaySpecStackEntry {
@@ -334,6 +336,9 @@ class ClipperOutput : public roo_display::DisplayOutput {
     return exclusions_;
   }
 
+  /// Returns deferred foreground descriptors in paint insertion order.
+  const std::vector<ClippedOverlay>& overlays() const { return overlays_; }
+
   /// Reports inherited content modulation that raw framebuffer copies bypass.
   bool hasContentEffects() const { return activeEffect() != nullptr; }
 
@@ -550,6 +555,16 @@ class Clipper {
 
   /// Computes conservative opaque geometry of all currently active masks.
   roo_display::Box opaqueInterior(roo_display::Box viewport) const;
+
+  /// Plans one safe translated framebuffer rectangle without executing it.
+  ///
+  /// The source certificate describes correct pixels from the preceding
+  /// completed paint. The viewport and translation use device coordinates.
+  /// Existing foreground, effects, and rounded masks are treated as read and
+  /// write restrictions. An empty result requests ordinary painting.
+  internal::BlitPlan planBlitCopy(roo_display::Box source_certificate,
+                                  roo_display::Box viewport, int16_t dx,
+                                  int16_t dy) const;
 
   /// Rejects admission when foreground or modulation already covers the
   /// viewport.
