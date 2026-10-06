@@ -51,3 +51,6 @@ See the [design](design/in_progress/selective_accelerated_redraw_design.md) for
 the rendering contract and release gates, and the
 [scrolling log example](../examples/simple/scrolling_log/scrolling_log.ino) for a
 complete comparison.
+
+The [host/model measurement report](design/in_progress/measurements/selective_accelerated_redraw_host.md)
+records the current evidence and outstanding release gates.

@@ -1,6 +1,8 @@
 #include "roo_windows/core/background_deferral.h"
 
+#include <algorithm>
 #include <array>
+#include <vector>
 
 #include "gtest/gtest.h"
 #include "roo_display/core/offscreen.h"
@@ -8,7 +10,12 @@
 #include "roo_testing/system/timer.h"
 #include "roo_windows.h"
 #include "roo_windows/containers/accelerated_scrollable_panel.h"
+#include "roo_windows/containers/aligned_layout.h"
 #include "roo_windows/containers/blit_cache_container.h"
+#include "roo_windows/containers/flex_layout.h"
+#include "roo_windows/material3/typography.h"
+#include "roo_windows/widgets/button.h"
+#include "roo_windows/widgets/text_label.h"
 
 namespace roo_windows {
 namespace {
@@ -466,7 +473,7 @@ class LogRow : public Panel {
 
   bool clipsChildrenToRoundedBounds() const override { return rounded_; }
 
-  BorderStyle getBorderStyle() const override { return BorderStyle(10, 1); }
+  BorderStyle getBorderStyle() const override { return BorderStyle(12, 1); }
 
   uint8_t getElevation() const override { return 2; }
 
@@ -534,12 +541,23 @@ class RoundedLogFrame : public Panel {
   BorderStyle getBorderStyle() const override { return BorderStyle(20, 1); }
 };
 
+// Rendering/scheduler tests have no touch device. Explicitly disable
+// acquisition so teardown does not join a polling thread asleep on a frozen
+// manual clock.
+class RenderKeys : public KeySource {
+ public:
+  int drain(KeyEvent*, int) override { return 0; }
+
+ private:
+  bool hasPendingEvents() const override { return false; }
+};
+
 struct LogWorld {
   LogWorld(bool accelerated, bool rounded, bool rounded_parent = false)
       : device(pixels.data()),
         display(device),
         env(scheduler),
-        app(&env, display) {
+        app(&env, display, keys, false) {
     auto rows = std::make_unique<LogRows>(app.context(), rounded);
     content = rows.get();
     if (accelerated) {
@@ -599,6 +617,7 @@ struct LogWorld {
   Display display;
   roo_scheduler::SchedulingService scheduler;
   Environment env;
+  RenderKeys keys;
   Application app;
   SimpleScrollablePanel* panel;
   ObservableAcceleratedPanel* optional = nullptr;
@@ -813,6 +832,242 @@ TEST(AcceleratedScrolling, HeldStillDragAndTerminalFlingSettleWithoutInput) {
   EXPECT_EQ(reference.pixels, current.pixels);
   EXPECT_EQ(roo_time::Uptime::Max(),
             current.scheduler.getNearestExecutionTime());
+}
+
+class TextLogRow : public FlexLayout {
+ public:
+  TextLogRow(ApplicationContext& ctx, int index)
+      : FlexLayout(ctx, FlexDirection::kColumn), index_(index) {
+    setPadding(Padding(10, 8));
+    add(std::make_unique<TextLabel>(ctx, "Cycle " + std::to_string(index + 1),
+                                    material3::text_style_title_small()));
+    add(std::make_unique<TextLabel>(ctx, "Pump running",
+                                    material3::text_style_body_small()));
+  }
+
+  Color background() const override {
+    return index_ % 2 == 0 ? Color(0xFFE0F2E9) : Color(0xFFF1E7DB);
+  }
+
+  BorderStyle getBorderStyle() const override { return BorderStyle(12, 1); }
+
+  bool clipsChildrenToRoundedBounds() const override { return true; }
+
+  uint8_t getElevation() const override { return 1; }
+
+ private:
+  int index_;
+};
+
+class TextLogRows : public FlexLayout {
+ public:
+  explicit TextLogRows(ApplicationContext& ctx)
+      : FlexLayout(ctx, FlexDirection::kColumn) {
+    setPadding(Padding(8));
+    setGap(10);
+    for (int i = 0; i < 40; ++i) add(std::make_unique<TextLogRow>(ctx, i));
+  }
+
+  PreferredSize getPreferredSize() const override {
+    return {PreferredSize::MatchParentWidth(),
+            PreferredSize::WrapContentHeight()};
+  }
+
+  Color background() const override { return Color(0xFF334155); }
+};
+
+struct TextLogWorld {
+  explicit TextLogWorld(bool accelerated)
+      : device(pixels.data()),
+        display(device),
+        env(scheduler),
+        app(&env, display, keys, false) {
+    auto content = std::make_unique<TextLogRows>(app.context());
+    std::unique_ptr<SimpleScrollablePanel> widget;
+    if (accelerated) {
+      auto optional = std::make_unique<ObservableAcceleratedPanel>(
+          app.context(), std::move(content));
+      policy = optional.get();
+      widget = std::move(optional);
+    } else {
+      widget = std::make_unique<SimpleScrollablePanel>(app.context(),
+                                                       std::move(content));
+    }
+    panel = widget.get();
+    auto frame = std::make_unique<RoundedLogFrame>(app.context());
+    frame->add(std::move(widget), Rect(display.extents()));
+    app.add(std::move(frame), display.extents());
+    app.window().setAdvisoryPaintBudget(roo_time::Micros(1));
+    app.refresh();
+    device.delay_per_fill_us = 2;
+  }
+
+  std::array<roo::byte, kWidth * kHeight * 4> pixels{};
+  RecordingDevice device;
+  Display display;
+  roo_scheduler::SchedulingService scheduler;
+  Environment env;
+  RenderKeys keys;
+  Application app;
+  SimpleScrollablePanel* panel;
+  ObservableAcceleratedPanel* policy = nullptr;
+};
+
+// Verifies real glyphs in the example's nested rounded row layout agree with a
+// freshly invalidated reference, rather than comparing two incremental paints.
+TEST(AcceleratedScrolling, TextRowsSettleToFreshCompleteReference) {
+  for (bool accelerated : {false, true}) {
+    TextLogWorld current(accelerated);
+    TextLogWorld reference(false);
+    for (int frame = 0; frame < 12; ++frame) {
+      current.panel->scrollBy(0, -4);
+      reference.panel->scrollBy(0, -4);
+      reference.app.root().invalidateInterior();
+      reference.app.refresh();
+      current.device.reset();
+      current.app.refresh();
+      for (uint16_t count : current.device.writes) EXPECT_LE(count, 1);
+      if (!accelerated) {
+        EXPECT_EQ(reference.pixels, current.pixels);
+      }
+    }
+    current.app.refresh();
+    EXPECT_EQ(reference.pixels, current.pixels);
+  }
+}
+
+class SwitchingViewport : public AlignedLayout {
+ public:
+  using AlignedLayout::AlignedLayout;
+
+  bool clipsChildrenToRoundedBounds() const override { return true; }
+
+  BorderStyle getBorderStyle() const override { return BorderStyle(20, 1); }
+};
+
+// Matches the example's native portrait panel and landscape orientation.
+OffscreenDevice<Rgb565> LandscapeLogDevice(roo::byte* pixels) {
+  OffscreenDevice<Rgb565> device(240, 320, pixels, Rgb565());
+  device.setOrientation(Orientation().rotateLeft());
+  return device;
+}
+
+struct SwitchingLogWorld {
+  SwitchingLogWorld()
+      : device(LandscapeLogDevice(pixels.data())),
+        display(device),
+        env(scheduler),
+        app(&env, display, keys, false) {
+    auto root =
+        std::make_unique<FlexLayout>(app.context(), FlexDirection::kColumn);
+    root->setPadding(Padding(8));
+    root->setGap(6);
+    auto controls =
+        std::make_unique<FlexLayout>(app.context(), FlexDirection::kRow);
+    control_row = controls.get();
+    controls->add(
+        std::make_unique<SimpleButton>(app.context(), "Complete", Button::TEXT),
+        {.flex_grow = 1});
+    auto mode_button = std::make_unique<SimpleButton>(
+        app.context(), "Accelerated", Button::TEXT);
+    accelerated_button = mode_button.get();
+    accelerated_button->setOnInteractiveChange(
+        [this]() { updateSelection(true); });
+    controls->add(std::move(mode_button), {.flex_grow = 1});
+    root->add(std::move(controls));
+    auto label = std::make_unique<TextLabel>(
+        app.context(), "Complete redraw", material3::text_style_body_small());
+    mode = label.get();
+    root->add(std::move(label));
+    auto viewport = std::make_unique<SwitchingViewport>(app.context());
+    auto plain = std::make_unique<SimpleScrollablePanel>(
+        app.context(), std::make_unique<TextLogRows>(app.context()));
+    complete = plain.get();
+    viewport->add(std::move(plain));
+    auto optional = std::make_unique<AcceleratedScrollablePanel>(
+        app.context(), std::make_unique<TextLogRows>(app.context()));
+    accelerated = optional.get();
+    accelerated->setVisibility(Visibility::kInvisible);
+    viewport->add(std::move(optional));
+    root->add(std::move(viewport), {.flex_grow = 1});
+    scene = std::move(root);
+    app.addTaskFullScreen(*scene);
+    app.window().setAdvisoryPaintBudget(roo_time::Micros(1));
+    app.refresh();
+  }
+
+  void updateSelection(bool optional) {
+    complete->setVisibility(optional ? Visibility::kInvisible
+                                     : Visibility::kVisible);
+    accelerated->setVisibility(optional ? Visibility::kVisible
+                                        : Visibility::kInvisible);
+    mode->setText(optional ? "Accelerated (16 ms)" : "Complete redraw");
+  }
+
+  void select(bool optional) {
+    updateSelection(optional);
+    app.refresh();
+  }
+
+  // Checks all pixels without dumping a whole framebuffer on failure.
+  void expectCompleteImage() {
+    std::vector<roo::byte> before(pixels.begin(), pixels.end());
+    app.root().invalidateInterior();
+    app.refresh();
+    EXPECT_TRUE(std::equal(before.begin(), before.end(), pixels.begin()));
+  }
+
+  std::array<roo::byte, 320 * 240 * 2> pixels{};
+  OffscreenDevice<Rgb565> device;
+  Display display;
+  roo_scheduler::SchedulingService scheduler;
+  Environment env;
+  RenderKeys keys;
+  std::unique_ptr<FlexLayout> scene;
+  Application app;
+  SimpleScrollablePanel* complete;
+  AcceleratedScrollablePanel* accelerated;
+  TextLabel* mode;
+  FlexLayout* control_row;
+  SimpleButton* accelerated_button;
+};
+
+// Verifies changing the comparison caption and revealing an accelerated log
+// preserves ordinary controls, then settles to a fully current stopped image.
+TEST(AcceleratedScrolling, ComparisonModeSwitchPreservesControls) {
+  auto world = std::make_unique<SwitchingLogWorld>();
+  Rect control_bounds = world->control_row->parent_bounds();
+  std::vector<roo::byte> initial_controls(world->pixels.begin(),
+                                          world->pixels.end());
+  world->accelerated_button->onShowPress(10, 10);
+  for (int i = 0; i < 30; ++i) {
+    system_time_lag_ns(20000000);
+    world->app.refresh();
+  }
+  world->accelerated_button->onSingleTapUp(10, 10);
+  for (int i = 0; i < 30; ++i) {
+    system_time_lag_ns(20000000);
+    world->app.refresh();
+  }
+  EXPECT_EQ(Visibility::kVisible, world->accelerated->visibility());
+  EXPECT_EQ(control_bounds, world->control_row->parent_bounds());
+  // UpRight maps logical Y to native X and reverses logical X into native Y.
+  for (int row = 0; row < 320; ++row) {
+    const size_t begin = (row * 240 + control_bounds.yMin()) * 2;
+    const size_t end = (row * 240 + control_bounds.yMax() + 1) * 2;
+    EXPECT_TRUE(std::equal(initial_controls.begin() + begin,
+                           initial_controls.begin() + end,
+                           world->pixels.begin() + begin));
+  }
+  world->expectCompleteImage();
+  for (int i = 0; i < 12; ++i) {
+    world->accelerated->scrollBy(0, -4);
+    world->app.refresh();
+  }
+  world->app.refresh();
+  world->expectCompleteImage();
+  world->select(false);
+  world->expectCompleteImage();
 }
 
 }  // namespace

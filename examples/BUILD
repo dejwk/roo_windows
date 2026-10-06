@@ -274,6 +274,7 @@ filegroup(
         "//examples/simple/image",
         "//examples/simple/label",
         "//examples/simple/navigation",
+        "//examples/simple/scrolling_log",
         "//examples/simple/shared_scheduler",
     ],
 )

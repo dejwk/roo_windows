@@ -1346,3 +1346,38 @@ cc_test(
     deps = [":roo_windows", "@roo_testing//:arduino_gtest_main",
             "@roo_testing//roo_testing/system:manual_time_mode"],
 )
+
+cc_test(
+    name = "accelerated_redraw_benchmark",
+    size = "large",
+    timeout = "long",
+    srcs = ["benchmarks/accelerated_redraw_benchmark.cpp"],
+    tags = ["manual"],
+    linkstatic = 1,
+    deps = [":roo_windows", "@roo_testing//:arduino_gtest_main",
+            "@roo_testing//roo_testing/system:manual_time_mode"],
+)
+
+cc_test(
+    name = "accelerated_redraw_stack_test",
+    srcs = ["benchmarks/accelerated_redraw_stack_test.cpp"],
+    tags = ["manual"],
+    linkstatic = 1,
+    deps = [":roo_windows", "@roo_testing//:arduino_gtest_main",
+            "@roo_testing//roo_testing/system:manual_time_mode"],
+)
+
+cc_binary(
+    name = "ordinary_redraw_size_probe",
+    srcs = ["benchmarks/accelerated_redraw_size_probe.cpp"],
+    linkstatic = 1,
+    deps = [":roo_windows", "@roo_testing//:arduino_main"],
+)
+
+cc_binary(
+    name = "accelerated_redraw_size_probe",
+    srcs = ["benchmarks/accelerated_redraw_size_probe.cpp"],
+    defines = ["ROO_REDRAW_OPTIONAL=1"],
+    linkstatic = 1,
+    deps = [":roo_windows", "@roo_testing//:arduino_main"],
+)
