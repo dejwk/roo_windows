@@ -71,6 +71,51 @@ void PaintContext::clear() const {
   canvas_.clear();
 }
 
+void PaintContext::clearDeferrableBackground() const {
+  const internal::BackgroundDeferralScope* scope = clipper_->background_scope_;
+  if (scope == nullptr) {
+    clear();
+    return;
+  }
+  const roo_display::Box clip = canvas_.clip_box();
+  const roo_display::Box optional =
+      roo_display::Box::Intersect(clip, scope->interior_);
+  if (optional.empty()) {
+    clear();
+    return;
+  }
+  // Paint the four strips outside the permitted interior normally.
+  clearRect(Rect(clip.xMin(), clip.yMin(), clip.xMax(), optional.yMin() - 1)
+                .translate(-canvas_.dx(), -canvas_.dy()));
+  clearRect(Rect(clip.xMin(), optional.yMax() + 1, clip.xMax(), clip.yMax())
+                .translate(-canvas_.dx(), -canvas_.dy()));
+  clearRect(
+      Rect(clip.xMin(), optional.yMin(), optional.xMin() - 1, optional.yMax())
+          .translate(-canvas_.dx(), -canvas_.dy()));
+  clearRect(
+      Rect(optional.xMax() + 1, optional.yMin(), clip.xMax(), optional.yMax())
+          .translate(-canvas_.dx(), -canvas_.dy()));
+  roo_display::Box skipped(0, 0, -1, -1);
+  for (int y = optional.yMin(); y <= optional.yMax();) {
+    int band = (y - scope->viewport_.yMin()) / 16;
+    int end = std::min<int>(optional.yMax(),
+                            scope->viewport_.yMin() + 16 * (band + 1) - 1);
+    roo_display::Box part(optional.xMin(), y, optional.xMax(), end);
+    if (clipper_->canDeferBackground(part, bgcolor())) {
+      skipped =
+          skipped.empty() ? part : roo_display::Box::Extent(skipped, part);
+    } else {
+      if (!skipped.empty()) {
+        clipper_->preserveBackground(skipped);
+        skipped = roo_display::Box(0, 0, -1, -1);
+      }
+      clearRect(Rect(part).translate(-canvas_.dx(), -canvas_.dy()));
+    }
+    y = end + 1;
+  }
+  if (!skipped.empty()) clipper_->preserveBackground(skipped);
+}
+
 void PaintContext::fillRect(XDim x0, YDim y0, XDim x1, YDim y1,
                             roo_display::Color color) const {
   activate();

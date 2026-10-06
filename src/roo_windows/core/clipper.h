@@ -11,6 +11,7 @@
 #include "roo_display/filter/foreground.h"
 #include "roo_display/shape/smooth.h"
 #include "roo_time.h"
+#include "roo_windows/core/background_deferral.h"
 #include "roo_windows/core/exclusion_filter.h"
 #include "roo_windows/core/press_overlay.h"
 #include "roo_windows/core/rounded_clip.h"
@@ -336,6 +337,9 @@ class ClipperOutput : public roo_display::DisplayOutput {
   /// Reports inherited content modulation that raw framebuffer copies bypass.
   bool hasContentEffects() const { return activeEffect() != nullptr; }
 
+  /// Inspects retained descriptors without rebuilding composition inputs.
+  bool overlaysIntersect(const roo_display::Box& box) const;
+
   /// Returns the unfiltered downstream output.
   roo_display::DisplayOutput& rawOut() { return orig_output_; }
 
@@ -534,6 +538,23 @@ class Clipper {
   /// Reports whether this paint has a finite optional-work allowance.
   bool hasPaintBudget() const { return deadline_ != roo_time::Uptime::Max(); }
 
+  /// Reports any preserved stale background in this paint, including closed
+  /// scopes.
+  bool backgroundDeferred() const { return background_deferred_; }
+
+  /// Identifies traversal under an optional-background owner, even if
+  /// suspended.
+  bool hasBackgroundDeferralScope() const {
+    return background_scope_ != nullptr;
+  }
+
+  /// Computes conservative opaque geometry of all currently active masks.
+  roo_display::Box opaqueInterior(roo_display::Box viewport) const;
+
+  /// Rejects admission when foreground or modulation already covers the
+  /// viewport.
+  bool backgroundUnobscured(const roo_display::Box& viewport) const;
+
   /// Hints that subsequent draws will be confined to `bounds` (device
   /// coordinates). Lets the clipper temporarily ignore exclusions that fall
   /// outside the hint.
@@ -661,9 +682,20 @@ class Clipper {
 
  private:
   friend class internal::RoundedRepaintScope;
+  friend class internal::BackgroundDeferralScope;
+  friend class PaintContext;
+
+  /// Protects stale pixels from lower writes without certifying scene validity.
+  void preserveBackground(const roo_display::Box& box);
+
+  /// Classifies a band using geometry, descriptors and the shared paint budget.
+  bool canDeferBackground(const roo_display::Box& box,
+                          roo_display::Color background) const;
 
   internal::ClipperOutput out_;
   roo_time::Uptime deadline_;
+  internal::BackgroundDeferralScope* background_scope_ = nullptr;
+  bool background_deferred_ = false;
   bool rounded_repaint_ = false;
 };
 

@@ -1320,3 +1320,10 @@ cc_binary(
     tags = ["manual"],
     deps = [":roo_windows"],
 )
+
+cc_test(
+    name = "background_deferral_test",
+    srcs = ["test/background_deferral_test.cpp"],
+    linkstatic = 1,
+    deps = [":roo_windows", "@roo_testing//:arduino_gtest_main"],
+)

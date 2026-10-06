@@ -204,6 +204,8 @@ void Container::paintChildrenWithoutRoundedClip(PaintContext& ctx) {
           fastDrawChildShadow(child, clipped_ctx);
         }
       } else {
+        internal::BackgroundDeferralSuspension suspension(
+            ctx.clipperForFramework());
         child.paintWidget(ctx.canvas(), ctx.clipperForFramework());
       }
     }
@@ -214,6 +216,8 @@ void Container::paintRoundedChildren(PaintContext& ctx,
                                      internal::RoundedClip& clip) {
   const bool grouped = mayHaveUnclippedChildren();
   if (grouped) {
+    internal::BackgroundDeferralSuspension suspension(
+        ctx.clipperForFramework());
     // Foreground children bypass this owner's mask and retain ancestor masks.
     for (int i = getChildrenCount() - 1; i >= 0; --i) {
       Widget& child = getChild(i);
@@ -266,7 +270,9 @@ void Container::fastDrawChildShadow(Widget& child, PaintContext& ctx) {
   ctx.addExclusion(shadow_clip);
 }
 
-void Container::paint(PaintContext& ctx) const { ctx.clear(); }
+void Container::paint(PaintContext& ctx) const {
+  ctx.clearDeferrableBackground();
+}
 
 bool Container::fillTouchTargetPath(XDim x, YDim y,
                                     std::vector<Widget*>& path) {

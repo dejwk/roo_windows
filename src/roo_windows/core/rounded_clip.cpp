@@ -158,6 +158,19 @@ int16_t RoundedClip::opaqueSpanBandEnd(int16_t y) const {
   return row(y) == nullptr ? viewport_.yMax() - bottom_rows_ : y;
 }
 
+roo_display::Box RoundedClip::opaqueInterior() const {
+  // The square inscribed in the largest corner circle has this inset. Verify
+  // integer coverage too, since outline and antialiasing shift the endpoints.
+  int inset = static_cast<int>(ceilf(radii_.max() * (1.0f - 0.70710678f)));
+  roo_display::Box result(viewport_.xMin() + inset, viewport_.yMin() + inset,
+                          viewport_.xMax() - inset, viewport_.yMax() - inset);
+  while (!result.empty() && !containsOpaque(result)) {
+    result = roo_display::Box(result.xMin() + 1, result.yMin() + 1,
+                              result.xMax() - 1, result.yMax() - 1);
+  }
+  return result;
+}
+
 bool RoundedClip::containsOpaque(const Box& box) const {
   if (!viewport_.contains(box)) return false;
   // A rounded rectangle is convex and its narrowest row is at an endpoint.

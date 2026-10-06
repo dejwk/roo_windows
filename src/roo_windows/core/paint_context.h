@@ -72,6 +72,11 @@ class PaintContext {
   /// Clears the current clip on the wrapped canvas.
   void clear() const;
 
+  /// Offers plain background erasure to an active accelerated scroller.
+  /// Otherwise identical to clear(); foreground and composition remain
+  /// mandatory.
+  void clearDeferrableBackground() const;
+
   /// Reports expired optional-work advice shared by all derived contexts.
   /// This query never interrupts painting or advances animations.
   bool paintBudgetExceeded() const { return clipper_->paintBudgetExceeded(); }

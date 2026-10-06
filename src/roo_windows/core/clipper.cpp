@@ -308,4 +308,55 @@ void ClipperOutput::addRoundedDecoration(
 }
 
 }  // namespace internal
+bool internal::ClipperOutput::overlaysIntersect(
+    const roo_display::Box& box) const {
+  for (const ClippedOverlay& overlay : overlays_) {
+    if (!roo_display::Box::Intersect(box, overlay.extents()).empty())
+      return true;
+  }
+  return false;
+}
+
+roo_display::Box Clipper::opaqueInterior(roo_display::Box viewport) const {
+  for (const internal::RoundedClip* mask = out_.activeRoundedClip();
+       mask != nullptr; mask = mask->parent) {
+    viewport = roo_display::Box::Intersect(viewport, mask->opaqueInterior());
+  }
+  return viewport;
+}
+
+bool Clipper::backgroundUnobscured(const roo_display::Box& viewport) const {
+  if (hasContentEffects() || out_.overlaysIntersect(viewport)) return false;
+  for (const roo_display::Box& exclusion : exclusions()) {
+    if (!roo_display::Box::Intersect(viewport, exclusion).empty()) return false;
+  }
+  for (const internal::MaskedExclusion& exclusion : maskedExclusions()) {
+    if (!roo_display::Box::Intersect(viewport, exclusion.bounds).empty())
+      return false;
+  }
+  return true;
+}
+
+bool Clipper::canDeferBackground(const roo_display::Box& box,
+                                 roo_display::Color background) const {
+  const internal::BackgroundDeferralScope* scope = background_scope_;
+  if (scope == nullptr || scope->viewport_.empty() ||
+      !scope->interior_.contains(box) || !background.isOpaque() ||
+      background != scope->background_ || hasContentEffects() ||
+      out_.overlaysIntersect(box))
+    return false;
+  for (const internal::RoundedClip* mask = out_.activeRoundedClip();
+       mask != nullptr; mask = mask->parent) {
+    if (!mask->containsOpaque(box)) return false;
+  }
+  int band = (box.yMin() - scope->viewport_.yMin()) / 16;
+  return band != scope->band_ && paintBudgetExceeded();
+}
+
+void Clipper::preserveBackground(const roo_display::Box& box) {
+  out_.addRectExclusion(box);
+  background_scope_->deferred_ = true;
+  background_deferred_ = true;
+}
+
 }  // namespace roo_windows

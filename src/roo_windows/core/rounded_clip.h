@@ -41,6 +41,9 @@ class RoundedClip {
   /// Tests whether a rectangle can bypass all curved-boundary processing.
   bool containsOpaque(const roo_display::Box& box) const;
 
+  /// Returns an inscribed rectangle verified fully opaque at integer endpoints.
+  roo_display::Box opaqueInterior() const;
+
   /// Accumulates the next lower layer at a boundary pixel, before parent mask.
   void accumulate(int16_t x, int16_t y, roo_display::Color color);
 
