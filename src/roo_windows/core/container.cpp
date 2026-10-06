@@ -263,10 +263,9 @@ void Container::fastDrawChildShadow(Widget& child, PaintContext& ctx) {
       Rect(rect.xMin() - margins.left(), rect.yMin() - margins.top(),
            rect.xMax() + margins.right(), rect.yMax() + margins.bottom()));
   if (shadow_clip.empty()) return;
-  Canvas shadow_canvas(ctx.canvas());
-  shadow_canvas.clipToExtents(shadow_clip);
-  if (shadow_canvas.clip_box().empty()) return;
-  shadow_canvas.clear();
+  PaintContext shadow_context = ctx.clipped(shadow_clip);
+  if (shadow_context.empty()) return;
+  shadow_context.clearDeferrableBackground();
   ctx.addExclusion(shadow_clip);
 }
 

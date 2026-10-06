@@ -136,8 +136,8 @@ class OptionalSurface : public SurfaceWidget {
     if (own_scope) {
       system_time_delay_micros(2);
       Box viewport = ctx.canvas().clip_box();
-      internal::BackgroundDeferralScope scope(
-          ctx.clipperForFramework(), viewport, viewport, ctx.bgcolor(), 0);
+      internal::BackgroundDeferralScope scope(ctx.clipperForFramework(),
+                                              viewport, viewport, 0);
       ctx.clearDeferrableBackground();
     } else {
       ctx.clearDeferrableBackground();
@@ -173,8 +173,8 @@ TEST_F(BackgroundDeferralTest, CacheGuardsBothTraversalDirections) {
     Clipper clipper(state, device_, roo_time::Uptime::Now());
     canvas.set_out(clipper.out());
     PaintContext ctx(canvas, clipper);
-    internal::BackgroundDeferralScope scope(
-        clipper, display_.extents(), display_.extents(), ctx.bgcolor(), 0);
+    internal::BackgroundDeferralScope scope(clipper, display_.extents(),
+                                            display_.extents(), 0);
     ptr->paintWidgetContents(ctx);
     EXPECT_EQ(0, device_.blits);
   }
@@ -205,7 +205,7 @@ TEST_F(BackgroundDeferralTest, ExpiredBandsPreservePixelsAndCoalesce) {
   PaintContext ctx(canvas, clipper);
   {
     internal::BackgroundDeferralScope scope(clipper, display_.extents(),
-                                            display_.extents(), color::Blue, 1);
+                                            display_.extents(), 1);
     ctx.clearDeferrableBackground();
     EXPECT_TRUE(scope.deferred());
     EXPECT_EQ(2u, clipper.exclusions().size());
@@ -221,8 +221,8 @@ TEST_F(BackgroundDeferralTest, ExpiredBandsPreservePixelsAndCoalesce) {
 }
 
 // Verifies disabled helper output is complete, and eligibility requires an
-// opaque matching color rather than merely a surface inside the viewport.
-TEST_F(BackgroundDeferralTest, DisabledAndContrastingFillsComplete) {
+// explicitly optional opaque surface even when its color differs.
+TEST_F(BackgroundDeferralTest, DisabledFillsCompleteAndContrastingFillsDefer) {
   Surface surface(device_, 0, 0, display_.extents(), false, color::Blue,
                   FillMode::kVisible, BlendingMode::kSource);
   Canvas canvas(&surface);
@@ -234,16 +234,19 @@ TEST_F(BackgroundDeferralTest, DisabledAndContrastingFillsComplete) {
   EXPECT_FALSE(clipper.backgroundDeferred());
   for (uint16_t count : device_.writes) EXPECT_EQ(count, 1);
   device_.reset();
+  ctx.setBgcolor(color::Red);
   internal::BackgroundDeferralScope scope(clipper, display_.extents(),
-                                          display_.extents(), color::Red, 0);
+                                          display_.extents(), 0);
   ctx.clearDeferrableBackground();
-  EXPECT_FALSE(scope.deferred());
-  for (uint16_t count : device_.writes) EXPECT_EQ(count, 1);
+  EXPECT_TRUE(scope.deferred());
+  EXPECT_EQ(1, device_.writes[5 * kWidth]);
+  EXPECT_EQ(0, device_.writes[40 * kWidth]);
 }
 
-// Verifies conservative overlay descriptor bounds make intersecting bands
-// mandatory without reading alpha or rebuilding the compositor for the query.
-TEST_F(BackgroundDeferralTest, OverlayBoundsAndSuspensionAreMandatory) {
+// Verifies pending overlay bounds reject entry admission but do not veto an
+// admitted fill; a later ordinary draw still composes the retained overlay.
+TEST_F(BackgroundDeferralTest,
+       PendingOverlayCanLagButOrdinaryDrawingComposesIt) {
   Surface surface(device_, 0, 0, display_.extents(), false, color::Blue,
                   FillMode::kVisible, BlendingMode::kSource);
   Canvas canvas(&surface);
@@ -252,12 +255,118 @@ TEST_F(BackgroundDeferralTest, OverlayBoundsAndSuspensionAreMandatory) {
   canvas.set_out(clipper.out());
   PaintContext ctx(canvas, clipper);
   ctx.addOverlayShape(SmoothFilledCircle(FpPoint{40, 40}, 5, color::Red));
+  ctx.addOverlayShape(SmoothFilledCircle(FpPoint{40, 5}, 3, color::Red));
   EXPECT_FALSE(clipper.backgroundUnobscured(display_.extents()));
   internal::BackgroundDeferralScope scope(clipper, display_.extents(),
-                                          display_.extents(), color::Blue, 0);
+                                          display_.extents(), 0);
   ctx.clearDeferrableBackground();
-  EXPECT_EQ(1, device_.writes[40 * kWidth]);
+  EXPECT_EQ(0, device_.writes[40 * kWidth]);
   EXPECT_EQ(0, device_.writes[60 * kWidth]);
+  // The mandatory band composes another overlay from the same retained stack.
+  EXPECT_EQ(color::Red, pixelAt(40, 5));
+}
+
+// Builds both ordinary decoration and captured rounded foreground using the
+// production compositor. No descriptor is removed when background output skips.
+void PaintDecoratedRows(PaintContext& ctx) {
+  Clipper& clipper = ctx.clipperForFramework();
+  int owner;
+  internal::RoundedClip& mask = clipper.prepareRoundedClip(
+      &owner, Box(12, 20, 70, 55), BorderStyle(10, 1));
+  {
+    PaintContext row = ctx.clipped(Rect(12, 20, 70, 55));
+    row.setBgcolor(color::Red);
+    internal::RoundedClipScope rounded(row, mask);
+    // A foreground stripe crosses fractional edge pixels, which must receive
+    // their current backing colors before the completed decoration is retained.
+    row.fillRect(Rect(12, 20, 70, 24), color::White);
+    row.addExclusion(Rect(12, 20, 70, 24));
+    row.clearDeferrableBackground();
+    row.addExclusion(Rect(12, 20, 70, 55));
+  }
+  clipper.addRoundedDecoration(&owner, ctx.canvas().clip_box(),
+                               Box(12, 20, 70, 55), 2, color::Red,
+                               BorderStyle(10, 1), color::Green);
+  PaintDecoration decoration;
+  decoration.bounds = Rect(75, 20, 90, 55);
+  decoration.background = color::Green;
+  decoration.corner_radii = {5, 5, 5, 5};
+  decoration.elevation = 2;
+  decoration.outline_width = 1;
+  decoration.outline_color = color::White;
+  ctx.addDecoration(decoration);
+  ctx.clearDeferrableBackground();
+}
+
+// Verifies deferred ordinary and nested rounded composition matches a complete
+// reference at every emitted pixel, with untouched old output in skipped gaps.
+TEST_F(BackgroundDeferralTest,
+       PendingDecorationsRetainCurrentCompositionInputs) {
+  Surface surface(device_, 0, 0, display_.extents(), false, color::Blue,
+                  FillMode::kVisible, BlendingMode::kSource);
+  std::array<Color, kWidth * kHeight> reference;
+  internal::ClipperState state;
+  {
+    Canvas canvas(&surface);
+    Clipper clipper(state, device_);
+    canvas.set_out(clipper.out());
+    PaintContext ctx(canvas, clipper);
+    PaintDecoratedRows(ctx);
+  }
+  for (int y = 0; y < kHeight; ++y) {
+    for (int x = 0; x < kWidth; ++x) reference[y * kWidth + x] = pixelAt(x, y);
+  }
+  Canvas old(&surface);
+  old.set_bgcolor(color::Magenta);
+  old.clear();
+  device_.reset();
+  Canvas canvas(&surface);
+  Clipper clipper(state, device_, roo_time::Uptime::Now());
+  canvas.set_out(clipper.out());
+  PaintContext ctx(canvas, clipper);
+  internal::BackgroundDeferralScope scope(clipper, display_.extents(),
+                                          display_.extents(), 1);
+  PaintDecoratedRows(ctx);
+  EXPECT_TRUE(scope.deferred());
+  EXPECT_EQ(0, device_.writes[54 * kWidth + 13]);
+  EXPECT_EQ(color::Magenta, pixelAt(13, 54));
+  for (int y = 0; y < kHeight; ++y) {
+    for (int x = 0; x < kWidth; ++x) {
+      int index = y * kWidth + x;
+      EXPECT_LE(device_.writes[index], 1);
+      if (device_.writes[index] != 0) {
+        EXPECT_EQ(reference[index], pixelAt(x, y));
+      }
+      if (y >= 16 && y < 32) {
+        EXPECT_EQ(reference[index], pixelAt(x, y));
+      }
+    }
+  }
+}
+
+// Verifies active inherited content effects still require complete output.
+TEST_F(BackgroundDeferralTest, ActiveContentEffectsVetoOptionalFills) {
+  auto widget = std::make_unique<OptionalSurface>(app_.context());
+  OptionalSurface* ptr = widget.get();
+  app_.add(std::move(widget), display_.extents());
+  ptr->setEnabled(false);
+  app_.refresh();
+  device_.reset();
+  Surface surface(device_, 0, 0, display_.extents(), false, color::Blue,
+                  FillMode::kVisible, BlendingMode::kSource);
+  Canvas canvas(&surface);
+  internal::ClipperState state;
+  Clipper clipper(state, device_, roo_time::Uptime::Now());
+  canvas.set_out(clipper.out());
+  PaintContext ctx(canvas, clipper);
+  clipper.pushOverlaySpec(*ptr, canvas);
+  ASSERT_TRUE(clipper.hasContentEffects());
+  internal::BackgroundDeferralScope scope(clipper, display_.extents(),
+                                          display_.extents(), 0);
+  ctx.clearDeferrableBackground();
+  EXPECT_FALSE(scope.deferred());
+  for (uint16_t count : device_.writes) EXPECT_EQ(count, 1);
+  clipper.popOverlaySpec();
 }
 
 // Verifies nested rounded masks admit only their opaque interior; fractional
@@ -282,7 +391,7 @@ TEST_F(BackgroundDeferralTest, NestedRoundedInteriorsAreConservative) {
   EXPECT_TRUE(outer.containsOpaque(interior));
   EXPECT_TRUE(inner.containsOpaque(interior));
   internal::BackgroundDeferralScope scope(clipper, display_.extents(), interior,
-                                          color::Blue, 0);
+                                          0);
   ctx.clearDeferrableBackground();
   EXPECT_TRUE(scope.deferred());
   EXPECT_EQ(0, device_.writes[40 * kWidth + 40]);
@@ -299,7 +408,7 @@ TEST_F(BackgroundDeferralTest, SuspensionRestoresPermission) {
   canvas.set_out(clipper.out());
   PaintContext ctx(canvas, clipper);
   internal::BackgroundDeferralScope scope(clipper, display_.extents(),
-                                          display_.extents(), color::Blue, 0);
+                                          display_.extents(), 0);
   {
     internal::BackgroundDeferralSuspension suspension(clipper);
     ctx.clipped(Rect(0, 15, 20, 25)).clearDeferrableBackground();

@@ -237,12 +237,16 @@ background for those transparent pixels. Never prefill and then redraw the
 same pixels in a different color.
 
 The internal accelerated-scroller background helper has one narrow exception:
-eligible opaque plain background rectangles may be preserved from the old
+eligible opaque background rectangles may be preserved from the old
 display image and excluded from later writes in the same paint. These exclusions
 protect pixels; they do not certify current scene content or reusable blit
 sources. Ordinary `addExclusion()` still requires fully resolved current pixels.
 Custom widgets opt in only through `clearDeferrableBackground()`; ordinary
-drawing and foreground completion remain mandatory.
+drawing still runs normally. Pending overlays, decoration and captured
+foreground can lag at omitted output pixels; their composition inputs remain
+registered and current for draws that proceed. Active fractional rounded-edge
+background accumulation remains mandatory. Cleanup belongs to the opting-in
+scroller.
 
 ### Single-Pass Paint Strategies
 

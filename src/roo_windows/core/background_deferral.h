@@ -13,8 +13,7 @@ namespace internal {
 class BackgroundDeferralScope {
  public:
   BackgroundDeferralScope(Clipper& clipper, roo_display::Box viewport,
-                          roo_display::Box interior,
-                          roo_display::Color background, uint16_t band,
+                          roo_display::Box interior, uint16_t band,
                           bool suspension = false);
 
   ~BackgroundDeferralScope();
@@ -31,7 +30,6 @@ class BackgroundDeferralScope {
   BackgroundDeferralScope* previous_;
   roo_display::Box viewport_;
   roo_display::Box interior_;
-  roo_display::Color background_;
   uint16_t band_;
   bool deferred_ = false;
 };
