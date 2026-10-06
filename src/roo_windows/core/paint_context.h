@@ -72,6 +72,10 @@ class PaintContext {
   /// Clears the current clip on the wrapped canvas.
   void clear() const;
 
+  /// Reports expired optional-work advice shared by all derived contexts.
+  /// This query never interrupts painting or advances animations.
+  bool paintBudgetExceeded() const { return clipper_->paintBudgetExceeded(); }
+
   /// Fills the given local-coordinate rectangle.
   void fillRect(XDim x0, YDim y0, XDim x1, YDim y1,
                 roo_display::Color color) const;

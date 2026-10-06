@@ -47,6 +47,10 @@ class DisplayWindow {
   /// pending click settlement after the drawing context closes.
   void refresh();
 
+  /// Limits optional background work in the next refresh. Zero is unlimited;
+  /// negative budgets fail a checked precondition. Painting still completes.
+  void setAdvisoryPaintBudget(roo_time::Duration budget);
+
   /// Invalidates the full root and requests application work asynchronously.
   void requestRefresh();
 
@@ -90,6 +94,7 @@ class DisplayWindow {
   MainWindow root_;
   TouchSensor touch_sensor_;
   GestureDetector gesture_detector_;
+  roo_time::Duration advisory_paint_budget_;
   bool touch_enabled_;
   bool refreshing_ = false;
   unsigned long last_time_refreshed_ms_ = 0;

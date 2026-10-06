@@ -4,6 +4,7 @@
 #include "roo_display.h"
 #include "roo_display/core/offscreen.h"
 #include "roo_scheduler.h"
+#include "roo_testing/system/timer.h"
 #include "roo_windows.h"
 #include "roo_windows/core/clipper.h"
 #include "roo_windows/core/overlay_spec.h"
@@ -626,6 +627,74 @@ TEST_F(PaintContextTest,
   container_ptr->paintWidgetContents(ctx);
 
   EXPECT_FALSE(clipper.currentOverlaySpec().is_modded());
+}
+
+class BudgetProbe : public SurfaceWidget {
+ public:
+  explicit BudgetProbe(ApplicationContext& context) : SurfaceWidget(context) {}
+
+  void paint(PaintContext& ctx) const override {
+    before = ctx.paintBudgetExceeded();
+    system_time_delay_micros(2000);
+    after = ctx.paintBudgetExceeded();
+    getApplication()->window().setAdvisoryPaintBudget(roo_time::Duration());
+    after_change = ctx.paintBudgetExceeded();
+    ctx.clear();
+    ++paints;
+  }
+
+  Dimensions getSuggestedMinimumDimensions() const override {
+    return Dimensions(1, 1);
+  }
+
+  mutable bool before = false;
+  mutable bool after = false;
+  mutable bool after_change = false;
+  mutable int paints = 0;
+};
+
+// Verifies a slow ordinary widget finishes, configuration is snapshotted for
+// each refresh, and saturated budgets remain unlimited.
+TEST_F(PaintContextTest, DisplayBudgetAppliesOnlyToNextRefresh) {
+  auto probe = std::make_unique<BudgetProbe>(app_.context());
+  BudgetProbe* ptr = probe.get();
+  app_.add(std::move(probe), Box(0, 0, 31, 23));
+  app_.window().setAdvisoryPaintBudget(roo_time::Millis(1));
+  app_.refresh();
+  EXPECT_FALSE(ptr->before);
+  EXPECT_TRUE(ptr->after);
+  EXPECT_TRUE(ptr->after_change);
+  EXPECT_EQ(1, ptr->paints);
+  ptr->invalidateInterior();
+  app_.refresh();
+  EXPECT_FALSE(ptr->after);
+  ptr->invalidateInterior();
+  app_.window().setAdvisoryPaintBudget(roo_time::Duration::Max());
+  app_.refresh();
+  EXPECT_FALSE(ptr->after);
+}
+
+// Verifies advisory expiry is shared by translated/clipped contexts while the
+// unlimited path and ordinary drawing remain complete.
+TEST_F(PaintContextTest, AdvisoryBudgetIsSharedAndNeverInterruptsDrawing) {
+  Surface surface(display_.output(), 0, 0, display_.extents(), false,
+                  color::Blue, FillMode::kVisible, BlendingMode::kSourceOver);
+  Canvas canvas(&surface);
+  internal::ClipperState state;
+  Clipper unlimited(state, canvas.out());
+  PaintContext ordinary(canvas, unlimited);
+  EXPECT_FALSE(ordinary.paintBudgetExceeded());
+  Clipper limited(state, canvas.out(),
+                  roo_time::Uptime::Now() + roo_time::Millis(1));
+  PaintContext ctx(canvas, limited);
+  PaintContext derived = ctx.translated(2, 3).clipped(Rect(0, 0, 5, 5));
+  EXPECT_FALSE(derived.paintBudgetExceeded());
+  system_time_delay_micros(1000);
+  EXPECT_TRUE(ctx.paintBudgetExceeded());
+  EXPECT_TRUE(derived.paintBudgetExceeded());
+  ctx.clear();
+  EXPECT_EQ(QuantizeToArgb4444(color::Blue), pixelAt(20, 20));
+  EXPECT_FALSE(ordinary.paintBudgetExceeded());
 }
 
 TEST(PaintContextSize, StaysWithinCanvasPlusPointer) {

@@ -10,6 +10,7 @@
 #include "roo_display/core/rasterizable.h"
 #include "roo_display/filter/foreground.h"
 #include "roo_display/shape/smooth.h"
+#include "roo_time.h"
 #include "roo_windows/core/exclusion_filter.h"
 #include "roo_windows/core/press_overlay.h"
 #include "roo_windows/core/rounded_clip.h"
@@ -520,8 +521,18 @@ class ClipperOutput : public roo_display::DisplayOutput {
 class Clipper {
  public:
   /// Wraps @p out for a complete paint pass, reusing buffers in @p state.
-  Clipper(internal::ClipperState& state, roo_display::DisplayOutput& out)
-      : out_(state, out) {}
+  Clipper(internal::ClipperState& state, roo_display::DisplayOutput& out,
+          roo_time::Uptime deadline = roo_time::Uptime::Max())
+      : out_(state, out), deadline_(deadline) {}
+
+  /// Reports expired advice without interrupting traversal or sampling motion.
+  bool paintBudgetExceeded() const {
+    return deadline_ != roo_time::Uptime::Max() &&
+           roo_time::Uptime::Now() >= deadline_;
+  }
+
+  /// Reports whether this paint has a finite optional-work allowance.
+  bool hasPaintBudget() const { return deadline_ != roo_time::Uptime::Max(); }
 
   /// Hints that subsequent draws will be confined to `bounds` (device
   /// coordinates). Lets the clipper temporarily ignore exclusions that fall
@@ -652,6 +663,7 @@ class Clipper {
   friend class internal::RoundedRepaintScope;
 
   internal::ClipperOutput out_;
+  roo_time::Uptime deadline_;
   bool rounded_repaint_ = false;
 };
 

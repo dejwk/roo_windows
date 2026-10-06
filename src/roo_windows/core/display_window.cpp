@@ -4,6 +4,7 @@
 
 #include <algorithm>
 
+#include "roo_logging.h"
 #include "roo_windows/core/application.h"
 
 namespace roo_windows {
@@ -14,16 +15,18 @@ constexpr long kMinRefreshTimeDeltaMs = 20;
 /// Adapts the root widget's complete paint operation to DrawingContext.
 class Adapter final : public roo_display::Drawable {
  public:
-  explicit Adapter(MainWindow& root) : root_(root) {}
+  Adapter(MainWindow& root, roo_time::Uptime deadline)
+      : root_(root), deadline_(deadline) {}
 
   roo_display::Box extents() const override { return root_.bounds().asBox(); }
 
   void drawTo(const roo_display::Surface& surface) const override {
-    root_.paintWindow(surface);
+    root_.paintWindow(surface, deadline_);
   }
 
  private:
   MainWindow& root_;
+  roo_time::Uptime deadline_;
 };
 
 }  // namespace
@@ -120,7 +123,19 @@ void DisplayWindow::refresh() {
   refreshPaint();
 }
 
+void DisplayWindow::setAdvisoryPaintBudget(roo_time::Duration budget) {
+  CHECK_GE(budget.inMicros(), 0);
+  advisory_paint_budget_ = budget;
+}
+
 void DisplayWindow::refreshPaint() {
+  roo_time::Uptime deadline = roo_time::Uptime::Max();
+  if (advisory_paint_budget_ > roo_time::Duration()) {
+    roo_time::Uptime now = roo_time::Uptime::Now();
+    if (advisory_paint_budget_ < roo_time::Uptime::Max() - now) {
+      deadline = now + advisory_paint_budget_;
+    }
+  }
   refreshing_ = true;
   AnimationRegistry& animations = root_.app().context().animations();
   root_.refreshClickAnimation();
@@ -138,7 +153,7 @@ void DisplayWindow::refreshPaint() {
   {
     roo_display::DrawingContext context(display_);
     context.setFillMode(roo_display::FillMode::kExtents);
-    Adapter adapter(root_);
+    Adapter adapter(root_, deadline);
     context.draw(adapter);
   }
   refreshing_ = false;

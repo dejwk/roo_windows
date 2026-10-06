@@ -51,7 +51,8 @@ class MainWindow : public Container {
   }
 
   /// Paints all current damage onto @p s before returning.
-  void paintWindow(const roo_display::Surface& s);
+  void paintWindow(const roo_display::Surface& s,
+                   roo_time::Uptime deadline = roo_time::Uptime::Max());
 
   Application& app() const;
   const Theme& theme() const override;

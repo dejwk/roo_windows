@@ -196,7 +196,8 @@ void MainWindow::updateLayout() {
   }
 }
 
-void MainWindow::paintWindow(const roo_display::Surface& s) {
+void MainWindow::paintWindow(const roo_display::Surface& s,
+                             roo_time::Uptime deadline) {
   preparePresentationPinsForPaint();
   if (!initialized_) {
     initialized_ = true;
@@ -208,7 +209,7 @@ void MainWindow::paintWindow(const roo_display::Surface& s) {
   canvas.clipToExtents(redraw_bounds_);
   // New invalidations raised during painting belong to the next refresh.
   redraw_bounds_ = Rect(0, 0, -1, -1);
-  Clipper clipper(clipper_state_, s.out());
+  Clipper clipper(clipper_state_, s.out(), deadline);
   canvas.set_out(clipper.out());
   paintWidget(canvas, clipper);
   commitPresentationPinBounds();
