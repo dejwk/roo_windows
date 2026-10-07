@@ -1,2 +1,4 @@
 MODULE.bazel.lock
 bazel-*
+emulation/MODULE.bazel.lock
+emulation/bazel-*
