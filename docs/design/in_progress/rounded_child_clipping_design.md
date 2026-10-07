@@ -15,8 +15,8 @@ P1 implements bounded subtraction in
 P4 implements owner-effect composition in five reviewable commits: existing
 helper extraction, the effect primitive, optional rasterizer support, renderer
 integration, and resource checks/documentation. P5 implements the private,
-non-executing safe-copy planner. The remaining stages are P6–P8; their IDs are
-preserved for delegation.
+non-executing safe-copy planner. P6 executes those plans from the existing
+cache. The remaining stages are P7–P8; their IDs are preserved for delegation.
 No remaining stage depends on interruption or its possible future replacement.
 
 This document captures the original output-interception proposal and its
@@ -98,9 +98,8 @@ grouped containers inspect direct-child indices in two filtered scans.
 
 ### Remaining work
 
-1. Execute the implemented safe-copy plans in synchronous paints.
-2. Connect menus to the existing cache using the certified interior region.
-3. Measure complete device scroll performance, peak stack, and retained RAM
+1. Connect menus to the existing cache using the certified interior region.
+2. Measure complete device scroll performance, peak stack, and retained RAM
    after integration. Historical measurements include now-obsolete state.
 
 ## Requirements
@@ -412,9 +411,11 @@ translated overlap, the planner evaluates a balanced inscribed core and
 horizontal and vertical opaque cores. Each builder intersects exact ancestor
 mask spans at the source and destination. The planner then subtracts foreground
 safely and selects the largest proven result. Its recursive search is limited
-to eight levels and 256 visited nodes; a constant-stack iterative fallback
-keeps the largest safe remainder after either limit. Exact maximum-area packing
-of every curved sliver is outside this release.
+to eight levels and 256 visited nodes. Candidates of 256 pixels or less also
+switch to the constant-stack iterative fallback, which keeps the largest safe
+remainder. This is a search-cost cutoff, not a minimum copy area: P8 will choose
+any device copy threshold from measured copy-versus-repaint time. Exact
+maximum-area packing of every curved sliver is outside this release.
 
 Certification requires unchanged translated content and either an opaque cached
 composition or a uniform, unchanged opaque backdrop behind its transparent
@@ -809,8 +810,8 @@ Validation: `//:blit_plan_test` covers the reference 20,020-pixel core, both
 axes and both directions, diagonal motion, asymmetric nested masks, outlines,
 previous source validity, ordinary foreground, conservative masked-exclusion
 bounds, translucent overlay extents, bounded-search fallback, and stale inputs.
-Every selected pixel is checked by the independent oracle. Existing rounded
-rendering still rejects device copies until P6.
+Every selected pixel is checked by the independent oracle. P6 consumes these
+plans from the framework cache.
 
 **Proposed commit:** Sparse rounded child clipping P5: prove safe interior blit regions.
 
@@ -818,6 +819,21 @@ Plan one reusable rectangle using both endpoint masks and foreground restriction
 with geometry-oracle and copied-area acceptance tests; retain paint fallback.
 
 ### P6. Execute interior copies in synchronous paints
+
+**Status: Implemented locally; pending review.**
+`BlitCacheContainer` consumes each pending translation once and asks the P5
+planner for one certified source/destination pair. It registers the destination
+as an exclusion before issuing the raw device copy, so the normal single child
+traversal paints only exposed strips and rounded boundary pixels. Generic
+filtered outputs continue to report no copy capability.
+
+The existing 8-byte `blit_safe_region_` remains the cross-refresh certificate;
+P6 adds no cache field or retained allocation. The cache publishes the next
+certificate immediately before traversing its children. Invalidation during
+that traversal therefore shrinks the published rectangle directly, and a frame
+that begins background deferral clears it. Active inherited effects reject both
+planning and certification. Pending translations accumulate in 32-bit fields
+and fall back to ordinary paint if a planner coordinate would exceed 16 bits.
 
 **Depends on:** P4, P5. **Files:** blit_cache_container, clipper; page-host and
 rounded blit rendering tests.
@@ -832,6 +848,15 @@ fresh rounded reconstruction with unchanged cached interiors, damage raised
 during painting, and a following refresh with no scroll. Copied destinations
 receive no subsequent writes in that paint; boundaries match the reference.
 Document the certificate lifetime and invalidation contract in this commit.
+
+Validation covers rounded owners, moving rounded descendants, stationary
+foreground, scroll reversal, large moves, fresh rounded reconstruction,
+successive invalidation, and damage raised by a child during painting. Tests
+compare copied frames with complete repaint references and verify that ordinary
+painting does not write any copied destination pixel later in the same paint.
+The previous half-panel execution heuristic is removed: every nonempty proven
+plan is executed. P8 retains responsibility for a measured device-specific
+copy-versus-repaint cutoff.
 
 **Proposed commit:** Sparse rounded child clipping P6: copy certified rounded interiors.
 
@@ -903,10 +928,11 @@ move this design to implemented only after every gate passes.
 | Exclusion filtering | P0 complete | P1 | Own exclusion_filter and masked tests; publish the depth/fallback contract before P5. |
 | Owner composition | P0 complete | P4 | Own rounded_clip, clipper, widget effects and decoration. |
 | Blit planning | P1 complete | P5 complete | Planner and independent geometry-oracle tests prove the safe-copy contract; no device copy is enabled. |
-| Blit execution and menus | P4 and P5 complete | P6 → P7 | Keep cache/copy changes together; coordinate Wi-Fi validation separately. |
+| Blit execution and menus | P4 and P5 complete | P6 complete locally → P7 | Keep cache/copy changes together; coordinate Wi-Fi validation separately. |
 | Acceptance | All active code stages complete | P8 | Report exact dependencies, synchronous refresh duration, and hardware availability. |
 
-P0, P1, P4, and P5 are complete. P6 follows the tested planner. P2 and P3 have no remaining dependants. An agent receives
+P0, P1, P4, and P5 are complete, and P6 is implemented locally. P7 follows the
+cache execution path. P2 and P3 have no remaining dependants. An agent receives
 its stage, dependency commits, file ownership,
 validation commands, and acceptance criteria from this document. It returns a
 commit, test results, and measured deltas. Concurrent agents must not rewrite

@@ -1,3 +1,4 @@
+#include <array>
 #include <functional>
 #include <iterator>
 #include <vector>
@@ -82,25 +83,38 @@ class CountingOffscreenDevice : public OffscreenDevice<Argb4444> {
     blit_calls_ = 0;
     output_pixels_ = 0;
     address_windows_ = 0;
+    output_writes_.fill(0);
+    last_blit_source_ = Box(0, 0, -1, -1);
+    last_blit_destination_ = Box(0, 0, -1, -1);
   }
 
   uint32_t blitCalls() const { return blit_calls_; }
   uint32_t outputPixels() const { return output_pixels_; }
   uint32_t addressWindows() const { return address_windows_; }
+  const Box& lastBlitSource() const { return last_blit_source_; }
+  const Box& lastBlitDestination() const { return last_blit_destination_; }
+  uint16_t outputWritesAt(int16_t x, int16_t y) const {
+    return output_writes_[y * 120 + x];
+  }
 
   void setAddress(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1,
                   BlendingMode mode) override {
     ++address_windows_;
+    write_x0_ = write_x_ = x0;
+    write_x1_ = x1;
+    write_y_ = y0;
     OffscreenDevice<Argb4444>::setAddress(x0, y0, x1, y1, mode);
   }
 
   void write(Color* color, uint32_t pixel_count) override {
     output_pixels_ += pixel_count;
+    recordWrites(pixel_count);
     OffscreenDevice<Argb4444>::write(color, pixel_count);
   }
 
   void fill(Color color, uint32_t pixel_count) override {
     output_pixels_ += pixel_count;
+    recordWrites(pixel_count);
     OffscreenDevice<Argb4444>::fill(color, pixel_count);
   }
 
@@ -139,6 +153,9 @@ class CountingOffscreenDevice : public OffscreenDevice<Argb4444> {
   void blitCopy(int16_t src_x0, int16_t src_y0, int16_t src_x1, int16_t src_y1,
                 int16_t dst_x0, int16_t dst_y0) override {
     ++blit_calls_;
+    last_blit_source_ = Box(src_x0, src_y0, src_x1, src_y1);
+    last_blit_destination_ =
+        Box(dst_x0, dst_y0, dst_x0 + src_x1 - src_x0, dst_y0 + src_y1 - src_y0);
     OffscreenDevice<Argb4444>::blitCopy(src_x0, src_y0, src_x1, src_y1, dst_x0,
                                         dst_y0);
   }
@@ -149,9 +166,28 @@ class CountingOffscreenDevice : public OffscreenDevice<Argb4444> {
            static_cast<uint32_t>(y1 - y0 + 1);
   }
 
+  void recordWrites(uint32_t count) {
+    while (count-- != 0) {
+      if (write_x_ < 120 && write_y_ < 60) {
+        ++output_writes_[write_y_ * 120 + write_x_];
+      }
+      if (++write_x_ > write_x1_) {
+        write_x_ = write_x0_;
+        ++write_y_;
+      }
+    }
+  }
+
   uint32_t blit_calls_ = 0;
   uint32_t output_pixels_ = 0;
   uint32_t address_windows_ = 0;
+  std::array<uint16_t, 120 * 60> output_writes_{};
+  Box last_blit_source_{0, 0, -1, -1};
+  Box last_blit_destination_{0, 0, -1, -1};
+  uint16_t write_x0_ = 0;
+  uint16_t write_x1_ = 0;
+  uint16_t write_x_ = 0;
+  uint16_t write_y_ = 0;
 };
 
 class HorizontalPageHostRenderTest : public testing::Test {
@@ -224,9 +260,138 @@ class RoundedTestPanel : public Panel {
   BorderStyle getBorderStyle() const override { return BorderStyle(16, 0); }
 };
 
-// Verifies masks introduced by cached descendants prevent later raw blits from
-// copying their partially composited corners to a different backdrop position.
-TEST_F(HorizontalPageHostRenderTest, RoundedDescendantDisablesBlitReuse) {
+class PaintInvalidatingBox : public ColorBoxWidget {
+ public:
+  using ColorBoxWidget::ColorBoxWidget;
+
+  void invalidateDuringNextPaint(Rect damage) {
+    paint_damage_ = damage;
+    invalidate_during_paint_ = true;
+  }
+
+  void paint(PaintContext& ctx) const override {
+    ColorBoxWidget::paint(ctx);
+    if (!invalidate_during_paint_) return;
+    invalidate_during_paint_ = false;
+    const_cast<PaintInvalidatingBox*>(this)->invalidateInterior(paint_damage_);
+  }
+
+ private:
+  mutable bool invalidate_during_paint_ = false;
+  Rect paint_damage_{0, 0, -1, -1};
+};
+
+void ExpectCopiedDestinationWasNotRepainted(
+    const CountingOffscreenDevice& output) {
+  const Box& copied = output.lastBlitDestination();
+  ASSERT_FALSE(copied.empty());
+  for (int y = copied.yMin(); y <= copied.yMax(); ++y) {
+    for (int x = copied.xMin(); x <= copied.xMax(); ++x) {
+      EXPECT_EQ(0, output.outputWritesAt(x, y))
+          << "copied destination repainted at " << x << ", " << y;
+    }
+  }
+}
+
+// Verifies a cache under an active rounded owner copies only its fully opaque
+// interior. The copied destination is reserved before child painting, and a
+// following reconstruction with no movement neither changes pixels nor repeats
+// the consumed translation.
+TEST_F(HorizontalPageHostRenderTest, RoundedOwnerCopiesSettledInteriorOnce) {
+  auto owner = std::make_unique<RoundedTestPanel>(context());
+  RoundedTestPanel* owner_ptr = owner.get();
+  auto cache = std::make_unique<BlitCacheContainer>(context());
+  BlitCacheContainer* moving = cache.get();
+  auto contents = std::make_unique<ColorBoxWidget>(context(), Color(0xFF3769A5),
+                                                   Dimensions(kWidth, 84));
+  contents->setMargins(MarginSize::kNone);
+  cache->setChild(std::move(contents));
+  owner->add(std::move(cache), Rect(0, 0, kWidth - 1, 83));
+  app_.add(std::move(owner), Box(0, 0, kWidth - 1, kHeight - 1));
+  refresh();
+
+  moving->moveTo(Rect(0, -8, kWidth - 1, 75));
+  offscreen_.resetCounters();
+  refresh();
+
+  ASSERT_EQ(1u, offscreen_.blitCalls());
+  ExpectCopiedDestinationWasNotRepainted(offscreen_);
+  const std::vector<roo::byte> copied_frame(std::begin(raster_),
+                                            std::end(raster_));
+
+  offscreen_.resetCounters();
+  owner_ptr->invalidateInterior();
+  refresh();
+  EXPECT_EQ(0u, offscreen_.blitCalls());
+  EXPECT_EQ(copied_frame,
+            std::vector<roo::byte>(std::begin(raster_), std::end(raster_)));
+
+  // The synchronous reconstruction established a fresh certificate before
+  // traversing the cache, so a later movement can copy again.
+  moving->moveTo(Rect(0, -16, kWidth - 1, 67));
+  offscreen_.resetCounters();
+  refresh();
+  EXPECT_EQ(1u, offscreen_.blitCalls());
+  ExpectCopiedDestinationWasNotRepainted(offscreen_);
+
+  // A large move with no proven overlap consumes the translation and falls
+  // back to ordinary painting. A later reconstruction must match exactly.
+  moving->moveTo(Rect(0, 40, kWidth - 1, 123));
+  offscreen_.resetCounters();
+  refresh();
+  EXPECT_EQ(0u, offscreen_.blitCalls());
+  const std::vector<roo::byte> large_move_frame(std::begin(raster_),
+                                                std::end(raster_));
+  owner_ptr->invalidateInterior();
+  refresh();
+  EXPECT_EQ(large_move_frame,
+            std::vector<roo::byte>(std::begin(raster_), std::end(raster_)));
+}
+
+// Verifies a certificate is published before child traversal, so damage raised
+// during that traversal and another invalidation before the next refresh both
+// remove stale source pixels from the subsequent copy.
+TEST_F(HorizontalPageHostRenderTest,
+       PaintTimeAndSuccessiveDamageShrinkRoundedSource) {
+  auto owner = std::make_unique<RoundedTestPanel>(context());
+  RoundedTestPanel* owner_ptr = owner.get();
+  auto cache = std::make_unique<BlitCacheContainer>(context());
+  BlitCacheContainer* moving = cache.get();
+  auto contents = std::make_unique<PaintInvalidatingBox>(
+      context(), Color(0xFF7146A8), Dimensions(kWidth, 84));
+  PaintInvalidatingBox* contents_ptr = contents.get();
+  contents->setMargins(MarginSize::kNone);
+  cache->setChild(std::move(contents));
+  owner->add(std::move(cache), Rect(0, 0, kWidth - 1, 83));
+  app_.add(std::move(owner), Box(0, 0, kWidth - 1, kHeight - 1));
+  refresh();
+
+  const Rect paint_damage(0, 20, kWidth - 1, 31);
+  const Rect later_damage(0, 40, kWidth - 1, 45);
+  contents_ptr->invalidateDuringNextPaint(paint_damage);
+  owner_ptr->invalidateInterior();
+  refresh();
+  contents_ptr->invalidateInterior(later_damage);
+
+  moving->moveTo(Rect(0, -8, kWidth - 1, 75));
+  offscreen_.resetCounters();
+  refresh();
+
+  ASSERT_EQ(1u, offscreen_.blitCalls());
+  EXPECT_FALSE(offscreen_.lastBlitSource().intersects(paint_damage.asBox()));
+  EXPECT_FALSE(offscreen_.lastBlitSource().intersects(later_damage.asBox()));
+  ExpectCopiedDestinationWasNotRepainted(offscreen_);
+  const std::vector<roo::byte> copied_frame(std::begin(raster_),
+                                            std::end(raster_));
+  owner_ptr->invalidateInterior();
+  refresh();
+  EXPECT_EQ(copied_frame,
+            std::vector<roo::byte>(std::begin(raster_), std::end(raster_)));
+}
+
+// Verifies a rounded descendant moving with the cached composition retains the
+// source certificate. A complete repaint must produce identical pixels.
+TEST_F(HorizontalPageHostRenderTest, RoundedDescendantRetainsBlitReuse) {
   auto cache = std::make_unique<BlitCacheContainer>(context());
   BlitCacheContainer* moving = cache.get();
   auto rounded = std::make_unique<RoundedTestPanel>(context());
@@ -240,18 +405,22 @@ TEST_F(HorizontalPageHostRenderTest, RoundedDescendantDisablesBlitReuse) {
     moving->moveTo(Rect(x, 0, x + 99, 47));
     offscreen_.resetCounters();
     refresh();
-    EXPECT_EQ(offscreen_.blitCalls(), 0u);
+    EXPECT_EQ(offscreen_.blitCalls(), 1u);
     const std::vector<roo::byte> before(std::begin(raster_), std::end(raster_));
     app_.root().invalidateInterior();
     refresh();
     EXPECT_EQ(before,
               std::vector<roo::byte>(std::begin(raster_), std::end(raster_)));
+    // Ensure this cache participates in a complete paint before the next move;
+    // the test then isolates movement reuse from root damage selection.
+    moving->invalidateInterior();
+    refresh();
   }
 }
 
-// Verifies retained masks from a foreground sibling also guard a later cache;
-// raw blits must not overwrite settled pixels after the rounded scope closes.
-TEST_F(HorizontalPageHostRenderTest, RoundedForegroundDisablesCoveredBlit) {
+// Verifies retained masks from a foreground sibling remove its conservative
+// bounds while still allowing an uncovered cache rectangle to be copied.
+TEST_F(HorizontalPageHostRenderTest, RoundedForegroundAllowsUncoveredBlit) {
   auto cache = std::make_unique<BlitCacheContainer>(context());
   BlitCacheContainer* moving = cache.get();
   cache->setChild(std::make_unique<ColorBoxWidget>(context(), color::Blue,
@@ -264,10 +433,12 @@ TEST_F(HorizontalPageHostRenderTest, RoundedForegroundDisablesCoveredBlit) {
                Rect(0, 0, 31, 31));
   app_.add(std::move(rounded), Box(24, 8, 55, 39));
   refresh();
+  moving->invalidateInterior();
+  refresh();
   moving->moveTo(Rect(4, 0, 113, 59));
   offscreen_.resetCounters();
   refresh();
-  EXPECT_EQ(offscreen_.blitCalls(), 0u);
+  EXPECT_EQ(offscreen_.blitCalls(), 1u);
   const std::vector<roo::byte> before(std::begin(raster_), std::end(raster_));
   app_.root().invalidateInterior();
   refresh();

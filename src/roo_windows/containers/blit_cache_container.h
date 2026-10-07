@@ -86,12 +86,6 @@ class BlitCacheContainer : public Container {
   void childShown(const Widget* child) override;
 
  private:
-  // Computes the largest full-width clean Y band within the panel's device
-  // rect, avoiding all exclusions from the clipper.
-  roo_display::Box computeCleanBand(const roo_display::Box& panel_device,
-                                    const std::vector<roo_display::Box>& excl,
-                                    size_t excl_count, bool vertical) const;
-
   // Shrinks the blit_safe_region_ by subtracting a dirty rect.
   // For full-width/full-height bands, trims from the edge that the rect
   // touches, or keeps the larger remaining portion if the rect is in the
@@ -109,7 +103,7 @@ class BlitCacheContainer : public Container {
   roo_display::Box blit_safe_region_;
 
   // Accumulated scroll/move delta since last paint.
-  int16_t pending_dx_;
+  int32_t pending_dx_;
   int32_t pending_dy_;
   bool has_pending_blit_;
 

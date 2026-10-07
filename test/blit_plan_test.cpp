@@ -89,6 +89,10 @@ class PlannerScene {
     return clipper_.planBlitCopy(source_certificate, viewport, dx, dy);
   }
 
+  Box certify(Box viewport) const {
+    return clipper_.certifyBlitSource(viewport);
+  }
+
   bool opaqueThrough(size_t mask_count, int16_t x, int16_t y) const {
     for (size_t i = 0; i < mask_count; ++i) {
       const MaskSpec& mask = masks_[i];
@@ -202,6 +206,29 @@ TEST(BlitPlanTest, PreservesFullOverlapWithoutRoundedMasks) {
   ExpectPlanSafe(scene, plan, viewport, viewport, 4, -3);
 }
 
+// Verifies certification uses the same mask and foreground proof without
+// requiring a synthetic translation or retaining paint-local descriptors.
+TEST(BlitPlanTest, CertifiesCurrentSourceBeforeChildTraversal) {
+  PlannerScene scene;
+  const Box viewport(0, 0, 159, 95);
+  scene.addBoxRestriction(Box(18, 24, 41, 70));
+  int owner;
+  scene.pushMask(&owner, viewport, BorderStyle(18, 0));
+  scene.addBoxRestriction(Box(78, 28, 116, 65));
+
+  const Box certificate = scene.certify(viewport);
+
+  ASSERT_FALSE(certificate.empty());
+  for (int32_t y = certificate.yMin(); y <= certificate.yMax(); ++y) {
+    for (int32_t x = certificate.xMin(); x <= certificate.xMax(); ++x) {
+      EXPECT_TRUE(scene.opaqueThrough(static_cast<int16_t>(x),
+                                      static_cast<int16_t>(y)));
+      EXPECT_FALSE(IsRestricted(scene, static_cast<int16_t>(x),
+                                static_cast<int16_t>(y)));
+    }
+  }
+}
+
 // Verifies the reference radius-16 scene retains the complete balanced core at
 // both endpoints of an eight-pixel upward scroll.
 TEST(BlitPlanTest, RecoversReferenceRoundedInterior) {
@@ -307,6 +334,21 @@ TEST(BlitPlanTest, BoundedSearchRemainsConservative) {
   const BlitPlan plan = scene.plan(viewport, viewport, 4, -3);
 
   ExpectPlanSafe(scene, plan, viewport, viewport, 4, -3);
+}
+
+// Verifies the small-candidate threshold stops recursive branching rather than
+// rejecting a useful copy. Device-specific copy thresholds remain a separate
+// execution policy.
+TEST(BlitPlanTest, SmallCandidateStillProducesAConservativePlan) {
+  PlannerScene scene;
+  const Box viewport(0, 0, 15, 15);
+  scene.addBoxRestriction(Box(6, 4, 8, 11));
+
+  const BlitPlan plan = scene.plan(viewport, viewport, 1, 0);
+
+  EXPECT_GT(plan.area(), 0);
+  EXPECT_LE(plan.area(), 256);
+  ExpectPlanSafe(scene, plan, viewport, viewport, 1, 0);
 }
 
 // Verifies absent history, non-overlapping history, and a zero translation

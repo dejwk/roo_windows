@@ -20,6 +20,9 @@ using roo_display::Box;
 
 constexpr uint8_t kRecursiveSearchDepth = 8;
 constexpr uint16_t kSearchNodeBudget = 256;
+// Small fragments use the constant-stack greedy fallback. This limits search
+// work without imposing a minimum area on the plan that may be returned.
+constexpr int32_t kRecursiveSearchAreaCutoff = 256;
 
 Box EmptyBox() { return Box(0, 0, -1, -1); }
 
@@ -162,8 +165,7 @@ class BlitPlanner {
 
   // Evaluates the bounded set of useful opaque-core shapes.
   BlitPlan plan() {
-    if (source_certificate_.empty() || viewport_.empty() ||
-        (dx_ == 0 && dy_ == 0)) {
+    if (source_certificate_.empty() || viewport_.empty()) {
       return BlitPlan();
     }
 
@@ -284,7 +286,8 @@ class BlitPlanner {
       consider(candidate);
       return;
     }
-    if (depth >= kRecursiveSearchDepth || nodes_remaining_ == 0) {
+    if (depth >= kRecursiveSearchDepth || nodes_remaining_ == 0 ||
+        candidate.area() <= kRecursiveSearchAreaCutoff) {
       finishIteratively(candidate);
       return;
     }
@@ -313,6 +316,7 @@ class BlitPlanner {
 
 internal::BlitPlan Clipper::planBlitCopy(Box source_certificate, Box viewport,
                                          int16_t dx, int16_t dy) const {
+  if (dx == 0 && dy == 0) return BlitPlan();
   if (hasContentEffects() || hasBackgroundDeferralScope()) return BlitPlan();
   const std::vector<Box>& exclusions = out_.exclusions();
   const std::vector<internal::ClippedOverlay>& overlays = out_.overlays();
@@ -323,6 +327,19 @@ internal::BlitPlan Clipper::planBlitCopy(Box source_certificate, Box viewport,
                      exclusions.size(), overlays.data(), overlays.size(),
                      masked.data(), masked.size())
       .plan();
+}
+
+Box Clipper::certifyBlitSource(Box viewport) const {
+  if (hasContentEffects() || hasBackgroundDeferralScope()) return EmptyBox();
+  const std::vector<Box>& exclusions = out_.exclusions();
+  const std::vector<internal::ClippedOverlay>& overlays = out_.overlays();
+  const std::vector<internal::MaskedExclusion>& masked =
+      out_.maskedExclusions();
+  return BlitPlanner(viewport, viewport, 0, 0, out_.activeRoundedClip(),
+                     exclusions.data(), exclusions.size(), overlays.data(),
+                     overlays.size(), masked.data(), masked.size())
+      .plan()
+      .destination;
 }
 
 }  // namespace roo_windows

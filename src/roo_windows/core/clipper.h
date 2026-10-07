@@ -566,6 +566,13 @@ class Clipper {
                                   roo_display::Box viewport, int16_t dx,
                                   int16_t dy) const;
 
+  /// Certifies one current framebuffer rectangle for a later blit source.
+  ///
+  /// Call this before traversing the cached subtree, while the clipper contains
+  /// only foreground restrictions. The returned device-coordinate rectangle
+  /// borrows no paint state and may outlive this Clipper.
+  roo_display::Box certifyBlitSource(roo_display::Box viewport) const;
+
   /// Rejects admission when foreground or modulation already covers the
   /// viewport.
   bool backgroundUnobscured(const roo_display::Box& viewport) const;
