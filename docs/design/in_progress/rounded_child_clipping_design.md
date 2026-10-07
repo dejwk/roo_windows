@@ -16,7 +16,10 @@ P4 implements owner-effect composition in five reviewable commits: existing
 helper extraction, the effect primitive, optional rasterizer support, renderer
 integration, and resource checks/documentation. P5 implements the private,
 non-executing safe-copy planner. P6 executes those plans from the existing
-cache. The remaining stages are P7–P8; their IDs are preserved for delegation.
+cache in [7c3c9369](https://github.com/dejwk/roo_windows/commit/7c3c9369).
+P7 is implemented locally and makes menu adoption follow the global scrolling
+cache policy. P8 is the remaining stage; stage IDs are preserved for
+delegation.
 No remaining stage depends on interruption or its possible future replacement.
 
 This document captures the original output-interception proposal and its
@@ -80,8 +83,10 @@ composition or traversal progress.
 - Deferred rounded overlays now batch point reads and forward surviving row
   spans through the source rasterizer.
 - Material menus use full-height viewports, horizontal gutters, and vertical
-  padding that travels with their content. Their viewport still derives from
-  SimpleScrollablePanel, so it does not yet own a blit cache.
+  padding that travels with their content. Their viewport derives from the
+  `ScrollablePanel` policy alias. It uses `SimpleScrollablePanel` by default
+  and `ScrollableBlitPanel` when `ROO_WINDOWS_ENABLE_BLIT_CACHE=1` is defined
+  consistently for the program.
 
 ### Completed child-order extension
 
@@ -98,8 +103,7 @@ grouped containers inspect direct-child indices in two filtered scans.
 
 ### Remaining work
 
-1. Connect menus to the existing cache using the certified interior region.
-2. Measure complete device scroll performance, peak stack, and retained RAM
+1. Measure complete device scroll performance, peak stack, and retained RAM
    after integration. Historical measurements include now-obsolete state.
 
 ## Requirements
@@ -469,12 +473,26 @@ greater-than-half-panel heuristic must not suppress a useful smaller interior.
 P8 measures command overhead before selecting a documented small-copy cutoff.
 Devices without copy support use ordinary painting with identical pixels.
 
-P7 connects MenuViewport to the existing ScrollableBlitPanel/cache mechanism.
-Its transparent surface ownership, horizontal gutters, moving vertical padding,
-group geometry, scrollbar behavior, selection, and borrowed-child teardown
-remain unchanged. Do not add a second cache beside the existing wrapper.
-Measure the MenuPanel size increase; Widget, Container, and non-caching
-SimpleScrollablePanel acquire no fields.
+P7 connects `MenuViewport` through the existing `ScrollablePanel` policy alias.
+The alias selects `SimpleScrollablePanel` by default and
+`ScrollableBlitPanel` when `ROO_WINDOWS_ENABLE_BLIT_CACHE=1`. The option changes
+class layout and must therefore be consistent across all translation units.
+The runtime device-capability check remains in `BlitCacheContainer`, so an
+enabled build safely falls back to ordinary painting when the current device
+cannot copy its framebuffer. Explicit simple and cached classes remain
+available for components that need a fixed policy.
+
+The menu's transparent surface ownership, horizontal gutters, moving vertical
+padding, group geometry, scrollbar behavior, selection, and borrowed-child
+teardown remain unchanged. The existing wrapper is the only cache. Widget,
+Container, and `SimpleScrollablePanel` acquire no fields.
+
+The ESP32-C3 ABI probe measures `MenuPanel` as 280 B with the default policy
+and 352 B with caching enabled. `MenuViewport` changes from 168 B to 240 B,
+matching the 72 B difference between the two scroll-panel implementations.
+The representative three-level menu payload changes from 5,528 B to 5,744 B
+when all three live panels use the cache. Neither mode adds a paint-time heap
+allocation.
 
 ### Resource accounting and complexity
 
@@ -820,7 +838,8 @@ with geometry-oracle and copied-area acceptance tests; retain paint fallback.
 
 ### P6. Execute interior copies in synchronous paints
 
-**Status: Implemented locally; pending review.**
+**Status: Implemented in
+[7c3c9369](https://github.com/dejwk/roo_windows/commit/7c3c9369).**
 `BlitCacheContainer` consumes each pending translation once and asks the P5
 planner for one certified source/destination pair. It registers the destination
 as an exclusion before issuing the raw device copy, so the normal single child
@@ -865,6 +884,8 @@ cross-refresh source certificates, including overlap and invalidation tests.
 
 ### P7. Enable cached scrolling in menus
 
+**Status: Implemented locally; pending review.**
+
 **Depends on:** P6. **Files:** [menu_surface](../../../src/roo_windows/material3/menu/menu_surface.h),
 rounded scrolling example, [menu geometry](../../../test/material3_menu_geometry_test.cpp),
 [golden](../../../test/material3_menu_golden_test.cpp) and resource tests;
@@ -877,6 +898,22 @@ submenu dismissal, and content replacement. Demonstrate actual copies in the
 menu integration test, not just a synthetic BlitCacheContainer. Compare output
 with full repaint and account for the MenuPanel object-size increase. Review
 golden differences; correct blitting alone must not change the rendered image.
+
+Implementation selects the existing wrapper through the global
+`ROO_WINDOWS_ENABLE_BLIT_CACHE` policy. The default remains the 168 B simple
+viewport. With caching enabled, real menu scrolling executes certified copies
+on capable devices, compares equal to a forced full repaint, and leaves copied
+destinations untouched by ordinary painting. A device that reports no copy
+support takes the ordinary path. Existing menu lifecycle and golden suites run
+in both configurations.
+
+Validation runs the menu geometry, lifecycle, golden, and rounded-clipping
+targets in both configurations, plus scroll-animation, app-bar binding, and
+dialog teardown tests for other users of the alias. The `roo_windows_wifi`
+Material 3 flow passes in both configurations. The rounded integration test
+checks selected content at the top and bottom panel curves, copy execution,
+single-write destinations, and equality with a forced full repaint. The golden
+output is unchanged.
 
 **Proposed commit:** Sparse rounded child clipping P7: cache rounded menu scrolling.
 
@@ -928,11 +965,11 @@ move this design to implemented only after every gate passes.
 | Exclusion filtering | P0 complete | P1 | Own exclusion_filter and masked tests; publish the depth/fallback contract before P5. |
 | Owner composition | P0 complete | P4 | Own rounded_clip, clipper, widget effects and decoration. |
 | Blit planning | P1 complete | P5 complete | Planner and independent geometry-oracle tests prove the safe-copy contract; no device copy is enabled. |
-| Blit execution and menus | P4 and P5 complete | P6 complete locally → P7 | Keep cache/copy changes together; coordinate Wi-Fi validation separately. |
+| Blit execution and menus | P4 and P5 complete | P6 complete; P7 complete locally | Keep cache/copy changes together; coordinate Wi-Fi validation separately. |
 | Acceptance | All active code stages complete | P8 | Report exact dependencies, synchronous refresh duration, and hardware availability. |
 
-P0, P1, P4, and P5 are complete, and P6 is implemented locally. P7 follows the
-cache execution path. P2 and P3 have no remaining dependants. An agent receives
+P0, P1, P4, P5, and P6 are complete, and P7 is implemented locally. P2 and P3
+have no remaining dependants. An agent receives
 its stage, dependency commits, file ownership,
 validation commands, and acceptance criteria from this document. It returns a
 commit, test results, and measured deltas. Concurrent agents must not rewrite

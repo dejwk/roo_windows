@@ -66,32 +66,53 @@ ordinary and single-selection leaves dismiss by default. Back/Escape closes
 the deepest submenu first and then the root. Arrow keys, Home/End, and wrapping
 Tab traversal operate only within the deepest visible level.
 
+## Scroll-copy policy
+
+Menus follow the application-wide `ScrollablePanel` policy. The default
+`ROO_WINDOWS_ENABLE_BLIT_CACHE=0` uses `SimpleScrollablePanel` and carries no
+framebuffer-cache state. Builds for devices with a framebuffer can define
+`ROO_WINDOWS_ENABLE_BLIT_CACHE=1` globally to use `ScrollableBlitPanel` in menus
+and other users of the alias. Every translation unit in a program must use the
+same value because the option changes object layout.
+
+An enabled build still checks the active display's `supportsBlitCopy()`
+capability. A display without that capability repaints normally. The explicit
+`SimpleScrollablePanel` and `ScrollableBlitPanel` types remain available when a
+component needs a fixed policy.
+
 ## Memory and allocation audit
 
 The committed `material3_menu_size_probe` records named `sizeof` symbols. An
-ESP32-C3 GCC 14.2.0 compile (32-bit pointers, 2026-09-05) measured:
+ESP32-C3 GCC 14.2.0 compile (32-bit pointers, 2026-10-07) measured:
 
 ```sh
 bash benchmarks/material3_menu_size_probe.sh \
   /path/to/riscv32-esp-elf-g++ /path/to/riscv32-esp-elf-nm
+
+ROO_WINDOWS_ENABLE_BLIT_CACHE=1 \
+  bash benchmarks/material3_menu_size_probe.sh \
+  /path/to/riscv32-esp-elf-g++ /path/to/riscv32-esp-elf-nm
 ```
 
-| Type | Bytes |
-| --- | ---: |
-| `Menu` | 12 |
-| internal `Menu::Impl` allocation | 456 |
-| `MenuEntry` / `ListEntry` | 104 / 88 |
-| `StandardMenuItem` | 32 |
-| `MenuRow<StandardMenuItem>` | 136 |
-| `MenuGroup` / `MenuOverlay` | 56 / 56 |
-| `MenuPanel` / `SimpleScrollablePanel` | 280 / 168 |
-| optional trailing payload / bound adornment state | 32 / 44 |
-| generated single-line text slot | 48 |
+| Type | Default | Cache enabled |
+| --- | ---: | ---: |
+| `Menu` | 12 | 12 |
+| internal `Menu::Impl` allocation | 456 | 528 |
+| `MenuEntry` / `ListEntry` | 104 / 88 | 104 / 88 |
+| `StandardMenuItem` | 32 | 32 |
+| `MenuRow<StandardMenuItem>` | 136 | 136 |
+| `MenuGroup` / `MenuOverlay` | 56 / 56 | 56 / 56 |
+| `MenuPanel` | 280 | 352 |
+| `MenuViewport` | 168 | 240 |
+| `SimpleScrollablePanel` / `ScrollableBlitPanel` | 168 / 240 | 168 / 240 |
+| optional trailing payload / bound adornment state | 32 / 44 | 32 / 44 |
+| generated single-line text slot | 48 | 48 |
 
 For a deliberately busy three-level chain—two six-row root groups, one
 four-row group in each of two visible child panels, eight adorned rows, and
-four optional item payloads—the modeled live allocation payload is 5,528
-bytes. This includes current vector capacities (128 bytes) and all menu-owned
+four optional item payloads—the modeled live allocation payload is 5,528 bytes
+with the default policy and 5,744 bytes with caching enabled for all three live
+panels. This includes current vector capacities (128 bytes) and all menu-owned
 objects and generated text slots; allocator headers and caller-owned strings,
 icons, application objects, and the 12-byte stack-resident `Menu` are excluded.
 The payload remains below the revised 6 KiB representative ceiling.

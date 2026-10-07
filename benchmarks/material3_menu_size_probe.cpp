@@ -29,8 +29,14 @@ ROO_WINDOWS_MENU_SIZE_PROBE(roo_windows::material3::MenuGroup,
                             material3_menu_group);
 ROO_WINDOWS_MENU_SIZE_PROBE(roo_windows::material3::internal::MenuPanel,
                             material3_menu_panel);
+ROO_WINDOWS_MENU_SIZE_PROBE(roo_windows::material3::internal::MenuViewport,
+                            material3_menu_viewport);
 ROO_WINDOWS_MENU_SIZE_PROBE(roo_windows::SimpleScrollablePanel,
                             simple_scrollable_panel);
+ROO_WINDOWS_MENU_SIZE_PROBE(roo_windows::ScrollableBlitPanel,
+                            scrollable_blit_panel);
+ROO_WINDOWS_MENU_SIZE_PROBE(roo_windows::ScrollablePanel,
+                            configured_scrollable_panel);
 ROO_WINDOWS_MENU_SIZE_PROBE(roo_windows::material3::internal::MenuOverlay,
                             material3_menu_overlay);
 ROO_WINDOWS_MENU_SIZE_PROBE(roo_windows::material3::MenuPolicy,

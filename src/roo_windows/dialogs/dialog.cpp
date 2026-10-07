@@ -133,9 +133,7 @@ void Dialog::Registration::onFinished(PresentationFinishReason reason) {
 void Dialog::clearPresentationContent() {
   if (presentation_content_ == nullptr) return;
   focus_scope_.clearRememberedFocus();
-  // ScrollablePanel's inherited clearContents() bypasses its blit-cache
-  // wrapper. Dispatch through the derived content setter to detach the child.
-  contents_.setContents(WidgetRef());
+  contents_.clearContents();
   presentation_content_ = nullptr;
 }
 

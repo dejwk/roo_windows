@@ -10,9 +10,9 @@
 namespace roo_windows::material3::internal {
 
 /// Transparent scrolling viewport that leaves menu-surface paint to its panel.
-class MenuViewport final : public SimpleScrollablePanel {
+class MenuViewport final : public ScrollablePanel {
  public:
-  using SimpleScrollablePanel::SimpleScrollablePanel;
+  using ScrollablePanel::ScrollablePanel;
 
  protected:
   Color background() const override { return roo_display::color::Transparent; }

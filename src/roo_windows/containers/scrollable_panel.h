@@ -3,6 +3,7 @@
 #include "roo_display/ui/alignment.h"
 #include "roo_scheduler.h"
 #include "roo_time.h"
+#include "roo_windows/config.h"
 #include "roo_windows/containers/blit_cache_container.h"
 #include "roo_windows/containers/scroll_motion_controller.h"
 #include "roo_windows/core/application_context.h"
@@ -344,7 +345,10 @@ class ScrollableBlitPanel : public SimpleScrollablePanel {
   void setContents(WidgetRef new_contents) {
     bool replaced = blit_cache_.child() != new_contents.get();
     blit_cache_.setChild(std::move(new_contents));
-    SimpleScrollablePanel::setContents(WidgetRef(blit_cache_));
+    // Detach an empty wrapper so the inherited hasContents() and child-count
+    // contract matches SimpleScrollablePanel in both policy configurations.
+    SimpleScrollablePanel::setContents(
+        blit_cache_.child() == nullptr ? WidgetRef() : WidgetRef(blit_cache_));
     auto connection = internal::ScrollConnectionRegistry::Find(*this);
     if (replaced && connection != nullptr) {
       cancelMotion();
@@ -355,10 +359,21 @@ class ScrollableBlitPanel : public SimpleScrollablePanel {
     }
   }
 
+  /// Detaches and releases the wrapped content.
+  void clearContents() { setContents(WidgetRef()); }
+
  private:
   BlitCacheContainer blit_cache_;
 };
 
+/// Selects the application-wide default scrolling storage policy.
+///
+/// This alias changes object layout, so every translation unit in one program
+/// must use the same `ROO_WINDOWS_ENABLE_BLIT_CACHE` value.
+#if ROO_WINDOWS_ENABLE_BLIT_CACHE
 using ScrollablePanel = ScrollableBlitPanel;
+#else
+using ScrollablePanel = SimpleScrollablePanel;
+#endif
 
 }  // namespace roo_windows

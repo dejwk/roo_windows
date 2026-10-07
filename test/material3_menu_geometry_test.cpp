@@ -11,6 +11,37 @@
 namespace roo_windows::material3 {
 namespace {
 
+template <typename T>
+T* FindAncestor(Widget& descendant) {
+  for (Widget* current = &descendant; current != nullptr;
+       current = current->parent()) {
+    if (auto* result = dynamic_cast<T*>(current)) return result;
+  }
+  return nullptr;
+}
+
+TEST(Material3MenuGeometry, ScrollablePanelUsesConfiguredStoragePolicy) {
+#if ROO_WINDOWS_ENABLE_BLIT_CACHE
+  static_assert(std::is_same<ScrollablePanel, ScrollableBlitPanel>::value,
+                "enabled policy must select framebuffer reuse");
+#else
+  static_assert(std::is_same<ScrollablePanel, SimpleScrollablePanel>::value,
+                "default policy must avoid cache storage");
+#endif
+}
+
+TEST(Material3MenuGeometry, ConfiguredScrollablePanelClearsLogicalContents) {
+  roo_scheduler::SchedulingService scheduler;
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
+  ScrollablePanel panel(context);
+  panel.setContents(std::make_unique<MenuEntry>(context));
+  ASSERT_TRUE(panel.hasContents());
+  panel.clearContents();
+  EXPECT_FALSE(panel.hasContents());
+  EXPECT_EQ(0, panel.getChildrenCount());
+}
+
 TEST(Material3MenuGeometry, RootPreferencesFitBeforeClamping) {
   const Rect viewport(8, 8, 311, 231);
   const Rect anchor(40, 40, 79, 63);
@@ -167,14 +198,13 @@ TEST(Material3MenuGeometry, VerticalPaddingBelongsToScrollableContent) {
         panel.measure(WidthSpec::Exactly(160), HeightSpec::Exactly(100));
     panel.layout(Rect(0, 0, size.width() - 1, size.height() - 1));
     ASSERT_TRUE(panel.isScrolling());
-    auto* viewport =
-        dynamic_cast<internal::MenuViewport*>(rows->parent()->parent());
+    auto* viewport = FindAncestor<internal::MenuViewport>(*rows);
     ASSERT_NE(viewport, nullptr);
     const int padding = Scaled(variant == ListVariant::kBaseline ? 0 : 4);
     EXPECT_EQ(Rect(padding, 0, size.width() - padding - 1, size.height() - 1),
               viewport->parent_bounds());
     EXPECT_EQ(padding, rows->offsetTop());
-    EXPECT_EQ(rows->height() + 2 * padding, viewport->contents()->height());
+    EXPECT_EQ(rows->height() + 2 * padding, viewport->getChild(0).height());
     EXPECT_EQ(0, viewport->contents()->offsetTop());
   }
 }

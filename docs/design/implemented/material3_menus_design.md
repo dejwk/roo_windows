@@ -740,9 +740,9 @@ The final ESP32-C3 GCC 14.2.0 audit records these 32-bit ABI sizes:
 | Type | Measured | Original ceiling | Result and trade-off |
 | --- | ---: | ---: | --- |
 | `Menu` | 12 B | 96 B plus level storage | Persistent state is behind one pimpl allocation. |
-| internal `Menu::Impl` allocation | 456 B | included above | Contains the root panel, overlay, focus scope, registration, and four bounded level records. |
+| internal `Menu::Impl` allocation | 456 B default; 528 B cached | included above | Contains the root panel, overlay, focus scope, registration, and four bounded level records. |
 | `MenuOverlay` | 56 B | 72 B plus child pointers | Pass. |
-| `MenuPanel` | 280 B | 80 B plus group capacity | Revised: the original estimate omitted the inline 168 B `SimpleScrollablePanel` and 56 B group stack; keeping the viewport persistent avoids show-time structural allocation. |
+| `MenuPanel` | 280 B default; 352 B cached | 80 B plus group capacity | The viewport is 168 B with the default simple policy and 240 B when global framebuffer caching is enabled; keeping it persistent avoids show-time structural allocation. |
 | `MenuGroup` | 56 B | 64 B plus row capacity | Pass. |
 | `MenuEntry` | 104 B | `sizeof(ListEntry) + 24 B` | Pass: `ListEntry` is 88 B, so the delta is 16 B. |
 | plain `StandardMenuItem` | 32 B | 48 B | Pass. |
@@ -753,7 +753,8 @@ The final ESP32-C3 GCC 14.2.0 audit records these 32-bit ABI sizes:
 The representative live-heap model uses two six-row root groups plus two
 visible child panels containing four rows each, eight adorned rows, and four
 item payloads. Menu-owned object payload and current vector capacities total
-5,528 B, below the revised 6 KiB ceiling; allocator headers and caller-owned
+5,528 B with the default scroll policy and 5,744 B when all three panels use
+the cache, below the revised 6 KiB ceiling; allocator headers and caller-owned
 content are excluded. The reproducible probe and assumptions are published in
 [`docs/material3_menus.md`](../../material3_menus.md#memory-and-allocation-audit).
 

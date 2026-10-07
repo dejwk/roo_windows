@@ -34,6 +34,9 @@ includes=(
 )
 
 common=(-std=gnu++17 -fno-exceptions -fno-rtti)
+if [[ "${ROO_WINDOWS_ENABLE_BLIT_CACHE:-0}" == "1" ]]; then
+  common+=(-DROO_WINDOWS_ENABLE_BLIT_CACHE=1)
+fi
 
 "${compiler}" "${common[@]}" -DROO_WINDOWS_STANDALONE_ABI_PROBE \
   "${includes[@]}" -c "${repo_dir}/benchmarks/material3_menu_size_probe.cpp" \

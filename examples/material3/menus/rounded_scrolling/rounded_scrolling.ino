@@ -33,10 +33,10 @@ class Backdrop final : public Widget {
   }
 };
 
-class ScheduleList final : public SimpleScrollablePanel {
+class ScheduleList final : public ScrollablePanel {
  public:
   explicit ScheduleList(ApplicationContext& context)
-      : SimpleScrollablePanel(context) {
+      : ScrollablePanel(context) {
     auto group = std::make_unique<material3::MenuGroup>(context);
     // Borrowed labels are literals. The group owns each row and its item.
     const char* labels[] = {"Monday", "Tuesday",  "Wednesday", "Thursday",
@@ -55,8 +55,9 @@ class ScheduleList final : public SimpleScrollablePanel {
     setContents(std::move(group));
   }
 
-  // The outer card owns the rounded clip, so this scrolling body needs no
-  // special paint implementation.
+  // ScrollablePanel follows the global framebuffer-cache policy. The outer
+  // card owns the rounded clip, so both policies use the same widget code and
+  // retain the antialiased boundary.
   Color background() const override { return Color(0xFFF8EFF8); }
 };
 

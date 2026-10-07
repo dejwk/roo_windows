@@ -48,7 +48,20 @@ class RecordingDevice : public roo_display::OffscreenDevice<Argb8888> {
   explicit RecordingDevice(roo::byte* data)
       : OffscreenDevice(kWidth, kHeight, data, Argb8888()) {}
 
-  void reset() { writes.fill(0); }
+  void reset() {
+    writes.fill(0);
+    blits.clear();
+  }
+
+  void setBlitSupported(bool supported) { blit_supported_ = supported; }
+
+  const Capabilities& getCapabilities() const override {
+    static const Capabilities kBlitCapabilities(
+        /*supports_blending=*/true, /*supports_blit_copy=*/true);
+    static const Capabilities kNoBlitCapabilities(
+        /*supports_blending=*/true, /*supports_blit_copy=*/false);
+    return blit_supported_ ? kBlitCapabilities : kNoBlitCapabilities;
+  }
 
   void setAddress(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1,
                   BlendingMode mode) override {
@@ -99,7 +112,21 @@ class RecordingDevice : public roo_display::OffscreenDevice<Argb8888> {
     }
   }
 
+  void blitCopy(int16_t src_x0, int16_t src_y0, int16_t src_x1, int16_t src_y1,
+                int16_t dst_x0, int16_t dst_y0) override {
+    blits.push_back({Box(src_x0, src_y0, src_x1, src_y1),
+                     Box(dst_x0, dst_y0, dst_x0 + src_x1 - src_x0,
+                         dst_y0 + src_y1 - src_y0)});
+    OffscreenDevice::blitCopy(src_x0, src_y0, src_x1, src_y1, dst_x0, dst_y0);
+  }
+
+  struct Blit {
+    Box source;
+    Box destination;
+  };
+
   std::array<uint16_t, kWidth * kHeight> writes{};
+  std::vector<Blit> blits;
 
  private:
   void countPixels(uint32_t count) {
@@ -121,7 +148,28 @@ class RecordingDevice : public roo_display::OffscreenDevice<Argb8888> {
   int16_t right_ = 0;
   int16_t x_ = 0;
   int16_t y_ = 0;
+  bool blit_supported_ = true;
 };
+
+template <typename T>
+T* FindAncestor(Widget& descendant) {
+  for (Widget* current = &descendant; current != nullptr;
+       current = current->parent()) {
+    if (auto* result = dynamic_cast<T*>(current)) return result;
+  }
+  return nullptr;
+}
+
+int BottomInAncestor(const Widget& descendant, const Widget& ancestor) {
+  int bottom = descendant.parent_bounds().yMax() + 1;
+  for (const Widget* current = descendant.parent(); current != &ancestor;
+       current = current->parent()) {
+    EXPECT_NE(current, nullptr);
+    if (current == nullptr) return bottom;
+    bottom += current->offsetTop();
+  }
+  return bottom;
+}
 
 class Pattern : public Widget {
  public:
@@ -340,6 +388,36 @@ class RoundedClipTest : public testing::Test {
     }
   }
 
+  std::array<Color, kWidth * kHeight> captureFrame() const {
+    std::array<Color, kWidth * kHeight> frame;
+    for (int16_t y = 0; y < kHeight; ++y) {
+      for (int16_t x = 0; x < kWidth; ++x) {
+        frame[y * kWidth + x] = pixel(x, y);
+      }
+    }
+    return frame;
+  }
+
+  void expectFrame(const std::array<Color, kWidth * kHeight>& expected) {
+    for (int16_t y = 0; y < kHeight; ++y) {
+      for (int16_t x = 0; x < kWidth; ++x) {
+        expectColor(pixel(x, y), expected[y * kWidth + x], x, y);
+      }
+    }
+  }
+
+  void expectBlitDestinationsNotRepainted() {
+    for (const RecordingDevice::Blit& blit : device_.blits) {
+      for (int16_t y = blit.destination.yMin(); y <= blit.destination.yMax();
+           ++y) {
+        for (int16_t x = blit.destination.xMin(); x <= blit.destination.xMax();
+             ++x) {
+          EXPECT_EQ(0, device_.writes[y * kWidth + x]) << x << ',' << y;
+        }
+      }
+    }
+  }
+
   std::array<roo::byte, kWidth * kHeight * 4> data_{};
   RecordingDevice device_;
   roo_display::Display display_;
@@ -408,8 +486,7 @@ TEST_F(RoundedClipTest, MenuScrollReachesAntialiasedPanelEdge) {
   const Box bounds(16, 12, 79, 55);
   app_.add(std::move(panel), bounds);
   app_.refresh();
-  auto* viewport = dynamic_cast<material3::internal::MenuViewport*>(
-      rows->parent()->parent());
+  auto* viewport = FindAncestor<material3::internal::MenuViewport>(*rows);
   ASSERT_NE(viewport, nullptr);
   const Color background = menu_panel->background();
   const BorderStyle border = menu_panel->getBorderStyle();
@@ -417,9 +494,25 @@ TEST_F(RoundedClipTest, MenuScrollReachesAntialiasedPanelEdge) {
                     background, border.corner_radii(), 0, background);
   for (int offset : {0, 12, 20, 0}) {
     SCOPED_TRACE(offset);
+#if ROO_WINDOWS_ENABLE_BLIT_CACHE
+    const ScrollPosition before = viewport->getScrollPosition();
+#endif
     viewport->scrollTo(0, -offset);
+#if ROO_WINDOWS_ENABLE_BLIT_CACHE
+    const ScrollPosition after = viewport->getScrollPosition();
+#endif
     device_.reset();
     app_.refresh();
+#if ROO_WINDOWS_ENABLE_BLIT_CACHE
+    if (before.x == after.x && before.y == after.y) {
+      EXPECT_TRUE(device_.blits.empty());
+    } else {
+      EXPECT_EQ(1U, device_.blits.size());
+      expectBlitDestinationsNotRepainted();
+    }
+#else
+    EXPECT_TRUE(device_.blits.empty());
+#endif
     const int top = bounds.yMin() + Scaled(4) - offset;
     const int left = bounds.xMin() + Scaled(4);
     Decoration child(Box(left, top, left + selected->width() - 1,
@@ -447,6 +540,25 @@ TEST_F(RoundedClipTest, MenuScrollReachesAntialiasedPanelEdge) {
     if (offset > 0) {
       EXPECT_GT(selected_boundary_pixels, 0);
     }
+    if (offset == 0) {
+      int bottom_boundary_pixels = 0;
+      for (int16_t y = bounds.yMax() - Scaled(4) + 1; y <= bounds.yMax(); ++y) {
+        for (int16_t x = bounds.xMin(); x < bounds.xMin() + Scaled(14); ++x) {
+          Color c;
+          child.readColors(&x, &y, 1, &c);
+          const Color expected = AlphaBlend(
+              Backdrop(x, y),
+              parent.readWithContent(x, y, AlphaBlend(background, c)));
+          expectColor(pixel(x, y), expected, x, y);
+          const uint8_t coverage = roo_windows::internal::RoundedFillCoverage(
+              bounds, border.corner_radii(), 0, x, y);
+          if (coverage > 0 && coverage < 255 && c.a() > 0) {
+            ++bottom_boundary_pixels;
+          }
+        }
+      }
+      EXPECT_GT(bottom_boundary_pixels, 0);
+    }
     if (offset == 20) {
       const int y = top + selected->height();
       const Color divider =
@@ -456,12 +568,60 @@ TEST_F(RoundedClipTest, MenuScrollReachesAntialiasedPanelEdge) {
       expectColor(pixel(43, y - 1), selected->background(), 43, y - 1);
     }
     expectSingleWrite();
+
+    const auto accelerated = captureFrame();
+    menu_panel->setDirty();
+    device_.reset();
+    app_.refresh();
+    EXPECT_TRUE(device_.blits.empty());
+    expectFrame(accelerated);
+    expectSingleWrite();
   }
   viewport->scrollToBottom();
   EXPECT_EQ(viewport->height() - Scaled(4),
-            viewport->contents()->offsetTop() +
-                menu_panel->groupAt(1).parent_bounds().yMax() + 1);
+            BottomInAncestor(menu_panel->groupAt(1), *viewport));
 }
+
+#if ROO_WINDOWS_ENABLE_BLIT_CACHE
+// The compile-time policy may install the cache on any display. A device that
+// has no framebuffer-copy support must retain the same rendering path and
+// pixels without issuing a copy.
+TEST_F(RoundedClipTest, CachedMenuFallsBackWhenDeviceCannotBlit) {
+  using namespace material3;
+  device_.setBlitSupported(false);
+  auto panel = std::make_unique<material3::internal::MenuPanel>(app_.context());
+  auto* menu_panel = panel.get();
+  auto group = std::make_unique<MenuGroup>(app_.context());
+  MenuGroup* rows = group.get();
+  for (int i = 0; i < 3; ++i) {
+    StandardMenuItemInit init;
+    if (i == 0) {
+      init.flags =
+          StandardMenuItemFlags::kSelectable | StandardMenuItemFlags::kSelected;
+    }
+    group->add(
+        std::make_unique<MenuRow<StandardMenuItem>>(app_.context(), init));
+  }
+  panel->addGroup(std::move(group));
+  app_.add(std::move(panel), Box(16, 12, 79, 55));
+  app_.refresh();
+  auto* viewport = FindAncestor<material3::internal::MenuViewport>(*rows);
+  ASSERT_NE(viewport, nullptr);
+
+  viewport->scrollTo(0, -12);
+  device_.reset();
+  app_.refresh();
+  EXPECT_TRUE(device_.blits.empty());
+  const auto ordinary = captureFrame();
+
+  menu_panel->setDirty();
+  device_.reset();
+  app_.refresh();
+  EXPECT_TRUE(device_.blits.empty());
+  expectFrame(ordinary);
+  expectSingleWrite();
+}
+#endif
 
 // Verifies a clean clipped foreground is reconstructed once when its backdrop
 // changes, rather than losing the selected color at the antialiased edge.
