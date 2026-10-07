@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="460" viewBox="0 0 1100 460" role="img" aria-labelledby="title desc">
+  <title id="title">Temporary composition lag with guaranteed cleanup</title>
+  <desc id="desc">An eligible background fill can skip despite pending overlays. A required draw or rotating cleanup band composes the current scene. Once the scroll position stops changing, the next scheduled refresh completes the whole viewport regardless of the budget.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#617383"/></marker>
+  </defs>
+  <rect width="1100" height="460" fill="white"/>
+  <g font-family="sans-serif" fill="#172c3d">
+    <text x="32" y="34" font-size="23" font-weight="600">Keep current composition inputs; guarantee progress and final cleanup</text>
+    <text x="32" y="67" font-size="16">Skipped pixels can lag temporarily. Every cleanup draw reconstructs the latest scene.</text>
+    <g font-size="14" font-weight="600" fill="#526775">
+      <text x="32" y="105">DRAW / FRAME</text><text x="355" y="105">DECISION / COMPOSITION</text><text x="827" y="105">DISPLAY OUTPUT</text>
+    </g>
+    <g fill="#f1f5f8" stroke="#a9bac7">
+      <rect x="32" y="120" width="270" height="74" rx="8"/>
+      <rect x="355" y="120" width="420" height="74" rx="8"/>
+      <rect x="32" y="220" width="270" height="74" rx="8"/>
+      <rect x="355" y="220" width="420" height="74" rx="8"/>
+      <rect x="32" y="320" width="270" height="74" rx="8"/>
+      <rect x="355" y="320" width="420" height="74" rx="8"/>
+    </g>
+    <rect x="827" y="120" width="245" height="74" rx="8" fill="#fff2da" stroke="#d4aa62"/>
+    <g fill="#e4f3ec" stroke="#77a991">
+      <rect x="827" y="220" width="245" height="74" rx="8"/>
+      <rect x="827" y="320" width="245" height="74" rx="8"/>
+    </g>
+    <g stroke="#617383" stroke-width="2" marker-end="url(#arrow)">
+      <path d="M 309 157 H 347"/><path d="M 782 157 H 819"/>
+      <path d="M 309 257 H 347"/><path d="M 782 257 H 819"/>
+      <path d="M 309 357 H 347"/><path d="M 782 357 H 819"/>
+    </g>
+    <g font-size="16">
+      <text x="48" y="150" font-weight="600">Optional background fill</text>
+      <text x="48" y="175" font-size="14">Expired; outside cleanup band</text>
+      <text x="371" y="150">Omit eligible fill despite pending layers;</text>
+      <text x="371" y="175">keep every overlay registered</text>
+      <text x="843" y="150" font-weight="600">Preserve old pixels</text>
+      <text x="843" y="175">Request another refresh</text>
+      <text x="48" y="250" font-weight="600">Required draw / cleanup band</text>
+      <text x="48" y="275" font-size="14">The band advances each paint</text>
+      <text x="371" y="250">Compose every relevant current layer,</text>
+      <text x="371" y="275">including pending foreground</text>
+      <text x="843" y="263" font-weight="600">Write current final colors</text>
+      <text x="48" y="350" font-weight="600">Scroll position unchanged</text>
+      <text x="48" y="375" font-size="14">Already scheduled cleanup refresh</text>
+      <text x="371" y="350">Rebuild the whole viewport;</text>
+      <text x="371" y="375">ignore the background budget</text>
+      <text x="843" y="350" font-weight="600">Complete current image</text>
+      <text x="843" y="375">Settle old cleanup work</text>
+    </g>
+    <text x="32" y="440" font-size="15" fill="#526775">Cleanup covers the full subtree. New invalidations raised during cleanup must remain scheduled.</text>
+  </g>
+</svg>

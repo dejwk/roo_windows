@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="560" viewBox="0 0 1080 560" role="img" aria-labelledby="title desc">
+  <title id="title">Rotating current-scene bands and full cleanup after motion</title>
+  <desc id="desc">Three schematic viewports of logical height 96, drawn at three times scale. Six bands each have logical height 16. Frame A paints band zero, frame B paints band one, and the first frame with unchanged scroll position paints every band. Direct drawing continues; pending composition can lag outside the required band. Active rounded-edge inputs are retained normally.</desc>
+  <defs>
+    <clipPath id="view-a"><rect x="48" y="112" width="240" height="288" rx="24"/></clipPath>
+    <clipPath id="view-b"><rect x="408" y="112" width="240" height="288" rx="24"/></clipPath>
+    <clipPath id="view-c"><rect x="768" y="112" width="240" height="288" rx="24"/></clipPath>
+    <g id="bands" fill="none" stroke="#aebbc5" stroke-width="1" stroke-dasharray="4 4">
+      <path d="M 0 48 H 240 M 0 96 H 240 M 0 144 H 240 M 0 192 H 240 M 0 240 H 240"/>
+    </g>
+    <g id="foreground" fill="#263b50">
+      <rect x="40" y="23" width="125" height="9" rx="2"/>
+      <rect x="40" y="71" width="155" height="9" rx="2"/>
+      <rect x="40" y="119" width="102" height="9" rx="2"/>
+      <rect x="40" y="167" width="141" height="9" rx="2"/>
+      <rect x="40" y="215" width="117" height="9" rx="2"/>
+      <rect x="40" y="263" width="155" height="9" rx="2"/>
+    </g>
+  </defs>
+  <rect width="1080" height="560" fill="white"/>
+  <g font-family="sans-serif" fill="#172c3d">
+    <text x="32" y="32" font-size="22" font-weight="600">Advance cleanup during motion; settle completely when motion pauses</text>
+    <text x="32" y="58" font-size="15">Schematic geometry, not predicted raster output. Deadline has expired in A and B.</text>
+    <text x="48" y="94" font-size="18" font-weight="600">A · Scroll position changes</text>
+    <text x="408" y="94" font-size="18" font-weight="600">B · Scroll position changes</text>
+    <text x="768" y="94" font-size="18" font-weight="600">C · Position is unchanged</text>
+    <g clip-path="url(#view-a)">
+      <rect x="48" y="112" width="240" height="288" fill="#edf0f3"/>
+      <rect x="48" y="112" width="240" height="48" fill="#a8d3fb"/>
+      <use href="#bands" x="48" y="112"/>
+      <use href="#foreground" x="48" y="112"/>
+    </g>
+    <g clip-path="url(#view-b)">
+      <rect x="408" y="112" width="240" height="288" fill="#edf0f3"/>
+      <rect x="408" y="160" width="240" height="48" fill="#a8d3fb"/>
+      <use href="#bands" x="408" y="112"/>
+      <use href="#foreground" x="408" y="112"/>
+    </g>
+    <g clip-path="url(#view-c)">
+      <rect x="768" y="112" width="240" height="288" fill="#a8d3fb"/>
+      <use href="#bands" x="768" y="112"/>
+      <use href="#foreground" x="768" y="112"/>
+    </g>
+    <g fill="none" stroke="#258567" stroke-width="4">
+      <rect x="50" y="114" width="236" height="284" rx="22"/>
+      <rect x="410" y="114" width="236" height="284" rx="22"/>
+      <rect x="770" y="114" width="236" height="284" rx="22"/>
+    </g>
+    <g font-size="13" text-anchor="end" fill="#455967">
+      <text x="39" y="141">0</text><text x="39" y="189">1</text>
+      <text x="39" y="237">2</text><text x="39" y="285">3</text>
+      <text x="39" y="333">4</text><text x="39" y="381">5</text>
+    </g>
+    <g font-size="16">
+      <text x="48" y="427">Guarantee band 0; request cleanup.</text>
+      <text x="408" y="427">Guarantee band 1; request cleanup.</text>
+      <text x="768" y="427">Complete the current image.</text>
+    </g>
+    <g font-size="15">
+      <rect x="48" y="459" width="20" height="14" fill="#a8d3fb"/>
+      <text x="78" y="471">Complete current band</text>
+      <rect x="408" y="459" width="20" height="14" fill="#edf0f3" stroke="#aebbc5"/>
+      <text x="438" y="471">Skipped output can remain stale</text>
+      <rect x="48" y="493" width="20" height="9" fill="#263b50"/>
+      <text x="78" y="504">Direct drawing continues</text>
+      <rect x="408" y="493" width="20" height="9" fill="#258567"/>
+      <text x="438" y="504">Outer clipping stays enforced</text>
+      <text x="48" y="541" fill="#455967">Cleanup rebuilds the latest scene, including pending overlays and nested rounded content.</text>
+    </g>
+  </g>
+</svg>

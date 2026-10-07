@@ -24,9 +24,13 @@ until it returns.
 
 The [retired continuation design](implemented/interrupted_paint_continuation_design.md)
 and continuation references in earlier implementation histories describe the
-previous behavior. Per-widget partial drawing and deferred scrolling backgrounds
-are future experiments, with no replacement interruption mechanism in this
-baseline.
+previous behavior. The
+[selective accelerated redraw design](in_progress/selective_accelerated_redraw_design.md)
+retains synchronous traversal. P1 adds an advisory paint budget and query;
+budget consumers remain under development. Its planned opted-in scroller
+accepts temporary composition lag when eligible background output is skipped,
+with rotating cleanup during movement and a complete scheduled repaint when
+motion pauses. It does not restore paint interruption.
 
 ## Implemented
 
@@ -92,6 +96,7 @@ baseline.
 
 | Design | Dependency status |
 | --- | --- |
+| [Selective accelerated redraw](in_progress/selective_accelerated_redraw_design.md) | P1 advisory budget and query are implemented. Background deferral with temporary composition lag (P2a), opt-in scrolling, guaranteed cleanup, and resource acceptance remain under development. |
 | [Sparse rounded child clipping](in_progress/rounded_child_clipping_design.md) | Prototype stages I1–I9, synchronous integration P0, bounded subtraction P1, owner effects P4, and the non-executing interior-copy planner P5 are implemented. P2 repair helpers are retired and P3 is cancelled. P6–P8 cover copy execution, menu adoption and production resource acceptance. |
 | Display runtime and cross-application input | Phases 1–6 are implemented. Explicit modal coverage and the final migration/cost audit remain proposed. |
 | Text system | `TextBlock` wrapping, justification, max-lines, ellipsis, caching, and golden coverage are implemented; shared rich paragraph layout and `RichTextBlock` remain. |
@@ -103,6 +108,7 @@ baseline.
 
 | Design | Dependency status |
 | --- | --- |
+| [Material 3 density](proposed/material3_density_design.md) | Theme storage, component geometry, and virtual-list prerequisites are implemented. Shared density, component mappings, and recursive runtime geometry refresh remain proposed. |
 | Button groups | Buttons and icon buttons are implemented; no group implementation exists. |
 | Click delivery policy | Click-animation lifecycle and settlement are implemented; widget-selected semantic delivery timing is not. |
 | Display runtime Phase 7 task-bounded transient coverage | Phase 6 input is implemented. Phase 7 is reconciled as task-bounded attachment of the one shared window host layer, retaining one active-presentation authority and explicit interaction owner; the extension remains unimplemented. |
