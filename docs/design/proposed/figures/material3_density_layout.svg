@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="780" height="300" viewBox="0 0 780 300">
+<rect width="780" height="300" fill="white"/>
+<g font-family="sans-serif" fill="#202124">
+<text x="30" y="28" font-size="18">Proposed baseline list row at zoom 100%</text>
+<text x="30" y="50" font-size="12">Geometry drawn at 2 SVG units per pixel; horizontal spacing is unchanged.</text>
+<text x="30" y="76" font-size="15">Density 0: 56 px</text>
+<rect x="30" y="90" width="208" height="112" rx="4" fill="#f1f3f4" stroke="#5f6368"/>
+<rect x="46" y="114" width="64" height="64" fill="#d3e3fd" stroke="#1a73e8"/>
+<rect x="126" y="122" width="96" height="48" fill="#e6f4ea" stroke="#137333"/>
+<text x="57" y="151" font-size="12">32 px</text>
+<text x="142" y="151" font-size="12">24 px</text>
+<text x="30" y="228" font-size="12">Token minimum: 56 px</text>
+<text x="30" y="247" font-size="12">Edge padding: 8 px</text>
+<text x="275" y="76" font-size="15">Density -2: 48 px</text>
+<rect x="275" y="90" width="208" height="96" rx="4" fill="#f1f3f4" stroke="#5f6368"/>
+<rect x="291" y="106" width="64" height="64" fill="#d3e3fd" stroke="#1a73e8"/>
+<rect x="371" y="114" width="96" height="48" fill="#e6f4ea" stroke="#137333"/>
+<text x="302" y="143" font-size="12">32 px</text>
+<text x="387" y="143" font-size="12">24 px</text>
+<text x="275" y="228" font-size="12">Token minimum: 48 px</text>
+<text x="275" y="247" font-size="12">Edge padding: 4 px</text>
+<text x="520" y="76" font-size="15">Density -5: 40 px</text>
+<rect x="520" y="90" width="208" height="80" rx="4" fill="#f1f3f4" stroke="#5f6368"/>
+<rect x="536" y="98" width="64" height="64" fill="#d3e3fd" stroke="#1a73e8"/>
+<rect x="616" y="106" width="96" height="48" fill="#e6f4ea" stroke="#137333"/>
+<text x="547" y="135" font-size="12">32 px</text>
+<text x="632" y="135" font-size="12">24 px</text>
+<text x="520" y="228" font-size="12">Token minimum: 36 px</text>
+<text x="520" y="247" font-size="12">Edge padding: 4 px</text>
+<text x="30" y="280" font-size="12">At -5: max(36, 32 + 4 + 4) = 40 px. Blue: leading slot. Green: text.</text>
+</g></svg>
