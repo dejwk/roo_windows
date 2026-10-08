@@ -268,7 +268,9 @@ TEST_F(MovingAppBarTest, CompactTrackingIsBoundedAndSettles) {
       const TextStyle& active = c * 2 < travel ? large : small;
       auto options = title->fontOptions(active);
       auto tracked = active.font().getHorizontalStringMetrics(text, options);
-      if (c != travel / 2) EXPECT_LE(options.trackingPx(), previous_tracking);
+      if (c != travel / 2) {
+        EXPECT_LE(options.trackingPx(), previous_tracking);
+      }
       auto unit_options = active.fontOptions();
       unit_options.setTrackingPx(active.tracking() + 1);
       auto base =
@@ -297,9 +299,12 @@ TEST_F(MovingAppBarTest, CompactTrackingIsBoundedAndSettles) {
                 std::max(expanded.screen_extents().width(),
                          normal.screen_extents().width()));
       if (bar_->title() == "Equipment") {
-        if (c == travel / 2 - 1)
+        if (c == travel / 2 - 1) {
           EXPECT_EQ(options.trackingPx(), large.tracking());
-        if (c == travel / 2) EXPECT_GT(options.trackingPx(), small.tracking());
+        }
+        if (c == travel / 2) {
+          EXPECT_GT(options.trackingPx(), small.tracking());
+        }
       }
       if (expanded.screen_extents().width() >=
           normal.screen_extents().width()) {
