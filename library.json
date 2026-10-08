@@ -43,13 +43,13 @@
     ],
     "dependencies": {
         "dejwk/roo_collections": ">=1.4.8",
-        "dejwk/roo_display": ">=3.3.2",
+        "dejwk/roo_display": ">=3.4.0",
         "dejwk/roo_fonts_basic": ">=1.0.6",
         "dejwk/roo_fonts_material": ">=1.1.2",
         "dejwk/roo_locale": ">=1.1.4",
         "dejwk/roo_logging": ">=1.5.11",
         "dejwk/roo_icons": ">=1.2.5",
-        "dejwk/roo_io": ">=2.4.0",
+        "dejwk/roo_io": ">=2.4.1",
         "dejwk/roo_scheduler": ">=2.3.0",
         "dejwk/roo_time": ">=2.0.1"
     }
