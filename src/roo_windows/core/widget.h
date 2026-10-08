@@ -657,6 +657,19 @@ class Widget {
   // this widget. This will schedule a layout pass of the tree.
   void requestLayout();
 
+  /// Refreshes cached geometry throughout this subtree on the next layout pass.
+  /// The default requests this widget's layout; containers also visit every
+  /// structural descendant, including hidden and gone children. Overrides with
+  /// detached geometry caches must refresh them before delegating to the base.
+  /// Call on the UI thread between completed frames, outside paint, layout, or
+  /// list synchronization. Pair with invalidateDescending() when appearance
+  /// changes too. Refresh each affected root when shared geometry inputs
+  /// change; this operation does not scope those inputs to the subtree.
+  /// Retained detached roots can be refreshed directly and are refreshed again
+  /// on attachment. Requests schedule work rather than measuring or painting
+  /// synchronously.
+  virtual void requestLayoutDescending();
+
   // Assign a size and position to a widget and all of its descendants.
   //
   // This is the second phase of the layout mechanism. (The first is measuring).

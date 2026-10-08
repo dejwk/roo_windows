@@ -31,6 +31,10 @@ class Container : public SurfaceWidget {
  public:
   Container(ApplicationContext& context);
 
+  /// Requests layout for every structural child, even hidden or gone ones,
+  /// before requesting this container's layout.
+  void requestLayoutDescending() override;
+
   /// Clips direct clipped children to this surface's rounded content bounds.
   /// Direct unclipped children bypass this container's clip while retaining
   /// ancestor clips and this owner's tint, ripple, and disabled styling.

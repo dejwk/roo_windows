@@ -1,6 +1,7 @@
 # Material 3 density
 
-Status: proposed. None of this document's density API is implemented.
+Status: partially implemented. Phase 1 (recursive layout refresh) is implemented.
+Density configuration and component geometry remain proposed (phases 2–5).
 
 ## Objective
 
@@ -309,6 +310,12 @@ Each phase is one commit. Run checks from the canonical `roo_windows` repository
 using its [Bazel setup](../../../BUILD) and [target baseline](../../material3_target_baseline.md).
 
 ### Phase 1: Recursive layout refresh
+
+Implemented: `Widget::requestLayoutDescending()`, structural container traversal,
+virtual-list prototype/pool refresh, and recursive refresh on attachment. The
+public method documents its UI-thread scheduling and repaint lifecycle.
+`layout_refresh_test` covers static containers, invisible/gone children, detached
+roots, nested cached measurements, stride changes, pool growth, and recycling.
 
 Implement recursive requests, detached prototype/pool participation, and safe
 reattachment. Add focused coverage with a static container, gone child, detached

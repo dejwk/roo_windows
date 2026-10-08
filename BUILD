@@ -1381,3 +1381,10 @@ cc_binary(
     linkstatic = 1,
     deps = [":roo_windows", "@roo_testing//:arduino_main"],
 )
+
+cc_test(
+    name = "layout_refresh_test",
+    srcs = ["test/layout_refresh_test.cpp"],
+    linkstatic = 1,
+    deps = [":roo_windows", "@roo_testing//:arduino_gtest_main"],
+)

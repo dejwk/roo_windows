@@ -52,12 +52,13 @@ void Container::attachChild(WidgetRef ref, const Rect& bounds) {
   Widget* child = ref.release();
   child->setParent(this, is_owned);
   child->setParentBounds(bounds);
+  // Detached subtrees may retain geometry from an earlier shared configuration.
+  child->requestLayoutDescending();
   if (!child->isGone()) {
     // Make sure that we propagate the requestLayout even if the child
     // already has the request flag set.
     requestLayout();
     child->invalidateInterior();
-    child->requestLayout();
     childShown(child);
   }
 }
@@ -394,6 +395,14 @@ void Container::propagateDirty(const Widget* child, const Rect& rect) {
     // child change. Schedule the backdrop before entering the paint traversal.
     notifyParentInvalidatedRegion(clipped.translate(offsetLeft(), offsetTop()));
   }
+}
+
+void Container::requestLayoutDescending() {
+  int count = getChildrenCount();
+  for (int i = 0; i < count; ++i) {
+    getChild(i).requestLayoutDescending();
+  }
+  requestLayout();
 }
 
 void Container::invalidateDescending() {

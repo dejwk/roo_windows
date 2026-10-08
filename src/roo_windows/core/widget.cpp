@@ -355,6 +355,8 @@ void Widget::requestLayout() {
   onRequestLayout();
 }
 
+void Widget::requestLayoutDescending() { requestLayout(); }
+
 #if MLOG_IS_ON(roo_windows_layout)
 static int indent_level = 0;
 

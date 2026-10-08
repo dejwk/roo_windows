@@ -147,6 +147,19 @@ class ListLayout : public Panel {
   /// Detaches children before destroying their owning pool.
   ~ListLayout() override { removeAll(); }
 
+  /// Refreshes the detached measurement prototype and all allocated pool rows,
+  /// including inactive rows, before requesting this list's layout.
+  void requestLayoutDescending() override {
+    CHECK(!synchronizing_);
+    prototype_->requestLayoutDescending();
+    for (size_t i = 0; i < elements_.capacity(); ++i) {
+      Widget& row = elements_.storage(i);
+      // Attached pool rows are visited once by container traversal below.
+      if (row.parent() != this) row.requestLayoutDescending();
+    }
+    Panel::requestLayoutDescending();
+  }
+
   /// Sets content padding and requests measurement.
   void setPadding(Padding padding) {
     if (padding_ == padding) return;
@@ -383,6 +396,14 @@ class ListLayout : public Panel {
       layoutRow(index, elements_[index - first_]);
     }
     synchronizing_ = false;
+    // Invisible sections retain lazy binding until they are presented.
+    if (!isPresented()) return;
+    // Publish the new visible interval before input can use the completed
+    // layout.
+    int begin;
+    int end;
+    viewportRange(unclippedRegion(this), begin, end);
+    synchronizeRange(begin, end);
   }
 
  private:
