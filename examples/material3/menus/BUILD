@@ -3,7 +3,7 @@ load("@rules_cc//cc:cc_library.bzl", "cc_library")
 cc_library(
     name = "example_runtime",
     hdrs = ["example_runtime.h"],
-    visibility = ["//examples/material3/menus:__subpackages__"],
+    visibility = ["//examples/material3:__subpackages__"],
     deps = [
         "//:roo_windows",
         "//fake:fltk_key_source",

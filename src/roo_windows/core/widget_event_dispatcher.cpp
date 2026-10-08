@@ -10,7 +10,8 @@ void WidgetEventDispatcher::setInteractiveChangeHandler(
     clearInteractiveChangeHandler(widget);
     return;
   }
-  interactive_change_handlers_[&widget] = std::move(handler);
+  interactive_change_handlers_[&widget] =
+      std::make_shared<std::function<void()>>(std::move(handler));
 }
 
 void WidgetEventDispatcher::clearInteractiveChangeHandler(Widget& widget) {
@@ -25,7 +26,8 @@ bool WidgetEventDispatcher::hasInteractiveChangeHandler(
 void WidgetEventDispatcher::dispatchInteractiveChange(Widget& widget) {
   auto it = interactive_change_handlers_.find(&widget);
   if (it == interactive_change_handlers_.end()) return;
-  (*it).second();
+  std::shared_ptr<std::function<void()>> handler = (*it).second;
+  (*handler)();
 }
 
 void WidgetEventDispatcher::setScrollPositionChangeHandler(

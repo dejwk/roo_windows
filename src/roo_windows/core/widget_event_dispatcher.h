@@ -30,7 +30,8 @@ class WidgetEventDispatcher {
 
   /// Dispatches an interactive-change event to the widget's handler.
   ///
-  /// No-op when no handler is registered.
+  /// No-op when no handler is registered. The handler may destroy its widget
+  /// or replace its own registration during delivery.
   void dispatchInteractiveChange(Widget& widget);
 
   /// Receives the previous and newly applied content origins.
@@ -60,7 +61,9 @@ class WidgetEventDispatcher {
 
   void moveHandlers(Widget& from, Widget& to);
 
-  roo_collections::FlatSmallHashMap<const Widget*, std::function<void()>>
+  // Keep a callable alive across registration removal during dispatch.
+  roo_collections::FlatSmallHashMap<const Widget*,
+                                    std::shared_ptr<std::function<void()>>>
       interactive_change_handlers_;
 
   // Keep the active callable alive if a handler mutates the map during

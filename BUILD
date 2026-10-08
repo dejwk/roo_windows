@@ -1431,3 +1431,9 @@ cc_test(
     linkstatic = 1,
     deps = [":roo_windows", "@roo_testing//:arduino_gtest_main"],
 )
+
+cc_test(
+    name = "material3_dropdown_button_test",
+    srcs = ["test/material3_dropdown_button_test.cpp"],
+    deps = [":roo_windows", "@roo_testing//:arduino_gtest_main"],
+)
