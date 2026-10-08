@@ -544,7 +544,8 @@ preserves ordinary geometry. Extra-large buttons correctly measure 272 px
 at 200% zoom after the byte-scaling overflow fix. Compact icon floors exclude
 symmetric transparent canvas margins while retaining the original anchor
 center and at least 4 dp of clearance on both painted edges. Horizontal icon
-slots remain unchanged; examples select assets with `SCALED_ROO_ICON`.
+slots remain unchanged; examples select assets with `SCALED_ROO_ICON`. Outlined
+buttons retain at least one physical pixel of border at zooms below 100%.
 
 Button geometry should be token-backed and shared by variant family.
 

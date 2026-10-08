@@ -1,3 +1,5 @@
+#include <algorithm>
+
 #include "gtest/gtest.h"
 #include "roo_display.h"
 #include "roo_display/core/offscreen.h"
@@ -468,7 +470,8 @@ TEST(Material3Button, ShapeMorphControlsPressedGeometry) {
       EXPECT_EQ(mode, button.shapeMorph());
       EXPECT_EQ(mode == ButtonShapeMorph::kDisabled ? resting : Scaled(8),
                 button.getBorderStyle().top_left_corner_radius());
-      EXPECT_EQ(Scaled(1), button.getBorderStyle().outline_width().floor());
+      EXPECT_EQ(std::max(1, Scaled(1)),
+                button.getBorderStyle().outline_width().floor());
     }
   }
 }
