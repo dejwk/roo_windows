@@ -51,6 +51,8 @@ struct ListRowGeometryInput {
   Dimensions leading;
   Dimensions trailing;
   Dimensions body;
+  YDim minimum_band_height = 0;
+  YDim extra_content_height = 0;
 };
 
 // Shared vertical geometry for natural measurement and child placement.
@@ -69,9 +71,12 @@ ListTextSlotMetrics ResolveListTextSlotMetrics(const ListItem* item);
 /// Measures a row's actual slots and resolves geometry at a valid level [-5,
 /// 0]. Zero retains the legacy descriptor text budget. Compact levels measure
 /// the attached text slots at their final width before applying the content
-/// floor.
+/// floor. Optional band/content floors include specialized row tokens and
+/// owner-painted content without applying a second height clamp afterward.
 ListRowLayoutMetrics ResolveListRowLayout(ListEntry& entry, WidthSpec width,
-                                          HeightSpec height, int8_t level);
+                                          HeightSpec height, int8_t level,
+                                          YDim minimum_band_height = 0,
+                                          YDim extra_content_height = 0);
 
 /// Places the same measured text, control, and body slots used by the resolver.
 void LayoutListRow(ListEntry& entry, const ListRowLayoutMetrics& layout);

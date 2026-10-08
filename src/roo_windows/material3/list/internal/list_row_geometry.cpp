@@ -130,9 +130,11 @@ ListRowGeometry ResolveListRowGeometry(const ListRowGeometryInput& input,
              : input.line_count == 2                 ? 72
                                                      : 56;
   YDim minimum = Scaled(std::max(36, base + 4 * static_cast<int>(level)));
-  YDim content = std::max(
-      {input.text_height, input.leading.height(), input.trailing.height()});
-  YDim band = std::max(minimum, content + 2 * tokens.vertical_padding);
+  YDim content =
+      std::max({input.text_height, input.leading.height(),
+                input.trailing.height(), input.extra_content_height});
+  YDim band = std::max({minimum, input.minimum_band_height,
+                        content + 2 * tokens.vertical_padding});
   bool has_body = input.body.width() > 0 || input.body.height() > 0;
   YDim body_y = band + (has_body ? tokens.body_gap : 0);
   YDim height = has_body
@@ -153,8 +155,9 @@ ListRowGeometry ResolveListRowGeometry(const ListRowGeometryInput& input,
 // the same slot positions and text bounds.
 ListRowLayoutMetrics ResolveListRowLayout(ListEntry& entry,
                                           WidthSpec width_spec,
-                                          HeightSpec height_spec,
-                                          int8_t level) {
+                                          HeightSpec height_spec, int8_t level,
+                                          YDim minimum_band_height,
+                                          YDim extra_content_height) {
   ListItem* item = entry.item_;
   const ListRowTokens tokens =
       internal::ResolveListRowTokens(entry.visual_context_.variant, level);
@@ -233,12 +236,14 @@ ListRowLayoutMetrics ResolveListRowLayout(ListEntry& entry,
       text.height,
       leading,
       trailing,
-      body};
+      body,
+      minimum_band_height,
+      extra_content_height};
   const internal::ListRowGeometry geometry =
       internal::ResolveListRowGeometry(input, level);
   YDim resolved_height = ConstrainHeight(geometry.height, height_spec);
-  YDim main_content_height =
-      std::max({text.height, leading.height(), trailing.height()});
+  YDim main_content_height = std::max(
+      {text.height, leading.height(), trailing.height(), extra_content_height});
 
   return ListRowLayoutMetrics{leading,
                               trailing,

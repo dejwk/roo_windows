@@ -97,6 +97,20 @@ TEST(ListDensityGeometry, TallSlotsBodiesAndTopAlignment) {
   }
 }
 
+// Verifies specialized row token and owner-painted content floors enter the
+// shared geometry before slot positioning and exact parent constraints.
+TEST(ListDensityGeometry, SpecializedBandAndContentFloors) {
+  ListRowGeometryInput input = Input(ListVariant::kBaseline);
+  input.minimum_band_height = Scaled(100);
+  ListRowGeometry geometry = internal::ResolveListRowGeometry(input, -5);
+  EXPECT_EQ(geometry.band_height, Scaled(100));
+  EXPECT_EQ(geometry.text_y, (Scaled(100) - Scaled(24)) / 2);
+  input.extra_content_height = Scaled(120);
+  geometry = internal::ResolveListRowGeometry(input, -5);
+  EXPECT_EQ(geometry.band_height, Scaled(120) + 2 * Scaled(4));
+  EXPECT_EQ(geometry.leading_y, (geometry.band_height - Scaled(32)) / 2);
+}
+
 class Slot : public Widget {
  public:
   Slot(ApplicationContext& context, YDim height)

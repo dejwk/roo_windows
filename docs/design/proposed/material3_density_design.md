@@ -1,14 +1,15 @@
 # Material 3 density
 
 Status: partially implemented. Phases 1–4 (recursive refresh, component geometry,
-public density, and the runtime example) are implemented. Rendering and embedded
-resource acceptance remain proposed (phase 5). Explicit list/row overrides are implemented (phase 6); menu-chain overrides
-are accepted for implementation (phase 7).
+public density, and the runtime example) and phases 6–7 (explicit list/row and
+menu-chain overrides) are implemented and validated on the host. Rendering and
+embedded resource acceptance remain proposed (phase 5).
 
 ## Objective
 
-Add application-wide Material 3 density customization with predictable component
-geometry, unchanged default rendering, and an explicit runtime relayout operation.
+Add application-wide Material 3 density customization and explicit list/menu
+overrides with predictable geometry, unchanged default rendering, and runtime
+relayout.
 
 ## Motivation
 
@@ -228,8 +229,9 @@ contract; its 27-byte size assertion remains valid.
 `Density` uses `int8_t` as its underlying type: one byte, alignment 1, no
 private state, vtable, or heap ownership. The existing documented four-byte-aligned 956-byte Material theme is
 expected to absorb this byte in trailing padding; verify actual host/target
-sizes rather than promise ABI stability. `Theme` and `Widget` instance sizes remain unchanged. Initial shared-density
-consumers had unchanged sizes; override participant deltas are accounted for
+sizes rather than promise ABI stability. `Theme` and `Widget` instance sizes
+remain unchanged. Initial shared-density consumers had unchanged sizes; override
+participant deltas are accounted for
 in the explicit override contract. Adding a virtual method adds vtable entries,
 not a second per-instance vptr.
 
@@ -295,6 +297,9 @@ Existing logical focus, selection, pixel scroll offset, and clamp rules apply.
 an active menu is invalid. On the next admission, policy reaches the root and
 all subsequently constructed submenus. Shared-theme mutation still requires
 explicit refresh on every affected root, including open menus that inherit.
+The menu overlay remeasures requested panels and lays out requested descendants
+within their allocated presentation bounds. Reopening or reanchoring recomputes
+the root panel placement; density refresh alone preserves those bounds.
 
 Resolution is O(1): a policy test and the existing validated enum resolver, with
 no parent traversal, registry, revision counter, or hot-path allocation. Payload
@@ -303,6 +308,28 @@ every row), and one in `MenuPolicy`. Alignment can increase instance sizes by
 more than one byte; measure host deltas and record them when completing phase 7.
 `Widget`, `Theme`, and `Material3Theme` gain no override storage. Family-wide
 settings and arbitrary subtree inheritance remain out of scope.
+
+Host measurements (GCC, 64-bit pointers) compare the pre-extension headers at
+`83a6c88a` with the completed extension using the same size-probe compiler
+arguments; private menu state uses the existing `ROO_WINDOWS_MENU_ABI_PROBE`
+symbols. The [menu size probe](../../../benchmarks/material3_menu_size_probe.cpp)
+now includes list/context and base/theme symbols. New bytes fit existing widget
+padding on this ABI; this is not a promise for embedded ABIs.
+
+| Type | Before (bytes) | After (bytes) |
+| --- | ---: | ---: |
+| `ListEntryVisualContext` | 12 | 13 |
+| `MenuPolicy` | 5 | 6 |
+| `List` / `ListEntry` | 128 / 128 | 128 / 128 |
+| `MenuEntry` / `MenuPanel` | 152 / 368 | 152 / 368 |
+| `Menu` / `MenuOverlay` | 24 / 80 | 24 / 80 |
+| Private `Menu::Impl` / row adornments / item trailing payload | 648 / 72 / 56 | 648 / 72 / 56 |
+| `Widget` / `Theme` / `Material3Theme` | 40 / 240 / 956 | 40 / 240 / 956 |
+
+Phase 5 still owns embedded flash/data and ABI measurements, reviewed compact
+raster goldens, and physical touch acceptance. Passing the existing default menu
+goldens does not complete that separate acceptance phase.
+
 
 ## Proposed API
 
@@ -391,8 +418,8 @@ commits add internal geometry helpers and tests; there is no accepted-but-ignore
 public density configuration. The recursive request is immediately functional
 when introduced.
 
-Named enumerators are the public configuration API; there is no wrapper class
-or public integer-conversion helper. Applications validate persisted or external
+Named enumerators configure concrete density levels; `DensityOverride` adds
+only an inheritance choice, with no public integer-conversion helper. Applications validate persisted or external
 integers against the range [-5, 0] before casting, and retain their current setting
 on invalid input. An internal resolver checks the enum's underlying value before
 using it in arithmetic: invalid values assert in debug builds and resolve as
@@ -528,11 +555,11 @@ physical touchscreen results separately from host acceptance.
 Commit: `Record Material density rendering and embedded resource acceptance`.
 
 Validation/exit criteria: all supported families obey their floors, level-zero
-legacy images pass, base widget sizes are unchanged (override participants have documented deltas),
-shared density payload is one
-byte, and geometry/paint add no new allocations. Report actual flash delta and
+legacy images pass, base widget sizes are unchanged (override participant
+deltas are documented), shared density payload is one byte, and geometry/paint add no new allocations. Report actual flash delta and
 pool growth rather than inventing a zero-cost claim. Mark implemented only after
-these checks pass; unexpected widget growth or paint allocations block acceptance.
+these checks pass; growth beyond the documented override costs or new paint
+allocations blocks acceptance.
 
 ### Phase 6: Explicit list and standalone-row overrides
 
@@ -559,6 +586,20 @@ and restoration to inheritance. Run existing density/list geometry suites and
 build the example. Format changed C++ with the repository configuration.
 
 ### Phase 7: Explicit menu-chain overrides and completion status
+
+Implemented: closed-menu policy reaches the root and every submenu, default
+menus retain explicit zero, and compact menus use shared band/content-floor
+resolution and actual shortcut line-height clips. The overlay refreshes requested
+panels and rows within retained presentation bounds. The nested-settings example
+shows one compact policy for the entire chain.
+
+Validation completed: `material3_density_override_test` and `material3_menu_test`
+pass in debug and with `--copt=-DNDEBUG`. Existing menu row, geometry, and golden
+suites pass; density integration/geometry, list/list-density geometry, and
+recursive-layout suites pass. Focused menu and pure shared-band tests pass at
+75/100/150/200% zoom. Both modified examples build. Changed library translation
+units compile with `-fno-exceptions -fno-rtti`; changed C++ files are formatted.
+
 
 Add the trailing menu policy field, default independent menu rows to zero, and
 propagate policy to root/submenu rows. Integrate menu height tokens and trailing

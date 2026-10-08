@@ -357,6 +357,33 @@ TEST_F(Material3MenuTest, LeafDismissalOverrideKeepsSingleSelectionOpen) {
   EXPECT_EQ(0, menu_.finishes());
 }
 
+// Verifies one density policy reaches root and newly built submenu rows,
+// survives closing/reopening, and can restore explicit zero or inheritance.
+TEST_F(Material3MenuTest, DensityPolicyPropagatesAcrossMenuChain) {
+  item_.enableSubmenu(app_.context());
+  for (DensityOverride density :
+       {DensityOverride::Explicit(Density::kMinus3),
+        DensityOverride::Explicit(Density::kDefault), DensityOverride{}}) {
+    MenuPolicy policy;
+    policy.density = density;
+    menu_.setPolicy(policy);
+    ASSERT_EQ(MenuShowResult::kShown, menu_.show(owner_, source_));
+    EXPECT_EQ(row_.densityOverride(), density);
+    EXPECT_EQ(row_.height(),
+              density.resolve(Density::kDefault) == Density::kMinus3
+                  ? Scaled(44)
+                  : Scaled(56));
+    CompleteRowTap();
+    ASSERT_NE(item_.firstChild(), nullptr);
+    EXPECT_EQ(item_.firstChild()->densityOverride(), density);
+    EXPECT_EQ(item_.secondChild()->densityOverride(), density);
+    EXPECT_EQ(item_.firstChild()->height(), row_.height());
+    menu_.dismissChain();
+    app_.refresh();
+    app_.refresh();
+  }
+}
+
 TEST_F(Material3MenuTest, SubmenuOpensAndBackClosesDeepestFirst) {
   item_.enableSubmenu(app_.context());
   ASSERT_EQ(MenuShowResult::kShown, menu_.show(owner_, source_));

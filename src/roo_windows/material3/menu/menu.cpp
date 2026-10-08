@@ -13,6 +13,7 @@
 #include "roo_windows/core/task.h"
 #include "roo_windows/core/theme.h"
 #include "roo_windows/core/transient_surface_host.h"
+#include "roo_windows/material3/list/internal/list_row_geometry.h"
 #include "roo_windows/material3/menu/menu_geometry.h"
 #include "roo_windows/material3/menu/menu_surface.h"
 #include "roo_windows/material3/menu/menu_tokens.h"
@@ -58,7 +59,7 @@ Rect TakeTrailingSlot(int16_t& right, int16_t width, int16_t height,
 MenuAdornmentGeometry ResolveMenuAdornmentGeometry(
     int16_t row_width, int16_t row_height, const internal::MenuTokens& tokens,
     bool has_submenu, bool has_badge, bool has_icon, bool is_selectable,
-    int16_t shortcut_width) {
+    int16_t shortcut_width, int16_t shortcut_height) {
   MenuAdornmentGeometry result{EmptyRect(), EmptyRect(), EmptyRect(),
                                EmptyRect(), EmptyRect()};
   const int16_t icon_size = Scaled(tokens.icon_size_dp);
@@ -81,8 +82,8 @@ MenuAdornmentGeometry ResolveMenuAdornmentGeometry(
         TakeTrailingSlot(right, icon_size, icon_size, row_height, gap);
   }
   if (shortcut_width > 0) {
-    result.shortcut =
-        TakeTrailingSlot(right, shortcut_width, icon_size, row_height, gap);
+    result.shortcut = TakeTrailingSlot(right, shortcut_width, shortcut_height,
+                                       row_height, gap);
   }
   return result;
 }
@@ -249,7 +250,11 @@ void StandardMenuItem::clearTrailingIcon() {
 }
 
 MenuEntry::MenuEntry(ApplicationContext& context)
-    : ListEntry(context), adornments_() {}
+    : ListEntry(context), adornments_() {
+  ListEntryVisualContext visual = visualContext();
+  visual.density = DensityOverride::Explicit(Density::kDefault);
+  setVisualContext(visual);
+}
 
 MenuEntry::~MenuEntry() { prepareForItemDestruction(); }
 
@@ -408,6 +413,42 @@ int16_t MenuEntry::trailingLaneWidth() const {
   return width == 0 ? 0 : width + Scaled(tokens.trailing_gap_dp);
 }
 
+YDim MenuEntry::minimumBandHeight() const {
+  const internal::MenuTokens& tokens = TokensFor(visualContext());
+  return Scaled(std::max(28, tokens.min_item_height_dp +
+                                 4 * static_cast<int>(resolvedDensityLevel())));
+}
+
+YDim MenuEntry::trailingLaneHeight() const {
+  // Preserve legacy level-zero geometry. Compact rows reserve actual painted
+  // content, which is not represented by the inherited ListItem slot widgets.
+  if (resolvedDensityLevel() == 0 || adornments_ == nullptr) return 0;
+  const internal::MenuTokens& tokens = TokensFor(visualContext());
+  const MenuItem* bound = menuItem();
+  YDim height = 0;
+  if (adornments_->content.icon != nullptr ||
+      (bound != nullptr &&
+       (bound->isSelectable() || (bound->hasSubmenu() && submenu_allowed_)))) {
+    height = Scaled(tokens.icon_size_dp);
+  }
+  if (!adornments_->content.shortcut.empty()) {
+    height = std::max<YDim>(height, text_style_label_large().lineHeight());
+  }
+  if (adornments_->content.badge.mode != BadgeMode::kHidden) {
+    height = std::max<YDim>(height, Scaled(24));
+  }
+  return height;
+}
+
+Dimensions MenuEntry::getSuggestedMinimumDimensions() const {
+  Dimensions base = ListEntry::getSuggestedMinimumDimensions();
+  const internal::ListRowTokens tokens = internal::ResolveListRowTokens(
+      visualContext().variant, resolvedDensityLevel());
+  return {base.width(),
+          std::max({base.height(), minimumBandHeight(),
+                    trailingLaneHeight() + 2 * tokens.vertical_padding})};
+}
+
 Dimensions MenuEntry::onMeasure(WidthSpec width, HeightSpec height) {
   int16_t lane = trailingLaneWidth();
   WidthSpec content_width = width;
@@ -418,28 +459,32 @@ Dimensions MenuEntry::onMeasure(WidthSpec width, HeightSpec height) {
     content_width =
         WidthSpec::Exactly(std::max<int16_t>(0, width.value() - lane));
   }
-  Dimensions base = ListEntry::onMeasure(content_width, height);
-  int16_t resolved_width = base.width() + lane;
+  const internal::ListRowLayoutMetrics layout = internal::ResolveListRowLayout(
+      *this, content_width, height, resolvedDensityLevel(), minimumBandHeight(),
+      trailingLaneHeight());
+  int16_t resolved_width = layout.width + lane;
   if (width.kind() == EXACTLY) resolved_width = width.value();
   if (width.kind() == AT_MOST)
     resolved_width = std::min(resolved_width, width.value());
-  const internal::MenuTokens& tokens = TokensFor(visualContext());
   // Minimum menu width belongs to MenuPanel so its content padding remains
   // inside that minimum. A row simply honors the content-width constraint it
   // receives from the already-inset viewport.
-  return Dimensions(
-      resolved_width,
-      std::max<int16_t>(Scaled(tokens.min_item_height_dp), base.height()));
+  return Dimensions(resolved_width, layout.height);
 }
 
 void MenuEntry::onLayout(bool changed, const Rect& rect) {
+  (void)changed;
   int16_t lane = trailingLaneWidth();
   Rect content_rect(rect.xMin(), rect.yMin(),
                     lane > 0
                         ? std::max<XDim>(rect.xMin() - 1, rect.xMax() - lane)
                         : rect.xMax(),
                     rect.yMax());
-  ListEntry::onLayout(changed, content_rect);
+  const internal::ListRowLayoutMetrics layout = internal::ResolveListRowLayout(
+      *this, WidthSpec::Exactly(content_rect.width()),
+      HeightSpec::Exactly(content_rect.height()), resolvedDensityLevel(),
+      minimumBandHeight(), trailingLaneHeight());
+  internal::LayoutListRow(*this, layout);
 
   if (!adornments_) return;
   const internal::MenuTokens& tokens = TokensFor(visualContext());
@@ -449,7 +494,9 @@ void MenuEntry::onLayout(bool changed, const Rect& rect) {
       bound != nullptr && bound->hasSubmenu() && submenu_allowed_,
       adornments_->badge.visible(), adornments_->content.icon != nullptr,
       bound != nullptr && bound->isSelectable(),
-      ShortcutWidth(adornments_->content.shortcut));
+      ShortcutWidth(adornments_->content.shortcut),
+      resolvedDensityLevel() == 0 ? Scaled(tokens.icon_size_dp)
+                                  : text_style_label_large().lineHeight());
   adornments_->badge.layoutForIcon(geometry.badge_anchor);
 }
 
@@ -460,6 +507,7 @@ void MenuEntry::paint(PaintContext& ctx) const {
   }
 
   const Theme& current_theme = theme();
+  const internal::MenuTokens& tokens = TokensFor(visualContext());
   Color color = headlineColor();
   const MenuItem* bound = menuItem();
   MenuAdornmentGeometry geometry = ResolveMenuAdornmentGeometry(
@@ -467,7 +515,9 @@ void MenuEntry::paint(PaintContext& ctx) const {
       bound != nullptr && bound->hasSubmenu() && submenu_allowed_,
       adornments_->badge.visible(), adornments_->content.icon != nullptr,
       bound != nullptr && bound->isSelectable(),
-      ShortcutWidth(adornments_->content.shortcut));
+      ShortcutWidth(adornments_->content.shortcut),
+      resolvedDensityLevel() == 0 ? Scaled(tokens.icon_size_dp)
+                                  : text_style_label_large().lineHeight());
 
   if (bound != nullptr && bound->hasSubmenu() && submenu_allowed_) {
     PaintTintedIcon(ctx, ic_filled_24_navigation_chevron_right(),
@@ -752,6 +802,7 @@ void Menu::bindLevelEntries(uint8_t level) {
           impl_->policy.variant == ListVariant::kExpressive &&
               impl_->policy.color_style == MenuColorStyle::kVibrant);
       ListEntryVisualContext visual = entry->visualContext();
+      visual.density = impl_->policy.density;
       visual.variant = impl_->policy.variant;
       visual.style = impl_->policy.variant == ListVariant::kExpressive
                          ? ListStyle::kSegmented

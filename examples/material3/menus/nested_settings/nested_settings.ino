@@ -1,4 +1,6 @@
-// Submenus cascade on wide displays and replace their parent on compact ones.
+// Compact a settings menu and every submenu independently of the rest of the
+// UI. Submenus cascade on wide displays and replace their parent on compact
+// ones.
 
 #include "examples/material3/menus/example_runtime.h"
 #include "roo_windows/containers/flex_layout.h"
@@ -76,6 +78,13 @@ class NestedSettingsCatalog final : public FlexLayout {
     group_.add(display_row_);
     group_.add(connectivity_row_);
     menu_.addGroup(group_);
+    // One policy compacts the whole menu chain, including freshly built child
+    // levels. Buttons and other application controls retain their own density.
+    // Configure while closed; inherited density would use DensityOverride{}.
+    material3::MenuPolicy policy;
+    policy.density =
+        material3::DensityOverride::Explicit(material3::Density::kMinus3);
+    menu_.setPolicy(policy);
     add(title_);
     add(open_);
   }

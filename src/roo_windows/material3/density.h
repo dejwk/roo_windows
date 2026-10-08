@@ -5,7 +5,7 @@
 
 namespace roo_windows::material3 {
 
-/// Application-wide compactness for eligible Material 3 whitespace tokens.
+/// Compactness for eligible Material 3 whitespace in themes and overrides.
 /// Typography, icon assets, application spacing, and other component families
 /// retain their geometry. Compact footprints are also the exact hit rectangles.
 enum class Density : int8_t {

@@ -27,7 +27,9 @@ class ListEntry;
 namespace internal {
 struct ListRowLayoutMetrics;
 ListRowLayoutMetrics ResolveListRowLayout(ListEntry& entry, WidthSpec width,
-                                          HeightSpec height, int8_t level);
+                                          HeightSpec height, int8_t level,
+                                          YDim minimum_band_height,
+                                          YDim extra_content_height);
 void LayoutListRow(ListEntry& entry, const ListRowLayoutMetrics& layout);
 }  // namespace internal
 
@@ -444,7 +446,8 @@ class ListEntry : public Material3Container {
 
  private:
   friend internal::ListRowLayoutMetrics internal::ResolveListRowLayout(
-      ListEntry& entry, WidthSpec width, HeightSpec height, int8_t level);
+      ListEntry& entry, WidthSpec width, HeightSpec height, int8_t level,
+      YDim minimum_band_height, YDim extra_content_height);
 
   friend void internal::LayoutListRow(
       ListEntry& entry, const internal::ListRowLayoutMetrics& layout);

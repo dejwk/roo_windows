@@ -93,6 +93,11 @@ struct MenuPolicy {
   SelectionMode selection_mode = SelectionMode::kNone;
   /// Resolves start/end placement and forward/backward submenu arrows.
   LayoutDirection layout_direction = LayoutDirection::kLeftToRight;
+  /// Row whitespace for the entire chain, including submenus. Explicit zero
+  /// keeps menus spacious independently of application density. An inherited
+  /// policy follows the live theme. Change policy only while the menu is
+  /// closed.
+  DensityOverride density = DensityOverride::Explicit(Density::kDefault);
 };
 
 /// Badge content exposed by a menu item to its bound row.
@@ -253,6 +258,9 @@ class MenuEntry : public ListEntry {
   /// Resolves the menu-token row fill for standard or vibrant paint.
   Color background() const override;
 
+  /// Includes menu tokens and compact trailing content in cheap natural size.
+  Dimensions getSuggestedMinimumDimensions() const override;
+
   /// Handles level-local traversal and submenu navigation keys.
   bool onKeyEvent(const KeyEvent& event) override;
 
@@ -292,6 +300,11 @@ class MenuEntry : public ListEntry {
 
   void syncAdornments();
   int16_t trailingLaneWidth() const;
+  // Resolves the menu token floor before shared row content/constraint
+  // handling.
+  YDim minimumBandHeight() const;
+  // Includes owner-painted shortcut, badge, and fixed icon slots when compact.
+  YDim trailingLaneHeight() const;
   void bindToMenu(Menu& owner, uint8_t level, uint16_t row, uint16_t generation,
                   bool vibrant);
   void unbindFromMenu();

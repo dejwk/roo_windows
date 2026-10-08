@@ -1,10 +1,13 @@
 #include <limits>
 
 #include "gtest/gtest.h"
+#include "roo_icons/filled/24/navigation.h"
 #include "roo_windows/containers/scrollable_panel.h"
 #include "roo_windows/containers/vertical_layout.h"
 #include "roo_windows/material3/button/button.h"
 #include "roo_windows/material3/list/dynamic_list.h"
+#include "roo_windows/material3/menu/menu.h"
+#include "roo_windows/material3/typography.h"
 #include "roo_windows_render_test_support.h"
 
 namespace roo_windows::material3 {
@@ -221,6 +224,136 @@ TEST_F(DensityOverrideTest, SlotControlsAndExactConstraints) {
   EXPECT_EQ(
       row.measure(WidthSpec::Exactly(220), HeightSpec::Exactly(12)).height(),
       12);
+}
+
+// Verifies menu rows are explicitly zero by default, can opt into live shared
+// density, and honor explicit choices in both visual families at every level.
+TEST_F(DensityOverrideTest, MenuDefaultInheritanceAndExplicitLevels) {
+  StandardMenuItem item(StandardMenuItemInit{"Menu item", {}});
+  MenuEntry row(context());
+  row.setMenuItem(item);
+  material_.density = Density::kMinus5;
+  EXPECT_FALSE(MenuPolicy{}.density.isInherited());
+  EXPECT_FALSE(row.densityOverride().isInherited());
+  EXPECT_EQ(
+      row.measure(WidthSpec::Exactly(200), HeightSpec::Unspecified(0)).height(),
+      std::max<YDim>(Scaled(56),
+                     text_style_body_large().lineHeight() + Scaled(20)));
+  row.clearDensityOverride();
+  EXPECT_TRUE(row.densityOverride().isInherited());
+  EXPECT_EQ(
+      row.measure(WidthSpec::Exactly(200), HeightSpec::Unspecified(0)).height(),
+      std::max<YDim>(Scaled(36),
+                     text_style_body_large().lineHeight() + 2 * Scaled(4)));
+  for (ListVariant variant :
+       {ListVariant::kBaseline, ListVariant::kExpressive}) {
+    ListEntryVisualContext visual = row.visualContext();
+    visual.variant = variant;
+    row.setVisualContext(visual);
+    for (int step = 0; step <= 5; ++step) {
+      row.setDensity(kLevels[step]);
+      int padding = Scaled(
+          std::max(4, (variant == ListVariant::kBaseline ? 8 : 10) - 2 * step));
+      YDim expected =
+          std::max<YDim>(Scaled(56 - 4 * step),
+                         text_style_body_large().lineHeight() + 2 * padding);
+      EXPECT_EQ(row.getSuggestedMinimumDimensions().height(), expected);
+      EXPECT_EQ(row.measure(WidthSpec::Exactly(200), HeightSpec::Unspecified(0))
+                    .height(),
+                expected);
+      row.layout(Rect(0, 0, 199, expected - 1));
+      EXPECT_EQ(row.height(), expected);
+      EXPECT_EQ(
+          row.measure(WidthSpec::Exactly(7), HeightSpec::Exactly(9)).height(),
+          9);
+    }
+  }
+}
+
+// Verifies root refresh reaches already-open inherited menu rows, updating
+// geometry and hit positions while preserving the allocated presentation
+// bounds.
+TEST_F(DensityOverrideTest, OpenInheritedMenuRefreshesWithSharedTheme) {
+  Button source(context(), "Menu");
+  Task& task = app_.addTaskFullScreen(source);
+  app_.refresh();
+  MenuRow<StandardMenuItem> first(context(), StandardMenuItemInit{"First", {}});
+  MenuRow<StandardMenuItem> second(context(),
+                                   StandardMenuItemInit{"Second", {}});
+  MenuGroup group(context());
+  group.add(first);
+  group.add(second);
+  Menu menu(context());
+  menu.addGroup(group);
+  MenuPolicy policy;
+  policy.density = DensityOverride{};
+  menu.setPolicy(policy);
+  ASSERT_EQ(menu.showFromRect(task, Rect(20, 20, 59, 39)),
+            MenuShowResult::kShown);
+  app_.refresh();
+  EXPECT_EQ(first.height(), Scaled(56));
+  changeShared(Density::kMinus5);
+  EXPECT_EQ(first.height(), Scaled(36));
+  EXPECT_EQ(second.height(), Scaled(36));
+  EXPECT_EQ(second.offsetTop(), Scaled(36) + Scaled(2));
+  std::vector<Widget*> path;
+  EXPECT_TRUE(first.fillTouchTargetPath(5, first.height() - 1, path));
+  EXPECT_FALSE(first.fillTouchTargetPath(5, first.height(), path));
+  changeShared(Density::kDefault);
+  EXPECT_EQ(first.height(), Scaled(56));
+  EXPECT_EQ(second.offsetTop(), Scaled(56) + Scaled(2));
+  menu.dismissChain();
+  task.navigation().clear();
+}
+
+class TallMenuSlot : public Widget {
+ public:
+  explicit TallMenuSlot(ApplicationContext& context) : Widget(context) {}
+
+  Dimensions getSuggestedMinimumDimensions() const override {
+    return {Scaled(24), Scaled(96)};
+  }
+};
+
+// Verifies tall content sets menu floors while shortcut, badge, checkmark and
+// trailing icon slots retain space; compact rows obey exact parent constraints.
+TEST_F(DensityOverrideTest, MenuTallSlotsAndTrailingContentFloors) {
+  TallMenuSlot slot(context());
+  StandardMenuItem item(
+      StandardMenuItemInit{"", {}, &slot, StandardMenuItemFlags::kSelectable});
+  item.setShortcut("Ctrl+S");
+  item.setBadgeValue(23);
+  MenuEntry row(context());
+  row.setMenuItem(item);
+  for (ListVariant variant :
+       {ListVariant::kBaseline, ListVariant::kExpressive}) {
+    ListEntryVisualContext visual = row.visualContext();
+    visual.variant = variant;
+    row.setVisualContext(visual);
+    for (int step = 0; step <= 5; ++step) {
+      row.setDensity(kLevels[step]);
+      int padding = Scaled(
+          std::max(4, (variant == ListVariant::kBaseline ? 8 : 10) - 2 * step));
+      EXPECT_EQ(row.measure(WidthSpec::Exactly(220), HeightSpec::Unspecified(0))
+                    .height(),
+                Scaled(96) + 2 * padding);
+    }
+  }
+  StandardMenuItem trailing_only(StandardMenuItemInit{
+      "", {}, nullptr, StandardMenuItemFlags::kSelectable});
+  trailing_only.setShortcut("Ctrl+S");
+  trailing_only.setBadgeValue(23);
+  trailing_only.setTrailingIcon(&ic_filled_24_navigation_chevron_right());
+  row.setMenuItem(trailing_only);
+  row.setDensity(Density::kMinus5);
+  YDim expected =
+      std::max({static_cast<YDim>(Scaled(36)),
+                static_cast<YDim>(Scaled(24) + 2 * Scaled(4)),
+                text_style_label_large().lineHeight() + 2 * Scaled(4)});
+  EXPECT_EQ(
+      row.measure(WidthSpec::Exactly(220), HeightSpec::Unspecified(0)).height(),
+      expected);
+  row.layout(Rect(0, 0, 219, expected - 1));
 }
 
 }  // namespace

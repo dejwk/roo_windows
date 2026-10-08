@@ -470,12 +470,13 @@ Widget& MenuOverlay::getChild(int idx) {
 }
 
 Dimensions MenuOverlay::onMeasure(WidthSpec width, HeightSpec height) {
+  // Retain presentation bounds while refreshing requested panel/row geometry.
+  Container::onMeasure(width, height);
   return Dimensions(width.resolveSize(0), height.resolveSize(0));
 }
 
 void MenuOverlay::onLayout(bool changed, const Rect& rect) {
-  (void)changed;
-  (void)rect;
+  Container::onLayout(changed, rect);
 }
 
 static_assert(sizeof(MenuGroup) <= sizeof(Container) + 32,

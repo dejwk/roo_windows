@@ -43,3 +43,11 @@ ROO_WINDOWS_MENU_SIZE_PROBE(roo_windows::material3::MenuPolicy,
                             material3_menu_policy);
 ROO_WINDOWS_MENU_SIZE_PROBE(roo_windows::StringViewLabel, string_view_label);
 ROO_WINDOWS_MENU_SIZE_PROBE(roo_windows::material3::Badge, material3_badge);
+
+ROO_WINDOWS_MENU_SIZE_PROBE(roo_windows::material3::List, material3_list);
+ROO_WINDOWS_MENU_SIZE_PROBE(roo_windows::material3::ListEntryVisualContext,
+                            material3_list_entry_visual_context);
+ROO_WINDOWS_MENU_SIZE_PROBE(roo_windows::material3::Material3Theme,
+                            material3_theme);
+ROO_WINDOWS_MENU_SIZE_PROBE(roo_windows::Theme, theme);
+ROO_WINDOWS_MENU_SIZE_PROBE(roo_windows::Widget, widget);
