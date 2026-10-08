@@ -1,6 +1,8 @@
 #include <algorithm>
 
 #include "gtest/gtest.h"
+#include "roo_display/ui/text_label.h"
+#include "roo_windows/material3/text_field/internal/text_field_geometry.h"
 #include "roo_windows/material3/text_field/secure_text_field.h"
 #include "roo_windows/material3/text_field/text_field.h"
 #include "roo_windows_render_test_support.h"
@@ -426,6 +428,92 @@ TEST(Material3TextFieldPaint, SinglePassAndAssistiveRemovalOnColoredAncestor) {
     EXPECT_EQ(partial, pixels) << "step " << step;
   }
   task.navigation().clear();
+}
+
+// Verifies every painted text slot matches roo_display's ascent-centered
+// TextLabel, including resting, populated, focused, and actively edited fields.
+TEST_F(Material3TextFieldTest, TextSlotsUseDisplayAscentCentering) {
+  const TextStyle& body = text_style_body_large();
+  const TextStyle& small = text_style_body_small();
+  for (bool outlined : {false, true}) {
+    for (int state = 0; state < 4; ++state) {
+      SCOPED_TRACE(::testing::Message()
+                   << "outlined=" << outlined << " state=" << state);
+      Field field(
+          context(), "H",
+          outlined ? TextFieldVariant::kOutlined : TextFieldVariant::kFilled);
+      field.setSupportingText("H");
+      field.setPrefixText("H");
+      field.setSuffixText("H");
+      if (state > 0) field.setText("H");
+      Task& task = app_.addTask(field, roo_display::Box(0, 0, 239, 119));
+      refresh();
+      if (state >= 2) {
+        ASSERT_TRUE(field.requestFocus());
+        refresh();
+      }
+      if (state == 3) {
+        KeyEvent key;
+        key.code = KeyCode::kEnter;
+        key.phase = KeyPhase::kDown;
+        ASSERT_TRUE(field.onKeyEvent(key));
+        refresh();
+        ASSERT_TRUE(field.isEdited());
+      }
+      roo_display::StringViewLabel body_label(
+          "H", body.font(), roo_display::color::Black, body.fontOptions());
+      roo_display::StringViewLabel small_label(
+          "H", small.font(), roo_display::color::Black, small.fontOptions());
+      internal::TextFieldSlotInput input{
+          {field.width(), field.height()},
+          outlined,
+          state > 0,
+          false,
+          {body.lineHeight(), small.lineHeight(), 0, 0},
+          small_label.metrics().advance(),
+          body_label.metrics().advance(),
+          body_label.metrics().advance()};
+      internal::TextFieldSlots slots =
+          internal::ResolveTextFieldSlots(input, 0);
+      auto checkBand = [&](Rect slot, const roo_display::StringViewLabel& label,
+                           Rect alignment_bounds) {
+        int baseline = roo_display::kMiddle.resolveOffset<int>(
+            alignment_bounds.yMin(), alignment_bounds.yMax(),
+            label.anchorExtents().yMin(), label.anchorExtents().yMax());
+        int first = slot.yMax() + 1;
+        int last = slot.yMin() - 1;
+        Color bg = pixelAt(slot.xMin(), slot.yMin());
+        for (int y = slot.yMin(); y <= slot.yMax(); ++y) {
+          for (int x = slot.xMin(); x < slot.xMin() + label.metrics().advance();
+               ++x) {
+            if (pixelAt(x, y) != bg) {
+              first = std::min(first, y);
+              last = std::max(last, y);
+            }
+          }
+        }
+        EXPECT_EQ(first, baseline + label.extents().yMin());
+        EXPECT_EQ(last, baseline + label.extents().yMax());
+      };
+      if (state == 0) {
+        checkBand(slots.label, body_label, slots.label);
+      } else {
+        Rect label_band = slots.label;
+        if (outlined) {
+          int stroke = std::max(1, Scaled(state >= 2 ? 2 : 1));
+          label_band =
+              Rect(slots.label.xMin(), slots.container.yMin(),
+                   slots.label.xMax(), slots.container.yMin() + stroke - 1);
+        }
+        checkBand(slots.label, small_label, label_band);
+        checkBand(slots.viewport, body_label, slots.viewport);
+        checkBand(slots.prefix, body_label, slots.prefix);
+        checkBand(slots.suffix, body_label, slots.suffix);
+      }
+      checkBand(slots.assist, small_label, slots.assist);
+      task.navigation().clear();
+    }
+  }
 }
 
 // Adding a descender must not move the shared capital's ink or baseline.

@@ -38,6 +38,14 @@ Color Opacity(Color color, int alpha, Color background) {
   return AlphaBlend(background, color);
 }
 
+// Centers the ascent band with the same anchors and rounding as TextLabel.
+int CenteredBaseline(const TextStyle& style, int height) {
+  const auto& metrics = style.font().metrics();
+  return kMiddle.resolveOffset(0, height - 1,
+                               -metrics.ascent() - metrics.linegap(),
+                               metrics.linegap() - 1);
+}
+
 // Draws and excludes one text slot using the field's logical direction.
 void DrawText(PaintContext& ctx, roo::string_view value, const TextStyle& style,
               Rect rect, Color color, Color background, bool right_to_left) {
@@ -49,8 +57,7 @@ void DrawText(PaintContext& ctx, roo::string_view value, const TextStyle& style,
   part.setBgcolor(background);
   part.drawTiled(
       StringViewLabel(value, style.font(), color, style.fontOptions()), rect,
-      (right_to_left ? kRight : kLeft) |
-          kBaseline.toTop().shiftBy(style.baselineOffset()));
+      (right_to_left ? kRight : kLeft) | kMiddle);
   ctx.addExclusion(rect);
 }
 
@@ -333,7 +340,7 @@ void TextField::paint(PaintContext& ctx) const {
       int stroke = isEnabled() && (isFocused() || isEdited())
                        ? kTokens.focus_stroke
                        : kTokens.idle_stroke;
-      int baseline = (2 * s.container.yMin() + stroke - 1 + small.ascent()) / 2;
+      int baseline = s.container.yMin() + CenteredBaseline(small, stroke);
       part.drawTiled(
           caption, label,
           kCenter | kBaseline.toTop().shiftBy(baseline - label.yMin()));
@@ -365,10 +372,10 @@ void TextField::paint(PaintContext& ctx) const {
           end = begin + 1;
         }
       }
+      int baseline = CenteredBaseline(body, s.viewport.height());
       PaintContext part =
           ctx.clipped(s.viewport)
-              .translated(s.viewport.xMin(),
-                          s.viewport.yMin() + body.baselineOffset());
+              .translated(s.viewport.xMin(), s.viewport.yMin() + baseline);
       part.setBgcolor(fill);
       Color highlight =
           isEdited() && getTask()->textFieldEditor().has_selection()
@@ -376,8 +383,8 @@ void TextField::paint(PaintContext& ctx) const {
               : accent;
       part.drawObject(::roo_windows::internal::SingleLineText(
           body.font(), body.fontOptions(),
-          Box(0, -body.baselineOffset(), s.viewport.width() - 1,
-              body.lineHeight() - body.baselineOffset() - 1),
+          Box(0, -baseline, s.viewport.width() - 1,
+              s.viewport.height() - baseline - 1),
           value_, obscureText(), recent, offset, begin, end, input, highlight));
       ctx.addExclusion(s.viewport);
     }
