@@ -1,3 +1,16 @@
+# roo_windows 1.9.0
+
+- Added Material 3 density levels from default to −5 for buttons, text fields, and lists, with explicit list, row, and menu-chain overrides and runtime layout refresh.
+- Added a full-screen editor fallback when a Material 3 text field cannot fit above the software keyboard; confirmation applies edits and Back discards them.
+- Added antialiased rounded child clipping and improved scrolling caches. Fixed unclipped-child stacking, disappearing overlays, and tint, ripple, and disabled-state composition.
+- Added experimental `AcceleratedScrollablePanel` with an advisory paint budget, optional background deferral during movement, and complete repaint when scrolling stops.
+- Fixed text-field label centering, compact-button icon spacing, outlined borders below 100% zoom, fractional button widths, and menu adornment sizing.
+- **API change:** `Application::refresh()` and `DisplayWindow::refresh()` now return `void` and take no deadline; rendering is synchronous, with interrupted-paint continuation removed.
+- Expanded examples, rendering regression tests, and embedded resource benchmarks.
+- Updated dependencies to `roo_display` 3.4.0 and `roo_io` 2.4.1.
+
+---
+
 # roo_windows 1.8.1
 
 - Fixed text alignment and centering in labels, Material 3 app bars, and badges using improved `roo_display` text metrics.
