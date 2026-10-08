@@ -8,8 +8,10 @@
 #include "benchmarks/standalone_abi_logging_stub.h"
 #endif
 
+#include "roo_windows/material3/button/button.h"
 #include "roo_windows/material3/menu/menu.h"
 #include "roo_windows/material3/menu/menu_surface.h"
+#include "roo_windows/material3/text_field/text_field.h"
 #include "roo_windows/widgets/text_label.h"
 
 #define ROO_WINDOWS_MENU_SIZE_PROBE(type, name) \
@@ -51,3 +53,15 @@ ROO_WINDOWS_MENU_SIZE_PROBE(roo_windows::material3::Material3Theme,
                             material3_theme);
 ROO_WINDOWS_MENU_SIZE_PROBE(roo_windows::Theme, theme);
 ROO_WINDOWS_MENU_SIZE_PROBE(roo_windows::Widget, widget);
+
+ROO_WINDOWS_MENU_SIZE_PROBE(roo_windows::material3::Button, material3_button);
+ROO_WINDOWS_MENU_SIZE_PROBE(roo_windows::material3::TextField,
+                            material3_text_field);
+#if !defined(ROO_WINDOWS_DENSITY_BASELINE_PROBE)
+ROO_WINDOWS_MENU_SIZE_PROBE(roo_windows::material3::Density, material3_density);
+ROO_WINDOWS_MENU_SIZE_PROBE(roo_windows::material3::DensityOverride,
+                            material3_density_override);
+#endif
+ROO_WINDOWS_MENU_SIZE_PROBE(
+    roo_windows::material3::ListRow<roo_windows::material3::HeadlineListItem>,
+    material3_headline_row);

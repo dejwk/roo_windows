@@ -115,3 +115,128 @@ separate from M3 storage, adds no palette state to the representative M3
 adornment, links on the supported ESP32-C3 target, and preserves the baseline
 M3 rendered output. Changes to these numbers require an explanation in the
 change that updates this report.
+
+## Material 3 density acceptance (2026-10-08)
+
+This capture covers [the density design](design/proposed/material3_density_design.md),
+including list/row and menu-chain overrides. It is separate from the historical
+theme-split capture above and uses the installed toolchain below.
+
+| Item | Value |
+| --- | --- |
+| Board | Seeed Studio XIAO ESP32-C3; 4 MiB flash, 320 KiB RAM |
+| Framework | Arduino-ESP32 3.3.5 / ESP-IDF libraries 5.5.0+sha.9bb7aa84fe |
+| Platform | Espressif32 55.3.35 |
+| Compiler | `riscv32-esp-elf-g++` 14.2.0+20251107 |
+| Application | Runtime density settings example; ILI9341 240x320, XPT2046 touch |
+| Flags | `ROO_WINDOWS_ZOOM=75`, release `-Os`, exceptions/RTTI disabled; huge-app partition |
+| Compared initial choices | Density zero and -2; both binaries retain all six runtime choices |
+| Source | Density implementation through `ea96796f`, the final `Scaled(SmallNumber)` idiom, and the concurrent text-field ascent-centering edits described below |
+
+Reproduce the two linked images without uploading firmware:
+
+```sh
+python3 benchmarks/material3_density_firmware_size_probe.py \
+  --output-dir /tmp/roo-density-size --jobs 4
+```
+
+The probe exposes canonical local `roo_*` sources in an isolated PlatformIO
+project and preserves raw section reports alongside `density-size-report.json`.
+Override `--platform`, `--pio`, and `--size-tool` to repeat with another installed
+toolchain. This comparison measures the cost of selecting a different initial
+level, not the cost of introducing density support into the library.
+
+| Section | Zero (bytes) | -2 (bytes) | Delta |
+| --- | ---: | ---: | ---: |
+| `.text` | 810,944 | 810,948 | +4 |
+| `.rodata` | 236,668 | 236,668 | +0 |
+| `.data` | 6,652 | 6,652 | +0 |
+| `.bss` | 13,288 | 13,288 | +0 |
+| DRAM layout reservation | 55,808 | 55,808 | +0 |
+| Firmware `.bin` | 1,190,176 | 1,190,176 | +0 |
+
+The DRAM layout reservation is recorded separately from `.data` and `.bss`.
+Linked image sizes include the entire application and its dependencies.
+
+### Density target ABI
+
+The target compiler's `sizeof` symbols compare pre-density revision `a464fb23`
+with the implemented feature using the same compiler, flags, and local dependency
+headers. Private menu state is exposed only by `ROO_WINDOWS_MENU_ABI_PROBE`.
+
+| Type | Before (bytes) | After (bytes) |
+| --- | ---: | ---: |
+| `Widget` / `Container` | 24 / 44 | 24 / 44 |
+| `Button` / `TextField` | 40 / 104 | 40 / 104 |
+| `List` / `ListEntry` | 88 / 88 | 88 / 88 |
+| `HeadlineRow` / `MenuEntry` | 104 / 104 | 104 / 104 |
+| `Menu` / `MenuGroup` / `MenuOverlay` | 12 / 56 / 56 | 12 / 56 / 56 |
+| `MenuPanel` / standard menu row | 280 / 136 | 280 / 136 |
+| Standard menu item / `StringViewLabel` / `Badge` | 32 / 48 / 20 | 32 / 48 / 20 |
+| Private menu implementation / row adornments / trailing payload | 456 / 44 / 32 | 456 / 44 / 32 |
+| `Theme` / `Material3Theme` | 232 / 956 | 232 / 956 |
+| `ListEntryVisualContext` / `MenuPolicy` | 12 / 5 | 13 / 6 |
+| `Density` / `DensityOverride` | Absent | 1 / 1 |
+
+The shared density byte fits existing M3 theme padding. Owner/row override bytes
+also fit existing participant padding on this target; the policy/context payloads
+grow by one byte each. This is measured ABI behavior, not a guarantee for every
+compiler or target. Recheck using:
+
+```sh
+bash benchmarks/material3_menu_size_probe.sh \
+  ~/.platformio/packages/toolchain-riscv32-esp/bin/riscv32-esp-elf-g++ \
+  ~/.platformio/packages/toolchain-riscv32-esp/bin/riscv32-esp-elf-nm
+```
+
+### Allocations and virtual-list capacity
+
+The host resource fixture counts C++ allocation calls on the UI thread after
+warm-up, over 20 geometry/paint iterations per level. Geometry resolution,
+suggested minimums, natural dimensions, and measurement allocate zero at every
+level. Complete invalidated-frame rendering uses 1,180 calls over 20 frames
+(59 per frame) at every level, including zero; compactness adds no calls to this
+fixture. Existing renderer stream allocations remain. This measures C++
+allocation counts, not peak heap bytes or every possible custom widget.
+
+A 100-item virtual headline list in a 320 px viewport has the following retained
+pool behavior at 100% zoom:
+
+| Transition | Row stride (px) | Retained rows |
+| --- | ---: | ---: |
+| Initial zero | 56 | 7 |
+| Compact -2 | 48 | 8 |
+| Compact -5 | 36 | 10 |
+| Return to zero | 56 | 10 |
+
+Capacity is the maximum encountered `floor(viewport / stride) + 2`; rows are
+retained on expansion back to zero. On the measured target ABI the ten 104-byte
+headline rows account for 1,040 object bytes, 312 more than seven rows. Model
+storage, string allocations, vector capacity, and allocator overhead are additional.
+
+### Rendering and validation limits
+
+Reviewed RGB565 galleries cover light/dark palettes, levels zero/-2/-5, and
+75/100/150/200% zoom. They exercise filled/outlined buttons and fields, baseline
+and expressive checkbox/radio rows, and menu shortcuts/badges/icons. Separate
+pixel tests preserve complete button artwork through all six levels and all five
+sizes. At 200% zoom, ExtraLarge button height is corrected from the old overflowed
+40 px to 272 px. Outlined buttons retain fractional widths of 0.75 px at 75% and 1.5 px at
+150% zoom instead of truncating to whole pixels; other default button geometry remains compatible.
+
+```sh
+bazel test //:material3_density_golden_test \
+  //:material3_density_geometry_test //:material3_list_density_geometry_test \
+  --copt=-DROO_WINDOWS_ZOOM=75
+bazel test //:material3_density_resource_test
+```
+
+Repeat the zoom command with 100, 150, and 200. The checked-in galleries are under
+`test/goldens/material3_density/`; the design includes PNG previews of the 100%
+light/dark output. Concurrent text-field ascent-centering edits were present in
+the working tree during this capture; those edits are owned by separate work.
+
+Both ESP32-C3 profiles compile and link, and host tests establish layout, raster,
+and input-routing behavior. No firmware was uploaded and no physical touchscreen
+usability test was performed. Compact touch usability still needs device testing
+for an application's input mode; host acceptance does not certify it.

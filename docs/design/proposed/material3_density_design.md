@@ -1,9 +1,8 @@
 # Material 3 density
 
-Status: partially implemented. Phases 1–4 (recursive refresh, component geometry,
-public density, and the runtime example) and phases 6–7 (explicit list/row and
-menu-chain overrides) are implemented and validated on the host. Rendering and
-embedded resource acceptance remain proposed (phase 5).
+Status: implemented. Phases 1–7 are complete, including explicit list/row and
+menu-chain overrides, reviewed rendering at 75/100/150/200% zoom, and ESP32-C3
+resource acceptance. Physical touchscreen usability has not been assessed.
 
 ## Objective
 
@@ -50,7 +49,9 @@ and materialized rows. Repainting alone cannot update these geometries.
 
 ## Requirements
 
-- Existing applications at the default setting retain their geometry and images.
+- Existing applications at the default setting retain their geometry and images,
+  except the corrected ExtraLarge button height overflow at 200% zoom and
+  outlined-button border truncation at fractional zooms.
 - Applications can select one compactness level before construction or change it
   between completed UI frames without rebuilding firmware.
 - Supported controls retain readable text, icons, labels, outlines, and content
@@ -116,7 +117,8 @@ never apply the reduction to every dimension found in a component.
 After scaling, raise eligible heights to their component content floor. Perform
 arithmetic in signed intermediates and clamp before narrowing to compact types.
 Round using existing `Scaled()` behavior. At level zero preserve the existing
-measurement and rounding path exactly; this includes current odd-pixel button
+measurement and rounding path except the corrected extra-large byte overflow
+at 200% zoom and fixed-point outline scaling at fractional zooms; this includes current odd-pixel button
 padding results and existing content that exceeds nominal tokens.
 
 | Component | Eligible dp tokens | Content floor / preserved geometry |
@@ -127,9 +129,14 @@ padding results and existing content that exceeds nominal tokens.
 | Expressive list row, standard/segmented | Same band minimum rule; vertical padding 10 minus 2 dp/step, floor 4 per edge | Same content floor; existing body gap, segment gap, separator thickness, and corner tokens preserved |
 | Checkbox/radio | None | Glyph footprint, state layer, and artwork unchanged |
 
-For button floors, reuse existing
-content metrics and symmetric padding calculation, raising the target height
-sufficiently to retain that per-edge minimum after integer rounding. Resolve
+For compact button floors, preserve the text line height but exclude symmetric
+transparent icon margins. Let $A$ be the icon anchor height, $t$ the clear margin
+above its painted bounds, and $b$ the clear margin below. The centered painted
+footprint is $\max(0, A - 2\min(t,b))$. Negative margins increase this footprint
+when artwork extends outside its anchor. Use the maximum of this footprint and
+the label line height, then raise the target sufficiently to retain the per-edge
+minimum after symmetric integer padding. The icon retains its original anchor
+center, horizontal slot, and complete artwork. Level zero keeps nominal slots. Resolve
 round shapes against actual dimensions; clamp square and pressed corner radii
 to half the smaller measured dimension. Explicit tight constraints can still
 clip content as they do today; floors govern natural/requested geometry.
@@ -326,9 +333,11 @@ padding on this ABI; this is not a promise for embedded ABIs.
 | Private `Menu::Impl` / row adornments / item trailing payload | 648 / 72 / 56 | 648 / 72 / 56 |
 | `Widget` / `Theme` / `Material3Theme` | 40 / 240 / 956 | 40 / 240 / 956 |
 
-Phase 5 still owns embedded flash/data and ABI measurements, reviewed compact
-raster goldens, and physical touch acceptance. Passing the existing default menu
-goldens does not complete that separate acceptance phase.
+Phase 5 records target ABI, linked image sections, allocation counts, and virtual
+pool capacity in the [target baseline](../../material3_target_baseline.md#material-3-density-acceptance-2026-10-08).
+The supported ESP32-C3 ABI also absorbs the new owner/row policy bytes in existing
+widget padding. Physical touchscreen usability is separate and has not been
+measured.
 
 
 ## Proposed API
@@ -460,15 +469,18 @@ dimensions. Phase 4 now supplies the live public theme density to these paths.
 [Geometry tests](../../../test/material3_density_geometry_test.cpp) cover all
 levels with independent pixel expectations at 75/100/150/200% zoom, actual content
 floors, float-state stability, oversized icons, RTL, and tight constraints.
-The zero-level button path intentionally retains legacy byte-token scaling,
-including the existing extra-large height narrowing at 200% zoom. Compact levels
-scale signed intermediates before narrowing.
+Phase 5 acceptance corrects extra-large height scaling at 200% zoom: scale
+136 dp in a signed intermediate to obtain 272 px, rather than narrowing it to
+16 px before padding. Other level-zero rounding remains unchanged. Compact
+icon floors use painted bounds around the original anchor center, so symmetric
+transparent asset margins do not prevent compaction. Horizontal slots and
+artwork stay unchanged.
 
 Factor pure internal resolvers accepting a valid signed level without exposing a
 public theme field. Implement button and field rules, rounding, content floors,
 and radius limits. Existing production paths pass zero until phase 4. Add token
 and slot geometry tests across all six levels and supported zooms. Update the
-button/field design documents to link this proposal's pending density contract.
+button/field design documents to link this proposal's density contract.
 
 Commit: `Prepare density-aware button and text-field geometry resolvers`.
 
@@ -546,6 +558,38 @@ example rejects invalid external integers before changing its configuration. Bui
 
 ### Phase 5: Rendering and resource acceptance
 
+Implemented: host rendering and embedded resource acceptance are complete.
+Rendering review covers eight RGB565 galleries: light/dark, zoom 75/100/150/200,
+and density zero/-2/-5. Pixel regression tests additionally preserve complete
+icon artwork across all five button sizes and all six levels. The acceptance
+work also corrects natural menu widths to reserve trailing adornments and
+compact button floors to exclude symmetric transparent icon margins; the
+ExtraLarge button height overflow at 200% zoom is fixed. Outlined button
+borders scale in sixteenths of a pixel: 0.75 px at 75% and 1.5 px at 150%,
+without integer truncation.
+
+The 100% galleries below show the same supported controls at each density.
+They use the current text-field ascent-centering rendering from concurrent work.
+
+![Light RGB565 density comparison](figures/material3_density_acceptance_light.png)
+
+![Dark RGB565 density comparison](figures/material3_density_acceptance_dark.png)
+
+The [resource report](../../material3_target_baseline.md#material-3-density-acceptance-2026-10-08)
+records the actual ESP32-C3 ABI and linked sections. Initial density -2 adds
+4 bytes of code over zero with unchanged data, constants, and firmware binary
+size. Geometry allocates nothing; frame allocation counts match zero at all
+levels. Retained virtual rows grow from 7 to 10 in a 320 px viewport, retaining
+that capacity on return to zero. No firmware upload or physical touch-usability
+assessment was performed.
+
+Validation completed: geometry and light/dark RGB565 golden suites pass at
+75/100/150/200% zoom. Default button, menu row/golden, text-field golden, list,
+dynamic-list, density integration/override, and resource suites pass. Density
+integration/override and button suites pass with `--copt=-DNDEBUG`. The density
+and three modified button examples build; both ESP32-C3 configurations compile
+and link. Changed C++ is formatted with the repository configuration.
+
 Add reviewed density goldens, zoom builds at 75/100/150/200%, light/dark RGB565
 coverage, and an ESP32-C3 example size comparison at levels zero and -2. Record
 actual theme/widget sizes and linked flash/data deltas in the target baseline.
@@ -616,8 +660,8 @@ Validation: all levels and both variants, default independence from shared densi
 explicit inheritance, submenu propagation, tall content and trailing adornments,
 closed-menu policy changes/reopening, exact parent constraints, and existing menu
 goldens. Run focused debug/release tests and supported zoom builds, build changed
-examples, and measure host size deltas. Embedded/raster acceptance from phase 5
-remains pending and must not be labeled completed by this extension.
+examples, and measure host size deltas. Phase 5 records embedded/raster acceptance
+separately from this extension.
 
 ## Testing Plan
 

@@ -231,7 +231,7 @@ Color Button::getOutlineColor() const {
 
 BorderStyle Button::getBorderStyle() const {
   SmallNumber outline = variant() == ButtonVariant::kOutlined
-                            ? SmallNumber::Of16ths(Scaled(16 * kOutlineWidth))
+                            ? Scaled(SmallNumber(kOutlineWidth))
                             : SmallNumber(0);
   const ClickAnimation* anim = getClickAnimation();
   if (shapeMorph() == ButtonShapeMorph::kDisabled ||

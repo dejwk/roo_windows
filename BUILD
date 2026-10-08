@@ -1416,3 +1416,18 @@ cc_test(
     linkstatic = 1,
     deps = [":roo_windows", "@roo_testing//:arduino_gtest_main"],
 )
+
+cc_test(
+    name = "material3_density_golden_test",
+    srcs = ["test/material3_density_golden_test.cpp", "test/material3_density_acceptance_theme.h"],
+    data = glob(["test/goldens/material3_density/*.ppm"], allow_empty = True),
+    linkstatic = 1,
+    deps = [":roo_windows", ":test_golden_utils", "@roo_testing//:arduino_gtest_main"],
+)
+
+cc_test(
+    name = "material3_density_resource_test",
+    srcs = ["test/material3_density_resource_test.cpp"],
+    linkstatic = 1,
+    deps = [":roo_windows", "@roo_testing//:arduino_gtest_main"],
+)
