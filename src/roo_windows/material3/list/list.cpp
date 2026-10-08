@@ -732,12 +732,18 @@ void ListEntry::setVisualContext(const ListEntryVisualContext& context) {
       visual_context_.show_divider == context.show_divider &&
       visual_context_.divider_mode == context.divider_mode &&
       visual_context_.divider_start_inset == context.divider_start_inset &&
-      visual_context_.divider_end_inset == context.divider_end_inset) {
+      visual_context_.divider_end_inset == context.divider_end_inset &&
+      visual_context_.density == context.density) {
     return;
   }
   const bool colors_changed = visual_context_.selected != context.selected ||
                               visual_context_.variant != context.variant;
+  const bool density_changed = visual_context_.density != context.density;
   visual_context_ = context;
+  if (density_changed) {
+    requestLayoutDescending();
+    invalidateDescending();
+  }
   if (colors_changed) syncTextColors();
   invalidateInterior();
 }
@@ -757,13 +763,29 @@ const ListEntryVisualContext& ListEntry::visualContext() const {
              : list.standardContainer;
 }
 
+void ListEntry::setDensity(Density density) {
+  ListEntryVisualContext context = visual_context_;
+  context.density = DensityOverride::Explicit(density);
+  setVisualContext(context);
+}
+
+void ListEntry::clearDensityOverride() {
+  ListEntryVisualContext context = visual_context_;
+  context.density = DensityOverride{};
+  setVisualContext(context);
+}
+
+int8_t ListEntry::resolvedDensityLevel() const {
+  return internal::ResolveDensityLevel(
+      visual_context_.density.resolve(theme().material3Theme().density));
+}
+
 BorderStyle ListEntry::getBorderStyle() const {
   return BorderStyleFor(visual_context_);
 }
 
 Dimensions ListEntry::getSuggestedMinimumDimensions() const {
-  int8_t level =
-      internal::ResolveDensityLevel(theme().material3Theme().density);
+  int8_t level = resolvedDensityLevel();
   const RowTokens tokens =
       internal::ResolveListRowTokens(visual_context_.variant, level);
   Dimensions leading = SuggestedMinimumChild(leading_child_);
@@ -804,8 +826,7 @@ Dimensions ListEntry::getSuggestedMinimumDimensions() const {
 
 PreferredSize ListEntry::getPreferredSize() const {
   PreferredSize legacy = Widget::getPreferredSize();
-  if (internal::ResolveDensityLevel(theme().material3Theme().density) == 0)
-    return legacy;
+  if (resolvedDensityLevel() == 0) return legacy;
   // Let measurement establish compact content floors from actual slots rather
   // than imposing a cheap descriptor budget as an exact parent constraint.
   return {legacy.width(), PreferredSize::WrapContentHeight()};
@@ -876,16 +897,14 @@ Widget& ListEntry::getChild(int idx) {
 
 Dimensions ListEntry::onMeasure(WidthSpec width, HeightSpec height) {
   RowLayoutMetrics layout = internal::ResolveListRowLayout(
-      *this, width, height,
-      internal::ResolveDensityLevel(theme().material3Theme().density));
+      *this, width, height, resolvedDensityLevel());
   return Dimensions(layout.width, layout.height);
 }
 
 void ListEntry::onLayout(bool changed, const Rect& rect) {
   const RowLayoutMetrics layout = internal::ResolveListRowLayout(
       *this, WidthSpec::Exactly(rect.width()),
-      HeightSpec::Exactly(rect.height()),
-      internal::ResolveDensityLevel(theme().material3Theme().density));
+      HeightSpec::Exactly(rect.height()), resolvedDensityLevel());
   internal::LayoutListRow(*this, layout);
 }
 
@@ -1446,6 +1465,7 @@ ListEntryVisualContext List::rowContext(int section_index, int index) const {
     result = static_cast<const ListEntry*>(section.widget)->visualContext();
     return result;
   }
+  result.density = density_;
   result.variant = variant_;
   result.style = style_;
   result.position = PositionForIndex(logical, logical_count_);
@@ -1536,6 +1556,7 @@ void List::resolveContexts() {
       auto& row = static_cast<ListEntry&>(*section.widget);
       // Use the already known ordinal rather than rescanning static prefixes.
       ListEntryVisualContext context = row.visualContext();
+      context.density = density_;
       context.variant = variant_;
       context.style = style_;
       context.position = count == 0 ? ListItemPosition::kSingle
@@ -1755,6 +1776,21 @@ void List::setStyle(ListStyle style) {
   if (style_ == style) return;
   style_ = style;
   onStructureOrPolicyChanged();
+}
+
+void List::setDensity(Density density) {
+  setDensityOverride(DensityOverride::Explicit(density));
+}
+
+void List::clearDensityOverride() { setDensityOverride(DensityOverride{}); }
+
+void List::setDensityOverride(DensityOverride density) {
+  checkNotCleaningBindings();
+  if (density_ == density) return;
+  density_ = density;
+  resolveContexts();
+  requestLayoutDescending();
+  invalidateDescending();
 }
 
 void List::setSelectionPolicy(const ListSelectionPolicy& policy) {

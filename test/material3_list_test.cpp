@@ -304,7 +304,8 @@ TEST(Material3List, PolicyDefaultsMatchDesign) {
   EXPECT_LE(sizeof(ListSelectionPolicy), 4U);
   EXPECT_LE(sizeof(ListDividerPolicy), 4U);
   EXPECT_LE(sizeof(DividerInsetHint), 2U);
-  EXPECT_LE(sizeof(ListEntryVisualContext), 12U);
+  EXPECT_LE(sizeof(ListEntryVisualContext), 13U);
+  EXPECT_TRUE(visual_context.density.isInherited());
 }
 
 // Verifies that the convenience init builders populate only descriptor data,

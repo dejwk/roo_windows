@@ -1409,3 +1409,10 @@ cc_test(
     linkstatic = 1,
     deps = [":roo_windows", "//examples/material3/theme/density:density_settings", "@roo_testing//:arduino_gtest_main"],
 )
+
+cc_test(
+    name = "material3_density_override_test",
+    srcs = ["test/material3_density_override_test.cpp", "test/roo_windows_render_test_support.h"],
+    linkstatic = 1,
+    deps = [":roo_windows", "@roo_testing//:arduino_gtest_main"],
+)

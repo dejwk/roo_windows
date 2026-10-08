@@ -1,6 +1,7 @@
 // Learning goal: compact a settings screen at runtime without changing its
 // fonts, icons, or firmware. Tap 0 through -5, then scroll through the fields
-// and device choices. Application spacing stays under your control.
+// and device choices. The device list has a local override you can clear.
+// Application spacing stays under your control.
 // Compact bounds are exact hit targets; keep 0 or add spacing for touch use.
 
 #ifdef ROO_TESTING
@@ -153,6 +154,15 @@ class SettingsScreen : public SimpleScrollablePanel {
     form->add(std::make_unique<material3::TextField>(
         context, "Location", material3::TextFieldVariant::kOutlined));
     auto list = std::make_unique<DeviceList>(context);
+    // Compact device rows independently of buttons and fields. The list owns
+    // this policy for both its static rows and its recycled dynamic section.
+    list->setDensity(material3::Density::kMinus3);
+    DeviceList* device_list = list.get();
+    auto inherit = std::make_unique<material3::Button>(
+        context, "Use display density for devices");
+    inherit->setOnInteractiveChange(
+        [device_list]() { device_list->clearDensityOverride(); });
+    form->add(std::move(inherit));
     list->add(std::make_unique<material3::ListRow<material3::CheckboxListItem>>(
         context, "Notifications"));
     list->add(std::make_unique<material3::ListRow<material3::RadioListItem>>(

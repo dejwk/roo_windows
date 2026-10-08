@@ -2,9 +2,8 @@
 
 Status: partially implemented. Phases 1–4 (recursive refresh, component geometry,
 public density, and the runtime example) are implemented. Rendering and embedded
-resource acceptance remain proposed (phase 5). Explicit list/row and menu
-overrides are accepted for implementation (phases 6–7); they are not yet
-implemented.
+resource acceptance remain proposed (phase 5). Explicit list/row overrides are implemented (phase 6); menu-chain overrides
+are accepted for implementation (phase 7).
 
 ## Objective
 
@@ -536,6 +535,11 @@ pool growth rather than inventing a zero-cost claim. Mark implemented only after
 these checks pass; unexpected widget growth or paint allocations block acceptance.
 
 ### Phase 6: Explicit list and standalone-row overrides
+
+Implemented: validated one-byte policy, standalone setters, static/dynamic
+owner propagation, automatic subtree refresh, and the runtime example. The
+focused override suite passes in debug and with `--copt=-DNDEBUG`; existing
+density, list-density geometry, and list suites pass. The runtime example builds.
 
 Add validated `DensityOverride`, list setters, and row-context propagation.
 Use one resolved policy for suggested minimums, preferred sizes, measurement,

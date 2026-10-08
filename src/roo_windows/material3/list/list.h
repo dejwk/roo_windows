@@ -13,6 +13,7 @@
 #include "roo_windows/core/widget_ref.h"
 #include "roo_windows/material3/checkbox/checkbox.h"
 #include "roo_windows/material3/container.h"
+#include "roo_windows/material3/density.h"
 #include "roo_windows/material3/radio_button/radio_button.h"
 #include "roo_windows/material3/switch/switch.h"
 #include "roo_windows/widgets/icon.h"
@@ -141,6 +142,8 @@ struct ListEntryVisualContext {
   DividerMode divider_mode = DividerMode::kNone;
   uint8_t divider_start_inset = 0;
   uint8_t divider_end_inset = 0;
+  /// Owner-supplied row whitespace policy; inheritance reads the theme live.
+  DensityOverride density{};
 };
 
 /// Construction-time descriptor for `StandardListItem`.
@@ -376,6 +379,18 @@ class ListEntry : public Material3Container {
   /// Returns the current list-resolved visual context.
   const ListEntryVisualContext& visualContext() const;
 
+  /// Pins row whitespace to @p density and schedules subtree layout/repaint.
+  /// Use for standalone rows on the UI thread between frames. A list or menu
+  /// owner supplies its own policy; slot controls retain their own density.
+  void setDensity(Density density);
+
+  /// Restores live application density and schedules subtree layout/repaint.
+  /// This is a standalone-row operation; owning lists/menus supply row policy.
+  void clearDensityOverride();
+
+  /// Returns the current standalone or owner-supplied row policy.
+  DensityOverride densityOverride() const { return visual_context_.density; }
+
   /// Supplies the secondary content color for default-colored slot widgets.
   /// Explicit widget colors remain unchanged.
   Color defaultColor() const override;
@@ -407,6 +422,9 @@ class ListEntry : public Material3Container {
   void onFocusChanged(bool focused) override;
 
  protected:
+  /// Resolves the current row policy against live application density.
+  int8_t resolvedDensityLevel() const;
+
   /// Keeps allocated text slots when their content becomes empty.
   /// Recycled subclasses override this without adding state to ordinary rows.
   virtual bool retainsTextSlots() const { return false; }
@@ -997,6 +1015,17 @@ class List : public Container {
   /// Sets the Material 3 list style used for future visual propagation.
   void setStyle(ListStyle style);
 
+  /// Pins all row whitespace to @p density and schedules subtree refresh.
+  /// Call on the UI thread between frames. Static rows, dynamic prototypes,
+  /// and pooled rows share this policy; embedded controls keep their own.
+  void setDensity(Density density);
+
+  /// Restores live application density and schedules subtree layout/repaint.
+  void clearDensityOverride();
+
+  /// Returns this list's row policy, inherited by default.
+  DensityOverride densityOverride() const { return density_; }
+
   /// Sets parent-wide selection and synchronizes participating radio/checkbox
   /// controls. Independent single-selection models require mode kNone.
   void setSelectionPolicy(const ListSelectionPolicy& policy);
@@ -1104,9 +1133,13 @@ class List : public Container {
   void invalidateDividerAfter(int section, int index);
   void paintBand(PaintContext& context, int section, int index, YDim gap) const;
 
+  // Propagates policy before refreshing attached and detached row geometry.
+  void setDensityOverride(DensityOverride density);
+
   std::vector<Section> sections_;
   ListVariant variant_ = ListVariant::kExpressive;
   ListStyle style_ = ListStyle::kStandard;
+  DensityOverride density_{};
   ListSelectionPolicy selection_policy_;
   ListDividerPolicy divider_policy_;
   ListRowLocation selection_;
