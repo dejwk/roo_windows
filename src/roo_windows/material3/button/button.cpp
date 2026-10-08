@@ -8,6 +8,7 @@
 #include "roo_display/ui/text_label.h"
 #include "roo_windows/core/click_animation.h"
 #include "roo_windows/material3/button/internal/button_geometry.h"
+#include "roo_windows/material3/internal/density.h"
 #include "roo_windows/material3/theme.h"
 #include "roo_windows/material3/typography.h"
 
@@ -209,9 +210,9 @@ void Button::setIcon(const MonoIcon* icon) {
 Padding Button::getPadding() const {
   internal::ButtonContentMetrics metrics =
       internal::ResolveButtonContentMetrics(label_, icon_, size());
-  // Production remains at level zero until application density is published.
-  return internal::ResolveButtonPadding(size(), smallButtonPadding(),
-                                        metrics.content_height, 0);
+  return internal::ResolveButtonPadding(
+      size(), smallButtonPadding(), metrics.content_height,
+      internal::ResolveDensityLevel(theme().material3Theme().density));
 }
 
 ::roo_windows::material3::ColorToken Button::containerRole() const {

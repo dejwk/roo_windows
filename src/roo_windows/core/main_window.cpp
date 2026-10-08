@@ -189,6 +189,20 @@ void MainWindow::removePopup(Widget& child) { removeFromLayer(popups_, child); }
 
 void MainWindow::refreshClickAnimation() { click_animation_.tick(); }
 
+void MainWindow::invalidateDescending() {
+  Container::invalidateDescending();
+  redraw_bounds_ = bounds();
+  setDirty(bounds());
+}
+
+void MainWindow::invalidateDescending(const Rect& rect) {
+  const Rect clipped = Rect::Intersect(rect, bounds());
+  if (clipped.empty()) return;
+  Container::invalidateDescending(clipped);
+  redraw_bounds_ = UnionNonEmpty(redraw_bounds_, clipped);
+  setDirty(clipped);
+}
+
 void MainWindow::updateLayout() {
   if (isLayoutRequested()) {
     measure(WidthSpec::Exactly(width()), HeightSpec::Exactly(height()));

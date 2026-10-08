@@ -670,6 +670,17 @@ class Widget {
   /// synchronously.
   virtual void requestLayoutDescending();
 
+  /// Marks this widget and all descendants as needing full redraw.
+  /// Pair with a layout request or invalidateInterior() to schedule work.
+  virtual void invalidateDescending() { markInvalidated(); }
+
+  /// Marks a local region and intersecting descendants as needing redraw.
+  /// Pair with a layout request or invalidateInterior() to schedule work.
+  virtual void invalidateDescending(const Rect& rect) {
+    if (!rect.intersects(bounds())) return;
+    markInvalidated();
+  }
+
   // Assign a size and position to a widget and all of its descendants.
   //
   // This is the second phase of the layout mechanism. (The first is measuring).
@@ -728,17 +739,6 @@ class Widget {
   // react to state-driven visual changes without overriding the full setter.
   // state_diff is the xor of the old and new state bitfields.
   virtual void notifyStateChanged(uint16_t state_diff) { (void)state_diff; }
-
-  // Marks the entire area of this widget, and all its descendants, as
-  // invalidated (needing full redraw).
-  virtual void invalidateDescending() { markInvalidated(); }
-
-  // Marks the specified sub-area of this widget, and all its descendants, as
-  // invalidated (needing full redraw).
-  virtual void invalidateDescending(const Rect& rect) {
-    if (!rect.intersects(bounds())) return;
-    markInvalidated();
-  }
 
   // Recursively iterates through all widgets to the 'left' of subject (i.e.,
   // with lower 'Z' than the subject), propagating the invalidation rectangle.

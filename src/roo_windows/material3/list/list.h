@@ -389,6 +389,10 @@ class ListEntry : public Material3Container {
   /// Returns the minimum dimensions for the bound item and slot widgets.
   Dimensions getSuggestedMinimumDimensions() const override;
 
+  /// Preserves default preferred geometry; compact rows wrap their measured
+  /// slots so descriptor estimates cannot impose an oversized exact height.
+  PreferredSize getPreferredSize() const override;
+
   /// Returns whether this row should behave as a clickable surface.
   bool isClickable() const override;
 

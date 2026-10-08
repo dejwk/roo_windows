@@ -1,8 +1,8 @@
 # Material 3 density
 
-Status: partially implemented. Phases 1–3 (recursive layout refresh and internal
-button/field/list geometry) are implemented. Production geometry remains at level
-zero; public density configuration and acceptance remain proposed (phases 4–5).
+Status: partially implemented. Phases 1–4 (recursive refresh, component geometry,
+public density, and the runtime example) are implemented. Rendering and embedded
+resource acceptance remain proposed (phase 5).
 
 ## Objective
 
@@ -94,10 +94,10 @@ the runtime requirement without forcing callers to know each component's caches.
 
 ![List row density and content floor](figures/material3_density_layout.svg)
 
-The figure uses the proposed one-line baseline row rule at zoom 100%, with a
+The figure uses the one-line baseline row rule at zoom 100%, with a
 24 px text block, a 32 px leading slot, and no application margins. It shows
-requested row heights 56, 48, and 36 px; the last is raised to the 40 px content floor. This is proposed
-geometry, not a screenshot of current support.
+requested row heights 56, 48, and 36 px; the last is raised to the 40 px content
+floor. This illustrates the implemented geometry rule rather than raster output.
 
 ## Design Details
 
@@ -152,8 +152,10 @@ buttons and fields inside a dialog still follow the application setting. Dialog
 chrome, calendar grids, menu rows, navigation, tabs, switches, icon buttons,
 progress indicators, badges, scaffold rulers, generic widgets, and Material 2
 components remain unchanged in this scope. Internally reused eligible controls
-also follow density; document and test their use in date-picker input and
-full-screen editor flows. No implicit density reset occurs at a transient host.
+also follow density, including date-picker numeric input. Full-screen text
+extraction currently uses Material 2 editor controls, whose geometry stays
+unchanged; the Material 3 source follows current density on return. No implicit
+density reset occurs at a transient host.
 
 This explicit distinction avoids an ancestor search or hidden per-widget mode.
 It differs from Angular's popup policy. Extending density to a new family requires
@@ -263,8 +265,10 @@ struct Material3Theme {
 
 Public framework declarations add `virtual void requestLayoutDescending()` to
 `Widget`, with overrides on `Container` and `ListLayout`. Token resolvers remain
-component-local. Applications use the existing invalidation API alongside the
-new layout request directly; no density-specific refresh function is added.
+component-local. Both recursive invalidation overloads are public on `Widget`
+and `Container`; `MainWindow` additionally registers display damage and schedules
+a frame. Applications use invalidation alongside the new layout request directly;
+no density-specific refresh function is added.
 No public arbitrary-dimension adjustment helper invites blanket shrinking.
 
 Application-owned storage setup and a settings callback:
@@ -332,7 +336,7 @@ not survive; existing ownership and attachment tests pass.
 
 Implemented: component-local pure resolvers accept signed levels [-5, 0] for
 button padding and field container/slot geometry. Button corners clamp to actual
-dimensions. Production paths pass zero; no public density setting is exposed.
+dimensions. Phase 4 now supplies the live public theme density to these paths.
 [Geometry tests](../../../test/material3_density_geometry_test.cpp) cover all
 levels with independent pixel expectations at 75/100/150/200% zoom, actual content
 floors, float-state stability, oversized icons, RTL, and tight constraints.
@@ -355,8 +359,8 @@ labels, RTL, multiline assistive text, icons, and unchanged zero-density goldens
 
 Implemented: internal level-parameterized band, measured-slot, and placement
 resolvers serve baseline and expressive rows. Appended bodies retain their gap
-and original bottom padding. Production passes zero. Compact text floors measure
-attached text slots at the final column width, while level zero retains its
+and original bottom padding. Phase 4 now supplies live theme density. Compact
+text floors measure attached text slots at the final column width, while level zero retains its
 legacy descriptor budget. List section geometry continues to remeasure on every
 measurement/layout pass; no density cache or per-widget state was added.
 Virtual-pool growth preserves the ring's live bindings and focused surviving
@@ -376,6 +380,34 @@ selection, focus, shrinking/growing stride, and scroll clamping. Zero-level
 images and default row heights remain unchanged.
 
 ### Phase 4: Public density and runtime example
+
+Implemented: the signed one-byte `Density` enum and defaulted trailing theme
+field are read live by standard buttons, filled/outlined fields, and
+baseline/expressive rows. Invalid casts assert in debug builds and use default
+geometry with `NDEBUG`. Compact rows wrap their measured content rather than
+forcing their cheap descriptor estimate as an exact height. Display-root
+recursive invalidation registers damage, including when allocated bounds stay
+unchanged; both full and regional public overloads are covered.
+
+The [runtime example](../../../examples/material3/theme/density/density.ino)
+owns its mutable theme and applies all six levels to a settings form and dynamic
+radio section. Its application helper validates external integers before casting
+and issues both recursive refresh calls. Build it with
+`bazel build //examples/material3/theme/density:density`; run that same target
+with `bazel run` for interactive use.
+
+[Integration tests](../../../test/material3_density_test.cpp) exercise live
+0 -> -2 -> -5 -> 0 changes, enum/default and external-input validation, real
+bounds/hits and vacated pixels, retained/recycled row focus and selection,
+scroll clamping, dialogs, in-place editing, extracted-editor return, and reused
+date-picker numeric input. Run the test with `--copt=-DNDEBUG` as well to check
+release fallback through production consumers.
+
+Full-screen text extraction currently uses Material 2 editor controls. Its
+geometry stays unchanged; the Material 3 source reads current density on return.
+In-place Material 3 fields and date-picker numeric input do follow density.
+Dialog chrome and date-picker calendar/chrome keep their existing geometry;
+reused Material 3 action buttons and fields follow the shared theme.
 
 Add the `Density` enum, explicit default theme field, internal enum validation,
 live consumer reads, and documentation of the two runtime refresh calls together.

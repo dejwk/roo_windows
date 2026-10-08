@@ -7,6 +7,7 @@
 #include "roo_windows/core/task.h"
 #include "roo_windows/internal/single_line_text.h"
 #include "roo_windows/keyboard/editor_destination.h"
+#include "roo_windows/material3/internal/density.h"
 #include "roo_windows/material3/text_field/internal/text_field_geometry.h"
 
 namespace roo_windows::material3 {
@@ -246,10 +247,12 @@ internal::TextFieldMetrics TextField::contentMetrics() const {
 }
 
 Dimensions TextField::getSuggestedMinimumDimensions() const {
-  return Dimensions(Scaled(120),
-                    internal::ResolveTextFieldNaturalHeight(
-                        variant() == TextFieldVariant::kOutlined,
-                        !assistiveText().empty(), contentMetrics(), 0));
+  return Dimensions(
+      Scaled(120),
+      internal::ResolveTextFieldNaturalHeight(
+          variant() == TextFieldVariant::kOutlined, !assistiveText().empty(),
+          contentMetrics(),
+          internal::ResolveDensityLevel(theme().material3Theme().density)));
 }
 
 PreferredSize TextField::getPreferredSize() const {
@@ -271,8 +274,8 @@ TextField::Slots TextField::slots() const {
       floating ? TextWidth(label_, small) : 0,
       floating ? TextWidth(prefix_, body) : 0,
       floating ? TextWidth(suffix_, body) : 0};
-  // Production remains at level zero until application density is published.
-  return internal::ResolveTextFieldSlots(input, 0);
+  return internal::ResolveTextFieldSlots(
+      input, internal::ResolveDensityLevel(theme().material3Theme().density));
 }
 
 void TextField::paint(PaintContext& ctx) const {

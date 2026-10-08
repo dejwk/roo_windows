@@ -40,6 +40,12 @@ class MainWindow : public Container {
   /// Samples and invalidates click feedback for a new logical frame.
   void refreshClickAnimation();
 
+  /// Invalidates the complete display tree and schedules display damage.
+  void invalidateDescending() override;
+
+  /// Invalidates a display-local region and schedules display damage.
+  void invalidateDescending(const Rect& rect) override;
+
   /// Applies any pending layout requests in the widget tree.
   void updateLayout();
 

@@ -7,6 +7,7 @@
 #include "roo_windows/core/framework_theme.h"
 #include "roo_windows/material3/color_token.h"
 #include "roo_windows/material3/component_theme.h"
+#include "roo_windows/material3/density.h"
 
 namespace roo_windows::material3 {
 
@@ -200,6 +201,10 @@ struct Material3Theme {
   ColorScheme color;
   StateLayerTheme state;
   ComponentTheme components{};
+  /// Owned application compactness, borrowed live by supported components.
+  /// After mutation, requestLayoutDescending() and invalidateDescending() on
+  /// every affected display/detached root, on the UI thread between frames.
+  Density density = Density::kDefault;
 };
 
 FrameworkTheme MakeFrameworkTheme(const Material3Theme& material_theme);

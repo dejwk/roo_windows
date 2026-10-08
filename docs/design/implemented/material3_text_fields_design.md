@@ -410,9 +410,10 @@ wrapped-text child widget on every field before multiline editing exists.
 ### Layout and Geometry
 
 The [Material 3 density proposal](../proposed/material3_density_design.md#geometry-rules)
-defines the pending compact-height and content-floor contract. Phase 2 provides
-internal geometry resolvers; production still uses level zero. Public density
-configuration will arrive with all initial component consumers in phase 4.
+defines the compact-height and content-floor contract. Production geometry
+reads `Material3Theme::density` live. After changing the owned value, request
+recursive layout and invalidation on each affected root; default density
+preserves the existing geometry.
 
 The first landed family uses the single-line Material 3 geometry exactly where
 the spec is explicit.

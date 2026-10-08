@@ -757,10 +757,11 @@ Proposed implementation defaults:
 ### Token-Backed Visual Defaults
 
 The [Material 3 density proposal](../proposed/material3_density_design.md#geometry-rules)
-defines the pending band reduction and measured-content floors. Phase 3 provides
-internal row resolvers, keeps appended-body spacing unchanged, and retains live
-bindings when a smaller stride grows the pool. Production remains at level zero;
-public density configuration is deferred to phase 4.
+defines band reduction and measured-content floors. Production rows read
+`Material3Theme::density` live, retain appended-body spacing, and preserve live
+bindings when a smaller stride grows the pool. After shared mutation, request
+recursive layout and invalidation on each affected root. Default density
+preserves the existing geometry.
 
 The Material 3 specs expose enough list sizing, spacing, shape, and color
 information through text and token tables to use those values as first-pass API

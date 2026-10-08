@@ -12,6 +12,7 @@
 #include "roo_windows/core/application_context.h"
 #include "roo_windows/core/child_layout.h"
 #include "roo_windows/core/theme.h"
+#include "roo_windows/material3/internal/density.h"
 #include "roo_windows/material3/list/dynamic_list.h"
 #include "roo_windows/material3/list/internal/list_row_geometry.h"
 #include "roo_windows/material3/list/list_geometry.h"
@@ -761,8 +762,10 @@ BorderStyle ListEntry::getBorderStyle() const {
 }
 
 Dimensions ListEntry::getSuggestedMinimumDimensions() const {
+  int8_t level =
+      internal::ResolveDensityLevel(theme().material3Theme().density);
   const RowTokens tokens =
-      internal::ResolveListRowTokens(visual_context_.variant, 0);
+      internal::ResolveListRowTokens(visual_context_.variant, level);
   Dimensions leading = SuggestedMinimumChild(leading_child_);
   Dimensions trailing = SuggestedMinimumChild(trailing_child_);
   Dimensions body = SuggestedMinimumChild(body_child_);
@@ -796,7 +799,16 @@ Dimensions ListEntry::getSuggestedMinimumDimensions() const {
       trailing,
       body};
   return Dimensions(std::max(desired_main_width, desired_body_width),
-                    internal::ResolveListRowGeometry(input, 0).height);
+                    internal::ResolveListRowGeometry(input, level).height);
+}
+
+PreferredSize ListEntry::getPreferredSize() const {
+  PreferredSize legacy = Widget::getPreferredSize();
+  if (internal::ResolveDensityLevel(theme().material3Theme().density) == 0)
+    return legacy;
+  // Let measurement establish compact content floors from actual slots rather
+  // than imposing a cheap descriptor budget as an exact parent constraint.
+  return {legacy.width(), PreferredSize::WrapContentHeight()};
 }
 
 bool ListEntry::isClickable() const {
@@ -863,15 +875,17 @@ Widget& ListEntry::getChild(int idx) {
 }
 
 Dimensions ListEntry::onMeasure(WidthSpec width, HeightSpec height) {
-  RowLayoutMetrics layout =
-      internal::ResolveListRowLayout(*this, width, height, 0);
+  RowLayoutMetrics layout = internal::ResolveListRowLayout(
+      *this, width, height,
+      internal::ResolveDensityLevel(theme().material3Theme().density));
   return Dimensions(layout.width, layout.height);
 }
 
 void ListEntry::onLayout(bool changed, const Rect& rect) {
-  const RowLayoutMetrics layout =
-      internal::ResolveListRowLayout(*this, WidthSpec::Exactly(rect.width()),
-                                     HeightSpec::Exactly(rect.height()), 0);
+  const RowLayoutMetrics layout = internal::ResolveListRowLayout(
+      *this, WidthSpec::Exactly(rect.width()),
+      HeightSpec::Exactly(rect.height()),
+      internal::ResolveDensityLevel(theme().material3Theme().density));
   internal::LayoutListRow(*this, layout);
 }
 

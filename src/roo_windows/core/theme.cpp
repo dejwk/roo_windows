@@ -213,6 +213,7 @@ const material3::Material3Theme& DefaultMaterial3Theme() {
     material3::Material3Theme result = {
         .color = DefaultMaterial3Colors(),
         .state = EmptyMaterial3StateLayerTheme(),
+        .density = material3::Density::kDefault,
     };
     result.state.disabledContentOpacity = legacy_state.disabled;
     for (uint8_t token = 0; token < 33; ++token) {

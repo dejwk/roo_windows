@@ -35,6 +35,13 @@ class Container : public SurfaceWidget {
   /// before requesting this container's layout.
   void requestLayoutDescending() override;
 
+  /// Marks this surface and every structural descendant as needing redraw.
+  /// Pair with requestLayoutDescending() after shared geometry changes.
+  void invalidateDescending() override;
+
+  /// Marks descendant regions intersecting @p rect as needing redraw.
+  void invalidateDescending(const Rect& rect) override;
+
   /// Clips direct clipped children to this surface's rounded content bounds.
   /// Direct unclipped children bypass this container's clip while retaining
   /// ancestor clips and this owner's tint, ripple, and disabled styling.
@@ -155,8 +162,6 @@ class Container : public SurfaceWidget {
   /// root traversal.
   void fastDrawChildShadow(Widget& child, PaintContext& ctx);
 
-  void invalidateDescending() override;
-  void invalidateDescending(const Rect& rect) override;
   bool invalidateBeneathDescending(const Rect& rect,
                                    const Widget* subject) override;
   void markCleanDescending() override;
