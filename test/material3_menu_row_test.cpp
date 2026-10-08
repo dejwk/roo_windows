@@ -157,4 +157,41 @@ TEST(Material3MenuRow, InlineItemIsUnboundBeforeItsDestructorRuns) {
 }
 
 }  // namespace
+class InspectableMenuRow : public MenuEntry {
+ public:
+  using ListEntry::getChild;
+  using MenuEntry::MenuEntry;
+};
+
+// Verifies natural-width hints reserve owner-painted lanes, so generic layouts
+// do not clip menu headlines when shortcuts, badges, and selection slots exist.
+TEST(Material3MenuRow, NaturalWidthIncludesTrailingLane) {
+  roo_scheduler::SchedulingService scheduler;
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
+  StandardMenuItem item(StandardMenuItemInit{
+      "Inspect", {}, nullptr, StandardMenuItemFlags::kSelectable});
+  item.setShortcut("Ctrl+I");
+  item.setBadgeValue(3);
+  InspectableMenuRow row(context);
+  row.setMenuItem(item);
+  for (ListVariant variant :
+       {ListVariant::kBaseline, ListVariant::kExpressive}) {
+    ListEntryVisualContext visual = row.visualContext();
+    visual.variant = variant;
+    row.setVisualContext(visual);
+    for (int level = 0; level >= -5; --level) {
+      row.setDensity(static_cast<Density>(level));
+      Dimensions hint = row.getSuggestedMinimumDimensions();
+      Dimensions natural =
+          row.measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
+      EXPECT_EQ(hint.width(), natural.width());
+      row.measure(WidthSpec::Exactly(hint.width()), HeightSpec::Unspecified(0));
+      row.layout(Rect(0, 0, hint.width() - 1, natural.height() - 1));
+      EXPECT_GE(row.getChild(0).width(),
+                row.getChild(0).getSuggestedMinimumDimensions().width());
+    }
+  }
+}
+
 }  // namespace roo_windows::material3

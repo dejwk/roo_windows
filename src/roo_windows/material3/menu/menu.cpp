@@ -444,7 +444,7 @@ Dimensions MenuEntry::getSuggestedMinimumDimensions() const {
   Dimensions base = ListEntry::getSuggestedMinimumDimensions();
   const internal::ListRowTokens tokens = internal::ResolveListRowTokens(
       visualContext().variant, resolvedDensityLevel());
-  return {base.width(),
+  return {static_cast<XDim>(base.width() + trailingLaneWidth()),
           std::max({base.height(), minimumBandHeight(),
                     trailingLaneHeight() + 2 * tokens.vertical_padding})};
 }
