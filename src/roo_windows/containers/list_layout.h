@@ -1,5 +1,7 @@
 #pragma once
 
+#include <algorithm>
+
 #include "roo_windows/config.h"
 #include "roo_windows/core/dimensions.h"
 #include "roo_windows/core/main_window.h"
@@ -43,12 +45,16 @@ class CircularBuffer {
         start_(other.start_),
         count_(other.count_) {}
 
+  /// Grows storage while preserving live widget addresses, bindings, and order.
+  /// May allocate new rows and rotate the backing pointers; existing row
+  /// objects stay in place. Call outside painting and model binding callbacks.
   void ensure_capacity(size_t capacity,
                        std::function<std::unique_ptr<Widget>()>& prototype_fn) {
-    CHECK_EQ(count_, 0);
     if (capacity <= this->capacity()) return;
+    // Normalize the live interval before growing the ring's modulus. Widget
+    // addresses and bindings stay unchanged, including a focused live row.
+    std::rotate(elements_.begin(), elements_.begin() + start_, elements_.end());
     start_ = 0;
-    count_ = 0;
     size_t i = this->capacity();
     while (i < capacity) {
       elements_.push_back(prototype_fn());
@@ -383,7 +389,6 @@ class ListLayout : public Panel {
         element_count_, std::max<YDim>(0, viewport_height) / rowStride() + 2);
     size_t old_capacity = elements_.capacity();
     if (capacity > old_capacity) {
-      releaseRows();
       elements_.ensure_capacity(capacity, prototype_fn_);
     }
     for (size_t i = old_capacity; i < elements_.capacity(); ++i) {

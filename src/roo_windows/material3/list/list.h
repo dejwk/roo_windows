@@ -22,6 +22,13 @@ namespace roo_windows {
 class StringViewLabel;
 
 namespace material3 {
+class ListEntry;
+namespace internal {
+struct ListRowLayoutMetrics;
+ListRowLayoutMetrics ResolveListRowLayout(ListEntry& entry, WidthSpec width,
+                                          HeightSpec height, int8_t level);
+void LayoutListRow(ListEntry& entry, const ListRowLayoutMetrics& layout);
+}  // namespace internal
 
 /// Explicit state used by list selection operations and notifications.
 enum class SelectionState : uint8_t { kSelected, kDeselected };
@@ -414,6 +421,12 @@ class ListEntry : public Material3Container {
   void onLayout(bool changed, const Rect& rect) override;
 
  private:
+  friend internal::ListRowLayoutMetrics internal::ResolveListRowLayout(
+      ListEntry& entry, WidthSpec width, HeightSpec height, int8_t level);
+
+  friend void internal::LayoutListRow(
+      ListEntry& entry, const internal::ListRowLayoutMetrics& layout);
+
   enum class TextSlotMode : uint8_t {
     kNone = 0,
     kLabel = 1,

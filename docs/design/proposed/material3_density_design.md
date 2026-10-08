@@ -1,8 +1,8 @@
 # Material 3 density
 
-Status: partially implemented. Phases 1–2 (recursive layout refresh and internal
-button/field geometry) are implemented. Production geometry remains at level
-zero; list geometry and public density configuration remain proposed (phases 3–5).
+Status: partially implemented. Phases 1–3 (recursive layout refresh and internal
+button/field/list geometry) are implemented. Production geometry remains at level
+zero; public density configuration and acceptance remain proposed (phases 4–5).
 
 ## Objective
 
@@ -352,6 +352,17 @@ Validation: focused button/text-field geometry tests, tight constraints, floatin
 labels, RTL, multiline assistive text, icons, and unchanged zero-density goldens.
 
 ### Phase 3: Internal list geometry
+
+Implemented: internal level-parameterized band, measured-slot, and placement
+resolvers serve baseline and expressive rows. Appended bodies retain their gap
+and original bottom padding. Production passes zero. Compact text floors measure
+attached text slots at the final column width, while level zero retains its
+legacy descriptor budget. List section geometry continues to remeasure on every
+measurement/layout pass; no density cache or per-widget state was added.
+Virtual-pool growth preserves the ring's live bindings and focused surviving
+rows instead of releasing all rows. [Focused tests](../../../test/material3_list_density_geometry_test.cpp)
+cover all levels, tall/multiline/margined slots, body placement, mixed sections,
+wrapped pool growth, selection/focus, recycled rows, and pixel scroll clamping.
 
 Add level-parameterized row resolvers for baseline/expressive variants, custom
 slots, and appended bodies. Verify `List` recomputes retained section geometry;

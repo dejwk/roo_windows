@@ -185,6 +185,12 @@ device after a reorder.
 
 ### Geometry and separators
 
+The [Material 3 density proposal](../proposed/material3_density_design.md#geometry-rules)
+defines the pending band reduction and measured-content floors. Phase 3 provides
+internal row resolvers, keeps appended-body spacing unchanged, and retains live
+bindings when a smaller stride grows the pool. Production remains at level zero;
+public density configuration is deferred to phase 4.
+
 Each dynamic section uses a fixed row surface height `h`, resolved from its
 prototype at the parent's width. All its rows use that height. Distinct dynamic
 sections can use different prototypes/heights; static entries retain their
