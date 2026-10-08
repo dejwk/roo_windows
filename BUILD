@@ -1437,3 +1437,16 @@ cc_test(
     srcs = ["test/material3_dropdown_button_test.cpp"],
     deps = [":roo_windows", "@roo_testing//:arduino_gtest_main"],
 )
+
+cc_test(
+    name = "material3_dropdown_button_golden_test",
+    srcs = ["test/material3_dropdown_button_golden_test.cpp"],
+    data = glob(["test/goldens/material3_dropdown_button/*.ppm"], allow_empty = True),
+    deps = [":roo_windows", ":test_golden_utils", "@roo_testing//:arduino_gtest_main"],
+)
+
+cc_test(
+    name = "material3_dropdown_button_resource_test",
+    srcs = ["test/material3_dropdown_button_resource_test.cpp"],
+    deps = [":roo_windows", "@roo_testing//:arduino_gtest_main"],
+)

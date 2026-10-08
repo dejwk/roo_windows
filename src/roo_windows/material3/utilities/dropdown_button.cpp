@@ -7,6 +7,7 @@
 
 #include "roo_display/ui/alignment.h"
 #include "roo_display/ui/text_label.h"
+#include "roo_display/ui/tile.h"
 #include "roo_icons/filled/18/navigation.h"
 #include "roo_icons/filled/24/navigation.h"
 #include "roo_icons/filled/36/navigation.h"
@@ -23,10 +24,10 @@ namespace roo_windows::material3 {
 namespace {
 
 const MonoIcon& Chevron(ButtonSize size) {
-  static const MonoIcon extra_small = ic_filled_18_navigation_arrow_drop_down();
-  static const MonoIcon standard = ic_filled_24_navigation_arrow_drop_down();
-  static const MonoIcon large = ic_filled_36_navigation_arrow_drop_down();
-  static const MonoIcon extra_large = ic_filled_48_navigation_arrow_drop_down();
+  static const MonoIcon extra_small = ic_filled_18_navigation_expand_more();
+  static const MonoIcon standard = ic_filled_24_navigation_expand_more();
+  static const MonoIcon large = ic_filled_36_navigation_expand_more();
+  static const MonoIcon extra_large = ic_filled_48_navigation_expand_more();
   switch (size) {
     case ButtonSize::kExtraSmall:
       return extra_small;
@@ -326,7 +327,28 @@ void DropdownButton::paint(PaintContext& ctx) const {
   int top = std::min<int>(area.height(), padding.top());
   int bottom = std::max(top, area.height() - padding.bottom());
   Rect content(left, top, right - 1, bottom - 1);
-  if (content.empty()) return;
+  if (content.empty()) {
+    ctx.clearRect(area);
+    return;
+  }
+  // Every part of the surface is settled once. The text/icon tiles own their
+  // slots; these disjoint strips cover padding and the inter-slot gap.
+  if (content.yMin() > area.yMin()) {
+    ctx.clearRect(
+        Rect(area.xMin(), area.yMin(), area.xMax(), content.yMin() - 1));
+  }
+  if (content.yMax() < area.yMax()) {
+    ctx.clearRect(
+        Rect(area.xMin(), content.yMax() + 1, area.xMax(), area.yMax()));
+  }
+  if (content.xMin() > area.xMin()) {
+    ctx.clearRect(
+        Rect(area.xMin(), content.yMin(), content.xMin() - 1, content.yMax()));
+  }
+  if (content.xMax() < area.xMax()) {
+    ctx.clearRect(
+        Rect(content.xMax() + 1, content.yMin(), area.xMax(), content.yMax()));
+  }
   Dimensions icon = iconSlot();
   int icon_left =
       std::max<int>(content.xMin(), content.xMax() - icon.width() + 1);
@@ -336,6 +358,10 @@ void DropdownButton::paint(PaintContext& ctx) const {
                 : 0;
   int text_right = std::max<int>(content.xMin() - 1, icon_left - gap - 1);
   Rect text_rect(content.xMin(), content.yMin(), text_right, content.yMax());
+  if (text_right + 1 < icon_left) {
+    ctx.clearRect(
+        Rect(text_right + 1, content.yMin(), icon_left - 1, content.yMax()));
+  }
   Color color =
       internal::ResolveButtonAppearance(theme(), variant(), isEnabled())
           .content;
@@ -344,19 +370,26 @@ void DropdownButton::paint(PaintContext& ctx) const {
     roo_display::StringViewLabel text(selectedText(), style.font(), color,
                                       style.fontOptions());
     PaintContext part = ctx.clipped(text_rect);
-    part.setBgcolor(effectiveBackground());
+    part.setBgcolor(ctx.bgcolor());
     int origin = TextWidthAndOrigin(selectedText()).second;
-    part.drawTiled(text, text_rect,
-                   roo_display::kLeft.shiftBy(origin) | roo_display::kMiddle);
+    roo_display::Tile tile(
+        &text, text_rect.asBox(),
+        roo_display::kLeft.shiftBy(origin) | roo_display::kMiddle,
+        ctx.bgcolor());
+    part.drawObject(tile);
     ctx.addExclusion(text_rect);
+  } else if (!text_rect.empty()) {
+    ctx.clearRect(text_rect);
   }
   if (!icon_rect.empty()) {
     MonoIcon icon = Chevron(size());
     icon.color_mode().setColor(color);
     PaintContext part = ctx.clipped(icon_rect);
-    part.setBgcolor(effectiveBackground());
-    part.drawTiled(icon, icon_rect,
-                   roo_display::kCenter | roo_display::kMiddle);
+    part.setBgcolor(ctx.bgcolor());
+    roo_display::Tile tile(&icon, icon_rect.asBox(),
+                           roo_display::kCenter | roo_display::kMiddle,
+                           ctx.bgcolor());
+    part.drawObject(tile);
     ctx.addExclusion(icon_rect);
   }
 }
