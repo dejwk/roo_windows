@@ -103,6 +103,117 @@ class RecordingDevice : public roo_display::OffscreenDevice<Argb8888> {
   int16_t y_ = 0;
 };
 
+// Verifies tight bounds preserve disconnected visible pieces and recognize
+// adjacent exclusions whose union covers a strip or the complete rectangle.
+TEST(ExclusionBounds, RectangularUnions) {
+  const Box bounds(0, 0, 19, 19);
+  const Box rectangles[] = {Box(0, 0, 9, 7), Box(10, 0, 19, 7),
+                            Box(0, 8, 3, 19), Box(16, 8, 19, 19),
+                            Box(4, 8, 15, 19)};
+  ExclusionUnion exclusions(rectangles, rectangles + 1);
+  EXPECT_EQ(exclusions.visibleBounds(bounds), bounds);
+  exclusions.reset(rectangles, rectangles + 2);
+  EXPECT_EQ(exclusions.visibleBounds(bounds), Box(0, 8, 19, 19));
+  exclusions.reset(rectangles, rectangles + 4);
+  EXPECT_EQ(exclusions.visibleBounds(bounds), Box(4, 8, 15, 19));
+  exclusions.reset(rectangles, rectangles + 5);
+  EXPECT_TRUE(exclusions.visibleBounds(bounds).empty());
+  const Box hole(4, 4, 15, 15);
+  exclusions.reset(&hole, &hole + 1);
+  EXPECT_EQ(exclusions.visibleBounds(bounds), bounds);
+}
+
+// Verifies retained rounded masks and ordinary rectangles produce exact visible
+// bounds. The reference enumerates independently calculated shape coverage;
+// the implementation skips rows and horizontal runs instead.
+TEST(ExclusionBounds, MaskedUnionsMatchCoverage) {
+  const Box bounds(0, 0, 31, 23);
+  const BorderStyle style(8, 0);
+  RoundedClip clip;
+  clip.reset(&clip, bounds, style);
+  for (int offset = 0; offset < 12; ++offset) {
+    const Box rectangles[] = {Box(0, 0, 15, offset), Box(16, 0, 31, offset + 1),
+                              Box(0, 24 - offset, 31, 23)};
+    const MaskedExclusion masked{Box(offset, 0, 31, 23), &clip};
+    ExclusionUnion exclusions(rectangles, rectangles + 3);
+    exclusions.reset(rectangles, rectangles + 3, &masked, &masked + 1);
+    for (int inset = 0; inset < 10; ++inset) {
+      const Box query(inset, inset, 31 - inset, 23 - inset);
+      Box expected(0, 0, -1, -1);
+      for (int y = query.yMin(); y <= query.yMax(); ++y) {
+        for (int x = query.xMin(); x <= query.xMax(); ++x) {
+          bool covered = false;
+          for (const Box& rectangle : rectangles) {
+            covered = covered || rectangle.contains(x, y);
+          }
+          covered = covered || (masked.bounds.contains(x, y) &&
+                                internal::RoundedFillCoverage(
+                                    bounds, style.corner_radii(),
+                                    style.outline_width(), x, y) == 255);
+          if (covered) continue;
+          const Box pixel(x, y, x, y);
+          expected = expected.empty() ? pixel : Box::Extent(expected, pixel);
+        }
+      }
+      EXPECT_EQ(exclusions.visibleBounds(query), expected)
+          << "offset=" << offset << " inset=" << inset;
+    }
+  }
+}
+
+// Verifies fragmented coverage cannot consume unbounded early-query work or
+// discard visible pixels when the span budget runs out.
+TEST(ExclusionBounds, FragmentationKeepsUnprovenPixels) {
+  std::array<Box, 256> rectangles;
+  for (int y = 0; y < 256; ++y) rectangles[y] = Box(0, y, 9, y);
+  ExclusionUnion exclusions(rectangles.data(),
+                            rectangles.data() + rectangles.size());
+  const Box query(0, 0, 191, 255);
+  const Box result = exclusions.visibleBounds(query);
+  EXPECT_TRUE(query.contains(result));
+  EXPECT_TRUE(result.contains(Box(10, 0, 191, 255)));
+}
+
+// Verifies span cursors progress through inclusive signed-coordinate limits
+// without 16-bit wrap or treating a 65,536-pixel run as empty.
+TEST(ExclusionBounds, SignedCoordinateLimits) {
+  const Box query(-32768, -32768, 32767, 32767);
+  const Box rectangles[] = {Box(-32768, -32768, -1, -32760),
+                            Box(0, -32768, 32767, -32760)};
+  ExclusionUnion exclusions(rectangles, rectangles + 2);
+  EXPECT_EQ(exclusions.visibleBounds(query), Box(-32768, -32759, 32767, 32767));
+  const Box all(-32768, -32768, 32767, 32767);
+  exclusions.reset(&all, &all + 1);
+  EXPECT_TRUE(exclusions.visibleBounds(query).empty());
+}
+
+// Verifies a prepared exclusion subset remains correct through shrinking and
+// expanding clips and new foreground exclusions.
+TEST(ExclusionBounds, PreparedOutputTracksBoundsAndMutations) {
+  roo::byte pixels[kWidth * kHeight * 4] = {};
+  RecordingDevice device(pixels);
+  internal::ClipperState state;
+  internal::ClipperOutput out(state, device);
+  const Box bounds(0, 0, 19, 19);
+  out.addExclusion(Box(0, 0, 9, 7));
+  out.addExclusion(Box(10, 0, 19, 7));
+  EXPECT_EQ(out.prepareClip(bounds), Box(0, 8, 19, 19));
+  out.setBounds(Box(0, 8, 19, 19));
+  out.setAddress(0, 8, 19, 19, BlendingMode::kSource);
+  out.fill(kPaint, 20 * 12);
+  out.addExclusion(Box(0, 8, 19, 15));
+  EXPECT_EQ(out.prepareClip(bounds), Box(0, 16, 19, 19));
+  // Expanding the prepared bounds must reintroduce the first two exclusions.
+  out.setBounds(bounds);
+  out.setAddress(0, 0, 19, 19, BlendingMode::kSource);
+  out.fill(kPaint, 20 * 20);
+  for (int y = 0; y < 20; ++y) {
+    for (int x = 0; x < 20; ++x) {
+      EXPECT_EQ(device.writes[y * kWidth + x], y < 8 ? 0 : y < 16 ? 1 : 2);
+    }
+  }
+}
+
 // Computes exclusions from the decoration coverage oracle, without span tables.
 bool Excluded(const std::vector<Box>& rectangles,
               const std::vector<MaskedExclusion>& masks, int16_t x, int16_t y,

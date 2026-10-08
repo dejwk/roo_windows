@@ -421,5 +421,125 @@ TEST(RoundedClipResources, BoundedExclusionFallbackDoesNotAllocate) {
   EXPECT_EQ(allocated_bytes, 0u);
 }
 
+constexpr int kStressWidth = 192;
+constexpr int kStressHeight = 128;
+constexpr int kStressMaxDepth = 8;
+constexpr int kStressMaxExclusions = 256;
+
+using StressDevice = roo_display::OffscreenDevice<roo_display::Argb8888>;
+
+// Exercises every P8 radius/depth/count tuple using retained caller storage.
+void RunStressMatrix(
+    StressDevice& device,
+    std::array<internal::RoundedClip, kStressMaxDepth>& clips,
+    std::array<roo_display::Box, kStressMaxExclusions>& rectangles,
+    std::array<internal::MaskedExclusion, kStressMaxExclusions>& masks) {
+  const int radii[] = {0, 8, 16, 32, 64};
+  const int depths[] = {1, 4, 8};
+  const int exclusion_counts[] = {1, 8, 64, 256};
+  Color color(0xFF123456);
+
+  for (int radius : radii) {
+    for (int depth : depths) {
+      for (int i = 0; i < depth; ++i) {
+        clips[i].reset(
+            &clips[i],
+            roo_display::Box(0, 0, kStressWidth - 1, kStressHeight - 1),
+            BorderStyle(radius, 0));
+        clips[i].parent = i == 0 ? nullptr : &clips[i - 1];
+      }
+      for (int exclusion_count : exclusion_counts) {
+        const int rectangle_count = exclusion_count / 2;
+        const int masked_count = exclusion_count - rectangle_count;
+        for (int i = 0; i < rectangle_count; ++i) {
+          const int16_t x = static_cast<int16_t>(
+              (static_cast<int32_t>(i) * (kStressWidth - 1)) /
+              std::max(1, rectangle_count - 1));
+          rectangles[i] = roo_display::Box(x, 0, x, kStressHeight - 1);
+        }
+        for (int i = 0; i < masked_count; ++i) {
+          const int16_t x = static_cast<int16_t>(
+              (static_cast<int32_t>(i) * (kStressWidth - 1)) /
+              std::max(1, masked_count - 1));
+          masks[i] = {roo_display::Box(x, 0, x, kStressHeight - 1),
+                      &clips[depth - 1]};
+        }
+        internal::ExclusionUnion exclusions(
+            rectangles.data(), rectangles.data() + rectangle_count);
+        exclusions.reset(rectangles.data(), rectangles.data() + rectangle_count,
+                         masks.data(), masks.data() + masked_count);
+        internal::ExclusionFilter filter(device, &exclusions);
+        int16_t x0 = 0;
+        int16_t y0 = 0;
+        int16_t x1 = kStressWidth - 1;
+        int16_t y1 = kStressHeight - 1;
+        filter.fillRects(roo_display::BlendingMode::kSource, color, &x0, &y0,
+                         &x1, &y1, 1);
+      }
+    }
+  }
+}
+
+// Verifies the P8 radius, nesting, and exclusion-count matrix retains all
+// geometry after warm-up and performs no allocation in the filtered draw path.
+TEST(RoundedClipResources, WarmedStressMatrixDoesNotAllocate) {
+  std::array<roo::byte, kStressWidth * kStressHeight * 4> pixels{};
+  StressDevice device(kStressWidth, kStressHeight, pixels.data(),
+                      roo_display::Argb8888());
+  std::array<internal::RoundedClip, kStressMaxDepth> clips;
+  std::array<roo_display::Box, kStressMaxExclusions> rectangles;
+  std::array<internal::MaskedExclusion, kStressMaxExclusions> masks;
+
+  RunStressMatrix(device, clips, rectangles, masks);
+  allocations = 0;
+  allocated_bytes = 0;
+  timespec start{};
+  timespec end{};
+  clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
+  tracking = true;
+  RunStressMatrix(device, clips, rectangles, masks);
+  tracking = false;
+  clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
+
+  const double cpu_ms =
+      (end.tv_sec - start.tv_sec) * 1e3 + (end.tv_nsec - start.tv_nsec) / 1e6;
+  std::printf(
+      "p8_stress_matrix radii=5 depths=3 exclusion_counts=4 "
+      "draws=60 cpu_ms=%.2f new_calls=%zu requested_bytes=%zu\n",
+      cpu_ms, allocations, allocated_bytes);
+  EXPECT_EQ(allocations, 0u);
+  EXPECT_EQ(allocated_bytes, 0u);
+}
+
+// Verifies query results are independent of exclusion order and characterizes
+// the cost of finding a large settled rectangle among small foreground pieces.
+TEST(RoundedClipResources, CharacterizeExclusionQueryOrder) {
+  using roo_display::Box;
+  std::array<Box, 256> rectangles;
+  for (size_t i = 0; i < rectangles.size(); ++i) {
+    rectangles[i] = Box(i % 32, i / 32, i % 32, i / 32);
+  }
+  rectangles.back() = Box(0, 0, 191, 127);
+  for (int order = 0; order < 2; ++order) {
+    internal::ExclusionUnion exclusions(rectangles.data(),
+                                        rectangles.data() + rectangles.size());
+    timespec start{};
+    timespec end{};
+    int hidden = 0;
+    clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
+    for (int i = 0; i < 20000; ++i) {
+      hidden += exclusions.visibleBounds(Box(8 + i % 2, 8, 183, 119)).empty();
+    }
+    clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
+    EXPECT_EQ(hidden, 20000);
+    const double ns =
+        ((end.tv_sec - start.tv_sec) * 1e9 + (end.tv_nsec - start.tv_nsec)) /
+        20000;
+    std::printf("exclusion_order large_at=%s ns_per_query=%.2f\n",
+                order == 0 ? "end" : "begin", ns);
+    std::reverse(rectangles.begin(), rectangles.end());
+  }
+}
+
 }  // namespace
 }  // namespace roo_windows

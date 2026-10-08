@@ -203,6 +203,13 @@ class ExclusionUnion {
     return last;
   }
 
+  /// Bounds pixels still needing paint, including combined sibling coverage.
+  /// Returns tight bounds when the query completes within 128 horizontal runs;
+  /// otherwise returns @p bounds conservatively. Uses constant-span row bands,
+  /// fixed scratch, and no pixel buffer. Empty proves complete coverage;
+  /// interior holes remain for the exact output filter.
+  Box visibleBounds(const Box& bounds) const;
+
   /// Conservatively detects overlap using exclusion bounds, without row scans.
   inline bool intersects(const Box& rect) const {
     for (const Box* box = begin_; box != end_; ++box) {
@@ -216,11 +223,14 @@ class ExclusionUnion {
   /// to contain `rect`, since the union can consist of adjacent rectangles that
   /// cover `rect` but none of them individually contain it.
   inline bool contains(const Box& rect) const {
-    for (const Box* box = begin_; box != end_; ++box) {
-      if (box->contains(rect)) return true;
+    // Enclosing widgets and blits commonly append a large settled rectangle
+    // after smaller foreground pieces. Try those recent proofs first. This
+    // changes only containment lookup, not rectangle subtraction order.
+    for (const Box* box = end_; box != begin_;) {
+      if ((--box)->contains(rect)) return true;
     }
-    for (const MaskedExclusion* e = masked_begin_; e != masked_end_; ++e) {
-      if (e->contains(rect)) return true;
+    for (const MaskedExclusion* e = masked_end_; e != masked_begin_;) {
+      if ((--e)->contains(rect)) return true;
     }
     return false;
   }

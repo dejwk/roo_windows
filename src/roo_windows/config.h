@@ -16,6 +16,19 @@
 #error "ROO_WINDOWS_ENABLE_BLIT_CACHE must be 0 or 1"
 #endif
 
+/// Rejects framebuffer copies smaller than this device-specific pixel count.
+///
+/// Copy cost depends on framebuffer memory and the content that repaint would
+/// replace, so the portable default accepts every proven rectangle. Set this
+/// globally from target measurements when small copies cost more than repaint.
+#ifndef ROO_WINDOWS_MIN_BLIT_COPY_PIXELS
+#define ROO_WINDOWS_MIN_BLIT_COPY_PIXELS 0
+#endif
+
+#if ROO_WINDOWS_MIN_BLIT_COPY_PIXELS < 0
+#error "ROO_WINDOWS_MIN_BLIT_COPY_PIXELS must not be negative"
+#endif
+
 /// Select UI language (defaults to `ROO_LANG`, which defaults to English).
 /// Example override:
 /// `#define ROO_WINDOWS_LANG ROO_LANG_pl`

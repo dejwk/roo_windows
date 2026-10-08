@@ -139,6 +139,7 @@ class ClipperOutput : public roo_display::DisplayOutput {
         overlays_(state.overlays_),
         overlay_specs_(state.overlay_specs_),
         valid_(false),
+        exclusions_valid_(false),
         overlay_stack_(state.overlay_stack_),
         overlay_filter_(out, &overlay_stack_),
         exclusion_union_(nullptr, nullptr),
@@ -164,12 +165,14 @@ class ClipperOutput : public roo_display::DisplayOutput {
     }
   }
 
-  /// Narrows subsequent sync work to overlays and exclusions intersecting
-  /// `bounds`.
+  /// Limits preparation to descriptors intersecting @p bounds.
+  /// Changed bounds invalidate prepared inputs; output rebuilds overlays
+  /// lazily.
   void setBounds(const roo_display::Box& bounds) {
     if (bounds == bounds_) return;
     bounds_ = bounds;
     valid_ = false;
+    exclusions_valid_ = false;
   }
 
   /// Records a device-space exclusion rectangle.
@@ -244,6 +247,14 @@ class ClipperOutput : public roo_display::DisplayOutput {
     static const std::vector<MaskedExclusion> empty;
     return state_.rounded_ == nullptr ? empty : state_.rounded_->exclusions;
   }
+
+  /// Trims settled edge strips before widgets generate their content.
+  /// Uses the same prepared exclusion union as output, including foreground
+  /// siblings and framebuffer copies. An empty result proves full coverage;
+  /// interior holes and unproven trims remain handled by the output filter.
+  /// Only exclusions are prepared here; overlays and effects stay lazy.
+  /// The caller must adopt the returned device-space clip before drawing.
+  roo_display::Box prepareClip(roo_display::Box requested);
 
   /// Retains one record for @p owner_key without activating its mask.
   /// Each owner prepares exactly once per synchronous paint. Preparation is
@@ -400,40 +411,19 @@ class ClipperOutput : public roo_display::DisplayOutput {
     return kInertOverlaySpec;
   }
 
-  /// Rebuilds bounded exclusions and overlay inputs after retained state
-  /// changes.
+  /// Prepares opaque coverage once for a given clip and exclusion list.
+  /// Clip queries and output share the arrays. Overlay/effect changes do not
+  /// invalidate them; changed bounds or new exclusions do.
+  void prepareExclusions();
+
+  /// Composes deferred overlays only when the first output operation needs
+  /// them.
   void sync() {
     if (valid_) return;
-    bounded_exclusions_.clear();
-    for (const auto& e : exclusions_) {
-      if (e.intersects(bounds_)) {
-        bounded_exclusions_.push_back(e);
-      }
-    }
-    const roo_display::Box* exclusion_begin =
-        bounded_exclusions_.empty() ? nullptr : &bounded_exclusions_.front();
-    const roo_display::Box* exclusion_end = exclusion_begin;
-    if (exclusion_end != nullptr) {
-      exclusion_end += bounded_exclusions_.size();
-    }
-    // ExclusionUnion borrows contiguous arrays until the next rebuild. Copy
-    // only masked descriptors intersecting the current output bounds so the
-    // subtraction walk does not inspect unrelated rounded regions.
-    const MaskedExclusion* masked_begin = nullptr;
-    const MaskedExclusion* masked_end = nullptr;
-    if (state_.rounded_ != nullptr) {
-      auto& bounded = state_.rounded_->bounded_exclusions;
-      bounded.clear();
-      for (const MaskedExclusion& e : state_.rounded_->exclusions) {
-        if (e.bounds.intersects(bounds_)) bounded.push_back(e);
-      }
-      if (!bounded.empty()) {
-        masked_begin = bounded.data();
-        masked_end = masked_begin + bounded.size();
-      }
-    }
-    exclusion_union_.reset(exclusion_begin, exclusion_end, masked_begin,
-                           masked_end);
+    prepareExclusions();
+    const bool has_exclusions = !bounded_exclusions_.empty() ||
+                                (state_.rounded_ != nullptr &&
+                                 !state_.rounded_->bounded_exclusions.empty());
 
     // Rebuild active overlays directly into a reusable RasterizableStack,
     // preserving clipper's "earlier overlays stay above later overlays"
@@ -475,7 +465,7 @@ class ClipperOutput : public roo_display::DisplayOutput {
 
     if (!has_overlays) {
       overlay_stack_.setExtents(roo_display::Box(0, 0, -1, -1));
-      if (bounded_exclusions_.empty() && masked_begin == masked_end) {
+      if (!has_exclusions) {
         output_ = &orig_output_;
       } else {
         exclusion_filter_.setOutput(orig_output_);
@@ -483,7 +473,7 @@ class ClipperOutput : public roo_display::DisplayOutput {
       }
     } else {
       overlay_stack_.setExtents(overlay_extents);
-      if (bounded_exclusions_.empty() && masked_begin == masked_end) {
+      if (!has_exclusions) {
         output_ = &overlay_filter_;
       } else {
         exclusion_filter_.setOutput(overlay_filter_);
@@ -504,7 +494,11 @@ class ClipperOutput : public roo_display::DisplayOutput {
   size_t& shape_overlay_count_;
   std::vector<ClippedOverlay>& overlays_;
   std::deque<internal::OverlaySpecStackEntry>& overlay_specs_;
+  // Output validity includes overlay composition and filter routing. Effects
+  // can invalidate it while leaving the prepared exclusions reusable.
   bool valid_;
+  // Occupies existing padding; no per-widget state is needed.
+  bool exclusions_valid_;
   // The raster stack borrows this effect stack until sync rebuilds its inputs.
   // Scope records live in the retained arena; the adapter is paint-local.
   PaintEffectStack effect_stack_;
@@ -651,6 +645,11 @@ class Clipper {
 
   /// Reports retained masked exclusions, including previously painted siblings.
   bool hasMaskedExclusions() const { return out_.hasMaskedExclusions(); }
+
+  /// Prepares exclusions and trims settled pixels from the content clip.
+  roo_display::Box prepareClip(roo_display::Box requested) {
+    return out_.prepareClip(requested);
+  }
 
   /// Returns masked exclusions in device coordinates, borrowing geometry
   /// valid through this paint.

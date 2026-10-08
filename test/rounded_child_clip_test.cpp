@@ -928,13 +928,14 @@ TEST_F(RoundedClipTest, SlowUnclippedChildCompletesBothGroups) {
 
   device_.reset();
   app_.refresh();
+  // The higher foreground settles every pixel of the lower foreground.
   EXPECT_EQ(foreground_ptr->paint_count, 1);
-  EXPECT_EQ(lower_foreground_ptr->paint_count, 1);
+  EXPECT_EQ(lower_foreground_ptr->paint_count, 0);
   EXPECT_EQ(clipped_ptr->paint_count, 1);
   foreground_ptr->delay_ms = 0;
   app_.refresh();
   EXPECT_EQ(foreground_ptr->paint_count, 1);
-  EXPECT_EQ(lower_foreground_ptr->paint_count, 1);
+  EXPECT_EQ(lower_foreground_ptr->paint_count, 0);
   EXPECT_EQ(clipped_ptr->paint_count, 1);
   EXPECT_EQ(pixel(32, 28), kBlue);
   expectSingleWrite();
@@ -1077,7 +1078,8 @@ TEST_F(RoundedClipTest, NonRoundedContainerStillGroupsChildren) {
   device_.reset();
   app_.refresh();
   EXPECT_EQ(pixel(32, 28), kBlue);
-  EXPECT_EQ(lower_ptr->paint_count, 2);
+  // The lower foreground paints for the first time when the higher one hides.
+  EXPECT_EQ(lower_ptr->paint_count, 1);
   expectSingleWrite();
 }
 

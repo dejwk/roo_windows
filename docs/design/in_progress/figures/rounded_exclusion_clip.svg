@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="260" viewBox="0 0 680 260">
+<rect width="680" height="260" fill="white"/>
+<g font-family="sans-serif" font-size="14" fill="#263238">
+<text x="24" y="25">Original descendant clip</text>
+<rect x="24" y="45" width="240" height="160" fill="#eef3f7" stroke="#263238"/>
+<rect x="24" y="45" width="120" height="64" fill="#82b1ff" stroke="#263238"/>
+<rect x="144" y="45" width="120" height="64" fill="#b39ddb" stroke="#263238"/>
+<text x="44" y="83">Sibling A</text><text x="164" y="83">Sibling B</text>
+<text x="55" y="163">Pixels still needing paint</text>
+<path d="M285 126 H356 M346 118 L356 126 L346 134" fill="none" stroke="#263238" stroke-width="2"/>
+<text x="380" y="25">Clip after exclusion preparation</text>
+<rect x="380" y="45" width="240" height="160" fill="white" stroke="#89969c" stroke-dasharray="5 4"/>
+<rect x="380" y="109" width="240" height="96" fill="#eef3f7" stroke="#263238" stroke-width="2"/>
+<text x="419" y="163">Reduced content clip</text>
+<text x="24" y="240">One clip rectangle; sibling coverage is combined before drawing starts.</text>
+</g></svg>

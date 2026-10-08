@@ -80,6 +80,15 @@ capability. A display without that capability repaints normally. The explicit
 `SimpleScrollablePanel` and `ScrollableBlitPanel` types remain available when a
 component needs a fixed policy.
 
+`ROO_WINDOWS_MIN_BLIT_COPY_PIXELS` sets a device-wide minimum copy area. Its
+portable default is zero because the relative cost of framebuffer copying and
+repainting depends on the display memory and the content. Set it from target
+measurements alongside `ROO_WINDOWS_ENABLE_BLIT_CACHE`. A rejected plan follows
+the ordinary repaint path and does not reserve its destination as settled
+output. On the measured Makerfabs ESP32-S3 1024x600 target, 4,592-pixel copies
+were slower than repaint, while 9,204- and 20,020-pixel copies were faster; that
+application therefore uses 8,192 pixels.
+
 ## Memory and allocation audit
 
 The committed `material3_menu_size_probe` records named `sizeof` symbols. An

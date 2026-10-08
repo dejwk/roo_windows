@@ -97,7 +97,7 @@ motion pauses. It does not restore paint interruption.
 | Design | Dependency status |
 | --- | --- |
 | [Selective accelerated redraw](in_progress/selective_accelerated_redraw_design.md) | P1 advisory budget and query are implemented. Background deferral with temporary composition lag (P2a), opt-in scrolling, guaranteed cleanup, and resource acceptance remain under development. |
-| [Sparse rounded child clipping](in_progress/rounded_child_clipping_design.md) | Prototype stages I1–I9, synchronous integration P0, bounded subtraction P1, owner effects P4, interior-copy planning P5, and copy execution P6 are implemented. P7 menu adoption is implemented locally with a global opt-in cache policy. P2 repair helpers are retired and P3 is cancelled. P8 covers production resource acceptance. |
+| [Sparse rounded child clipping](in_progress/rounded_child_clipping_design.md) | P0, P1, and P4–P7 are complete. P8 generalized exclusion preparation is implemented and measured; uncovered-scene performance and the released `roo_display` dependency check remain open. P2 repair helpers are retired and P3 is cancelled. |
 | Display runtime and cross-application input | Phases 1–6 are implemented. Explicit modal coverage and the final migration/cost audit remain proposed. |
 | Text system | `TextBlock` wrapping, justification, max-lines, ellipsis, caching, and golden coverage are implemented; shared rich paragraph layout and `RichTextBlock` remain. |
 | Transient presentation pins | The shared layer-scoped host, slider/range-slider indicators, and keyboard press-highlighter adoption are implemented. Visual overflow prerequisites are in progress. |

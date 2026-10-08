@@ -260,6 +260,12 @@ class RoundedTestPanel : public Panel {
   BorderStyle getBorderStyle() const override { return BorderStyle(16, 0); }
 };
 
+class TestPanel : public Panel {
+ public:
+  using Panel::add;
+  using Panel::Panel;
+};
+
 class PaintInvalidatingBox : public ColorBoxWidget {
  public:
   using ColorBoxWidget::ColorBoxWidget;
@@ -279,6 +285,20 @@ class PaintInvalidatingBox : public ColorBoxWidget {
  private:
   mutable bool invalidate_during_paint_ = false;
   Rect paint_damage_{0, 0, -1, -1};
+};
+
+class PaintCountingBox : public ColorBoxWidget {
+ public:
+  using ColorBoxWidget::ColorBoxWidget;
+
+  void paint(PaintContext& ctx) const override {
+    ++paint_count;
+    last_clip = ctx.canvas().clip_box();
+    ColorBoxWidget::paint(ctx);
+  }
+
+  mutable int paint_count = 0;
+  mutable Box last_clip{0, 0, -1, -1};
 };
 
 void ExpectCopiedDestinationWasNotRepainted(
@@ -345,6 +365,87 @@ TEST_F(HorizontalPageHostRenderTest, RoundedOwnerCopiesSettledInteriorOnce) {
   owner_ptr->invalidateInterior();
   refresh();
   EXPECT_EQ(large_move_frame,
+            std::vector<roo::byte>(std::begin(raster_), std::end(raster_)));
+}
+
+// Verifies foreground siblings jointly narrow a later child's clip, suppress
+// fully hidden paint hooks, and reveal the correct pixels on a later refresh.
+TEST_F(HorizontalPageHostRenderTest, SettledSiblingsTrimLaterDescendants) {
+  auto panel = std::make_unique<TestPanel>(context());
+  auto background = std::make_unique<PaintCountingBox>(context(), color::Green,
+                                                       Dimensions(120, 60));
+  PaintCountingBox* background_ptr = background.get();
+  panel->add(std::move(background), Rect(0, 0, 119, 59));
+  auto hidden = std::make_unique<PaintCountingBox>(context(), color::Red,
+                                                   Dimensions(40, 10));
+  PaintCountingBox* hidden_ptr = hidden.get();
+  panel->add(std::move(hidden), Rect(20, 0, 59, 9));
+  auto left = std::make_unique<ColorBoxWidget>(context(), color::Blue,
+                                               Dimensions(60, 20));
+  Widget* left_ptr = left.get();
+  panel->add(std::move(left), Rect(0, 0, 59, 19));
+  panel->add(std::make_unique<ColorBoxWidget>(context(), color::Blue,
+                                              Dimensions(60, 20)),
+             Rect(60, 0, 119, 19));
+  app_.add(std::move(panel), Box(0, 0, 119, 59));
+  refresh();
+  EXPECT_EQ(background_ptr->last_clip, Box(0, 20, 119, 59));
+  EXPECT_EQ(hidden_ptr->paint_count, 0);
+  EXPECT_EQ(pixelAt(30, 5), color::Blue);
+
+  left_ptr->setVisibility(Visibility::kInvisible);
+  offscreen_.resetCounters();
+  refresh();
+  EXPECT_EQ(hidden_ptr->paint_count, 1);
+  EXPECT_EQ(pixelAt(30, 5), color::Red);
+  EXPECT_EQ(pixelAt(10, 5), QuantizeToArgb4444(color::Green));
+  EXPECT_EQ(pixelAt(90, 5), color::Blue);
+  const std::vector<roo::byte> revealed(std::begin(raster_), std::end(raster_));
+  app_.root().invalidateInterior();
+  refresh();
+  EXPECT_EQ(revealed,
+            std::vector<roo::byte>(std::begin(raster_), std::end(raster_)));
+}
+
+// Verifies a copied rectangle suppresses complete descendant paint work while
+// descendants touching exposed strips still paint and reconstruct those strips.
+TEST_F(HorizontalPageHostRenderTest,
+       CopiedInteriorSkipsOnlyFullySettledDescendants) {
+  auto owner = std::make_unique<RoundedTestPanel>(context());
+  auto cache = std::make_unique<BlitCacheContainer>(context());
+  BlitCacheContainer* moving = cache.get();
+  auto contents = std::make_unique<TestPanel>(context());
+  auto interior = std::make_unique<PaintCountingBox>(context(), color::Red,
+                                                     Dimensions(40, 16));
+  PaintCountingBox* interior_ptr = interior.get();
+  auto edge = std::make_unique<PaintCountingBox>(context(), color::Blue,
+                                                 Dimensions(80, 16));
+  PaintCountingBox* edge_ptr = edge.get();
+  contents->add(std::move(interior), Rect(40, 20, 79, 35));
+  contents->add(std::move(edge), Rect(20, 52, 99, 67));
+  cache->setChild(std::move(contents));
+  owner->add(std::move(cache), Rect(0, 0, 119, 83));
+  app_.add(std::move(owner), Box(0, 0, 119, 59));
+  refresh();
+  ASSERT_EQ(1, interior_ptr->paint_count);
+  ASSERT_EQ(1, edge_ptr->paint_count);
+
+  moving->moveTo(Rect(0, -8, 119, 75));
+  offscreen_.resetCounters();
+  refresh();
+
+  ASSERT_EQ(1u, offscreen_.blitCalls());
+  EXPECT_EQ(1, interior_ptr->paint_count);
+  EXPECT_EQ(2, edge_ptr->paint_count);
+  EXPECT_FALSE(edge_ptr->last_clip.empty());
+  EXPECT_FALSE(
+      edge_ptr->last_clip.intersects(offscreen_.lastBlitDestination()));
+  ExpectCopiedDestinationWasNotRepainted(offscreen_);
+  const std::vector<roo::byte> copied_frame(std::begin(raster_),
+                                            std::end(raster_));
+  app_.root().invalidateInterior();
+  refresh();
+  EXPECT_EQ(copied_frame,
             std::vector<roo::byte>(std::begin(raster_), std::end(raster_)));
 }
 

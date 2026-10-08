@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <limits>
 
+#include "roo_windows/config.h"
 #include "roo_windows/core/blit_plan.h"
 #include "roo_windows/core/canvas.h"
 #include "roo_windows/core/child_layout.h"
@@ -273,6 +274,13 @@ void BlitCacheContainer::paintWidgetContents(PaintContext& ctx) {
     plan = clipper.planBlitCopy(blit_safe_region_, panel_device,
                                 static_cast<int16_t>(dx),
                                 static_cast<int16_t>(dy));
+  }
+  if (!plan.empty() &&
+      plan.destination.area() < ROO_WINDOWS_MIN_BLIT_COPY_PIXELS) {
+    // The geometry is safe, but the target says repaint is cheaper at this
+    // size. Keep ordinary invalidation intact by dropping the plan before its
+    // destination becomes an exclusion.
+    plan = internal::BlitPlan();
   }
 
   // Publish the next source certificate before child traversal. Any content

@@ -7,6 +7,54 @@
 namespace roo_windows {
 namespace internal {
 
+roo_display::Box ClipperOutput::prepareClip(roo_display::Box requested) {
+  setBounds(requested);
+  prepareExclusions();
+  const roo_display::Box visible = exclusion_union_.visibleBounds(requested);
+  // The original prepared inputs also describe this subset. Adopting the
+  // trimmed clip here lets its first output reuse them without another scan.
+  // Overlays, if previously prepared, need the narrower bounds on next output.
+  if (visible != bounds_) valid_ = false;
+  bounds_ = visible;
+  return visible;
+}
+
+void ClipperOutput::prepareExclusions() {
+  if (exclusions_valid_) return;
+  bounded_exclusions_.clear();
+  for (const auto& e : exclusions_) {
+    if (e.intersects(bounds_)) {
+      bounded_exclusions_.push_back(e);
+    }
+  }
+  const roo_display::Box* exclusion_begin =
+      bounded_exclusions_.empty() ? nullptr : &bounded_exclusions_.front();
+  const roo_display::Box* exclusion_end = exclusion_begin;
+  if (exclusion_end != nullptr) {
+    exclusion_end += bounded_exclusions_.size();
+  }
+  // ExclusionUnion borrows contiguous arrays until the next rebuild. Copy
+  // only masked descriptors intersecting the current output bounds so the
+  // subtraction walk does not inspect unrelated rounded regions.
+  const MaskedExclusion* masked_begin = nullptr;
+  const MaskedExclusion* masked_end = nullptr;
+  if (state_.rounded_ != nullptr) {
+    auto& bounded = state_.rounded_->bounded_exclusions;
+    bounded.clear();
+    for (const MaskedExclusion& e : state_.rounded_->exclusions) {
+      if (e.bounds.intersects(bounds_)) bounded.push_back(e);
+    }
+    if (!bounded.empty()) {
+      masked_begin = bounded.data();
+      masked_end = masked_begin + bounded.size();
+    }
+  }
+  exclusion_union_.reset(exclusion_begin, exclusion_end, masked_begin,
+                         masked_end);
+
+  exclusions_valid_ = true;
+}
+
 RoundedPaintState& ClipperOutput::roundedArena() {
   // Keep rectangular-only paints free of rounded/effect arena storage. Once
   // needed, the arena remains in ClipperState so later paints reuse its slots.
@@ -226,6 +274,7 @@ void ClipperOutput::addRoundedExclusion(const roo_display::Box& exclusion) {
     overlays_.pop_back();
   }
   valid_ = false;
+  exclusions_valid_ = false;
 }
 
 void ClipperOutput::addRectExclusion(const roo_display::Box& exclusion) {
@@ -245,6 +294,7 @@ void ClipperOutput::addRectExclusion(const roo_display::Box& exclusion) {
     overlays_.pop_back();
   }
   valid_ = false;
+  exclusions_valid_ = false;
 }
 
 const roo_display::Rasterizable* ClipperOutput::maskRoundedOverlay(

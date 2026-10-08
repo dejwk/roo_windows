@@ -741,6 +741,20 @@ void Widget::paintWidget(const Canvas& canvas, Clipper& clipper) {
     markCleanDescending();
     if (!hasDecorationOverflow()) return;
   }
+  // Prepare the same exclusion state that output will need before asking the
+  // widget to generate pixels. Previously painted siblings and framebuffer
+  // copies can settle the complete clip or remove its outer strips.
+  if (!empty) {
+    const roo_display::Box trimmed_clip =
+        clipper.prepareClip(ctx.canvas().clip_box());
+    if (trimmed_clip.empty()) {
+      markCleanDescending();
+      if (!hasDecorationOverflow()) return;
+      empty = true;
+    } else {
+      ctx.setClipBox(trimmed_clip);
+    }
+  }
   clipper.pushOverlaySpec(*this, ctx.canvas());
   const OverlaySpec& overlay_spec = clipper.currentOverlaySpec();
   if (!empty) {
