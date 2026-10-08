@@ -2,7 +2,9 @@
 
 Status: partially implemented. Phases 1–4 (recursive refresh, component geometry,
 public density, and the runtime example) are implemented. Rendering and embedded
-resource acceptance remain proposed (phase 5).
+resource acceptance remain proposed (phase 5). Explicit list/row and menu
+overrides are accepted for implementation (phases 6–7); they are not yet
+implemented.
 
 ## Objective
 
@@ -57,8 +59,9 @@ and materialized rows. Repainting alone cannot update these geometries.
   change, including lists with recycled rows and detached content later attached.
 - Explicit parent constraints remain authoritative. Application-authored margins,
   padding, and fixed dimensions remain under application control.
-- The setting adds no per-widget storage or ancestor lookup and allocates nothing
-  during geometry resolution or painting.
+- Density resolution uses no ancestor lookup and allocates nothing during
+  geometry resolution or painting. Explicit choices add compact storage only
+  to participating list owners and their existing row context.
 - Component participation, touch behavior, ownership, and runtime update
   responsibilities are documented rather than inferred from input hardware.
 
@@ -67,7 +70,8 @@ and materialized rows. Repainting alone cannot update these geometries.
 **Density** is a one-byte enum with six named levels from 0 to -5.
 Zero selects existing geometry; more negative values remove eligible whitespace.
 One value lives in each application-owned `Material3Theme`. Geometry resolvers
-read it live through the existing theme pointer, with no widget copies.
+read it live through the existing theme pointer, with no widget copies for buttons and fields. Lists and menus additionally
+carry an optional override policy, described below.
 
 **Eligible dimensions** are explicitly listed component tokens. Their authored
 values decrease in dp, then pass through `Scaled()`. **Content floors** are
@@ -88,7 +92,7 @@ These operations schedule work rather than painting synchronously. The root
 selects the tree to refresh; it does not scope the shared density setting.
 No theme event registry or density-change listener is introduced.
 
-The shared value meets the uniformity and storage requirements; explicit token
+The shared value supplies application defaults; explicit token
 rules preserve content and default compatibility. The subtree operation meets
 the runtime requirement without forcing callers to know each component's caches.
 
@@ -149,13 +153,14 @@ uses a **32 px leading slot**, which dominates the 24 px text block:
 
 Eligibility is defined by component family, not by attachment context. Standard
 buttons and fields inside a dialog still follow the application setting. Dialog
-chrome, calendar grids, menu rows, navigation, tabs, switches, icon buttons,
+chrome, calendar grids, navigation, tabs, switches, icon buttons,
 progress indicators, badges, scaffold rulers, generic widgets, and Material 2
 components remain unchanged in this scope. Internally reused eligible controls
 also follow density, including date-picker numeric input. Full-screen text
 extraction currently uses Material 2 editor controls, whose geometry stays
 unchanged; the Material 3 source follows current density on return. No implicit
-density reset occurs at a transient host.
+density reset occurs at a transient host. Menu rows have their own explicit
+policy, defaulting to level zero as described below.
 
 This explicit distinction avoids an ancestor search or hidden per-widget mode.
 It differs from Angular's popup policy. Extending density to a new family requires
@@ -224,8 +229,9 @@ contract; its 27-byte size assertion remains valid.
 `Density` uses `int8_t` as its underlying type: one byte, alignment 1, no
 private state, vtable, or heap ownership. The existing documented four-byte-aligned 956-byte Material theme is
 expected to absorb this byte in trailing padding; verify actual host/target
-sizes rather than promise ABI stability. `Theme`, `Widget`, and concrete widget
-instance sizes remain unchanged. Adding a virtual method adds vtable entries,
+sizes rather than promise ABI stability. `Theme` and `Widget` instance sizes remain unchanged. Initial shared-density
+consumers had unchanged sizes; override participant deltas are accounted for
+in the explicit override contract. Adding a virtual method adds vtable entries,
 not a second per-instance vptr.
 
 Each geometry lookup adds a field load, signed addition, and minimum/maximum
@@ -240,6 +246,64 @@ screen has tens of widgets; large dynamic lists visit allocated rows, not all
 model items. Smaller strides can increase the existing row pool at layout time,
 so runtime switching is not guaranteed allocation-free. Steady-state measure
 resolution and paint retain their existing allocation contracts.
+
+### Explicit list and menu density overrides
+
+A compact device list can coexist with spacious action menus. `DensityOverride`
+is a one-byte policy containing either **inherit the application setting** or an
+explicit `Density`, including level zero. Inheritance is a distinct state; zero
+must remain available to pin a component to its original geometry. Invalid
+explicit enum casts assert in debug and become explicit level zero in release,
+never accidentally selecting inheritance.
+
+`List` defaults to inheritance. It stores one policy and supplies that policy in
+`ListEntryVisualContext` to static rows, dynamic prototypes, and recycled rows.
+Rows resolve inheritance live against their theme; the owner never snapshots the
+shared value. A standalone `ListEntry` also defaults to inheritance and exposes
+an override setter that updates its existing context. Once a row belongs to a
+list or menu, the owner supplies its policy; per-item exceptions are outside this
+scope. A row setter is intended for standalone rows, including those attached to
+generic containers. Embedded slot controls retain their own density behavior:
+the row policy compacts only row whitespace, not its descendant subtree.
+
+`MenuPolicy` defaults to **explicit level zero**. The same policy governs the
+root panel and every submenu; callers can explicitly select inheritance. Bare
+`MenuEntry` rows also default to explicit zero. This corrects a current mismatch:
+menus are documented as density-independent, but their `ListEntry` substrate
+currently reads shared density before imposing a fixed menu height minimum.
+Default menus under a compact shared theme will now retain level-zero geometry.
+
+Menu rows reuse the 56/72/88 dp list band and variant-specific vertical padding
+rules, preserving existing level-zero geometry. The authored menu minimum
+(48 dp baseline, 56 dp expressive) decreases by 4 dp per step with a 28 dp floor
+and enters the same band resolver, before content floors and parent constraints.
+The larger list band still dominates ordinary rows. Owner-painted trailing
+content contributes to the content floor: actual shortcut line height, icon and
+check/arrow token height, and the badge's 24 dp reserved lane height. Each has
+resolved vertical padding on both edges. Measurement and layout use the same
+resolver; there is no fixed-height post-measure clamp to defeat compaction.
+At zero, preserve legacy geometry, including legacy adornment placement.
+Panel padding, group gaps, separators, corner radii, width tokens, and icon/text
+metrics remain unchanged. The existing list figure illustrates the shared band
+and content-floor rule; menus additionally include the trailing lane in that floor.
+
+List/standalone-row setters and clear operations schedule recursive layout and
+repaint on the affected subtree, on the UI thread between frames. The list first
+propagates its policy, then requests recursive layout so detached prototype and
+pool caches also refresh. Newly bound rows receive current owner policy.
+Existing logical focus, selection, pixel scroll offset, and clamp rules apply.
+`Menu::setPolicy()` keeps its existing closed-menu-only contract; configuring
+an active menu is invalid. On the next admission, policy reaches the root and
+all subsequently constructed submenus. Shared-theme mutation still requires
+explicit refresh on every affected root, including open menus that inherit.
+
+Resolution is O(1): a policy test and the existing validated enum resolver, with
+no parent traversal, registry, revision counter, or hot-path allocation. Payload
+cost is one byte in `List`, one in `ListEntryVisualContext` (already stored in
+every row), and one in `MenuPolicy`. Alignment can increase instance sizes by
+more than one byte; measure host deltas and record them when completing phase 7.
+`Widget`, `Theme`, and `Material3Theme` gain no override storage. Family-wide
+settings and arbitrary subtree inheritance remain out of scope.
 
 ## Proposed API
 
@@ -270,6 +334,36 @@ and `Container`; `MainWindow` additionally registers display damage and schedule
 a frame. Applications use invalidation alongside the new layout request directly;
 no density-specific refresh function is added.
 No public arbitrary-dimension adjustment helper invites blanket shrinking.
+
+The override extension adds the following surface (illustrative declarations):
+
+```cpp
+class DensityOverride {
+ public:
+  constexpr DensityOverride();  // Inherit the application setting.
+  static constexpr DensityOverride Explicit(Density density);
+  constexpr bool isInherited() const;
+  constexpr Density resolve(Density application_density) const;
+ private:
+  Density density_;  // One byte; validated explicit levels or inheritance.
+};
+
+// List and standalone ListEntry:
+void setDensity(Density density);
+void clearDensityOverride();
+DensityOverride densityOverride() const;
+
+// Trailing fields in existing aggregate policy/context structs:
+// ListEntryVisualContext: DensityOverride density{};
+// MenuPolicy: DensityOverride density =
+//     DensityOverride::Explicit(Density::kDefault);
+
+list.setDensity(Density::kMinus3);
+list.clearDensityOverride();
+MenuPolicy menu_policy;
+menu_policy.density = DensityOverride::Explicit(Density::kMinus2);
+menu.setPolicy(menu_policy);  // While closed; includes subsequent submenus.
+```
 
 Application-owned storage setup and a settings callback:
 
@@ -435,10 +529,50 @@ physical touchscreen results separately from host acceptance.
 Commit: `Record Material density rendering and embedded resource acceptance`.
 
 Validation/exit criteria: all supported families obey their floors, level-zero
-legacy images pass, widget sizes are unchanged, shared density payload is one
+legacy images pass, base widget sizes are unchanged (override participants have documented deltas),
+shared density payload is one
 byte, and geometry/paint add no new allocations. Report actual flash delta and
 pool growth rather than inventing a zero-cost claim. Mark implemented only after
 these checks pass; unexpected widget growth or paint allocations block acceptance.
+
+### Phase 6: Explicit list and standalone-row overrides
+
+Add validated `DensityOverride`, list setters, and row-context propagation.
+Use one resolved policy for suggested minimums, preferred sizes, measurement,
+and layout. Refresh static/dynamic rows and detached geometry automatically.
+Extend the runtime density example with a list pinned to a chosen density and
+an interaction restoring application inheritance.
+
+Proposed commit message: `Material 3 density phase 6: add explicit list and row overrides`.
+
+Add `DensityOverride` and owner-supplied row policy to the density design's public
+API, with automatic subtree refresh and a runtime example.
+
+Validation: focused public tests for inheritance versus explicit zero, all six
+levels, invalid casts in debug/release, standalone rows, sibling isolation,
+mixed static/dynamic lists, prototype stride, pool recycling, selection/focus,
+and restoration to inheritance. Run existing density/list geometry suites and
+build the example. Format changed C++ with the repository configuration.
+
+### Phase 7: Explicit menu-chain overrides and completion status
+
+Add the trailing menu policy field, default independent menu rows to zero, and
+propagate policy to root/submenu rows. Integrate menu height tokens and trailing
+adornment content floors into the shared row resolver used for measure/layout.
+Demonstrate menu density in a maintained menu example. Record measured host
+instance-size deltas and final validation, then update this document's status.
+
+Proposed commit message: `Material 3 density phase 7: add explicit menu-chain overrides`.
+
+Extend the density design to menu chains with independent defaults, shared row
+geometry, trailing content floors, tests, and an example.
+
+Validation: all levels and both variants, default independence from shared density,
+explicit inheritance, submenu propagation, tall content and trailing adornments,
+closed-menu policy changes/reopening, exact parent constraints, and existing menu
+goldens. Run focused debug/release tests and supported zoom builds, build changed
+examples, and measure host size deltas. Embedded/raster acceptance from phase 5
+remains pending and must not be labeled completed by this extension.
 
 ## Testing Plan
 
@@ -476,12 +610,13 @@ Makes every element smaller and is already partly available through zoom. It
 changes readability, asset choice, and unrelated geometry. Eligible whitespace
 rules provide the compactness required here while retaining content metrics.
 
-#### Per-widget, component-family, or subtree overrides
+#### General subtree and component-family overrides
 
-Useful for mixed-density screens, but introduces precedence, storage, and
-inheritance machinery without an initial consumer requirement. A shared value
-has constant lookup with no ancestor search; future overrides require a separate
-proposal and compatibility analysis.
+Explicit list/menu owners solve the demonstrated mixed-density screen. General
+subtree inheritance adds contextual lookup and detached-row semantics; family-wide
+theme defaults add another precedence layer. Neither is required for these
+consumers. Keep the owner policy plus application fallback as the complete
+precedence rule.
 
 #### Preserve a large layout footprint around every compact control
 
@@ -503,7 +638,7 @@ stable and documented; popup chrome remains outside the initial scope.
 
 ## Future Work
 
-- Component-family overrides and scoped density for demonstrated mixed screens.
+- Component-family defaults and arbitrary scoped density for additional consumers.
 - Reviewed mappings for additional controls and navigation families.
 - A separate theme mutation/notification contract covering colors and geometry.
 - Input-mode-specific target policy and logical scroll-anchor preservation.
