@@ -27,10 +27,13 @@ struct ButtonContentMetrics {
 /// Returns the shared tokens for @p size.
 const ButtonGeometryTokens& ButtonGeometryTokensFor(ButtonSize size);
 
-/// Measures label/icon content without padding or density changes.
+/// Measures label/icon content without widget padding. Compact levels exclude
+/// symmetric transparent icon margins from vertical content while preserving
+/// its anchor alignment and horizontal slot. Zero retains the nominal slot.
 ButtonContentMetrics ResolveButtonContentMetrics(roo::string_view label,
                                                  const MonoIcon* icon,
-                                                 ButtonSize size);
+                                                 ButtonSize size,
+                                                 int8_t level = 0);
 
 /// Resolves symmetric padding for a valid signed density in [-5, 0].
 /// Level zero retains legacy integer rounding, including oversized content.

@@ -46,7 +46,7 @@ roo_windows::fake::FltkKeySource emulator_keys;
 #include "roo_display.h"
 #include "roo_display/driver/ili9341.h"
 #include "roo_display/driver/touch_xpt2046.h"
-#include "roo_icons/outlined/24/action.h"
+#include "roo_icons/outlined/action.h"
 #include "roo_scheduler.h"
 #include "roo_windows.h"
 
@@ -136,8 +136,8 @@ class CompactControls : public FlexLayout {
     // Keep this action's resting shape while retaining click feedback.
     backwash_.setShapeMorph(material3::ButtonShapeMorph::kDisabled);
     backwash_.setSmallButtonPadding(material3::SmallButtonPadding::kReduced);
-    prime_.setIcon(&ic_outlined_24_action_cached());
-    backwash_.setIcon(&ic_outlined_24_action_build());
+    prime_.setIcon(&SCALED_ROO_ICON(outlined, action_cached));
+    backwash_.setIcon(&SCALED_ROO_ICON(outlined, action_build));
 
     toolbar_.add(prime_);
     toolbar_.add(backwash_);

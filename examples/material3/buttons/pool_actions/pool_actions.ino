@@ -46,8 +46,8 @@ roo_windows::fake::FltkKeySource emulator_keys;
 #include "roo_display.h"
 #include "roo_display/driver/ili9341.h"
 #include "roo_display/driver/touch_xpt2046.h"
-#include "roo_icons/outlined/24/action.h"
-#include "roo_icons/outlined/24/av.h"
+#include "roo_icons/outlined/action.h"
+#include "roo_icons/outlined/av.h"
 #include "roo_scheduler.h"
 #include "roo_windows.h"
 
@@ -134,9 +134,9 @@ class PoolActions : public FlexLayout {
     actions_.setGap(Scaled(6));
     actions_.setAlignItems(AlignItems::kCenter);
 
-    heat_.setIcon(&ic_outlined_24_action_eco());
-    circulate_.setIcon(&ic_outlined_24_action_cached());
-    stop_.setIcon(&ic_outlined_24_av_stop());
+    heat_.setIcon(&SCALED_ROO_ICON(outlined, action_eco));
+    circulate_.setIcon(&SCALED_ROO_ICON(outlined, action_cached));
+    stop_.setIcon(&SCALED_ROO_ICON(outlined, av_stop));
 
     actions_.add(heat_);
     actions_.add(circulate_);

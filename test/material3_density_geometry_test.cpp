@@ -1,6 +1,7 @@
 #include <algorithm>
 
 #include "gtest/gtest.h"
+#include "roo_icons/filled/navigation.h"
 #include "roo_icons/outlined/48/action.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/material3/button/internal/button_geometry.h"
@@ -12,13 +13,13 @@ namespace roo_windows::material3::internal {
 namespace {
 
 #if ROO_WINDOWS_ZOOM >= 200
-constexpr int kButtonHeights[5][6] = {{64, 56, 56, 56, 56, 56},
-                                      {80, 72, 64, 56, 56, 56},
-                                      {112, 104, 96, 88, 80, 72},
-                                      {192, 184, 176, 168, 160, 152},
-                                      // Legacy level zero scales a byte height,
-                                      // narrowing 272 to 16 before padding.
-                                      {40, 264, 256, 248, 240, 232}};
+constexpr int kButtonHeights[5][6] = {
+    {64, 56, 56, 56, 56, 56},
+    {80, 72, 64, 56, 56, 56},
+    {112, 104, 96, 88, 80, 72},
+    {192, 184, 176, 168, 160, 152},
+    // Extra-large heights scale before narrowing.
+    {272, 264, 256, 248, 240, 232}};
 constexpr int kFieldHeights[2][6] = {{112, 104, 96, 96, 96, 96},
                                      {112, 104, 96, 88, 80, 72}};
 #elif ROO_WINDOWS_ZOOM >= 150
@@ -92,6 +93,62 @@ TEST_F(DensityGeometryTest, ButtonSizeAndDensityMatrix) {
     EXPECT_EQ(
         button.measure(WidthSpec::Exactly(10), HeightSpec::Exactly(5)).height(),
         5);
+  }
+}
+
+// Verifies scaled check artwork does not impose transparent canvas height on
+// compact buttons; nominal slot width/gap stay fixed and both ink edges fit.
+TEST_F(DensityGeometryTest, CompactIconUsesPaintedFootprint) {
+  Material3Theme material = DefaultTheme().material3Theme();
+  Theme themed{MakeFrameworkTheme(material), &material};
+  ApplicationContext themed_context(scheduler, themed,
+                                    DefaultKeyboardColorTheme());
+  const MonoIcon& icon = SCALED_ROO_ICON(filled, navigation_check);
+  Button plain(themed_context, "Save");
+  Button with_icon(themed_context, "Save");
+  with_icon.setIcon(&icon);
+  for (int level = 0; level >= -5; --level) {
+    material.density = static_cast<Density>(level);
+    ButtonContentMetrics metrics =
+        ResolveButtonContentMetrics("Save", &icon, ButtonSize::kSmall, level);
+    EXPECT_EQ(metrics.icon_slot_width, Scaled(24));
+    EXPECT_EQ(metrics.gap, Scaled(8));
+    if (level != 0) {
+      EXPECT_EQ(with_icon.getNaturalDimensions().height(),
+                plain.getNaturalDimensions().height());
+      int anchor_top = (with_icon.getNaturalDimensions().height() -
+                        icon.anchorExtents().height()) /
+                       2;
+      EXPECT_GE(
+          anchor_top + icon.extents().yMin() - icon.anchorExtents().yMin(),
+          Scaled(4));
+      int ink_bottom =
+          anchor_top + icon.extents().yMax() - icon.anchorExtents().yMin();
+      EXPECT_GE(with_icon.getNaturalDimensions().height() - ink_bottom - 1,
+                Scaled(4));
+    }
+  }
+}
+
+// Verifies off-center and out-of-anchor artwork cannot escape compact floors.
+// The metadata-only icons are measured, never decoded or painted.
+TEST_F(DensityGeometryTest, CompactOffCenterIconKeepsBothEdges) {
+  static const uint8_t data[] = {0};
+  const roo_display::Box anchor(0, 0, 23, 23);
+  for (roo_display::Box ink :
+       {roo_display::Box(2, 0, 21, 3), roo_display::Box(2, 20, 21, 23),
+        roo_display::Box(2, -4, 21, 25)}) {
+    MonoIcon icon(ink, anchor, data,
+                  roo_display::Alpha4(roo_display::color::Black));
+    ButtonContentMetrics metrics =
+        ResolveButtonContentMetrics({}, &icon, ButtonSize::kSmall, -5);
+    Padding padding =
+        ResolveButtonPadding(ButtonSize::kSmall, SmallButtonPadding::kReduced,
+                             metrics.content_height, -5);
+    int height = metrics.content_height + padding.top() + padding.bottom();
+    int anchor_top = (height - anchor.height()) / 2;
+    EXPECT_GE(anchor_top + ink.yMin(), Scaled(4));
+    EXPECT_GE(height - (anchor_top + ink.yMax()) - 1, Scaled(4));
   }
 }
 

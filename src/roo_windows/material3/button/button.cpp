@@ -209,7 +209,9 @@ void Button::setIcon(const MonoIcon* icon) {
 
 Padding Button::getPadding() const {
   internal::ButtonContentMetrics metrics =
-      internal::ResolveButtonContentMetrics(label_, icon_, size());
+      internal::ResolveButtonContentMetrics(
+          label_, icon_, size(),
+          internal::ResolveDensityLevel(theme().material3Theme().density));
   return internal::ResolveButtonPadding(
       size(), smallButtonPadding(), metrics.content_height,
       internal::ResolveDensityLevel(theme().material3Theme().density));
@@ -290,7 +292,9 @@ void Button::notifyStateChanged(uint16_t state_diff) {
 
 Dimensions Button::getSuggestedMinimumDimensions() const {
   internal::ButtonContentMetrics metrics =
-      internal::ResolveButtonContentMetrics(label_, icon_, size());
+      internal::ResolveButtonContentMetrics(
+          label_, icon_, size(),
+          internal::ResolveDensityLevel(theme().material3Theme().density));
   return Dimensions(metrics.content_width, metrics.content_height);
 }
 
@@ -327,7 +331,9 @@ void Button::paintWithCanvas(const Canvas& canvas) const {
   // slots do not bias the text away from the visual center.
   StringViewLabel l(label_, font, content, style.fontOptions());
   internal::ButtonContentMetrics metrics =
-      internal::ResolveButtonContentMetrics(label_, icon_, size());
+      internal::ResolveButtonContentMetrics(
+          label_, icon_, size(),
+          internal::ResolveDensityLevel(theme().material3Theme().density));
   int16_t iw = metrics.icon_slot_width;
   int16_t lw = l.anchorExtents().width();
   int16_t gap = metrics.gap;

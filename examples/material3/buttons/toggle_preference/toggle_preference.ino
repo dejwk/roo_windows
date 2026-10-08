@@ -46,7 +46,7 @@ roo_windows::fake::FltkKeySource emulator_keys;
 #include "roo_display.h"
 #include "roo_display/driver/ili9341.h"
 #include "roo_display/driver/touch_xpt2046.h"
-#include "roo_icons/outlined/24/action.h"
+#include "roo_icons/outlined/action.h"
 #include "roo_scheduler.h"
 #include "roo_windows.h"
 
@@ -97,16 +97,16 @@ class TogglePreference : public FlexLayout {
             "Choose a container type by action importance; save reminders.",
             material3::text_style_body_medium(), kTop | kLeft),
         actions_(context, FlexDirection::kRow),
-        standard_(context, ic_outlined_24_action_build(),
+        standard_(context, SCALED_ROO_ICON(outlined, action_build),
                   material3::IconButtonStyle::kStandard),
-        filled_(context, ic_outlined_24_action_done(),
+        filled_(context, SCALED_ROO_ICON(outlined, action_done),
                 material3::IconButtonStyle::kFilled),
-        tonal_(context, ic_outlined_24_action_cached(),
+        tonal_(context, SCALED_ROO_ICON(outlined, action_cached),
                material3::IconButtonStyle::kFilledTonal),
-        outlined_(context, ic_outlined_24_action_delete(),
+        outlined_(context, SCALED_ROO_ICON(outlined, action_delete),
                   material3::IconButtonStyle::kOutlined),
-        reminder_(context, ic_outlined_24_action_bookmark(),
-                  &ic_outlined_24_action_favorite(),
+        reminder_(context, SCALED_ROO_ICON(outlined, action_bookmark),
+                  &SCALED_ROO_ICON(outlined, action_favorite),
                   material3::IconButtonStyle::kOutlined),
         feedback_(context, "Reminder preference is off",
                   material3::text_style_title_small()) {

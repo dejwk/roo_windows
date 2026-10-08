@@ -540,7 +540,11 @@ The [Material 3 density proposal](../proposed/material3_density_design.md#geomet
 defines the compact-height and content-floor contract. Production geometry
 reads `Material3Theme::density` live. After changing the owned value, request
 recursive layout and invalidation on each affected root; default density
-preserves the existing geometry.
+preserves ordinary geometry. Extra-large buttons correctly measure 272 px
+at 200% zoom after the byte-scaling overflow fix. Compact icon floors exclude
+symmetric transparent canvas margins while retaining the original anchor
+center and at least 4 dp of clearance on both painted edges. Horizontal icon
+slots remain unchanged; examples select assets with `SCALED_ROO_ICON`.
 
 Button geometry should be token-backed and shared by variant family.
 

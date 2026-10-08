@@ -46,6 +46,7 @@ roo_windows::fake::FltkKeySource emulator_keys;
 #include "roo_display.h"
 #include "roo_display/driver/ili9341.h"
 #include "roo_display/driver/touch_xpt2046.h"
+#include "roo_icons/filled/navigation.h"
 #include "roo_scheduler.h"
 #include "roo_windows.h"
 #include "roo_windows/containers/horizontal_layout.h"
@@ -149,7 +150,11 @@ class SettingsScreen : public SimpleScrollablePanel {
       choices->add(std::move(button));
     }
     form->add(std::move(choices));
-    form->add(std::make_unique<material3::Button>(context, "Save settings"));
+    auto save = std::make_unique<material3::Button>(context, "Save settings");
+    // Choose the icon asset for display zoom. Density removes whitespace,
+    // including transparent icon margins, while keeping artwork unchanged.
+    save->setIcon(&SCALED_ROO_ICON(filled, navigation_check));
+    form->add(std::move(save));
     form->add(std::make_unique<material3::TextField>(context, "Device name"));
     form->add(std::make_unique<material3::TextField>(
         context, "Location", material3::TextFieldVariant::kOutlined));

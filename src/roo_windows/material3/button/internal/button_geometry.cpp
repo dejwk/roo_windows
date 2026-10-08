@@ -24,6 +24,18 @@ int ButtonHorizontalPaddingDpFor(ButtonSize size,
   return ButtonGeometryTokensFor(size).horizontal_padding_dp;
 }
 
+// Height needed to keep all painted pixels around the original anchor center.
+// Using the tighter of the two margins protects off-center artwork and even
+// artwork extending outside its anchor box, without scanning or allocating.
+int IconVerticalFootprint(const MonoIcon& icon) {
+  roo_display::Box ink = icon.extents();
+  if (ink.empty()) return 0;
+  roo_display::Box anchor = icon.anchorExtents();
+  int clear_top = ink.yMin() - anchor.yMin();
+  int clear_bottom = anchor.yMax() - ink.yMax();
+  return std::max(0, anchor.height() - 2 * std::min(clear_top, clear_bottom));
+}
+
 const TextStyle& ButtonTextStyle() { return text_style_label_large(); }
 
 }  // namespace
@@ -37,7 +49,10 @@ const ButtonGeometryTokens& ButtonGeometryTokensFor(ButtonSize size) {
 // drawable is smaller than the Material 3 target.
 ButtonContentMetrics ResolveButtonContentMetrics(roo::string_view label,
                                                  const MonoIcon* icon,
-                                                 ButtonSize size) {
+                                                 ButtonSize size,
+                                                 int8_t level) {
+  DCHECK_GE(level, -5);
+  DCHECK_LE(level, 0);
   const ButtonGeometryTokens& geometry = ButtonGeometryTokensFor(size);
   const TextStyle& style = ButtonTextStyle();
   const roo_display::Font& font = style.font();
@@ -68,7 +83,11 @@ ButtonContentMetrics ResolveButtonContentMetrics(roo::string_view label,
       content_width += gap + text_width;
     }
   }
-  int16_t content_height = std::max(text_height, icon_slot_height);
+  int icon_content_height = icon_slot_height;
+  if (level != 0 && icon != nullptr) {
+    icon_content_height = IconVerticalFootprint(*icon);
+  }
+  int16_t content_height = std::max<int>(text_height, icon_content_height);
   return ButtonContentMetrics{text_width,       text_height, icon_slot_width,
                               icon_slot_height, gap,         content_width,
                               content_height};
@@ -80,9 +99,10 @@ Padding ResolveButtonPadding(ButtonSize size, SmallButtonPadding small_padding,
   DCHECK_LE(level, 0);
   int horizontal = Scaled(ButtonHorizontalPaddingDpFor(size, small_padding));
   const ButtonGeometryTokens& tokens = ButtonGeometryTokensFor(size);
-  // Keep the legacy Scaled(uint8_t) path at zero, including its narrowing.
+  // Scale a signed intermediate: the extra-large 136dp height exceeds a byte
+  // at 200% zoom. Ordinary level-zero rounding remains unchanged.
   int target = level == 0
-                   ? Scaled(tokens.height_dp)
+                   ? Scaled(static_cast<int>(tokens.height_dp))
                    : Scaled(std::max(24, static_cast<int>(tokens.height_dp) +
                                              4 * static_cast<int>(level)));
   if (level != 0) {
