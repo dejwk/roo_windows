@@ -104,9 +104,9 @@ using namespace roo_windows;
 roo_scheduler::SchedulingService scheduler;
 Environment env(scheduler);
 
-class EditorDestination : public Destination {
+class SharedEditorDestination : public Destination {
  public:
-  explicit EditorDestination(ApplicationContext& context)
+  explicit SharedEditorDestination(ApplicationContext& context)
       : contents(context),
         field(context, font_body1(), "Type here",
               roo_display::kLeft | roo_display::kMiddle, TextField::UNDERLINE) {
@@ -130,7 +130,7 @@ TextLabel first_label(first_app.context(), "Keyboard application",
                       material2::text_style_caption(),
                       kGravityCenter | kGravityMiddle);
 
-EditorDestination editor_destination(second_app.context());
+SharedEditorDestination editor_destination(second_app.context());
 
 void setup() {
   initDisplays();
