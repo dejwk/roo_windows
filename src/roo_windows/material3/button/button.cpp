@@ -1,143 +1,24 @@
 #include "roo_windows/material3/button/button.h"
 
 #include <algorithm>
-#include <cmath>
 
-#include "roo_display/color/color.h"
 #include "roo_display/ui/alignment.h"
 #include "roo_display/ui/text_label.h"
 #include "roo_windows/core/click_animation.h"
+#include "roo_windows/material3/button/internal/button_appearance.h"
 #include "roo_windows/material3/button/internal/button_geometry.h"
 #include "roo_windows/material3/internal/density.h"
 #include "roo_windows/material3/theme.h"
 #include "roo_windows/material3/typography.h"
 
-using roo_display::AlphaBlend;
 using roo_display::kCenter;
 using roo_display::kMiddle;
 using roo_display::StringViewLabel;
-using roo_display::color::Transparent;
 
 namespace roo_windows {
 namespace material3 {
 
-namespace {
-
-// Shared outline and shape-morph constants.
-constexpr int kOutlineWidth = 1;
-constexpr uint8_t kFullCornerRadius = 0xFF;
-constexpr float kShapeMorphProgressScale = 3.0f;
-
-struct ButtonTokens {
-  Color container;
-  Color content;
-  Color outline;
-  uint8_t resting_elevation;
-  uint8_t pressed_elevation;
-};
-
-// Shared M3 defaults retain semantic identity until the paint path resolves
-// them against the installed Material 3 scheme. A false paint flag is
-// deliberately distinct from the transparent color a caller may supply.
-struct ButtonColorTokens {
-  ColorToken container;
-  ColorToken content;
-  ColorToken outline;
-  bool paint_container;
-  bool paint_outline;
-  uint8_t resting_elevation;
-  uint8_t pressed_elevation;
-};
-
-constexpr ButtonColorTokens kButtonColorTokens[] = {
-    // text, filled, filled tonal, outlined, elevated.
-    {ColorToken::kSurface, ColorToken::kPrimary, ColorToken::kOutline, false,
-     false, 0, 0},
-    {ColorToken::kPrimary, ColorToken::kOnPrimary, ColorToken::kOutline, true,
-     false, 0, 0},
-    {ColorToken::kSecondaryContainer, ColorToken::kOnSecondaryContainer,
-     ColorToken::kOutline, true, false, 0, 0},
-    {ColorToken::kSurface, ColorToken::kOnSurfaceVariant,
-     ColorToken::kOutlineVariant, false, true, 0, 0},
-    {ColorToken::kSurfaceContainerLow, ColorToken::kPrimary,
-     ColorToken::kOutline, true, false, 1, 1},
-};
-
-// Disabled buttons are specified as on-surface content composited onto the
-// surface, rather than as separate fixed colors.
-Color DisabledComposite(const Theme& theme, Color fg, uint8_t alpha) {
-  return AlphaBlend(theme.material3Theme().color.surface, fg.withA(alpha));
-}
-
-::roo_windows::material3::ColorToken ContainerRoleFor(const Theme& theme,
-                                                      ButtonVariant v) {
-  switch (v) {
-    case ButtonVariant::kFilled:
-      return ::roo_windows::material3::ColorToken::kPrimary;
-    case ButtonVariant::kFilledTonal:
-      return ::roo_windows::material3::ColorToken::kSecondaryContainer;
-    case ButtonVariant::kElevated:
-      return theme.material3Theme().components.button.elevatedContainer;
-    case ButtonVariant::kText:
-    case ButtonVariant::kOutlined:
-      return ::roo_windows::material3::ColorToken::kNone;
-  }
-  return ::roo_windows::material3::ColorToken::kNone;
-}
-
-ButtonTokens ResolveTokens(const Theme& theme, ButtonVariant v, bool enabled) {
-  const ColorScheme& colors = theme.material3Theme().color;
-  if (!enabled) {
-    if (v == ButtonVariant::kText || v == ButtonVariant::kOutlined) {
-      return ButtonTokens{Transparent,
-                          DisabledComposite(theme, colors.onSurface, 0x61),
-                          v == ButtonVariant::kOutlined
-                              ? DisabledComposite(theme, colors.onSurface, 0x1F)
-                              : Transparent,
-                          0, 0};
-    }
-    Color disabled_container = DisabledComposite(theme, colors.onSurface, 0x1F);
-    return ButtonTokens{disabled_container,
-                        DisabledComposite(theme, colors.onSurface, 0x61),
-                        Transparent, 0, 0};
-  }
-  const ButtonColorTokens& tokens = kButtonColorTokens[static_cast<uint8_t>(v)];
-  const ColorToken container = ContainerRoleFor(theme, v);
-  return ButtonTokens{
-      tokens.paint_container ? colors.resolve(container) : Transparent,
-      colors.resolve(tokens.content),
-      tokens.paint_outline ? colors.resolve(tokens.outline) : Transparent,
-      tokens.resting_elevation,
-      tokens.pressed_elevation,
-  };
-}
-
-uint8_t ElevationFor(ButtonVariant variant, bool enabled, bool pressed) {
-  (void)pressed;
-  if (!enabled) return 0;
-  return variant == ButtonVariant::kElevated ? 3 : 0;
-}
-
-// Before layout, retain the nominal-token fallback used by shape queries.
-Dimensions CornerDimensions(const Button& button) {
-  if (!button.bounds().empty()) return {button.width(), button.height()};
-  int16_t height = Scaled(static_cast<int16_t>(
-      internal::ButtonGeometryTokensFor(button.size()).height_dp));
-  return {height, height};
-}
-
-uint8_t RestingCornerRadiusPx(const Button& button) {
-  return internal::ResolveButtonCornerRadius(button.size(), button.shape(),
-                                             false, CornerDimensions(button));
-}
-
-uint8_t InterpolateCornerRadiusPx(uint8_t from, uint8_t to, float progress) {
-  if (progress <= 0.0f) return from;
-  if (progress >= 1.0f) return to;
-  return (uint8_t)std::lround(from + (to - from) * progress);
-}
-
-}  // namespace
+namespace {}  // namespace
 
 Button::Button(ApplicationContext& context, roo::string_view label,
                ButtonVariant variant)
@@ -218,56 +99,32 @@ Padding Button::getPadding() const {
 }
 
 ::roo_windows::material3::ColorToken Button::containerRole() const {
-  return ContainerRoleFor(theme(), variant());
+  return internal::ResolveButtonContainerRole(theme(), variant());
 }
 
 Color Button::background() const {
-  return ResolveTokens(theme(), variant(), isEnabled()).container;
+  return internal::ResolveButtonAppearance(theme(), variant(), isEnabled())
+      .container;
 }
 
 Color Button::getOutlineColor() const {
-  return ResolveTokens(theme(), variant(), isEnabled()).outline;
+  return internal::ResolveButtonAppearance(theme(), variant(), isEnabled())
+      .outline;
 }
 
 BorderStyle Button::getBorderStyle() const {
-  SmallNumber outline = variant() == ButtonVariant::kOutlined
-                            ? Scaled(SmallNumber(kOutlineWidth))
-                            : SmallNumber(0);
-  const ClickAnimation* anim = getClickAnimation();
-  if (shapeMorph() == ButtonShapeMorph::kDisabled ||
-      (anim == nullptr && !isPressed())) {
-    if (shape() == ButtonShape::kRound) {
-      return BorderStyle(kFullCornerRadius, outline);
-    }
-    return BorderStyle(RestingCornerRadiusPx(*this), outline);
-  }
-
-  uint8_t pressed_radius = internal::ResolveButtonCornerRadius(
-      size(), shape(), true, CornerDimensions(*this));
-  uint8_t corner_radius = 0;
-  if (anim != nullptr) {
-    // Let the shape settle early so the button reaches its pressed geometry
-    // before the longer click animation finishes.
-    float morph_progress =
-        std::min(1.0f, anim->progress() * kShapeMorphProgressScale);
-    corner_radius = InterpolateCornerRadiusPx(RestingCornerRadiusPx(*this),
-                                              pressed_radius, morph_progress);
-  } else if (isPressed()) {
-    // Pressed state uses a shared "more square" shape regardless of the
-    // resting corner family, matching the Material 3 shape morph behavior.
-    corner_radius = pressed_radius;
-  } else {
-    corner_radius = RestingCornerRadiusPx(*this);
-  }
-  return BorderStyle(corner_radius, outline);
+  return internal::ResolveButtonBorderStyle(
+      size(), shape(), variant(), shapeMorph() != ButtonShapeMorph::kDisabled,
+      isPressed(), getClickAnimation(), {width(), height()});
 }
 
 uint8_t Button::getElevation() const {
-  return ElevationFor(variant(), isEnabled(), isPressed());
+  return internal::ResolveButtonElevation(variant(), isEnabled(), isPressed());
 }
 
 Color Button::resolveContentColor() const {
-  return ResolveTokens(theme(), variant(), isEnabled()).content;
+  return internal::ResolveButtonAppearance(theme(), variant(), isEnabled())
+      .content;
 }
 
 void Button::notifyStateChanged(uint16_t state_diff) {
@@ -281,7 +138,8 @@ void Button::notifyStateChanged(uint16_t state_diff) {
         (state_diff & kWidgetPressed) != 0 ? !isPressed() : isPressed();
     bool old_enabled =
         (state_diff & kWidgetEnabled) != 0 ? !isEnabled() : isEnabled();
-    uint8_t old_elevation = ElevationFor(variant(), old_enabled, old_pressed);
+    uint8_t old_elevation =
+        internal::ResolveButtonElevation(variant(), old_enabled, old_pressed);
     uint8_t new_elevation = getElevation();
     if (old_elevation != new_elevation && isVisible()) {
       elevationChanged(std::max(old_elevation, new_elevation));
