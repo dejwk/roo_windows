@@ -20,9 +20,10 @@ using roo_display::Box;
 
 constexpr uint8_t kRecursiveSearchDepth = 8;
 constexpr uint16_t kSearchNodeBudget = 256;
-// Small fragments use the constant-stack greedy fallback. This limits search
-// work without imposing a minimum area on the plan that may be returned.
-constexpr int32_t kRecursiveSearchAreaCutoff = 256;
+// Search abandons a branch once its entire remaining candidate is at most one
+// eighth of the target. Such a branch cannot produce enough copied output to
+// justify further restriction scans or subdivision.
+constexpr int32_t kRecursiveSearchOpportunityDenominator = 8;
 
 Box EmptyBox() { return Box(0, 0, -1, -1); }
 
@@ -153,6 +154,8 @@ class BlitPlanner {
               size_t masked_count)
       : source_certificate_(source_certificate),
         viewport_(viewport),
+        search_opportunity_area_cutoff_(viewport.area() /
+                                        kRecursiveSearchOpportunityDenominator),
         dx_(dx),
         dy_(dy),
         masks_(masks),
@@ -262,11 +265,16 @@ class BlitPlanner {
   }
 
   // Finishes with constant stack after either recursion or node budget is
-  // exhausted. Keeping the largest remainder is conservative; evaluating four
-  // initial core shapes limits the lost area without retaining fragments.
+  // exhausted. It follows the largest remainder while that remainder still
+  // exceeds the opportunity cutoff.
   void finishIteratively(Box candidate) {
     Box blocked;
-    while (candidate.area() > best_destination_.area()) {
+    while (!candidate.empty()) {
+      const int32_t candidate_area = candidate.area();
+      if (candidate_area <= best_destination_.area() ||
+          candidate_area <= search_opportunity_area_cutoff_) {
+        return;
+      }
       if (!firstBlockedPiece(candidate, blocked)) {
         consider(candidate);
         return;
@@ -278,7 +286,10 @@ class BlitPlanner {
   }
 
   void Search(const Box& candidate, uint8_t depth) {
-    if (candidate.empty() || candidate.area() <= best_destination_.area()) {
+    if (candidate.empty()) return;
+    const int32_t candidate_area = candidate.area();
+    if (candidate_area <= best_destination_.area() ||
+        candidate_area <= search_opportunity_area_cutoff_) {
       return;
     }
     Box blocked;
@@ -286,8 +297,7 @@ class BlitPlanner {
       consider(candidate);
       return;
     }
-    if (depth >= kRecursiveSearchDepth || nodes_remaining_ == 0 ||
-        candidate.area() <= kRecursiveSearchAreaCutoff) {
+    if (depth >= kRecursiveSearchDepth || nodes_remaining_ == 0) {
       finishIteratively(candidate);
       return;
     }
@@ -299,6 +309,7 @@ class BlitPlanner {
 
   Box source_certificate_;
   Box viewport_;
+  int32_t search_opportunity_area_cutoff_;
   int16_t dx_;
   int16_t dy_;
   const RoundedClip* masks_;

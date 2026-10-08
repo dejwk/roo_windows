@@ -415,11 +415,14 @@ translated overlap, the planner evaluates a balanced inscribed core and
 horizontal and vertical opaque cores. Each builder intersects exact ancestor
 mask spans at the source and destination. The planner then subtracts foreground
 safely and selects the largest proven result. Its recursive search is limited
-to eight levels and 256 visited nodes. Candidates of 256 pixels or less also
-switch to the constant-stack iterative fallback, which keeps the largest safe
-remainder. This is a search-cost cutoff, not a minimum copy area: P8 will choose
-any device copy threshold from measured copy-versus-repaint time. Exact
-maximum-area packing of every curved sliver is outside this release.
+to eight levels and 256 visited nodes. It abandons a branch when its entire
+remaining candidate covers at most one eighth of the total target region,
+before scanning that branch's restrictions. The constant-stack iterative
+fallback applies the same cutoff as its largest remainder shrinks. This avoids
+spending CPU on a branch whose best possible copy is small relative to the
+paint target. P8 may add a stricter device copy threshold from measured
+copy-versus-repaint time. Exact maximum-area packing of every curved sliver is
+outside this release.
 
 Certification requires unchanged translated content and either an opaque cached
 composition or a uniform, unchanged opaque backdrop behind its transparent

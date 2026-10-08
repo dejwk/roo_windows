@@ -318,9 +318,9 @@ TEST(BlitPlanTest, PreservesTheSourceCertificate) {
   EXPECT_TRUE(source_certificate.contains(plan.source));
 }
 
-// Verifies deep foreground fragmentation reaches the constant-stack fallback
-// while the returned rectangle still passes the independent pixel oracle.
-TEST(BlitPlanTest, BoundedSearchRemainsConservative) {
+// Verifies deep foreground fragmentation is abandoned when every remaining
+// branch falls below the relative opportunity threshold.
+TEST(BlitPlanTest, FragmentedSearchStopsBelowOpportunityThreshold) {
   PlannerScene scene;
   const Box viewport(0, 0, 191, 127);
   for (int i = 0; i < 24; ++i) {
@@ -333,22 +333,30 @@ TEST(BlitPlanTest, BoundedSearchRemainsConservative) {
 
   const BlitPlan plan = scene.plan(viewport, viewport, 4, -3);
 
-  ExpectPlanSafe(scene, plan, viewport, viewport, 4, -3);
+  EXPECT_TRUE(plan.empty());
 }
 
-// Verifies the small-candidate threshold stops recursive branching rather than
-// rejecting a useful copy. Device-specific copy thresholds remain a separate
-// execution policy.
-TEST(BlitPlanTest, SmallCandidateStillProducesAConservativePlan) {
+// Verifies search abandons an opportunity at exactly one eighth of the target
+// without even accepting an otherwise safe candidate, but continues
+// immediately above the threshold.
+TEST(BlitPlanTest, SearchOpportunityUsesOneEighthOfTarget) {
   PlannerScene scene;
-  const Box viewport(0, 0, 15, 15);
-  scene.addBoxRestriction(Box(6, 4, 8, 11));
+  const Box viewport(0, 0, 127, 127);
 
-  const BlitPlan plan = scene.plan(viewport, viewport, 1, 0);
+  // After translation, this certificate offers 2,048 of the target's 16,384
+  // pixels. At exactly one eighth, the opportunity is discarded.
+  const Box cutoff_certificate(0, 0, 31, 63);
+  const BlitPlan cutoff_plan = scene.plan(cutoff_certificate, viewport, 1, 0);
+  EXPECT_TRUE(cutoff_plan.empty());
 
-  EXPECT_GT(plan.area(), 0);
-  EXPECT_LE(plan.area(), 256);
-  ExpectPlanSafe(scene, plan, viewport, viewport, 1, 0);
+  // One additional source column raises the opportunity above one eighth.
+  // Search accepts the complete safe candidate.
+  const Box above_cutoff_certificate(0, 0, 32, 63);
+  const BlitPlan above_cutoff_plan =
+      scene.plan(above_cutoff_certificate, viewport, 1, 0);
+  EXPECT_EQ(Box(1, 0, 33, 63), above_cutoff_plan.destination);
+  ExpectPlanSafe(scene, above_cutoff_plan, above_cutoff_certificate, viewport,
+                 1, 0);
 }
 
 // Verifies absent history, non-overlapping history, and a zero translation
