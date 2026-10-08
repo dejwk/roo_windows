@@ -7,6 +7,7 @@
 #include "roo_windows/core/task.h"
 #include "roo_windows/internal/single_line_text.h"
 #include "roo_windows/keyboard/editor_destination.h"
+#include "roo_windows/material3/text_field/internal/text_field_geometry.h"
 
 namespace roo_windows::material3 {
 namespace {
@@ -14,11 +15,6 @@ using namespace roo_display;
 
 // Shared Material 3 dimensions, evaluated once to avoid per-field storage.
 struct Tokens {
-  int16_t height = Scaled(56);
-  int16_t pad = Scaled(16);
-  int16_t icon_pad = Scaled(12);
-  int16_t gap = Scaled(16);
-  int16_t assist_gap = Scaled(4);
   int16_t radius = Scaled(4);
   int16_t notch = Scaled(4);
   int16_t idle_stroke = std::max(1, Scaled(1));
@@ -27,8 +23,6 @@ struct Tokens {
 const Tokens kTokens;
 
 const MonoIcon kErrorIcon = SCALED_ROO_ICON(filled, alert_error);
-
-Rect Empty() { return Rect(0, 0, -1, -1); }
 
 // Measures a string using the complete text-style layout configuration.
 int16_t TextWidth(roo::string_view text, const TextStyle& style) {
@@ -74,17 +68,6 @@ void DrawIcon(PaintContext& ctx, const MonoIcon* source, Rect rect, Color color,
   ctx.addExclusion(rect);
 }
 }  // namespace
-
-struct TextField::Slots {
-  Rect container;
-  Rect label;
-  Rect viewport;
-  Rect prefix;
-  Rect suffix;
-  Rect leading;
-  Rect trailing;
-  Rect assist;
-};
 
 TextField::TextField(ApplicationContext& context, roo::string_view label,
                      TextFieldVariant variant)
@@ -249,15 +232,24 @@ bool TextField::floated() const {
   return !value_.empty() || isFocused() || isEdited();
 }
 
+internal::TextFieldMetrics TextField::contentMetrics() const {
+  const MonoIcon* trailing = effectiveTrailingIcon();
+  return {
+      text_style_body_large().lineHeight(),
+      text_style_body_small().lineHeight(),
+      leading_ == nullptr ? 0
+                          : std::max<int>(ROO_WINDOWS_ICON_SIZE,
+                                          leading_->anchorExtents().height()),
+      trailing == nullptr ? 0
+                          : std::max<int>(ROO_WINDOWS_ICON_SIZE,
+                                          trailing->anchorExtents().height())};
+}
+
 Dimensions TextField::getSuggestedMinimumDimensions() const {
-  int height = kTokens.height;
-  if (flags_ & kOutlined) {
-    height += text_style_body_small().lineHeight() / 2;
-  }
-  if (!assistiveText().empty()) {
-    height += kTokens.assist_gap + text_style_body_small().lineHeight();
-  }
-  return Dimensions(Scaled(120), height);
+  return Dimensions(Scaled(120),
+                    internal::ResolveTextFieldNaturalHeight(
+                        variant() == TextFieldVariant::kOutlined,
+                        !assistiveText().empty(), contentMetrics(), 0));
 }
 
 PreferredSize TextField::getPreferredSize() const {
@@ -269,86 +261,18 @@ PreferredSize TextField::getPreferredSize() const {
 TextField::Slots TextField::slots() const {
   const TextStyle& body = text_style_body_large();
   const TextStyle& small = text_style_body_small();
-  // An outlined floating label straddles the top stroke, so reserve half of
-  // its line height above the fixed-height container.
-  int top = flags_ & kOutlined ? small.lineHeight() / 2 : 0;
-  Slots s;
-  s.container = Rect(0, top, width() - 1, top + kTokens.height - 1);
-
-  // First reserve the edge affordances, then assign the remaining span to the
-  // label, prefix, editable viewport, and suffix.
-  int left = leading_ ? kTokens.icon_pad : kTokens.pad;
-  int right =
-      width() - (effectiveTrailingIcon() ? kTokens.icon_pad : kTokens.pad);
-  int iy = top + (kTokens.height - ROO_WINDOWS_ICON_SIZE) / 2;
-  s.leading = leading_ ? Rect(left, iy,
-                              std::min(right, left + ROO_WINDOWS_ICON_SIZE) - 1,
-                              iy + ROO_WINDOWS_ICON_SIZE - 1)
-                       : Empty();
-  if (leading_) {
-    left = std::min(right, left + ROO_WINDOWS_ICON_SIZE + kTokens.gap);
-  }
-  s.trailing = effectiveTrailingIcon()
-                   ? Rect(std::max(left, right - ROO_WINDOWS_ICON_SIZE), iy,
-                          right - 1, iy + ROO_WINDOWS_ICON_SIZE - 1)
-                   : Empty();
-  if (effectiveTrailingIcon()) {
-    right = std::max(left, right - ROO_WINDOWS_ICON_SIZE - kTokens.gap);
-  }
   bool floating = floated();
-  int ty = top + (kTokens.height - body.lineHeight()) / 2;
-  if (floating && !(flags_ & kOutlined)) {
-    ty = top + (kTokens.height - body.lineHeight() - small.lineHeight()) / 2 +
-         small.lineHeight();
-  }
-  if (floating) {
-    int ly = flags_ & kOutlined ? 0 : ty - small.lineHeight();
-    int lw = std::min(std::max(0, right - left), (int)TextWidth(label_, small));
-    s.label = Rect(left, ly, left + lw - 1, ly + small.lineHeight() - 1);
-  } else {
-    s.label = Rect(left, ty, right - 1, ty + body.lineHeight() - 1);
-  }
-  int pw = floating ? std::min(std::max(0, right - left),
-                               (int)TextWidth(prefix_, body))
-                    : 0;
-  s.prefix = Rect(left, ty, left + pw - 1, ty + body.lineHeight() - 1);
-  left += pw;
-  int sw = floating ? std::min(std::max(0, right - left),
-                               (int)TextWidth(suffix_, body))
-                    : 0;
-  s.suffix = Rect(right - sw, ty, right - 1, ty + body.lineHeight() - 1);
-  right -= sw;
-  s.viewport = Rect(left, ty, right - 1, ty + body.lineHeight() - 1);
-  s.assist =
-      Rect(kTokens.pad, top + kTokens.height + kTokens.assist_gap,
-           width() - kTokens.pad - 1,
-           top + kTokens.height + kTokens.assist_gap + small.lineHeight() - 1);
-  if (flags_ & kRtl) {
-    // Compute logical slots left-to-right once, then mirror their physical
-    // rectangles without changing the UTF-8 value or prefix/suffix roles.
-    auto mirror = [&](Rect& r) {
-      r = Rect(width() - 1 - r.xMax(), r.yMin(), width() - 1 - r.xMin(),
-               r.yMax());
-    };
-    mirror(s.leading);
-    mirror(s.trailing);
-    mirror(s.label);
-    mirror(s.prefix);
-    mirror(s.suffix);
-    mirror(s.viewport);
-  }
-  // Tiny layouts can make slots overlap or invert; clipping leaves painting
-  // with empty rectangles instead of coordinates outside the widget.
-  auto clip = [&](Rect& r) { r = Rect::Intersect(r, bounds()); };
-  clip(s.container);
-  clip(s.label);
-  clip(s.viewport);
-  clip(s.prefix);
-  clip(s.suffix);
-  clip(s.leading);
-  clip(s.trailing);
-  clip(s.assist);
-  return s;
+  internal::TextFieldSlotInput input{
+      {width(), height()},
+      variant() == TextFieldVariant::kOutlined,
+      floating,
+      layoutDirection() == LayoutDirection::kRightToLeft,
+      contentMetrics(),
+      floating ? TextWidth(label_, small) : 0,
+      floating ? TextWidth(prefix_, body) : 0,
+      floating ? TextWidth(suffix_, body) : 0};
+  // Production remains at level zero until application density is published.
+  return internal::ResolveTextFieldSlots(input, 0);
 }
 
 void TextField::paint(PaintContext& ctx) const {
@@ -447,7 +371,7 @@ void TextField::paint(PaintContext& ctx) const {
           isEdited() && getTask()->textFieldEditor().has_selection()
               ? Opacity(colors.primary, 64, fill)
               : accent;
-      part.drawObject(internal::SingleLineText(
+      part.drawObject(::roo_windows::internal::SingleLineText(
           body.font(), body.fontOptions(),
           Box(0, -body.baselineOffset(), s.viewport.width() - 1,
               body.lineHeight() - body.baselineOffset() - 1),

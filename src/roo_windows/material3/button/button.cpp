@@ -7,6 +7,7 @@
 #include "roo_display/ui/alignment.h"
 #include "roo_display/ui/text_label.h"
 #include "roo_windows/core/click_animation.h"
+#include "roo_windows/material3/button/internal/button_geometry.h"
 #include "roo_windows/material3/theme.h"
 #include "roo_windows/material3/typography.h"
 
@@ -21,26 +22,10 @@ namespace material3 {
 
 namespace {
 
-// Per-size geometry tokens transcribed from the Material 3 button spec.
-constexpr int kIconLabelGap = 8;
+// Shared outline and shape-morph constants.
 constexpr int kOutlineWidth = 1;
 constexpr uint8_t kFullCornerRadius = 0xFF;
 constexpr float kShapeMorphProgressScale = 3.0f;
-
-struct ButtonGeometryTokens {
-  uint8_t height_dp;
-  uint8_t horizontal_padding_dp;
-  uint8_t icon_size_dp;
-  uint8_t icon_gap_dp;
-  uint8_t square_corner_radius_dp;
-  uint8_t pressed_corner_radius_dp;
-};
-
-constexpr ButtonGeometryTokens kButtonGeometryTokens[] = {
-    {32, 12, 20, 4, 12, 8},    {40, 16, 24, 8, 12, 8},
-    {56, 24, 24, 8, 16, 12},   {96, 48, 32, 12, 28, 16},
-    {136, 64, 40, 16, 28, 16},
-};
 
 struct ButtonTokens {
   Color container;
@@ -126,95 +111,23 @@ ButtonTokens ResolveTokens(const Theme& theme, ButtonVariant v, bool enabled) {
   };
 }
 
-const ButtonGeometryTokens& GeometryTokensFor(ButtonSize size) {
-  return kButtonGeometryTokens[static_cast<uint8_t>(size)];
-}
-
-// Small buttons have an extra configuration knob in the spec: the same height
-// can be paired with either the default or reduced horizontal padding.
-int HorizontalPaddingDpFor(ButtonSize size,
-                           SmallButtonPadding small_button_padding) {
-  if (size == ButtonSize::kSmall) {
-    return small_button_padding == SmallButtonPadding::kDefault ? 24 : 16;
-  }
-  return GeometryTokensFor(size).horizontal_padding_dp;
-}
-
-const TextStyle& ButtonTextStyle() { return text_style_label_large(); }
-
-struct ButtonContentMetrics {
-  int16_t text_width;
-  int16_t text_height;
-  int16_t icon_slot_width;
-  int16_t icon_slot_height;
-  int16_t gap;
-  int16_t content_width;
-  int16_t content_height;
-};
-
-// Measures the content block without widget padding. For icons, keep at least
-// the token slot size so the size tables remain stable even if the concrete
-// drawable is smaller than the Material 3 target.
-ButtonContentMetrics ResolveContentMetrics(roo::string_view label,
-                                           const MonoIcon* icon,
-                                           ButtonSize size) {
-  const ButtonGeometryTokens& geometry = GeometryTokensFor(size);
-  const TextStyle& style = ButtonTextStyle();
-  const roo_display::Font& font = style.font();
-  int16_t text_width = 0;
-  int16_t text_height = 0;
-  if (!label.empty()) {
-    text_width =
-        font.getHorizontalStringMetrics(label, style.fontOptions()).advance();
-    text_height = style.lineHeight();
-  }
-  int16_t icon_slot_width = 0;
-  int16_t icon_slot_height = 0;
-  if (icon != nullptr) {
-    int16_t token_icon_size = Scaled(geometry.icon_size_dp);
-    icon_slot_width = token_icon_size;
-    icon_slot_height = token_icon_size;
-    icon_slot_width =
-        std::max<int16_t>(icon_slot_width, icon->anchorExtents().width());
-    icon_slot_height =
-        std::max<int16_t>(icon_slot_height, icon->anchorExtents().height());
-  }
-  int16_t gap =
-      (icon != nullptr && text_width > 0) ? Scaled(geometry.icon_gap_dp) : 0;
-  int16_t content_width = text_width;
-  if (icon != nullptr) {
-    content_width = icon_slot_width;
-    if (text_width > 0) {
-      content_width += gap + text_width;
-    }
-  }
-  int16_t content_height = std::max(text_height, icon_slot_height);
-  return ButtonContentMetrics{text_width,       text_height, icon_slot_width,
-                              icon_slot_height, gap,         content_width,
-                              content_height};
-}
-
 uint8_t ElevationFor(ButtonVariant variant, bool enabled, bool pressed) {
   (void)pressed;
   if (!enabled) return 0;
   return variant == ButtonVariant::kElevated ? 3 : 0;
 }
 
-uint8_t RestingCornerRadiusPx(const Button& button,
-                              const ButtonGeometryTokens& geometry) {
-  if (button.shape() != ButtonShape::kRound) {
-    return (uint8_t)std::min<int>(Scaled(geometry.square_corner_radius_dp),
-                                  255);
-  }
-  int16_t diameter = std::min<int16_t>(button.width(), button.height());
-  if (diameter <= 0) {
-    diameter = Scaled(geometry.height_dp);
-  }
-  return (uint8_t)std::min<int16_t>(diameter / 2, 255);
+// Before layout, retain the nominal-token fallback used by shape queries.
+Dimensions CornerDimensions(const Button& button) {
+  if (!button.bounds().empty()) return {button.width(), button.height()};
+  int16_t height = Scaled(static_cast<int16_t>(
+      internal::ButtonGeometryTokensFor(button.size()).height_dp));
+  return {height, height};
 }
 
-uint8_t PressedCornerRadiusPx(const ButtonGeometryTokens& geometry) {
-  return (uint8_t)std::min<int>(Scaled(geometry.pressed_corner_radius_dp), 255);
+uint8_t RestingCornerRadiusPx(const Button& button) {
+  return internal::ResolveButtonCornerRadius(button.size(), button.shape(),
+                                             false, CornerDimensions(button));
 }
 
 uint8_t InterpolateCornerRadiusPx(uint8_t from, uint8_t to, float progress) {
@@ -294,17 +207,11 @@ void Button::setIcon(const MonoIcon* icon) {
 }
 
 Padding Button::getPadding() const {
-  ButtonSize button_size = size();
-  ButtonContentMetrics metrics =
-      ResolveContentMetrics(label_, icon_, button_size);
-  int16_t horizontal =
-      Scaled(HorizontalPaddingDpFor(button_size, smallButtonPadding()));
-  int16_t target_height = Scaled(GeometryTokensFor(button_size).height_dp);
-  // Suggested minimum dimensions exclude padding in roo_windows, so vertical
-  // padding is derived here to make the final natural height match the spec.
-  int16_t vertical =
-      std::max<int16_t>(0, (target_height - metrics.content_height) / 2);
-  return Padding(horizontal, vertical);
+  internal::ButtonContentMetrics metrics =
+      internal::ResolveButtonContentMetrics(label_, icon_, size());
+  // Production remains at level zero until application density is published.
+  return internal::ResolveButtonPadding(size(), smallButtonPadding(),
+                                        metrics.content_height, 0);
 }
 
 ::roo_windows::material3::ColorToken Button::containerRole() const {
@@ -320,7 +227,6 @@ Color Button::getOutlineColor() const {
 }
 
 BorderStyle Button::getBorderStyle() const {
-  const ButtonGeometryTokens& geometry = GeometryTokensFor(size());
   SmallNumber outline = variant() == ButtonVariant::kOutlined
                             ? SmallNumber(Scaled(kOutlineWidth))
                             : SmallNumber(0);
@@ -330,24 +236,25 @@ BorderStyle Button::getBorderStyle() const {
     if (shape() == ButtonShape::kRound) {
       return BorderStyle(kFullCornerRadius, outline);
     }
-    return BorderStyle(RestingCornerRadiusPx(*this, geometry), outline);
+    return BorderStyle(RestingCornerRadiusPx(*this), outline);
   }
 
-  uint8_t pressed_radius = PressedCornerRadiusPx(geometry);
+  uint8_t pressed_radius = internal::ResolveButtonCornerRadius(
+      size(), shape(), true, CornerDimensions(*this));
   uint8_t corner_radius = 0;
   if (anim != nullptr) {
     // Let the shape settle early so the button reaches its pressed geometry
     // before the longer click animation finishes.
     float morph_progress =
         std::min(1.0f, anim->progress() * kShapeMorphProgressScale);
-    corner_radius = InterpolateCornerRadiusPx(
-        RestingCornerRadiusPx(*this, geometry), pressed_radius, morph_progress);
+    corner_radius = InterpolateCornerRadiusPx(RestingCornerRadiusPx(*this),
+                                              pressed_radius, morph_progress);
   } else if (isPressed()) {
     // Pressed state uses a shared "more square" shape regardless of the
     // resting corner family, matching the Material 3 shape morph behavior.
     corner_radius = pressed_radius;
   } else {
-    corner_radius = RestingCornerRadiusPx(*this, geometry);
+    corner_radius = RestingCornerRadiusPx(*this);
   }
   return BorderStyle(corner_radius, outline);
 }
@@ -381,7 +288,8 @@ void Button::notifyStateChanged(uint16_t state_diff) {
 }
 
 Dimensions Button::getSuggestedMinimumDimensions() const {
-  ButtonContentMetrics metrics = ResolveContentMetrics(label_, icon_, size());
+  internal::ButtonContentMetrics metrics =
+      internal::ResolveButtonContentMetrics(label_, icon_, size());
   return Dimensions(metrics.content_width, metrics.content_height);
 }
 
@@ -400,7 +308,7 @@ void Button::paintWithCanvas(const Canvas& canvas) const {
     canvas.clearRect(b);
     return;
   }
-  const TextStyle& style = ButtonTextStyle();
+  const TextStyle& style = text_style_label_large();
   const roo_display::Font& font = style.font();
   if (!hasIcon()) {
     canvas.drawTiled(
@@ -417,7 +325,8 @@ void Button::paintWithCanvas(const Canvas& canvas) const {
   // Center the icon+label cluster as a single block so size-dependent icon
   // slots do not bias the text away from the visual center.
   StringViewLabel l(label_, font, content, style.fontOptions());
-  ButtonContentMetrics metrics = ResolveContentMetrics(label_, icon_, size());
+  internal::ButtonContentMetrics metrics =
+      internal::ResolveButtonContentMetrics(label_, icon_, size());
   int16_t iw = metrics.icon_slot_width;
   int16_t lw = l.anchorExtents().width();
   int16_t gap = metrics.gap;

@@ -1,7 +1,8 @@
 # Material 3 density
 
-Status: partially implemented. Phase 1 (recursive layout refresh) is implemented.
-Density configuration and component geometry remain proposed (phases 2–5).
+Status: partially implemented. Phases 1–2 (recursive layout refresh and internal
+button/field geometry) are implemented. Production geometry remains at level
+zero; list geometry and public density configuration remain proposed (phases 3–5).
 
 ## Objective
 
@@ -328,6 +329,16 @@ are remeasured, offscreen rows are correct after recycling, and stale stride doe
 not survive; existing ownership and attachment tests pass.
 
 ### Phase 2: Internal button and field geometry
+
+Implemented: component-local pure resolvers accept signed levels [-5, 0] for
+button padding and field container/slot geometry. Button corners clamp to actual
+dimensions. Production paths pass zero; no public density setting is exposed.
+[Geometry tests](../../../test/material3_density_geometry_test.cpp) cover all
+levels with independent pixel expectations at 75/100/150/200% zoom, actual content
+floors, float-state stability, oversized icons, RTL, and tight constraints.
+The zero-level button path intentionally retains legacy byte-token scaling,
+including the existing extra-large height narrowing at 200% zoom. Compact levels
+scale signed intermediates before narrowing.
 
 Factor pure internal resolvers accepting a valid signed level without exposing a
 public theme field. Implement button and field rules, rounding, content floors,

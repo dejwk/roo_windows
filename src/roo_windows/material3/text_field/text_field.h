@@ -5,6 +5,11 @@
 #include "roo_windows/internal/text_edit_target.h"
 #include "roo_windows/material3/typography.h"
 
+namespace roo_windows::material3::internal {
+struct TextFieldMetrics;
+struct TextFieldSlots;
+}  // namespace roo_windows::material3::internal
+
 namespace roo_windows::material3 {
 /// Material 3 single-line container treatment.
 enum class TextFieldVariant : uint8_t { kFilled, kOutlined };
@@ -186,7 +191,10 @@ class TextField : public SurfaceWidget,
   friend class ::roo_windows::EditorDestination;
 
   /// Owner-local rectangles for the field's painted regions.
-  struct Slots;
+  using Slots = internal::TextFieldSlots;
+
+  /// Returns state-independent font and icon metrics without measuring strings.
+  internal::TextFieldMetrics contentMetrics() const;
 
   /// Computes the clipped rectangles for the current content and direction.
   Slots slots() const;
