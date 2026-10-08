@@ -545,7 +545,8 @@ at 200% zoom after the byte-scaling overflow fix. Compact icon floors exclude
 symmetric transparent canvas margins while retaining the original anchor
 center and at least 4 dp of clearance on both painted edges. Horizontal icon
 slots remain unchanged; examples select assets with `SCALED_ROO_ICON`. Outlined
-buttons retain at least one physical pixel of border at zooms below 100%.
+buttons scale their border in sixteenths of a pixel, retaining 0.75 px at 75%
+and 1.5 px at 150% zoom instead of truncating to whole pixels.
 
 Button geometry should be token-backed and shared by variant family.
 

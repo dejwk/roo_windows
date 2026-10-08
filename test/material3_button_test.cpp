@@ -276,7 +276,8 @@ TEST(Material3Button, OutlinedVariantHasOutline) {
   ApplicationContext context = MakeContext(env);
 
   Button outlined(context, "O", ButtonVariant::kOutlined);
-  EXPECT_GT((int)outlined.getBorderStyle().outline_width().floor(), 0);
+  EXPECT_EQ(SmallNumber::Of16ths(Scaled(16)),
+            outlined.getBorderStyle().outline_width());
 
   Button filled(context, "F", ButtonVariant::kFilled);
   EXPECT_EQ(0, (int)filled.getBorderStyle().outline_width().floor());
@@ -470,8 +471,8 @@ TEST(Material3Button, ShapeMorphControlsPressedGeometry) {
       EXPECT_EQ(mode, button.shapeMorph());
       EXPECT_EQ(mode == ButtonShapeMorph::kDisabled ? resting : Scaled(8),
                 button.getBorderStyle().top_left_corner_radius());
-      EXPECT_EQ(std::max(1, Scaled(1)),
-                button.getBorderStyle().outline_width().floor());
+      EXPECT_EQ(SmallNumber::Of16ths(Scaled(16)),
+                button.getBorderStyle().outline_width());
     }
   }
 }
