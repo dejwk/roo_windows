@@ -46,7 +46,7 @@ class FlexCard : public FlexLayout {
   /// Reverts to the style-default outline color role.
   void clearOutlineRoleOverride();
 
-  /// Overrides the resting elevation (dp).
+  /// Overrides the resting renderer elevation (0..31), not Material dp.
   void setElevation(uint8_t elevation);
   bool hasElevationOverride() const {
     return (override_flags_ & kOverrideElevation) != 0;
@@ -83,7 +83,7 @@ class FlexCard : public FlexLayout {
   /// Returns a `BorderStyle` built from the (overridden) corner radius and
   /// outline width.
   BorderStyle getBorderStyle() const override;
-  /// Returns the (overridden) resting elevation in dp.
+  /// Returns the (overridden) resting renderer elevation.
   uint8_t getElevation() const override;
 
  private:

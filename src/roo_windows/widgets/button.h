@@ -2,8 +2,8 @@
 
 #include <string>
 
-#include "roo_windows/core/surface_widget.h"
 #include "roo_windows/core/border_style.h"
+#include "roo_windows/core/surface_widget.h"
 
 namespace roo_windows {
 
@@ -53,8 +53,8 @@ class Button : public SurfaceWidget {
   /// click dispatch.
   bool isClickable() const override { return true; }
 
-  /// Sets the resting and pressed elevations in dp. The current elevation
-  /// follows `isPressed()`.
+  /// Sets resting and pressed renderer elevations (0..31), not Material dp. The
+  /// current elevation follows `isPressed()`.
   void setElevation(uint8_t resting, uint8_t pressed);
 
   /// Resolves the container color role for the active style (e.g. surface

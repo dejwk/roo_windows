@@ -6,7 +6,7 @@
 
 namespace roo_windows::material3::internal {
 
-/// Material 3 menu geometry and color roles in Material dp units.
+/// Material 3 menu geometry in dp, color roles, and renderer shadow values.
 ///
 /// The two constants below are the local, reviewable transcription consumed by
 /// menu rows and panels. Keeping every role in one table prevents individual
@@ -24,7 +24,7 @@ struct MenuTokens {
   int16_t viewport_margin_dp;
   int16_t submenu_gutter_dp;
   int16_t panel_corner_radius_dp;
-  uint8_t elevation;
+  uint8_t elevation;  // Renderer parameter (0..31), not dp or an M3 level.
   ColorToken panel_container;
   ColorToken panel_content;
   ColorToken selected_container;

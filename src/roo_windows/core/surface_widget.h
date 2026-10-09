@@ -46,8 +46,10 @@ class SurfaceWidget : public Widget {
   virtual BorderStyle getBorderStyle() const { return BorderStyle(); }
 
   /// Returns the current elevation of the widget. Non-zero elevation causes
-  /// a shadow to be drawn. The elevation can be in the range [0-31]. By
-  /// default, surface widgets have elevation = 0. Subclasses can override.
+  /// a shadow to be drawn. Elevation is a renderer-specific shadow parameter in
+  /// [0-31], not physical dp or a Material 3 level ordinal. Decoration scales
+  /// the resulting shadow geometry for zoom; do not pre-scale this parameter.
+  /// By default, surface widgets have elevation = 0. Subclasses can override.
   /// When the reported elevation changes in the subclass,
   /// `elevationChanged()` must be called to ensure that the screen is
   /// properly redrawn.

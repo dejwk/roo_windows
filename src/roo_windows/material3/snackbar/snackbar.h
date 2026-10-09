@@ -115,7 +115,8 @@ class SnackbarWidget : public Container {
   /// Advertises the Material snackbar corner shape.
   BorderStyle getBorderStyle() const override;
 
-  /// Advertises Material level-three elevation.
+  /// Returns the current renderer shadow parameter.
+  /// The Material level-3 mapping is tracked by the FAB design elevation audit.
   uint8_t getElevation() const override { return 3; }
 
  protected:

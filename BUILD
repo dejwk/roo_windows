@@ -1450,3 +1450,10 @@ cc_test(
     srcs = ["test/material3_dropdown_button_resource_test.cpp"],
     deps = [":roo_windows", "@roo_testing//:arduino_gtest_main"],
 )
+
+cc_binary(
+    name = "material3_elevation_capture",
+    tags = ["manual"],
+    srcs = ["benchmarks/material3_elevation_capture.cpp"],
+    deps = [":roo_windows"],
+)

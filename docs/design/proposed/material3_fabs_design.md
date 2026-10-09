@@ -124,6 +124,101 @@ The local widget model imposes several concrete constraints:
   provides body/chrome geometry; FAB positioning remains the consuming host's
   responsibility. The base widgets add no placement state.
 
+### Elevation Audit (2026-10)
+
+This table records current code, not a claim that renderer numbers equal
+Material reference heights. The source links establish the required semantic
+levels; the calibration below quantifies the limits of numerical visual matching.
+
+| Component | Current renderer behavior | Material contract / finding |
+| --- | --- | --- |
+| Baseline menu | Constant 3 | [Level 2](https://raw.githubusercontent.com/androidx/androidx/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/MenuTokens.kt); cannot validate renderer 3 without mapping. |
+| Expressive menus | Constant 3 for both palettes | Baseline shadow value reused locally; expressive-specific reference still needs verification. |
+| Snackbar | Constant 3, formerly described as level 3 | [Level 3](https://raw.githubusercontent.com/androidx/androidx/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/SnackbarTokens.kt); the comment conflated semantic level with raw parameter. |
+| Elevated button and dropdown | Enabled 3, disabled 0; ignores hover/focus/press in resolver | [Level 1 at rest/focus/press, level 2 hovered, level 0 disabled](https://raw.githubusercontent.com/androidx/androidx/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/ElevatedButtonTokens.kt). Hover treatment is missing independently of calibration. |
+| Filled / tonal button and dropdown | Constant 0 | [Filled](https://raw.githubusercontent.com/androidx/androidx/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/FilledButtonTokens.kt) and [tonal](https://raw.githubusercontent.com/androidx/androidx/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/FilledTonalButtonTokens.kt) rise from level 0 to level 1 on hover; missing. |
+| Elevated FlexCard | Resting default 3; explicit renderer override supported | [Resting level 1](https://raw.githubusercontent.com/androidx/androidx/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/ElevatedCardTokens.kt). Current API provides resting styling, not the clickable/dragged state elevation family. |
+| Basic / full-screen dialog | Both zero | Basic-dialog [level 3](https://raw.githubusercontent.com/androidx/androidx/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/DialogTokens.kt) is a deviation in the existing local design; full-screen stays flat. Scrim ownership does not supply the surface shadow. |
+| App bars | Zero shadow with scrolled surface fill | Intentional [Material 3 color-based separation](https://m3.material.io/components/app-bars/); do not add a shadow based only on surface-color elevation. |
+
+The shared button appearance table separately stores resting/pressed values of
+1 while the actual elevation resolver returns 3 for elevated buttons. Consolidate
+that duplicate authority when migrating to the mapping. Test button and dropdown
+hover enter/exit, pressed and focused precedence, disable/re-enable, and cleanup
+of the larger old shadow after elevation decreases.
+
+### Renderer Calibration Results
+
+The experiment used the production `Decoration::readColors()` rasterizer at
+renderer settings 0..31, 56 dp / radius 16 dp and 96 dp / radius 28 dp surfaces,
+and 100% / 200% zoom: 128 roo captures. The reference is Google's
+[Material Web elevation implementation at revision 47adb655](https://github.com/material-components/material-web/blob/47adb655bd7a88c4d62e8faac2873084eed555dc/elevation/internal/_elevation.scss),
+rendered by Chrome 155.0.8059.39. Its two pseudo-element shadows were evaluated
+at the six integer levels, retaining separate key/ambient opacity and paint
+order. Both surfaces used identical dimensions, radii, and 64 dp margins.
+
+The fit compares direct 8-bit alpha on transparent backgrounds, outside the
+union of both zero-elevation surface masks, including their antialiased fringes.
+This retains thin contact shadows without scoring different surface edges.
+The objective is the equally weighted mean squared alpha error over the four
+size/zoom cases, with level zero fixed to renderer zero and a nondecreasing
+mapping. Captures on white and RGB(32,32,32) backgrounds provide visual checks;
+inverting dark 8-bit RGB to alpha amplifies rounding and is not the fit metric.
+All captured shadow tails fit inside their margins.
+
+| Material level | Combined best renderer value | Best at 100% only | Best at 200% only | Relative shadow RMS error, combined fit |
+| --- | --- | --- | --- | --- |
+| 0 | 0 | 0 | 0 | 0% |
+| 1 | 1 | 2 | 1 | 53% |
+| 2 | 2 | 2 | 1 | 60% |
+| 3 | 3 | 3 | 2 | 59% |
+| 4 | 4 | 4 | 3 | 57% |
+| 5 | 7 | 9 | 7 | 49% |
+
+Relative RMS error is `sqrt(sum(error squared) / sum(reference alpha squared))`,
+with equal case weighting. This exposes the residual mismatch instead of
+reporting a small whole-canvas error diluted by transparent pixels. Removing
+one additional device-pixel ring gives the same combined mapping. A two-pixel
+ring was rejected because it removes nearly all of the smallest shadow at 100%.
+Level 4's candidates 3 and 4 differ by only about 1% in MSE; level 5's candidates
+7 through 9 are also close. These are approximate choices, not precise physical
+calibration constants.
+
+**Conclusion:** use `[0, 1, 2, 3, 4, 7]` as the proposed shared approximation
+when retaining the current renderer. There is no exact, zoom-independent visual
+match: low renderer settings give a narrow contact outline and the shadow
+falloff differs from Material's blur. Increasing renderer elevation also reduces
+its peak opacity. An exact Material appearance needs a separately designed
+shadow profile, not a different integer conversion. This audit does not change
+existing components' runtime shadow values; migrating them is a separate code
+slice with visual regression review. The proposed FAB therefore uses renderer
+3 at rest/focus/press and 4 on hover, explicitly via semantic mapping.
+
+![All 32 production renderer settings](figures/material3_elevation_all_levels.png)
+
+![Material reference compared with fitted renderer shadows](figures/material3_elevation_comparison.png)
+
+Reproduction uses the canonical repository as the working directory. The
+[capture benchmark](../../../benchmarks/material3_elevation_capture.cpp) exports
+PGM alpha without display RGB565/ARGB4444 quantization. The
+[analysis script](../../../benchmarks/material3_elevation_calibration.py) needs
+Python with NumPy and Pillow plus `google-chrome` (override with `--chrome`).
+The [recorded results](../../../benchmarks/material3_elevation_calibration_results.json)
+include every per-case 6-by-32 error matrix, source revision/hash, browser version,
+and sensitivity result. Production renderer source baseline: commit `a1396830`.
+
+```sh
+bazel run //:material3_elevation_capture -- /tmp/roo-shadow-calibration/raw
+bazel run //:material3_elevation_capture --copt=-DROO_WINDOWS_ZOOM=200 -- /tmp/roo-shadow-calibration/raw
+python3 benchmarks/material3_elevation_calibration.py /tmp/roo-shadow-calibration
+```
+
+The reference HTML, screenshots, raw alpha captures, and contact sheets remain
+in the selected output directory. Geometry is scaled explicitly; elevation
+inputs stay unchanged between zoom builds. Level-zero alpha masks agree after
+excluding both antialiased fringes, and the fit's shadow error is exactly zero
+for level zero.
+
 ## Requirements
 
 ### Functional Requirements
@@ -382,13 +477,31 @@ coverage, which already opts out. Verify final rendered colors on an opaque
 surface host, not just resolver output.
 No outline is drawn in any style.
 
-Enabled-state elevation is:
+Material semantic elevation and renderer elevation are distinct quantities.
+The [Material system tokens](https://raw.githubusercontent.com/androidx/androidx/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/ElevationTokens.kt)
+define levels 0..5 with reference heights 0, 1, 3, 6, 8, and 12 dp. These are
+**not** numeric values to pass directly to `SurfaceWidget::getElevation()`.
+Its 0..31 parameter drives the framework's custom shadow spread, shift, and
+opacity formulas in [decoration.cpp](../../../src/roo_windows/decoration/decoration.cpp).
+Zoom scales the derived geometry; callers must not pre-scale the parameter.
+Surface color roles and paint order are independent of this shadow parameter.
 
-- resting: `3 dp`,
-- hovered: `4 dp`,
-- focused: `3 dp`,
-- pressed: `3 dp`,
-- disabled: `0 dp`.
+The [FAB state tokens](https://raw.githubusercontent.com/androidx/androidx/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/FabPrimaryContainerTokens.kt)
+require:
+
+| State | Material level | Material reference height (not renderer value) |
+| --- | --- | --- |
+| Resting | 3 | 6 dp |
+| Hovered | 4 | 8 dp |
+| Focused | 3 | 6 dp |
+| Pressed | 3 | 6 dp |
+| Disabled (local extension) | 0 | 0 dp |
+
+No established Material-to-renderer mapping was found in the current tree or
+inspected renderer history. The [calibration below](#renderer-calibration-results)
+provides an experimentally selected approximation, not an exact Material match.
+The implementation must resolve semantic levels through the proposed shared
+mapping; neither the level ordinal nor reference dp is an implicit conversion.
 
 Resolve simultaneous states in this order: disabled, pressed, focused,
 hovered, resting. Selection and activation use the shared overlays without
@@ -635,6 +748,34 @@ Implementation work for these phases follows the repo-local
 [widget authoring](../../../.github/instructions/roo-windows-widget-authoring.instructions.md)
 and [C++ authoring](../../../.github/instructions/general-cpp-code-authoring-instructions.md)
 instructions.
+
+### Phase 0: Apply the Calibrated Material-to-Renderer Mapping
+
+The calibration experiment is complete; its results and reproducible tools are
+recorded above. Runtime adoption remains to be implemented.
+
+1. Add a shared Material-level-to-renderer helper using the measured candidate
+   `[0, 1, 2, 3, 4, 7]`, documenting its approximation limits and provenance.
+2. Add unit coverage for all six entries, explicit renderer units, and unchanged
+   results across zoom configurations. Preserve raw 0..31 overrides.
+3. Migrate baseline menus, snackbar, and elevated-card resting defaults to the
+   semantic levels in the audit. Verify expressive-menu elevation against its
+   own reference before migrating that variant.
+4. Consolidate duplicate button elevation sources, add the missing hover
+   states for buttons and dropdowns, and invalidate the larger old/new shadow.
+5. Reconcile the basic-dialog zero-shadow deviation with its level-3 contract;
+   keep full-screen dialogs flat. Review affected goldens at both zoom levels.
+
+Proposed commit message:
+
+> Material 3 FAB Phase 0: apply calibrated renderer elevation mapping.
+>
+> Centralize the approximate Material shadow mapping and migrate verified
+> component elevation states with unit and visual regression coverage.
+
+Validation: mapping tests, affected component tests, and reviewed golden changes.
+Use the recorded calibration to assess visual changes rather than equating
+reference dp heights with renderer values.
 
 ### Phase 1: Declare the Material 3 FAB Types and Size Budgets
 
