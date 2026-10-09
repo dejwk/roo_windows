@@ -257,6 +257,10 @@ pins both to spacious geometry. Pass the policy into `MenuPolicy::density`,
 thereby deliberately overriding standalone Menu's explicit-zero default. The
 composite has one predictable compactness setting, while button size/shape/
 variant affect only the trigger, not menu row typography or appearance.
+The session sets `MenuPolicy::text_size` to `MenuTextSize::kMedium`, using
+body-medium primary option text to match the button label's nominal size.
+Standalone menus retain their body-large default. Menu row spacing and minimum
+heights continue to follow density independently of the text-size choice.
 
 Resolve inheritance live from the application theme. Density changes eligible
 vertical whitespace, not text, chevron artwork, horizontal padding, or gap.

@@ -60,7 +60,7 @@ TEST(DropdownButtonGolden, ClosedFilled) {
               DensityOverride(), false, 320);
 }
 
-// Verifies the menu anchors below the trigger with one checked selection.
+// Verifies medium option text and one checked selection in a tight viewport.
 TEST(DropdownButtonGolden, OpenOutlined) {
   CheckButton("open_outlined", ButtonVariant::kOutlined, ButtonSize::kSmall,
               DensityOverride(), true, 320);

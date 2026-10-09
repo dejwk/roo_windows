@@ -98,6 +98,7 @@ class DropdownButton::Session final : public Menu,
     }
     MenuPolicy policy;
     policy.selection_mode = SelectionMode::kSingle;
+    policy.text_size = MenuTextSize::kMedium;
     policy.density = owner_.density_;
     setPolicy(policy);
     addGroup(std::move(group));
