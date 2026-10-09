@@ -254,12 +254,12 @@ internal::TextFieldMetrics TextField::contentMetrics() const {
 }
 
 Dimensions TextField::getSuggestedMinimumDimensions() const {
-  return Dimensions(
-      Scaled(120),
-      internal::ResolveTextFieldNaturalHeight(
-          variant() == TextFieldVariant::kOutlined, !assistiveText().empty(),
-          contentMetrics(),
-          internal::ResolveDensityLevel(theme().material3Theme().density)));
+  return Dimensions(Scaled(120),
+                    internal::ResolveTextFieldNaturalHeight(
+                        variant() == TextFieldVariant::kOutlined,
+                        !assistiveText().empty(), contentMetrics(),
+                        internal::ResolveDensityLevel(densityOverride().resolve(
+                            theme().material3Theme().density))));
 }
 
 PreferredSize TextField::getPreferredSize() const {
@@ -282,7 +282,8 @@ TextField::Slots TextField::slots() const {
       floating ? TextWidth(prefix_, body) : 0,
       floating ? TextWidth(suffix_, body) : 0};
   return internal::ResolveTextFieldSlots(
-      input, internal::ResolveDensityLevel(theme().material3Theme().density));
+      input, internal::ResolveDensityLevel(
+                 densityOverride().resolve(theme().material3Theme().density)));
 }
 
 void TextField::paint(PaintContext& ctx) const {

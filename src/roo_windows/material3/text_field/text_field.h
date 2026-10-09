@@ -3,6 +3,7 @@
 #include "roo_windows/core/layout_direction.h"
 #include "roo_windows/core/surface_widget.h"
 #include "roo_windows/internal/text_edit_target.h"
+#include "roo_windows/material3/density.h"
 #include "roo_windows/material3/typography.h"
 
 namespace roo_windows::material3::internal {
@@ -33,6 +34,12 @@ class TextField : public SurfaceWidget,
 
   /// Changes the container treatment and remeasures its label clearance.
   void setVariant(TextFieldVariant variant);
+
+  /// Selects component density without storing optional policy on every field.
+  /// The default inherits the live theme. Subclasses may pin a density;
+  /// changing their policy requires requesting layout and invalidating the
+  /// field.
+  virtual DensityOverride densityOverride() const { return {}; }
 
   /// Returns the live value; cancel does not revert edits.
   const std::string& text() const { return value_; }

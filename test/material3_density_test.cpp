@@ -202,6 +202,41 @@ TEST_F(DensityTest, FixedBoundsFieldRepaints) {
   task.navigation().clear();
 }
 
+// Verifies pinned field density controls both measurement and painting while
+// ordinary fields still inherit live theme changes.
+TEST_F(DensityTest, TextFieldDensityOverride) {
+  class CompactField : public TextField {
+   public:
+    using TextField::TextField;
+    DensityOverride densityOverride() const override {
+      return DensityOverride::Explicit(Density::kMinus5);
+    }
+  };
+  TextField inherited(context(), "Name");
+  EXPECT_TRUE(inherited.densityOverride().isInherited());
+  for (TextFieldVariant variant :
+       {TextFieldVariant::kFilled, TextFieldVariant::kOutlined}) {
+    CompactField field(context(), "Name", variant);
+    field.setText("value");
+    Task& task = app_.addTask(field, roo_display::Box(0, 0, 239, 119));
+    change(Density::kDefault);
+    EXPECT_EQ(field.getSuggestedMinimumDimensions().height(),
+              Scaled(variant == TextFieldVariant::kFilled ? 48 : 44));
+    EXPECT_EQ(inherited.getSuggestedMinimumDimensions().height(), Scaled(56));
+    std::vector<roo_display::Color> original;
+    for (int y = 0; y < 120; ++y)
+      for (int x = 0; x < 240; ++x) original.push_back(pixelAt(x, y));
+    change(Density::kMinus5);
+    EXPECT_EQ(field.getSuggestedMinimumDimensions().height(),
+              Scaled(variant == TextFieldVariant::kFilled ? 48 : 44));
+    EXPECT_EQ(inherited.getSuggestedMinimumDimensions().height(), Scaled(48));
+    for (int y = 0; y < 120; ++y)
+      for (int x = 0; x < 240; ++x)
+        EXPECT_EQ(pixelAt(x, y), original[y * 240 + x]);
+    task.navigation().clear();
+  }
+}
+
 // Verifies active hardware editing retains text, selection, and focus while
 // the source field follows the shared live theme.
 TEST_F(DensityTest, ActiveInPlaceEditor) {
