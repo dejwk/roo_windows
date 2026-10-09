@@ -26,6 +26,10 @@ bool WidgetEventDispatcher::hasInteractiveChangeHandler(
 void WidgetEventDispatcher::dispatchInteractiveChange(Widget& widget) {
   auto it = interactive_change_handlers_.find(&widget);
   if (it == interactive_change_handlers_.end()) return;
+  // Keep the registered callable alive if the callback removes its widget.
+  // Copying std::function here could allocate on every dispatch and would
+  // discard changes to mutable captures. Sharing adds a registration-time
+  // allocation while preserving the original callable and its state.
   std::shared_ptr<std::function<void()>> handler = (*it).second;
   (*handler)();
 }
@@ -53,6 +57,9 @@ void WidgetEventDispatcher::dispatchScrollPositionChange(
     Widget& widget, ScrollPosition previous, ScrollPosition current) {
   auto it = scroll_position_change_handlers_.find(&widget);
   if (it == scroll_position_change_handlers_.end()) return;
+  // Keep the original callable alive if the callback changes registration.
+  // A std::function copy could allocate during scroll dispatch and would lose
+  // mutable-capture updates; sharing pays for storage at registration instead.
   std::shared_ptr<ScrollHandler> handler = (*it).second;
   (*handler)(previous, current);
 }
