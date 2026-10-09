@@ -130,6 +130,10 @@ class DropdownButton : public SurfaceWidget {
   /// Paints left-aligned text and a right-aligned chevron.
   void paint(PaintContext& ctx) const override;
 
+  ClickActivationPolicy getClickActivationPolicy() const override {
+    return ClickActivationPolicy::kImmediateContinueAnimation;
+  }
+
  protected:
   /// Resolves natural dimensions against parent constraints.
   Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
