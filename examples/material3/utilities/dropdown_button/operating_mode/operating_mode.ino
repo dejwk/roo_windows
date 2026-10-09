@@ -21,8 +21,10 @@ static constexpr const char* kModes[] = {"Off", "Automatic", "Scheduled"};
 static constexpr const char* kServiceModes[] = {"Off", "Automatic", "Scheduled",
                                                 "Maintenance"};
 
+/// Shows an operating-mode selector and adds a maintenance choice on demand.
 class OperatingModeScreen final : public FlexLayout {
  public:
+  /// Creates the screen with borrowed, static choice tables in @p context.
   explicit OperatingModeScreen(ApplicationContext& context)
       : FlexLayout(context, FlexDirection::kColumn),
         caption_(context, "Operating mode",
@@ -52,9 +54,9 @@ class OperatingModeScreen final : public FlexLayout {
     add(service_);
   }
 
-  // Call from application policy when maintenance mode becomes available.
-  // The new table is static here; a runtime-built table must remain alive
-  // until another successful replacement or this widget's destruction.
+  /// Adds the maintenance choice when application policy enables it.
+  /// The new table is static here; a runtime-built table must remain alive
+  /// until another successful replacement or this widget's destruction.
   void enableMaintenanceMode() { mode_.setItems(kServiceModes, 2); }
 
  private:

@@ -18,8 +18,6 @@ using roo_display::StringViewLabel;
 namespace roo_windows {
 namespace material3 {
 
-namespace {}  // namespace
-
 Button::Button(ApplicationContext& context, roo::string_view label,
                ButtonVariant variant)
     : SurfaceWidget(context),

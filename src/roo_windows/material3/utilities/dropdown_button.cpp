@@ -23,6 +23,7 @@
 namespace roo_windows::material3 {
 namespace {
 
+// Returns the immutable chevron artwork for the trigger size tier.
 const MonoIcon& Chevron(ButtonSize size) {
   static const MonoIcon extra_small = ic_filled_18_navigation_expand_more();
   static const MonoIcon standard = ic_filled_24_navigation_expand_more();
@@ -46,7 +47,7 @@ const MonoIcon& Chevron(ButtonSize size) {
 std::pair<int, int> TextWidthAndOrigin(roo::string_view text) {
   if (text.empty()) return {0, 0};
   const TextStyle& style = text_style_label_large();
-  auto metrics =
+  const roo_display::GlyphMetrics metrics =
       style.font().getHorizontalStringMetrics(text, style.fontOptions());
   int left = std::min<int>(0, metrics.screen_extents().xMin());
   int right =
@@ -54,6 +55,7 @@ std::pair<int, int> TextWidthAndOrigin(roo::string_view text) {
   return {std::max(0, right - left), -left};
 }
 
+// Saturates nonnegative layout dimensions to the storage range.
 int16_t ClampedDimension(int value) {
   return static_cast<int16_t>(
       std::max(0, std::min<int>(value, std::numeric_limits<int16_t>::max())));
@@ -65,8 +67,10 @@ int16_t ClampedDimension(int value) {
 class DropdownButton::Session final : public Menu,
                                       private roo_scheduler::Executable {
  public:
+  /// Captures one borrowed menu option and records its invoked index.
   class Item final : public StandardMenuItem {
    public:
+    /// Creates one row that borrows @p label for the session lifetime.
     Item(Session& session, size_t index, roo::string_view label, bool selected)
         : StandardMenuItem(StandardMenuItemInit{
               label,
@@ -78,6 +82,7 @@ class DropdownButton::Session final : public Menu,
           session_(session),
           index_(index) {}
 
+    /// Records the invoked choice for delivery after menu detachment.
     void onInvoked() override { session_.pending_index_ = index_; }
 
    private:
@@ -85,9 +90,11 @@ class DropdownButton::Session final : public Menu,
     size_t index_;
   };
 
+  /// Creates a transient menu belonging to @p owner.
   explicit Session(DropdownButton& owner)
       : Menu(owner.context()), owner_(owner) {}
 
+  /// Cancels deferred completion and detaches menu state before rows die.
   ~Session() override {
     suppress_ = true;
     if (pending_execution_ >= 0 && owner_.tryContext() != nullptr) {
@@ -96,6 +103,7 @@ class DropdownButton::Session final : public Menu,
     prepareForDerivedDestruction();
   }
 
+  /// Builds rows only for an active presentation, borrowing every option label.
   void populate(const char* const* items, size_t count, size_t selected) {
     auto group = std::make_unique<MenuGroup>(owner_.context());
     for (size_t i = 0; i < count; ++i) {
@@ -112,11 +120,22 @@ class DropdownButton::Session final : public Menu,
     addGroup(std::move(group));
   }
 
+  /// Returns the selected row for initial menu focus.
   MenuEntry* selectedRow() const { return selected_row_; }
+
+  /// Returns the row invoked before the menu detached, if any.
   size_t pendingIndex() const { return pending_index_; }
+
+  /// Returns the terminal reason used for deferred selection delivery.
   PresentationFinishReason finishReason() const { return finish_reason_; }
+
+  /// Reports whether this menu remains presented.
   bool isOpen() const { return open_; }
+
+  /// Updates presentation state after admission or detachment.
   void setOpen(bool open) { open_ = open; }
+
+  /// Prevents a programmatic dismissal from scheduling selection delivery.
   void suppress() { suppress_ = true; }
 
  protected:
@@ -152,18 +171,19 @@ DropdownButton::DropdownButton(ApplicationContext& context,
       variant_(static_cast<uint8_t>(variant)),
       size_(static_cast<uint8_t>(ButtonSize::kSmall)),
       shape_(static_cast<uint8_t>(ButtonShape::kRound)) {
-  assert(validItems(items, count));
-  if (validItems(items, count)) {
+  assert(ValidItems(items, count));
+  if (ValidItems(items, count)) {
     items_ = items;
     count_ = count;
     selected_index_ = count == 0 ? kNoSelection : 0;
-    text_metrics_ = measureItems(items, count);
+    text_metrics_ = MeasureItems(items, count);
   }
 }
 
 DropdownButton::~DropdownButton() { dismissMenu(); }
 
-bool DropdownButton::validItems(const char* const* items, size_t count) {
+// Validates the borrowed table before it can replace an active one.
+bool DropdownButton::ValidItems(const char* const* items, size_t count) {
   if (count > UINT16_MAX || (count > 0 && items == nullptr)) return false;
   for (size_t i = 0; i < count; ++i) {
     if (items[i] == nullptr) return false;
@@ -171,7 +191,8 @@ bool DropdownButton::validItems(const char* const* items, size_t count) {
   return true;
 }
 
-Dimensions DropdownButton::measureItems(const char* const* items,
+// Caches widest ink/advance and tallest line among all choices.
+Dimensions DropdownButton::MeasureItems(const char* const* items,
                                         size_t count) {
   int width = 0;
   int height = 0;
@@ -186,11 +207,11 @@ Dimensions DropdownButton::measureItems(const char* const* items,
 
 bool DropdownButton::setItems(const char* const* items, size_t count,
                               size_t selected_index) {
-  if (!validItems(items, count) || (count > 0 && selected_index >= count) ||
+  if (!ValidItems(items, count) || (count > 0 && selected_index >= count) ||
       (count == 0 && selected_index != 0 && selected_index != kNoSelection)) {
     return false;
   }
-  Dimensions metrics = measureItems(items, count);
+  Dimensions metrics = MeasureItems(items, count);
   dismissMenu();
   items_ = items;
   count_ = count;
@@ -290,7 +311,7 @@ Dimensions DropdownButton::onMeasure(WidthSpec width, HeightSpec height) {
 
 void DropdownButton::requestLayoutDescending() {
   dismissMenu();
-  text_metrics_ = measureItems(items_, count_);
+  text_metrics_ = MeasureItems(items_, count_);
   SurfaceWidget::requestLayoutDescending();
 }
 
@@ -400,7 +421,7 @@ MenuShowResult DropdownButton::showMenu() {
   if (!isEnabled() || count_ == 0 || owner == nullptr) {
     return MenuShowResult::kInteractionOwnerUnavailable;
   }
-  auto session = std::make_unique<Session>(*this);
+  std::unique_ptr<Session> session = std::make_unique<Session>(*this);
   session->populate(items_, count_, selected_index_);
   MenuShowResult result =
       session->show(*owner, *this, MenuPlacement::kBelowStart);
@@ -425,6 +446,7 @@ bool DropdownButton::isMenuOpen() const {
   return session_ != nullptr && session_->isOpen();
 }
 
+// Release all menu state before committing and notifying a reentrant handler.
 void DropdownButton::completeSession() {
   if (session_ == nullptr) return;
   size_t index = session_->pendingIndex();

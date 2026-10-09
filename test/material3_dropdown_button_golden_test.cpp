@@ -20,6 +20,7 @@ class GoldenPanel final : public Panel {
   using Panel::removeLast;
 };
 
+// Captures one selector state and compares its final surface with a reference.
 void CheckButton(const char* name, ButtonVariant variant, ButtonSize size,
                  DensityOverride density, bool open, int width) {
   constexpr int kHeight = 240;

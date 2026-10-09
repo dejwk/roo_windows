@@ -45,6 +45,7 @@ Color DisabledComposite(const Theme& theme, Color fg, uint8_t alpha) {
   return AlphaBlend(theme.material3Theme().color.surface, fg.withA(alpha));
 }
 
+// Interpolates a corner radius while pinning animation endpoints exactly.
 uint8_t InterpolateCornerRadiusPx(uint8_t from, uint8_t to, float progress) {
   if (progress <= 0.0f) return from;
   if (progress >= 1.0f) return to;
@@ -104,7 +105,8 @@ uint8_t ResolveButtonElevation(ButtonVariant variant, bool enabled,
   return variant == ButtonVariant::kElevated ? 3 : 0;
 }
 
-// Nominal height keeps shape queries stable before the first layout.
+// Before layout, retain the nominal height used by the old button shape
+// query. This keeps the corners stable until measured bounds are available.
 Dimensions ButtonCornerDimensions(ButtonSize size, Dimensions measured) {
   if (measured.width() > 0 && measured.height() > 0) return measured;
   int16_t height =
@@ -133,10 +135,12 @@ BorderStyle ResolveButtonBorderStyle(ButtonSize size, ButtonShape shape,
       ResolveButtonCornerRadius(size, shape, true, measured);
   uint8_t radius = pressed_radius;
   if (animation != nullptr) {
+    // Settle the shape early, before the longer click animation completes.
     radius = InterpolateCornerRadiusPx(
         resting, pressed_radius,
         std::min(1.0f, animation->progress() * kShapeMorphProgressScale));
   }
+  // Without an active animation, pressed state uses the shared squarer shape.
   return BorderStyle(radius, outline);
 }
 

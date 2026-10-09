@@ -22,6 +22,7 @@ thread_local bool track_allocations = false;
 thread_local size_t live_bytes = 0;
 thread_local size_t peak_bytes = 0;
 
+// Tracks only allocations started inside a measured selector lifecycle.
 void* Allocate(size_t bytes, bool nothrow) {
   auto* header = static_cast<AllocationHeader*>(
       std::malloc(sizeof(AllocationHeader) + (bytes == 0 ? 1 : bytes)));
@@ -38,6 +39,7 @@ void* Allocate(size_t bytes, bool nothrow) {
   return header + 1;
 }
 
+// Releases measured bytes even when the tracking window has ended.
 void Deallocate(void* pointer) noexcept {
   if (pointer == nullptr) return;
   auto* header = static_cast<AllocationHeader*>(pointer) - 1;

@@ -18,14 +18,17 @@ namespace roo_windows::material3 {
 /// successful setItems() call replaces them or the button is destroyed.
 class DropdownButton : public SurfaceWidget {
  public:
+  /// Sentinel returned by selectedIndex() when the choice table is empty.
   static constexpr size_t kNoSelection = static_cast<size_t>(-1);
 
-  /// Creates a selector borrowing @p items and their strings; starts at zero.
+  /// Creates a selector in @p context, borrowing @p items and their strings.
+  /// Starts at index zero when nonempty and uses @p variant for the trigger.
   /// Invalid tables assert in debug builds and become empty in release builds.
   DropdownButton(ApplicationContext& context, const char* const* items,
                  size_t count, ButtonVariant variant = ButtonVariant::kFilled);
 
-  /// Deduces the count of a caller-owned constant pointer array.
+  /// Creates a selector from caller-owned @p items, deducing its array size.
+  /// The array and strings must outlive this selector or their replacement.
   template <size_t N>
   DropdownButton(ApplicationContext& context, const char* const (&items)[N],
                  ButtonVariant variant = ButtonVariant::kFilled)
@@ -37,10 +40,11 @@ class DropdownButton : public SurfaceWidget {
   /// Replaces the borrowed table and silently selects @p selected_index.
   /// Valid replacement releases old borrows before return; invalid input leaves
   /// the current choices and selection unchanged. Zero or kNoSelection is
-  /// accepted for an empty replacement.
+  /// accepted for an empty replacement. An open menu is dismissed first.
   bool setItems(const char* const* items, size_t count, size_t selected_index);
 
-  /// Replaces choices from an array, selecting its first item by default.
+  /// Replaces borrowed @p items and chooses @p selected_index, defaulting to
+  /// zero. Returns false and keeps the old table when the selection is invalid.
   template <size_t N>
   bool setItems(const char* const (&items)[N], size_t selected_index = 0) {
     return setItems(items, N, selected_index);
@@ -53,10 +57,13 @@ class DropdownButton : public SurfaceWidget {
   size_t selectedIndex() const { return selected_index_; }
 
   /// Returns a borrowed view of the selected string, or an empty view.
+  /// Its bytes remain owned by the caller; old bytes can be released after
+  /// replacement when the new table does not also borrow them.
   roo::string_view selectedText() const;
 
-  /// Silently selects a valid index and closes any active menu.
-  /// Returns false without changing state when @p index is invalid.
+  /// Silently selects @p index and closes any active menu.
+  /// Returns false without changing state when @p index is invalid; no
+  /// interactive-change callback runs for programmatic selection.
   bool setSelectedIndex(size_t index);
 
   /// Returns the Material 3 size tier used for trigger geometry.
@@ -79,10 +86,12 @@ class DropdownButton : public SurfaceWidget {
   /// Changes both trigger and menu density; a default policy inherits theme.
   void setDensityOverride(DensityOverride density);
 
-  /// Presents an anchored menu or returns a specific admission failure.
+  /// Presents an anchored menu, or returns its admission failure.
+  /// Interactive selection commits after menu detachment through the scheduler.
   MenuShowResult showMenu();
 
   /// Silently cancels an open menu or pending selection completion.
+  /// The committed selection stays unchanged and no callback is delivered.
   void dismissMenu();
 
   /// Reports whether a menu is still presented, excluding pending cleanup.
@@ -128,8 +137,8 @@ class DropdownButton : public SurfaceWidget {
  private:
   class Session;
 
-  static bool validItems(const char* const* items, size_t count);
-  static Dimensions measureItems(const char* const* items, size_t count);
+  static bool ValidItems(const char* const* items, size_t count);
+  static Dimensions MeasureItems(const char* const* items, size_t count);
   void completeSession();
   int8_t resolvedDensityLevel() const;
   Dimensions iconSlot() const;
