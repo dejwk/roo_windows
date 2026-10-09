@@ -186,9 +186,11 @@ as well as its strings, so a local pointer array must also outlive its use.
 Use the current button `label-large` typography for every size, preserving its
 actual current behavior. Reuse the button size-token table, reduced small-button
 horizontal padding, normal outer margins, shape-morph default, and all five
-variant palettes. A shared immutable down-chevron asset is selected for the
-size tier; use existing Roo icon assets and the same nominal icon-slot rules
-as buttons. The glyph always points down, including while the menu is open.
+variant palettes. A shared immutable down-chevron asset is selected at
+compile time by `SCALED_ROO_ICON` for the configured display zoom, so only that
+artwork size is linked. Each button size still supplies its own nominal
+icon-slot token; the slot contains whichever is larger, the token or the
+artwork anchor. The glyph always points down, including while the menu is open.
 
 Move the existing button palette/elevation/shape-resolution code into
 `material3/button/internal/button_appearance.{h,cpp}`. Functions accept the

@@ -8,10 +8,7 @@
 #include "roo_display/ui/alignment.h"
 #include "roo_display/ui/text_label.h"
 #include "roo_display/ui/tile.h"
-#include "roo_icons/filled/18/navigation.h"
-#include "roo_icons/filled/24/navigation.h"
-#include "roo_icons/filled/36/navigation.h"
-#include "roo_icons/filled/48/navigation.h"
+#include "roo_icons/filled/navigation.h"
 #include "roo_scheduler.h"
 #include "roo_windows/core/paint_context.h"
 #include "roo_windows/core/task.h"
@@ -23,24 +20,10 @@
 namespace roo_windows::material3 {
 namespace {
 
-// Returns the immutable chevron artwork for the trigger size tier.
-const MonoIcon& Chevron(ButtonSize size) {
-  static const MonoIcon extra_small = ic_filled_18_navigation_expand_more();
-  static const MonoIcon standard = ic_filled_24_navigation_expand_more();
-  static const MonoIcon large = ic_filled_36_navigation_expand_more();
-  static const MonoIcon extra_large = ic_filled_48_navigation_expand_more();
-  switch (size) {
-    case ButtonSize::kExtraSmall:
-      return extra_small;
-    case ButtonSize::kSmall:
-    case ButtonSize::kMedium:
-      return standard;
-    case ButtonSize::kLarge:
-      return large;
-    case ButtonSize::kExtraLarge:
-      return extra_large;
-  }
-  return standard;
+// Selects one artwork size at compile time for the configured display zoom.
+const MonoIcon& Chevron() {
+  static const MonoIcon icon = SCALED_ROO_ICON(filled, navigation_expand_more);
+  return icon;
 }
 
 // Use one text block for both advance and ink; preserve negative bearings.
@@ -281,7 +264,7 @@ int8_t DropdownButton::resolvedDensityLevel() const {
 Dimensions DropdownButton::iconSlot() const {
   const internal::ButtonGeometryTokens& tokens =
       internal::ButtonGeometryTokensFor(size());
-  const MonoIcon& icon = Chevron(size());
+  const MonoIcon& icon = Chevron();
   return {std::max<int16_t>(Scaled(tokens.icon_size_dp),
                             icon.anchorExtents().width()),
           std::max<int16_t>(Scaled(tokens.icon_size_dp),
@@ -403,7 +386,7 @@ void DropdownButton::paint(PaintContext& ctx) const {
     ctx.clearRect(text_rect);
   }
   if (!icon_rect.empty()) {
-    MonoIcon icon = Chevron(size());
+    MonoIcon icon = Chevron();
     icon.color_mode().setColor(color);
     PaintContext part = ctx.clipped(icon_rect);
     part.setBgcolor(ctx.bgcolor());

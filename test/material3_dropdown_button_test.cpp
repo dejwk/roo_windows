@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <memory>
 #include <string>
 #include <vector>
@@ -5,10 +6,13 @@
 #include "gtest/gtest.h"
 #include "roo_display.h"
 #include "roo_display/core/offscreen.h"
+#include "roo_icons/filled/navigation.h"
 #include "roo_windows/core/application.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/panel.h"
 #include "roo_windows/core/task.h"
+#include "roo_windows/core/theme.h"
+#include "roo_windows/material3/button/internal/button_geometry.h"
 #include "roo_windows/material3/utilities/dropdown_button.h"
 
 namespace roo_windows::material3 {
@@ -81,6 +85,23 @@ TEST_F(DropdownButtonTest, StableNaturalWidthAndSilentSelection) {
   EXPECT_EQ(0, changes);
   EXPECT_FALSE(button.setSelectedIndex(3));
   EXPECT_EQ(2u, button.selectedIndex());
+}
+
+// Verifies each button size reserves its own token slot around the single
+// artwork variant selected for the configured display zoom.
+TEST_F(DropdownButtonTest, ChevronUsesScaledArtworkAndSizeTokenSlot) {
+  DropdownButton button(app_.context(), nullptr, 0);
+  const MonoIcon& chevron = SCALED_ROO_ICON(filled, navigation_expand_more);
+  for (ButtonSize size :
+       {ButtonSize::kExtraSmall, ButtonSize::kSmall, ButtonSize::kMedium,
+        ButtonSize::kLarge, ButtonSize::kExtraLarge}) {
+    button.setSize(size);
+    const internal::ButtonGeometryTokens& tokens =
+        internal::ButtonGeometryTokensFor(size);
+    EXPECT_EQ(std::max<int>(Scaled(tokens.icon_size_dp),
+                            chevron.anchorExtents().width()),
+              button.getSuggestedMinimumDimensions().width());
+  }
 }
 
 // Verifies replacing choices releases old borrows and recalculates width.
