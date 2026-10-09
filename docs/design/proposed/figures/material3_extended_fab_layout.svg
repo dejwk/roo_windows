@@ -1,56 +1,15 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="900" height="280" viewBox="0 0 900 280">
-  <rect width="900" height="280" fill="#ffffff"/>
-  <style>
-    .title { font: 600 18px sans-serif; fill: #1f1f1f; }
-    .label { font: 13px sans-serif; fill: #1f1f1f; }
-    .small { font: 12px sans-serif; fill: #555555; }
-    .frame { fill: #d7e3ff; stroke: #4f5b78; stroke-width: 2; }
-    .icon { fill: #2b4c7e; stroke: #203656; stroke-width: 1.5; }
-    .textbar { fill: #6a7a96; }
-    .guide { stroke: #666666; stroke-width: 1.5; fill: none; marker-start: url(#arrow); marker-end: url(#arrow); }
-    .tick { stroke: #666666; stroke-width: 1.5; }
-  </style>
-  <defs>
-    <marker id="arrow" viewBox="0 0 8 8" refX="4" refY="4" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
-      <path d="M0,0 L8,4 L0,8 z" fill="#666666"/>
-    </marker>
-  </defs>
-
-  <text x="40" y="32" class="title">Material 3 Extended FAB layout</text>
-
-  <text x="120" y="64" class="label">Expanded</text>
-  <rect x="90" y="96" width="360" height="56" rx="20" ry="20" class="frame"/>
-  <rect x="106" y="112" width="24" height="24" rx="4" ry="4" class="icon"/>
-  <rect x="142" y="117" width="92" height="14" rx="3" ry="3" class="textbar"/>
-  <text x="462" y="129" class="small">56 dp height</text>
-
-  <line x1="468" y1="96" x2="468" y2="152" class="tick"/>
-  <line x1="486" y1="96" x2="486" y2="152" class="tick"/>
-  <line x1="477" y1="96" x2="477" y2="152" class="guide"/>
-
-  <line x1="90" y1="184" x2="106" y2="184" class="guide"/>
-  <line x1="90" y1="174" x2="90" y2="194" class="tick"/>
-  <line x1="106" y1="174" x2="106" y2="194" class="tick"/>
-  <text x="75" y="208" class="small">16 dp</text>
-
-  <line x1="130" y1="184" x2="142" y2="184" class="guide"/>
-  <line x1="130" y1="174" x2="130" y2="194" class="tick"/>
-  <line x1="142" y1="174" x2="142" y2="194" class="tick"/>
-  <text x="121" y="208" class="small">12 dp</text>
-
-  <line x1="234" y1="184" x2="450" y2="184" class="guide"/>
-  <line x1="234" y1="174" x2="234" y2="194" class="tick"/>
-  <line x1="450" y1="174" x2="450" y2="194" class="tick"/>
-  <text x="296" y="208" class="small">wrap content width + 20 dp trailing space</text>
-
-  <text x="582" y="64" class="label">Collapsed</text>
-  <rect x="580" y="96" width="56" height="56" rx="20" ry="20" class="frame"/>
-  <rect x="596" y="112" width="24" height="24" rx="4" ry="4" class="icon"/>
-
-  <line x1="580" y1="184" x2="636" y2="184" class="guide"/>
-  <line x1="580" y1="174" x2="580" y2="194" class="tick"/>
-  <line x1="636" y1="174" x2="636" y2="194" class="tick"/>
-  <text x="592" y="208" class="small">56 dp</text>
-
-  <text x="90" y="244" class="label">v1 keeps one standard extended size and collapses to the standard 56 dp FAB footprint.</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="340" viewBox="0 0 940 340">
+<rect width="940" height="340" fill="white"/>
+<style>text {font: 16px sans-serif; fill: #243047} .title {font-size:24px;font-weight:600} .surface {fill:#e8def8;stroke:#675080;stroke-width:1} .icon {fill:#675080} .label {fill:#9582b1}</style>
+<text x="32" y="40" class="title">Expressive small extended FAB: expanded and collapsed</text>
+<text x="32" y="72">2 px/dp; sample label advance = 60 dp. All rectangles follow the family width equation.</text>
+<rect x="64" y="112" width="248" height="112" rx="32" class="surface"/>
+<rect x="96" y="144" width="48" height="48" rx="0" class="icon"/>
+<rect x="160" y="148" width="120" height="40" rx="0" class="label"/>
+<text x="64" y="254">16 + 24 + 8 + 60 + 16 = 124 dp</text>
+<text x="382" y="171">collapse →</text>
+<rect x="560" y="112" width="112" height="112" rx="32" class="surface"/>
+<rect x="592" y="144" width="48" height="48" rx="0" class="icon"/>
+<text x="556" y="254">56 × 56 dp</text>
+<text x="32" y="301">Height 56 dp; radius 16 dp; icon required; label retained when collapsed.</text>
 </svg>

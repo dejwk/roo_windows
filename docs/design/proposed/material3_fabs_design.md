@@ -4,6 +4,11 @@
 
 **Proposed.** None of the defined scope is implemented. The status of existing and outstanding prerequisites is recorded in the [status index](../README.md).
 
+This is the authoritative proposal for both FAB types. It supersedes the
+[standalone extended-FAB proposal](material3_extended_fab_design.md), whose URL
+remains as a migration note. There is one implementation plan and one shared
+`FabColorStyle`; no separate `ExtendedFab` class or color enum will land.
+
 ## Objective
 
 Add a Material Design 3 floating action button family to `roo_windows` that
@@ -14,15 +19,15 @@ The design should provide:
 
 - icon-only floating action buttons in the Material 3 small, regular, medium,
   and large size families,
-- extended floating action buttons with a single-line label, optional icon,
+- extended floating action buttons with a single-line label, required icon,
   and explicit collapsed versus expanded presentation,
 - expressive Material 3 color styles plus the legacy surface style,
 - token-backed geometry, shape, elevation, and state-layer behavior resolved
   from the active theme,
-- reuse of the existing `BasicSurfaceWidget`, area-overlay, and click-
+- reuse of the existing `SurfaceWidget`, area-overlay, and click-
   animation pipeline,
-- and a narrow widget-only API that stays separate from future scaffold,
-  placement-host, or FAB-menu work.
+- and a narrow widget-only API that stays separate from screen placement
+  and future FAB-menu work.
 
 This document defines the intended API family. It does not describe an
 existing implementation.
@@ -49,7 +54,7 @@ The right shape for `roo_windows` is a dedicated Material 3 FAB family.
 
 ### Current Status in `roo_windows`
 
-As of 2026-05, the relevant current pieces are:
+As of this 2026-10 review, the relevant current pieces are:
 
 - the landed Material 3 standard button in
   [src/roo_windows/material3/button/button.h](../../../src/roo_windows/material3/button/button.h)
@@ -61,7 +66,6 @@ As of 2026-05, the relevant current pieces are:
   and tests in
   [test/material3_button_test.cpp](../../../test/material3_button_test.cpp),
 - the current surface, overlay, and click-animation pipeline in
-  [src/roo_windows/core/basic_surface_widget.h](../../../src/roo_windows/core/basic_surface_widget.h),
   [src/roo_windows/core/surface_widget.h](../../../src/roo_windows/core/surface_widget.h),
   and
   [src/roo_windows/core/overlay_spec.cpp](../../../src/roo_windows/core/overlay_spec.cpp),
@@ -109,17 +113,16 @@ The main product signals carried into this design are:
 
 The local widget model imposes several concrete constraints:
 
-- Surface-owning widgets should derive from `SurfaceWidget` /
-  `BasicSurfaceWidget`.
+- Surface-owning widgets derive from `SurfaceWidget`.
 - Area overlays already work for surface widgets, and overlay color can be
   derived from the widget's effective container role.
 - The click-animation pipeline already exists and should be reused instead of
   introducing a second ripple system.
 - The repo's widget authoring rules optimize for per-instance RAM first, so
   icon-only FABs should not pay for label storage or extended-state fields.
-- `roo_windows` does not currently have a Material scaffold or FAB placement
-  host, so the base FAB family should remain placement-agnostic rather than
-  trying to solve screen-level layout in the same API.
+- The implemented [LayoutScaffold](../../../src/roo_windows/material3/layout_scaffold/layout_scaffold.h)
+  provides body/chrome geometry; FAB positioning remains the consuming host's
+  responsibility. The base widgets add no placement state.
 
 ## Requirements
 
@@ -160,7 +163,8 @@ The local widget model imposes several concrete constraints:
    `ExtendedFloatingActionButton` public types.
 2. Keep the base FAB widgets placement-agnostic: no per-widget corner,
    alignment, inset, or dock policy fields.
-3. Keep icon references non-owning `const MonoIcon*` pointers.
+3. Require borrowed `const MonoIcon&` arguments; store them as non-owning
+   `const MonoIcon*` pointers internally.
 4. Keep extended labels as non-owning `roo::string_view`.
 5. Keep the base content models narrow: icon only for
    `FloatingActionButton`, icon plus one line of text for
@@ -187,7 +191,7 @@ The public family is split into two widget types:
 2. `material3::ExtendedFloatingActionButton` for label-bearing FABs that can
    switch between expanded and collapsed presentation.
 
-Both widgets derive from `BasicSurfaceWidget` because both own a meaningful
+Both widgets derive from `SurfaceWidget` because both own a meaningful
 container surface, border radius, elevation, and area-overlay behavior.
 
 The core design decisions are:
@@ -218,7 +222,7 @@ This is a deliberate semantic split:
   concepts such as button variants and the pressed corner morph,
 - `FloatingActionButton` is icon-first and always represents the primary
   screen action,
-- `ExtendedFloatingActionButton` keeps one label and one optional icon, but it
+- `ExtendedFloatingActionButton` keeps one label and one required icon, but it
   still belongs to the FAB family rather than the standard-button family.
 
 No shared public FAB base class is introduced.
@@ -241,7 +245,7 @@ The icon-only family uses the following size buckets:
 | Small | `40 x 40 dp` | `24 dp` | `12 dp` | Supported for migration; not the default |
 | Regular | `56 x 56 dp` | `24 dp` | `16 dp` | Default icon-only size |
 | Medium | `80 x 80 dp` | `28 dp` | `20 dp` | Recommended for prominent compact/mobile layouts |
-| Large | `96 x 96 dp` | `36 dp` | `28 dp` | Prominent large-screen or high-emphasis variant |
+| Large | `96 x 96 dp` | `32 dp` | `28 dp` | Prominent large-screen or high-emphasis variant |
 
 The icon is centered in the resolved container. Measurement is therefore the
 container token itself; icon size affects paint and minimum icon slot sizing,
@@ -249,57 +253,75 @@ not outer container dimensions.
 
 #### Extended FAB Tokens
 
-The extended family uses these height buckets:
+The expressive family uses the following complete token table. Dimensions are
+in dp; convert each geometry token with `Scaled()` before combining it with
+measured pixel dimensions. Theme density leaves FAB geometry unchanged in v1;
+zoom scaling still applies. Text styles come from the existing
+[Material typography helpers](../../../src/roo_windows/material3/typography.h).
 
-| Size | Minimum container | Icon slot | Corner radius | Typography |
-| --- | --- | --- | --- | --- |
-| Small | `56 dp` height, `56 dp` min width | `24 dp` | `16 dp` | `font_button()` |
-| Medium | `80 dp` height, `80 dp` min width | `28 dp` | `20 dp` | `font_button()` |
-| Large | `96 dp` height, `96 dp` min width | `36 dp` | `28 dp` | `font_button()` |
+| Size | Height / min width | Icon slot | Radius | Leading / trailing | Gap | Text style |
+| --- | --- | --- | --- | --- | --- | --- |
+| Small | 56 | 24 | 16 | 16 / 16 | 8 | `text_style_title_medium()` |
+| Medium | 80 | 28 | 20 | 26 / 26 | 12 | `text_style_title_large()` |
+| Large | 96 | 32 | 28 | 28 / 28 | 16 | `text_style_headline_small()` |
 
-All three extended sizes use an `8 dp` icon-label gap. Leading and trailing
-padding are size-token-driven and live in a static table rather than as stored
-per-instance fields.
+Source baseline, inspected 2026-10-09: AndroidX Material 3 expressive FABs,
+using the v0_14_0 generated
+[small](https://raw.githubusercontent.com/androidx/androidx/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/ExtendedFabSmallTokens.kt),
+[medium](https://raw.githubusercontent.com/androidx/androidx/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/ExtendedFabMediumTokens.kt),
+and [large](https://raw.githubusercontent.com/androidx/androidx/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/ExtendedFabLargeTokens.kt)
+geometry and the [FAB implementation's typography and gap corrections](https://raw.githubusercontent.com/androidx/androidx/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/FloatingActionButton.kt).
+That implementation explicitly marks the generated medium/large gaps of 16/20 dp
+as incorrect and uses 12/16 dp. This proposal adopts those corrections; the table
+above is the implementation contract even if upstream changes later. The
+[icon-only large token](https://raw.githubusercontent.com/androidx/androidx/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/FabLargeTokens.kt)
+also uses a 32 dp icon. The former standalone proposal's classic 56 dp geometry
+(16/20 dp padding, 12 dp gap, label-large typography) is not a second v1 mode.
 
-The natural extended width is:
+Both types require an icon. Labels are borrowed single-line views; an empty
+label is valid and omits the gap. Callers must keep icon and label storage alive.
+Embedded newline characters are outside the single-line label contract.
+
+Let $h$, $s$, $p_l$, $p_r$, and $g$ be the scaled height, icon slot, leading and
+trailing padding, and gap. Let $t$ be the label advance measured with the chosen
+`TextStyle::font()` and `fontOptions()`. The expanded natural width is:
 
 $$
-w_\text{extended} = \max\left(h,\; p_\text{lead} + s_\text{icon} +
-\begin{cases}
-0 & \text{if icon absent and label empty} \\
-w_\text{text} & \text{if icon absent and label present} \\
-s_\text{icon} & \text{if icon present and label empty} \\
-s_\text{icon} + g + w_\text{text} & \text{if icon and label are both present}
-\end{cases}
-+ p_\text{trail}\right)
+w_{expanded} = \max(h, p_l + s + (\text{label.empty()} ? 0 : g + t) + p_r)
 $$
 
-where:
+The icon contributes exactly once. At 100% zoom, a small extended FAB with a
+60 px label measures $16 + 24 + 8 + 60 + 16 = 124$ px. With an empty label it
+measures 56 px. Collapsed width and height are $h$ for every size.
 
-- $h$ is the size-token height,
-- $p_\text{lead}$ and $p_\text{trail}$ are the size-token leading and trailing
-  paddings,
-- $s_\text{icon}$ is the icon-slot size,
-- $g$ is the `8 dp` icon-label gap,
-- and $w_\text{text}$ is the measured single-line label width in
-  `font_button()`.
+![Small extended FAB geometry](figures/material3_extended_fab_layout.svg)
 
-The typography choice is deliberate.
+Suggested minimum dimensions stay cheap and non-measuring: return the token
+square. Both types use zero framework padding (`getPadding()` inherited from
+`Widget`); extended token padding is internal content geometry already included
+in the width formula. `getNaturalDimensions()` computes the exact expanded width,
+and `onMeasure()` resolves it against `WidthSpec` / `HeightSpec`. This keeps
+parent preferred-size queries and actual measurement consistent without counting
+padding twice. Icon-only natural dimensions are the token square.
 
-Material 3 expressive tokens distinguish text styles between small, medium,
-and large extended FABs, but the current `roo_windows` theme surface still
-exposes the older `font_button()` / `font_h6()` / `font_subtitle*()` naming
-set rather than Material 3 title/headline token helpers. The initial FAB
-family therefore standardizes on `font_button()` for all extended sizes.
+Paint and measurement use the same text style, advance, and font options.
+Center the icon-plus-label cluster in the actual bounds; at natural width this
+preserves the symmetric token paddings. A larger assigned width keeps the
+cluster centered. Constrained bounds clip the centered content; v1 does not
+wrap, ellipsize, or auto-collapse. Hosts request wrap-content bounds to retain
+the natural square collapsed footprint. Clamp corner radii to actual bounds.
 
-That keeps the implementation local to the FAB family instead of forcing a
-broader theme-typography expansion into the first FAB landing. The public FAB
-API does not depend on this bridge, so a future theme-typography update can
-refine the mapping without breaking callers.
+The icon slot remains token-sized regardless of the asset's dimensions. Center
+the unscaled drawable in that slot and clip oversized artwork to it; v1 performs
+no icon resampling. Tests cover smaller and larger assets. This explicit local
+policy preserves fixed FAB geometry instead of adopting the standard button's
+content-driven slot expansion.
 
 ### Collapsed Versus Expanded Extended FABs
 
-`ExtendedFloatingActionButton` stores one boolean presentation flag:
+`ExtendedFloatingActionButton` stores one boolean presentation flag, initially
+true. A required icon reference in the constructor and `setIcon()` makes every
+collapsed state meaningful; there is no null-icon state:
 
 - `expanded = true`: render icon plus label using the extended width formula,
 - `expanded = false`: render as the corresponding icon-only FAB height bucket
@@ -346,8 +368,19 @@ uses the existing highlighter-color path to resolve `primary` correctly without
 requiring a new core overlay hook.
 
 Disabled colors follow the same embedded-friendly rule already used by the
-button family: composite `onSurface` onto the current surface with Material 3
-disabled-state opacities instead of storing separate per-style disabled colors.
+button family: resolve the installed `theme().material3Theme().color` scheme,
+then composite `onSurface` over its `surface` using alpha `0x1F` for the
+container and `0x61` for content. Both classes override
+`useAutomaticDisabledStyle()` to return false, as `material3::Button` does, so
+explicit disabled colors do not also receive the automatic disabled overlay.
+The current `SurfaceWidget::prepareCanvas()` also halves disabled background
+alpha unconditionally. Phase 2 must make that adjustment honor
+`useAutomaticDisabledStyle()` before relying on precomposited FAB colors; keep
+the existing behavior for widgets that retain the default true policy. Add a
+shared surface regression for both policy values and rerun the Material button
+coverage, which already opts out. Verify final rendered colors on an opaque
+surface host, not just resolver output.
+No outline is drawn in any style.
 
 Enabled-state elevation is:
 
@@ -357,9 +390,14 @@ Enabled-state elevation is:
 - pressed: `3 dp`,
 - disabled: `0 dp`.
 
-`notifyStateChanged()` updates the surface elevation whenever one of those
-state transitions changes the effective elevation and calls `elevationChanged()`.
-The change is discrete, not animated, in v1.
+Resolve simultaneous states in this order: disabled, pressed, focused,
+hovered, resting. Selection and activation use the shared overlays without
+changing elevation. `getElevation()` derives the current value without storing
+it. `notifyStateChanged()` reconstructs the previous enabled/pressed/focused/
+hovered state from `state_diff`, and calls
+`elevationChanged(std::max(old_elevation, new_elevation))` when visible and the
+value changes. Chain to `SurfaceWidget::notifyStateChanged()`. Test shadow
+cleanup when elevation decreases. The change is discrete in v1.
 
 ### Paint and Invalidation Model
 
@@ -411,19 +449,25 @@ policy fields:
 
 - a simple fixed-position screen layout,
 - a navigation-rail header slot,
-- a future scaffold,
+- the existing layout scaffold,
 - or a future popup/menu launcher.
 
 ### RAM Budget
 
 The design keeps the pay-for-what-you-use split explicit.
 
-Target budgets for host-side tests are:
+Use alignment-aware upper bounds rather than historical absolute base sizes.
+Define `AlignUp(n, a) = ((n + a - 1) / a) * a` and assert:
 
-1. `FloatingActionButton`:
-   `sizeof(BasicSurfaceWidget) + sizeof(void*) + 4`
-2. `ExtendedFloatingActionButton`:
-   `sizeof(BasicSurfaceWidget) + sizeof(void*) + sizeof(roo::string_view) + 8`
+1. `sizeof(FloatingActionButton) <= AlignUp(sizeof(SurfaceWidget) +
+   sizeof(const MonoIcon*) + 1, alignof(FloatingActionButton))`.
+2. `sizeof(ExtendedFloatingActionButton) <= AlignUp(sizeof(SurfaceWidget) +
+   sizeof(roo::string_view) + sizeof(const MonoIcon*) + 1,
+   alignof(ExtendedFloatingActionButton))`.
+
+The final byte holds packed enums and the extended flag. Account for ABI tail
+padding explicitly; record sizes in the host build and an ESP32 build. No
+absolute 32-bit base-size estimate is assumed.
 
 The important accounting rule is the shape, not the exact host-build byte
 count:
@@ -463,15 +507,15 @@ enum class FabColorStyle : uint8_t {
   kSurface,
 };
 
-class FloatingActionButton : public BasicSurfaceWidget {
+class FloatingActionButton : public SurfaceWidget {
  public:
   explicit FloatingActionButton(
-      ApplicationContext& context, const MonoIcon* icon = nullptr,
+      ApplicationContext& context, const MonoIcon& icon,
       FabSize size = FabSize::kRegular,
       FabColorStyle color_style = FabColorStyle::kPrimaryContainer);
 
-  const MonoIcon* icon() const;
-  void setIcon(const MonoIcon* icon);
+  const MonoIcon& icon() const;
+  void setIcon(const MonoIcon& icon);
 
   FabSize size() const;
   void setSize(FabSize size);
@@ -479,16 +523,19 @@ class FloatingActionButton : public BasicSurfaceWidget {
   FabColorStyle colorStyle() const;
   void setColorStyle(FabColorStyle style);
 
-  bool isClickable() const override;
-  ColorRole containerRole() const override;
+  bool isClickable() const override { return true; }
+  bool useAutomaticDisabledStyle() const override { return false; }
+  ColorToken containerRole() const override;
   Color background() const override;
   BorderStyle getBorderStyle() const override;
   uint8_t getElevation() const override;
   bool usesHighlighterColor() const override;
   Dimensions getSuggestedMinimumDimensions() const override;
+  Dimensions getNaturalDimensions() const override;
   void paint(PaintContext& ctx) const override;
 
  protected:
+  Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
   void notifyStateChanged(uint16_t state_diff) override;
 
  private:
@@ -497,19 +544,19 @@ class FloatingActionButton : public BasicSurfaceWidget {
   uint8_t color_style_ : 3;
 };
 
-class ExtendedFloatingActionButton : public BasicSurfaceWidget {
+class ExtendedFloatingActionButton : public SurfaceWidget {
  public:
   explicit ExtendedFloatingActionButton(
-      ApplicationContext& context, roo::string_view label = {},
-      const MonoIcon* icon = nullptr,
+      ApplicationContext& context, roo::string_view label,
+      const MonoIcon& icon,
       ExtendedFabSize size = ExtendedFabSize::kSmall,
       FabColorStyle color_style = FabColorStyle::kPrimaryContainer);
 
   roo::string_view label() const;
   void setLabel(roo::string_view label);
 
-  const MonoIcon* icon() const;
-  void setIcon(const MonoIcon* icon);
+  const MonoIcon& icon() const;
+  void setIcon(const MonoIcon& icon);
 
   ExtendedFabSize size() const;
   void setSize(ExtendedFabSize size);
@@ -520,16 +567,19 @@ class ExtendedFloatingActionButton : public BasicSurfaceWidget {
   bool expanded() const;
   void setExpanded(bool expanded);
 
-  bool isClickable() const override;
-  ColorRole containerRole() const override;
+  bool isClickable() const override { return true; }
+  bool useAutomaticDisabledStyle() const override { return false; }
+  ColorToken containerRole() const override;
   Color background() const override;
   BorderStyle getBorderStyle() const override;
   uint8_t getElevation() const override;
   bool usesHighlighterColor() const override;
   Dimensions getSuggestedMinimumDimensions() const override;
+  Dimensions getNaturalDimensions() const override;
   void paint(PaintContext& ctx) const override;
 
  protected:
+  Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
   void notifyStateChanged(uint16_t state_diff) override;
 
  private:
@@ -543,6 +593,22 @@ class ExtendedFloatingActionButton : public BasicSurfaceWidget {
 }  // namespace material3
 }  // namespace roo_windows
 ```
+
+### Consumer Example
+
+With `context` and a long-lived `const MonoIcon& add_icon` supplied by the
+application:
+
+```cpp
+material3::FloatingActionButton add(context, add_icon);
+material3::ExtendedFloatingActionButton compose(context, "Compose", add_icon);
+compose.setSize(material3::ExtendedFabSize::kMedium);
+compose.setExpanded(false);  // Host chooses when available width needs a square.
+compose.setExpanded(true);   // Same action, icon, label, and callback identity.
+```
+
+Attach these widgets through the host's normal ownership mechanism. Use the
+existing `setOnInteractiveChange()` / `onClicked()` path to handle the action.
 
 ### API Notes
 
@@ -566,7 +632,9 @@ class ExtendedFloatingActionButton : public BasicSurfaceWidget {
 ## Implementation Plan
 
 Implementation work for these phases follows the repo-local
-[roo_windows widget authoring instruction](../../../.github/instructions/roo-windows-widget-authoring.instructions.md).
+[widget authoring](../../../.github/instructions/roo-windows-widget-authoring.instructions.md)
+and [C++ authoring](../../../.github/instructions/general-cpp-code-authoring-instructions.md)
+instructions.
 
 ### Phase 1: Declare the Material 3 FAB Types and Size Budgets
 
@@ -576,7 +644,8 @@ Code slice:
    `material3/fab/` directory.
 2. Keep icon-only and extended FABs as separate public types from the first
    commit.
-3. Add pointer-size-aware size-budget tests for both types.
+3. Add alignment-aware size-budget tests for both types and compile checks
+   that null icons cannot be passed to constructors or setters.
 4. If any declared methods must remain stubbed in this phase, make the stub
    behavior explicit with `LOG(FATAL)` rather than temporary silent drawing.
 
@@ -597,10 +666,17 @@ Code slice:
 
 1. Implement icon-only measurement, paint, color-style mapping, and state-
    dependent elevation.
-2. Reuse the existing area-overlay and click-animation pipeline.
+2. Reuse the existing area-overlay and click-animation pipeline. Make the
+   shared disabled-background alpha adjustment respect the automatic-style
+   opt-out, with focused surface regression coverage and existing Material
+   button tests as described in the color contract.
 3. Support all four icon-only size buckets and all seven color styles.
 4. Add focused tests and goldens for sizes, color-style mapping, disabled
-   rendering, and the legacy surface-style highlighter path.
+   rendering, and the legacy surface-style highlighter path. Verify final
+   disabled pixels, simultaneous interaction states, decreasing-elevation shadow
+   cleanup, fixed icon slots, and zoom scaling.
+5. Start `examples/material3/fabs/fabs.ino` with an icon-only primary action;
+   build it in this phase.
 
 Proposed commit message:
 
@@ -623,7 +699,12 @@ Code slice:
 3. Keep collapse/expand as an immediate relayout in this phase; do not add
    container-transform animation yet.
 4. Add focused tests and goldens for small, medium, and large extended FABs in
-   expanded and collapsed presentation.
+   expanded and collapsed presentation. Cover the width equation with empty
+   and nonempty labels, each text style's font options, parent width constraints,
+   zoom, borrowed icon replacement while collapsed, and repeated collapse/expand
+   without stale pixels or shadows.
+5. Extend the same example with a label-bearing action and a host-controlled
+   collapse toggle; build it in this phase.
 
 Proposed commit message:
 
@@ -641,8 +722,7 @@ cases.
 
 Code slice:
 
-1. Add a representative example sketch under
-   `examples/material3/fabs/fabs.ino`.
+1. Extend `examples/material3/fabs/fabs.ino` with representative host layouts.
 2. Show both a fixed-position FAB over scrollable content and a rail-header FAB
    host, using the current layout primitives rather than a new scaffold.
 3. Build the example in CI or local validation coverage.
@@ -728,7 +808,5 @@ first design rules.
    of folding menu behavior into the base widgets.
 2. Add animated container-transform motion for extended collapse/expand once a
    focused motion design lands for that transition.
-3. Add scaffold or FAB-host primitives when the repo is ready to solve fixed
-   screen-level placement as a shared layout concern.
-4. Revisit the extended-FAB typography bridge if `roo_windows` adopts a
-   Material 3-native typography helper surface in `Theme`.
+3. Add a FAB placement helper using the existing scaffold geometry when a
+   consuming flow needs shared fixed-position policy.

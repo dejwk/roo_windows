@@ -114,8 +114,8 @@ motion pauses. It does not restore paint interruption.
 | Click delivery policy | Click-animation lifecycle and settlement are implemented; widget-selected semantic delivery timing is not. |
 | Display runtime Phase 7 task-bounded transient coverage | Phase 6 input is implemented. Phase 7 is reconciled as task-bounded attachment of the one shared window host layer, retaining one active-presentation authority and explicit interaction owner; the extension remains unimplemented. |
 | Display runtime Phase 8 migration and cost audit | Phases 2–6 are implemented and Phase 7 is architecturally reconciled; the shared host, task-coverage extension, final migration documentation, resource audit, and hardware validation remain proposed. |
-| Extended FAB | The base FAB dependency is proposed; buttons and theme support are implemented. |
-| FAB | Buttons, icon buttons, and theme support are implemented; the FAB family is not. |
+| [Extended FAB](proposed/material3_extended_fab_design.md) | Standalone proposal superseded by the authoritative FAB family design below; extended widgets remain unimplemented. |
+| [FAB family](proposed/material3_fabs_design.md) | Authoritative proposal for icon-only and extended FABs. Buttons, icon buttons, typography, and theme support exist; FAB widgets remain unimplemented. |
 | Interaction overlay reveal | Point and area ripples, widget-local click animation, paint context, and the navigation bar's component-local fade are implemented; shared fade reveal and paint-owned overlay policy are not. |
 | Navigation drawer | List support and basic dialogs are implemented and back routing exists; no drawer implementation exists. |
 | [Presentation registry](implemented/presentation_registry_design.md) | Effective presentation queries and targeted deferred widget notifications are implemented; consumers choose their lifecycle policies. |
