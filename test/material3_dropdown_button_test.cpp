@@ -7,6 +7,7 @@
 #include "roo_display.h"
 #include "roo_display/core/offscreen.h"
 #include "roo_icons/filled/navigation.h"
+#include "roo_testing/system/timer.h"
 #include "roo_windows/core/application.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/panel.h"
@@ -67,6 +68,40 @@ class DropdownButtonTest : public testing::Test {
   TestPanel content_;
   Task& owner_;
 };
+
+// Verifies pixels covered by an open menu match a complete repaint while the
+// trigger continues its click animation beneath the clean transient surface.
+TEST_F(DropdownButtonTest, ContinuedClickAnimationRespectsOpenMenu) {
+  static constexpr const char* choices[] = {"First", "Second", "Third"};
+  DropdownButton button(app_.context(), choices);
+  attach(button);
+  button.onShowPress(100, 24);
+  button.onSingleTapUp(100, 24);
+  ASSERT_TRUE(button.isMenuOpen());
+  app_.refresh();
+  for (int frame = 0; frame < 12; ++frame) {
+    system_time_delay_micros(20000);
+    app_.refresh();
+    const std::vector<roo::byte> incremental(raster_,
+                                             raster_ + sizeof(raster_));
+    app_.root().invalidateDescending();
+    app_.refresh();
+    // The first menu row overlaps the lower-left part of the trigger. Compare
+    // its opaque interior; visible trigger pixels can advance between paints.
+    for (int y = 55; y <= 65; ++y) {
+      const int offset = (y * 320 + 30) * 2;
+      EXPECT_TRUE(std::equal(incremental.begin() + offset,
+                             incremental.begin() + offset + 101 * 2,
+                             raster_ + offset))
+          << "frame " << frame << " row " << y;
+    }
+  }
+  EXPECT_FALSE(button.isClicking());
+  EXPECT_FALSE(app_.root().click_animation().isBusy());
+  button.dismissMenu();
+  drain();
+  content_.removeLast();
+}
 
 // Verifies constant arrays start at zero and keep the widest-label width.
 TEST_F(DropdownButtonTest, StableNaturalWidthAndSilentSelection) {

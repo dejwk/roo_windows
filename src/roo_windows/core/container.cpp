@@ -143,9 +143,14 @@ void Container::paintContentsWithoutRoundedClip(PaintContext& ctx) {
     markInvalidated();
     invalid_region_ = ctx.localClip();
   }
+  // Transparent composition containers have no exclusion of their own. Even
+  // when clean, visit their children to protect foreground pixels from later
+  // output by lower layers.
+  const bool needs_child_exclusions = !fullyCoversBoundsWithOpaqueColors();
   if (!isInvalidated()) {
     // Faster path with less stack overhead; repaint the children.
-    if (isDirty() || !bounds().contains(maxBounds())) {
+    if (isDirty() || needs_child_exclusions ||
+        !bounds().contains(maxBounds())) {
       markClean();
       // Draw the panel's children.
       paintChildren(ctx);
@@ -155,7 +160,7 @@ void Container::paintContentsWithoutRoundedClip(PaintContext& ctx) {
     Rect invalid_region = invalid_region_;
     markClean();
     invalid_region_ = Rect(0, 0, -1, -1);
-    if (dirty || !bounds().contains(maxBounds())) {
+    if (dirty || needs_child_exclusions || !bounds().contains(maxBounds())) {
       // Draw the panel's children.
       paintChildren(ctx);
     }
