@@ -128,7 +128,13 @@ TEST_F(MovingAppBarTest, FlingSurvivesCollapsingViewport) {
 TEST_F(MovingAppBarTest, SmallBarAndShortContent) {
   install(AppBarScrollBehavior::kEnterAlways, AppBarVariant::kSmall, 20);
   panel_->onDragStart(0, 0);
-  panel_->onDrag(0, 0, 0, -64);
+  panel_->onDrag(0, 0, 0, -32);
+  refresh();
+  auto* title = static_cast<material3::internal::AppBarTitle*>(
+      static_cast<Widget&>(*bar_).focusChildAt(0));
+  EXPECT_EQ(bar_->theme().material3Theme().color.onSurface,
+            title->textColor(bar_->background()));
+  panel_->onDrag(0, 0, 0, -32);
   refresh();
   EXPECT_EQ(0, bar_->height());
   EXPECT_EQ(240, panel_->height());
@@ -150,45 +156,65 @@ TEST_F(MovingAppBarTest, HidingBarStopsCoordinatedMotion) {
   EXPECT_TRUE(bar_->hasScrollBehavior());
 }
 
-// A font switch or disappearing subtitle must not change the center path.
-void VerifyTitleCenterPath(AppBar& bar, MotionPanel& panel) {
-  Widget* title = static_cast<Widget&>(bar).focusChildAt(0);
-  ASSERT_NE(nullptr, title);
-  auto center = [title]() {
-    return title->parent_bounds().yMin() + title->parent_bounds().yMax();
-  };
-  int previous = center();
-  int travel = bar.height() - 64;
-  panel.onDragStart(0, 0);
-  for (int i = 0; i < travel; ++i) {
-    panel.onDrag(0, 0, 0, -1);
-    int current = center();
-    EXPECT_LE(std::abs(current - previous), 4) << "collapse pixel " << i + 1;
-    previous = current;
-  }
-  EXPECT_NEAR(63, center(), 1);
-  for (int i = 0; i < travel; ++i) {
-    panel.onDrag(0, 0, 0, 1);
-    int current = center();
-    EXPECT_LE(std::abs(current - previous), 4) << "expansion pixel " << i + 1;
-    previous = current;
-  }
-}
-
-TEST_F(MovingAppBarTest, MediumTitleCenterIsContinuous) {
+// Verifies the expanded title follows the bottom edge, then the compact
+// title stays in the action row. Both phases fade through the surface color,
+// and reversing collapse restores the same geometry and colors.
+TEST_F(MovingAppBarTest, TitlesScrollOutAndFadeInAtFixedAnchors) {
   install();
-  bar_->setSubtitle("Solar heating");
-  refresh();
-  VerifyTitleCenterPath(*bar_, *panel_);
-}
-
-TEST_F(MovingAppBarTest, LargeTitleCenterIsContinuous) {
-  install(AppBarScrollBehavior::kExitUntilCollapsed,
-          AppBarVariant::kLargeFlexible);
-  bar_->setSubtitle("Solar heating");
-  bar_->setTitleAlignment(AppBarTitleAlignment::kCentered);
-  refresh();
-  VerifyTitleCenterPath(*bar_, *panel_);
+  for (AppBarScrollBehavior behavior :
+       {AppBarScrollBehavior::kEnterAlways,
+        AppBarScrollBehavior::kExitUntilCollapsed}) {
+    for (AppBarVariant variant :
+         {AppBarVariant::kMediumFlexible, AppBarVariant::kLargeFlexible}) {
+      for (AppBarTitleAlignment alignment :
+           {AppBarTitleAlignment::kLeading, AppBarTitleAlignment::kCentered}) {
+        for (const char* subtitle : {"", "Solar heating"}) {
+          panel_->scrollToTop();
+          bar_->setVariant(variant);
+          bar_->setTitleAlignment(alignment);
+          bar_->setSubtitle(subtitle);
+          ASSERT_EQ(ScrollConnectionStatus::kSuccess,
+                    bar_->setScrollBehavior(*panel_, behavior));
+          refresh();
+          auto* title = static_cast<material3::internal::AppBarTitle*>(
+              static_cast<Widget&>(*bar_).focusChildAt(0));
+          const Rect expanded = title->parent_bounds();
+          const int travel = bar_->height() - 64;
+          const roo_display::Color foreground =
+              bar_->theme().material3Theme().color.onSurface;
+          panel_->onDragStart(0, 0);
+          for (int step = 0; step <= 2 * travel; ++step) {
+            const int collapse = step <= travel ? step : 2 * travel - step;
+            refresh();
+            SCOPED_TRACE(collapse);
+            const roo_display::Color background = bar_->background();
+            if (collapse * 2 < travel) {
+              EXPECT_EQ(expanded.translate(0, -collapse),
+                        title->parent_bounds());
+              EXPECT_EQ(expanded.height(), title->height());
+            } else {
+              EXPECT_EQ(text_style_title_large().lineHeight(), title->height());
+              EXPECT_EQ((64 - title->height()) / 2, title->offsetTop());
+              EXPECT_EQ(16, title->offsetLeft());
+            }
+            if (collapse == 0 || collapse == travel) {
+              EXPECT_EQ(foreground, title->textColor(background));
+            } else if (collapse * 2 == travel) {
+              EXPECT_EQ(background, title->textColor(background));
+            } else if (collapse * 4 == travel || collapse * 4 == 3 * travel) {
+              EXPECT_EQ(
+                  roo_display::AlphaBlend(background, foreground.withA(128)),
+                  title->textColor(background));
+            }
+            if (step < 2 * travel) {
+              panel_->onDrag(0, 0, 0, step < travel ? -1 : 1);
+            }
+          }
+          panel_->onDragFinished(0, 0);
+        }
+      }
+    }
+  }
 }
 
 // Verifies the subtitle stays below the moving title, sharing its leading
@@ -223,7 +249,7 @@ TEST_F(MovingAppBarTest, SubtitleFollowsTitleDuringCollapseAndExpansion) {
           EXPECT_EQ(subtitle_height, subtitle->height());
           if (alignment == AppBarTitleAlignment::kLeading) {
             EXPECT_EQ(title->offsetLeft(), subtitle->offsetLeft());
-            EXPECT_GT(subtitle->width(), title->width());
+            EXPECT_EQ(subtitle->width(), title->width());
           } else {
             EXPECT_EQ(
                 title->parent_bounds().xMin() + title->parent_bounds().xMax(),
@@ -238,135 +264,6 @@ TEST_F(MovingAppBarTest, SubtitleFollowsTitleDuringCollapseAndExpansion) {
       panel_->onDragFinished(0, 0);
     }
   }
-}
-
-// Tracking narrows the font-switch width gap without exceeding either the
-// larger font's advance or its ink width, and returns to normal at collapse.
-TEST_F(MovingAppBarTest, CompactTrackingIsBoundedAndSettles) {
-  install(AppBarScrollBehavior::kEnterAlways, AppBarVariant::kLargeFlexible);
-  const TextStyle& large = text_style_headline_medium();
-  const TextStyle& small = text_style_title_large();
-  const char* titles[] = {"Equipment", "WWW", "iiiiiiii", "A", "", "Zażółć"};
-  for (const char* text : titles) {
-    bar_->setTitle(text);
-    panel_->scrollToTop();
-    refresh();
-    // Empty titles have no visible child to inspect.
-    if (bar_->title().empty()) continue;
-    auto* title = static_cast<material3::internal::AppBarTitle*>(
-        static_cast<Widget&>(*bar_).focusChildAt(0));
-    auto expanded =
-        large.font().getHorizontalStringMetrics(text, large.fontOptions());
-    auto normal =
-        small.font().getHorizontalStringMetrics(text, small.fontOptions());
-    auto connection = material3::internal::FindAppBarConnection(*bar_);
-    int travel = connection->limit();
-    panel_->onDragStart(0, 0);
-    int previous_tracking = 32767;
-    int previous_width = expanded.screen_extents().width();
-    for (int c = 0; c <= travel; ++c) {
-      const TextStyle& active = c * 2 < travel ? large : small;
-      auto options = title->fontOptions(active);
-      auto tracked = active.font().getHorizontalStringMetrics(text, options);
-      if (c != travel / 2) {
-        EXPECT_LE(options.trackingPx(), previous_tracking);
-      }
-      auto unit_options = active.fontOptions();
-      unit_options.setTrackingPx(active.tracking() + 1);
-      auto base =
-          active.font().getHorizontalStringMetrics(text, active.fontOptions());
-      auto unit = active.font().getHorizontalStringMetrics(text, unit_options);
-      int step = unit.screen_extents().width() - base.screen_extents().width();
-      if (c * 2 < travel) {
-        EXPECT_EQ(active.tracking(), options.trackingPx());
-        EXPECT_EQ(expanded.screen_extents().width(),
-                  tracked.screen_extents().width());
-      } else if (step > 0) {
-        int advance_step = unit.advance() - base.advance();
-        int max_extra = std::max(
-            0, std::min((expanded.advance() - normal.advance()) / advance_step,
-                        (expanded.screen_extents().width() -
-                         normal.screen_extents().width()) /
-                            step));
-        double target = normal.screen_extents().width() +
-                        double(max_extra * step) * (travel - c) / (travel / 2);
-        EXPECT_LE(std::abs(tracked.screen_extents().width() - target),
-                  step / 2.0 + 0.01);
-      }
-      EXPECT_LE(tracked.advance(),
-                std::max(expanded.advance(), normal.advance()));
-      EXPECT_LE(tracked.screen_extents().width(),
-                std::max(expanded.screen_extents().width(),
-                         normal.screen_extents().width()));
-      if (bar_->title() == "Equipment") {
-        if (c == travel / 2 - 1) {
-          EXPECT_EQ(options.trackingPx(), large.tracking());
-        }
-        if (c == travel / 2) {
-          EXPECT_GT(options.trackingPx(), small.tracking());
-        }
-      }
-      if (expanded.screen_extents().width() >=
-          normal.screen_extents().width()) {
-        EXPECT_LE(tracked.screen_extents().width(), previous_width);
-      }
-      previous_width = tracked.screen_extents().width();
-      previous_tracking = options.trackingPx();
-      if (c < travel) panel_->onDrag(0, 0, 0, -1);
-    }
-    EXPECT_EQ(small.tracking(), previous_tracking);
-  }
-}
-
-// Reproduces the exit-until-collapsed example's medium font and actual title.
-TEST_F(MovingAppBarTest, ExitExampleUsesTrackingAcrossCompactHalf) {
-  install(AppBarScrollBehavior::kExitUntilCollapsed);
-  bar_->setTitle("Solar heating");
-  bar_->setSubtitle("Equipment details");
-  refresh();
-  auto* title = static_cast<material3::internal::AppBarTitle*>(
-      static_cast<Widget&>(*bar_).focusChildAt(0));
-  int travel = bar_->height() - 64;
-  panel_->onDragStart(0, 0);
-  panel_->onDrag(0, 0, 0, -travel / 2);
-  int initial = title->fontOptions(text_style_title_large()).trackingPx();
-  EXPECT_GT(initial, text_style_title_large().tracking());
-  panel_->onDrag(0, 0, 0, -1);
-  EXPECT_EQ(initial, title->fontOptions(text_style_title_large()).trackingPx());
-  panel_->onDrag(0, 0, 0, -(travel / 2 - 1));
-  EXPECT_EQ(text_style_title_large().tracking(),
-            title->fontOptions(text_style_title_large()).trackingPx());
-}
-
-// Leading endpoints still contract around a continuous center at the switch.
-TEST_F(MovingAppBarTest, LeadingTitleContractsAroundItsCenter) {
-  install(AppBarScrollBehavior::kEnterAlways, AppBarVariant::kLargeFlexible);
-  bar_->setTitle("Equipment");
-  refresh();
-  Widget* title = static_cast<Widget&>(*bar_).focusChildAt(0);
-  int travel = bar_->height() - 64;
-  panel_->onDragStart(0, 0);
-  panel_->onDrag(0, 0, 0, -(travel / 2 - 1));
-  Rect before = title->parent_bounds();
-  refresh();
-  EXPECT_TRUE(test::CompareOrUpdateGolden(
-      test::CaptureRgb(offscreen_.raster(), 0, 0, 320, 240),
-      "test/goldens/app_bar_scroll/leading_before.ppm",
-      "app_bar_leading_before"));
-  panel_->onDrag(0, 0, 0, -1);
-  Rect after = title->parent_bounds();
-  refresh();
-  EXPECT_TRUE(test::CompareOrUpdateGolden(
-      test::CaptureRgb(offscreen_.raster(), 0, 0, 320, 240),
-      "test/goldens/app_bar_scroll/leading_after.ppm",
-      "app_bar_leading_after"));
-  EXPECT_NEAR(before.xMin() + before.xMax(), after.xMin() + after.xMax(), 3);
-  // Each font can be one tracking step (eight gaps here) from the target.
-  EXPECT_NEAR(before.width(), after.width(), 16);
-  panel_->onDrag(0, 0, 0, -travel / 2);
-  EXPECT_EQ(16, title->parent_bounds().xMin());
-  panel_->onDrag(0, 0, 0, travel);
-  EXPECT_EQ(16, title->parent_bounds().xMin());
 }
 
 // Flexible action rows stay fixed while the title reaches their center.
@@ -398,6 +295,12 @@ TEST_F(MovingAppBarTest, CollapsedTitleAndActionsShareCenter) {
         panel_->onDrag(0, 0, 0, -1);
         EXPECT_EQ(action_y, leading_ptr->offsetTop());
         EXPECT_EQ(trailing_y, trailing_ptr->offsetTop());
+        if (2 * (i + 1) >= travel) {
+          Widget* title = static_cast<Widget&>(*bar_).focusChildAt(0);
+          EXPECT_EQ(56, title->offsetLeft());
+          EXPECT_EQ(208, title->width());
+          EXPECT_EQ((64 - title->height()) / 2, title->offsetTop());
+        }
       }
       refresh();
       EXPECT_EQ(64, bar_->height());
@@ -544,10 +447,10 @@ TEST_F(MovingAppBarTest, CollapseFramesGolden) {
   bar_->setTitleAlignment(AppBarTitleAlignment::kCentered);
   refresh();
   panel_->onDragStart(0, 0);
-  const int steps[] = {0, -18, -17, -1, -36};
-  const char* names[] = {"expanded", "fading", "before_switch", "midpoint",
-                         "collapsed"};
-  for (int i = 0; i < 5; ++i) {
+  const int steps[] = {0, -18, -17, -1, -18, -18};
+  const char* names[] = {"expanded", "fading",    "before_switch",
+                         "midpoint", "fading_in", "collapsed"};
+  for (int i = 0; i < 6; ++i) {
     panel_->onDrag(0, 0, 0, steps[i]);
     refresh();
     EXPECT_TRUE(test::CompareOrUpdateGolden(

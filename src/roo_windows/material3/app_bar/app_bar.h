@@ -62,11 +62,11 @@ class AppBarText : public Widget {
   bool use_on_surface_variant_ = false;
 };
 
-// Titles share advance-width and ascent alignment with other app-bar text.
+// Titles fade between their expanded and compact presentations.
 class AppBarTitle final : public AppBarText {
  public:
   using AppBarText::AppBarText;
-  roo_display::Font::Options fontOptions(const TextStyle& style) const override;
+  roo_display::Color textColor(roo_display::Color background) const override;
 };
 
 // Supplemental text fades without storing an opacity on every text child.
@@ -155,7 +155,6 @@ class AppBar : public Material3Container {
   void onLayout(bool changed, const Rect& rect) override;
 
  private:
-  friend class internal::AppBarTitle;
   const TextStyle& titleTextStyle() const;
   const TextStyle& expandedTitleTextStyle() const;
   const internal::AppBarVariantTokens& tokens() const;

@@ -1,6 +1,7 @@
 #include "roo_windows/material3/app_bar/app_bar.h"
 
 #include <algorithm>
+#include <cstdlib>
 #include <utility>
 
 #include "roo_display/shape/smooth.h"
@@ -92,49 +93,22 @@ Dimensions internal::AppBarText::getSuggestedMinimumDimensions() const {
                     style.lineHeight());
 }
 
-roo_display::Font::Options internal::AppBarTitle::fontOptions(
-    const TextStyle& style) const {
-  roo_display::Font::Options options = style.fontOptions();
-  if (parent() == nullptr) return options;
+roo_display::Color internal::AppBarTitle::textColor(
+    roo_display::Color background) const {
+  roo_display::Color foreground = AppBarText::textColor(background);
+  if (parent() == nullptr) return foreground;
   auto connection = internal::FindAppBarConnection(*parent());
   if (connection == nullptr || connection->limit() == 0 ||
-      connection->collapse() * 2 < connection->limit() ||
-      connection->collapse() == connection->limit()) {
-    return options;
+      static_cast<const AppBar&>(*parent()).variant() ==
+          AppBarVariant::kSmall) {
+    return foreground;
   }
-  const AppBar& bar = static_cast<const AppBar&>(*parent());
-  const TextStyle& expanded = bar.expandedTitleTextStyle();
-  const TextStyle& compact = text_style_title_large();
-  auto large = expanded.font().getHorizontalStringMetrics(
-      text(), expanded.fontOptions());
-  auto small =
-      compact.font().getHorizontalStringMetrics(text(), compact.fontOptions());
-  auto current = style.font().getHorizontalStringMetrics(text(), options);
-  auto unit_options = options;
-  unit_options.setTrackingPx(options.trackingPx() + 1);
-  auto unit = style.font().getHorizontalStringMetrics(text(), unit_options);
-  // Measuring a one-pixel increment counts actual rendered glyph boundaries,
-  // including UTF-8 and font fallback. A single glyph has no tracking span.
-  int advance_step = unit.advance() - current.advance();
-  int ink_step =
-      unit.screen_extents().width() - current.screen_extents().width();
-  if (advance_step <= 0 || ink_step <= 0) return options;
-  // The expanded font keeps its natural width. At the switch choose the
-  // widest compact tracking that fits, then interpolate back to normal over
-  // the compact half. Round to nearest so a one-pixel maximum is visible for
-  // half that interval rather than disappearing immediately after the switch.
-  int max_extra = std::max(
-      0, std::min(
-             (large.advance() - small.advance()) / advance_step,
-             (large.screen_extents().width() - small.screen_extents().width()) /
-                 ink_step));
-  YDim start = (connection->limit() + 1) / 2;
-  YDim span = connection->limit() - start;
-  if (span == 0) return options;
-  int extra =
-      (max_extra * (connection->limit() - connection->collapse()) + span / 2) /
-      span;
-  return options.setTrackingPx(options.trackingPx() + extra);
+  // Switch typography and anchors while invisible at half collapse.
+  const int visibility =
+      std::abs(connection->limit() - 2 * connection->collapse());
+  const uint8_t alpha =
+      (255 * visibility + connection->limit() / 2) / connection->limit();
+  return roo_display::AlphaBlend(background, foreground.withA(alpha));
 }
 
 roo_display::Color internal::AppBarText::textColor(
@@ -476,6 +450,9 @@ void AppBar::onLayout(bool changed, const Rect& rect) {
   const YDim collapse = connection == nullptr ? 0 : connection->collapse();
   const int16_t height = std::max<int16_t>(0, rect.height() + collapse);
   const bool single_row = variant_ == AppBarVariant::kSmall;
+  const bool compact_title = !single_row && connection != nullptr &&
+                             connection->limit() > 0 &&
+                             collapse * 2 >= connection->limit();
   int16_t left = std::min<int16_t>(edge, width);
   int16_t right = std::max<int16_t>(left, width - edge);
 
@@ -511,9 +488,9 @@ void AppBar::onLayout(bool changed, const Rect& rect) {
   }
 
   // A single-row title starts at the 16dp title inset without navigation, or
-  // 4dp after its 48dp navigation slot. Flexible titles use the
+  // 4dp after its 48dp navigation slot. Expanded flexible titles use the
   // second row and therefore do not reserve navigation/action width.
-  if (!single_row) {
+  if (!single_row && !compact_title) {
     left = std::min<int16_t>(title_inset, width);
     right = std::max<int16_t>(left, width - title_inset);
   } else {
@@ -524,10 +501,12 @@ void AppBar::onLayout(bool changed, const Rect& rect) {
     right = std::max<int16_t>(left, right);
   }
 
-  const int16_t lane_top = single_row ? 0 : action_size + 2 * edge;
+  const int16_t title_row_height = compact_title ? action_row_height : height;
+  const int16_t lane_top =
+      single_row || compact_title ? 0 : action_size + 2 * edge;
   const int16_t lane_bottom =
-      single_row
-          ? height
+      single_row || compact_title
+          ? title_row_height
           : std::max<int16_t>(lane_top,
                               height - Scaled(tokens().title_bottom_inset_dp));
   const int16_t lane_height = std::max<int16_t>(0, lane_bottom - lane_top);
@@ -548,8 +527,9 @@ void AppBar::onLayout(bool changed, const Rect& rect) {
                               lane_height - title_height)
           : 0;
   const int16_t stack_height = title_height + subtitle_height;
-  const int16_t stack_top =
-      single_row ? (height - stack_height) / 2 : lane_bottom - stack_height;
+  const int16_t stack_top = single_row || compact_title
+                                ? (title_row_height - stack_height) / 2
+                                : lane_bottom - stack_height - collapse;
   title_widget_.layout(
       Rect(left, stack_top, right - 1, stack_top + title_height - 1));
   if (show_subtitle) {
@@ -560,68 +540,6 @@ void AppBar::onLayout(bool changed, const Rect& rect) {
     for (int i = 0; i < getChildrenCount(); ++i) {
       Widget& child = getChild(i);
       child.layout(child.parent_bounds().translate(0, -collapse));
-    }
-  } else if (!single_row && connection != nullptr && connection->limit() > 0) {
-    float t = static_cast<float>(collapse) / connection->limit();
-    int16_t compact_left =
-        leading_ == nullptr ? title_inset : edge + action_size + Scaled(4);
-    int16_t compact_right = std::max<int16_t>(
-        compact_left, width - edge - ChildCount(trailing_) * action_size -
-                          (ChildCount(trailing_) > 0 ? Scaled(4) : 0));
-    int16_t title_left = left + (compact_left - left) * t;
-    int16_t title_right = right + (compact_right - right) * t;
-    const int16_t subtitle_right = title_right;
-    if (title_alignment_ == AppBarTitleAlignment::kLeading) {
-      const TextStyle& expanded = expandedTitleTextStyle();
-      const TextStyle& compact = text_style_title_large();
-      const TextStyle& current = titleTextStyle();
-      const auto expanded_metrics = expanded.font().getHorizontalStringMetrics(
-          title(), expanded.fontOptions());
-      const auto compact_metrics = compact.font().getHorizontalStringMetrics(
-          title(), compact.fontOptions());
-      const auto current_metrics = current.font().getHorizontalStringMetrics(
-          title(), title_widget_.fontOptions(current));
-      int expanded_width =
-          std::min<int>(right - left, expanded_metrics.advance());
-      int compact_width = std::min<int>(compact_right - compact_left,
-                                        compact_metrics.advance());
-      int current_width =
-          std::min<int>(title_right - title_left, current_metrics.advance());
-      int expanded_center_x = 2 * left + expanded_width - 1;
-      int compact_center_x = 2 * compact_left + compact_width - 1;
-      int center_x =
-          expanded_center_x + (compact_center_x - expanded_center_x) *
-                                  collapse / connection->limit();
-      title_left = (center_x - current_width + 1) / 2;
-      title_right = title_left + current_width;
-      // Leading endpoints use a continuous center path in between, so the
-      // typography switch contracts on both sides rather than at one edge.
-      title_widget_.setAlignment(roo_display::kCenter | roo_display::kMiddle);
-    }
-    // Both endpoint centers are independent of the currently selected font
-    // and subtitle visibility. Changing typography must not move the path.
-    int16_t expanded_title_height =
-        std::min<int16_t>(expandedTitleTextStyle().lineHeight(), lane_height);
-    int16_t expanded_subtitle_height =
-        subtitle_widget_.text().empty()
-            ? 0
-            : std::min<int16_t>(text_style_body_medium().lineHeight(),
-                                lane_height - expanded_title_height);
-    int32_t expanded_center = 2 * (lane_bottom - expanded_subtitle_height) -
-                              expanded_title_height - 1;
-    int32_t compact_center = Scaled(64) - 1;
-    // Work in doubled coordinates to retain half-pixel box centers.
-    int32_t center = expanded_center + (compact_center - expanded_center) *
-                                           collapse / connection->limit();
-    int16_t top = (center - title_height + 1) / 2;
-    title_widget_.layout(
-        Rect(title_left, top, title_right - 1, top + title_height - 1));
-    if (show_subtitle) {
-      // Follow the title's moving anchor while retaining enough lane width
-      // for subtitles that are longer than the title.
-      subtitle_widget_.layout(Rect(title_left, top + title_height,
-                                   subtitle_right - 1,
-                                   top + title_height + subtitle_height - 1));
     }
   }
 }
