@@ -21,6 +21,7 @@
 namespace roo_windows {
 
 class StringViewLabel;
+class TextStyle;
 
 namespace material3 {
 class ListEntry;
@@ -430,6 +431,10 @@ class ListEntry : public Material3Container {
   /// Keeps allocated text slots when their content becomes empty.
   /// Recycled subclasses override this without adding state to ordinary rows.
   virtual bool retainsTextSlots() const { return false; }
+
+  /// Supplies primary-label typography for both text slots and row metrics.
+  /// Specialized row families can override the body-large default.
+  virtual const TextStyle& headlineTextStyle() const;
 
   /// Resolves the primary text color used when text slots are synchronized.
   /// Derived row families may override this to match a specialized container.

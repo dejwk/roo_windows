@@ -66,7 +66,8 @@ struct ListRowGeometry {
 };
 
 /// Computes cheap descriptor metrics without measuring attached children.
-ListTextSlotMetrics ResolveListTextSlotMetrics(const ListItem* item);
+ListTextSlotMetrics ResolveListTextSlotMetrics(const ListItem* item,
+                                               const TextStyle& headline_style);
 
 /// Measures a row's actual slots and resolves geometry at a valid level [-5,
 /// 0]. Zero retains the legacy descriptor text budget. Compact levels measure

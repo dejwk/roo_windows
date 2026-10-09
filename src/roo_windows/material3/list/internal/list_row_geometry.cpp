@@ -84,7 +84,8 @@ YDim SlotY(bool top_text, VerticalVisualAlignment alignment, YDim band,
 
 // Measures the descriptor-driven text stack without depending on any row-owned
 // child widget state.
-ListTextSlotMetrics ResolveListTextSlotMetrics(const ListItem* item) {
+ListTextSlotMetrics ResolveListTextSlotMetrics(
+    const ListItem* item, const TextStyle& headline_style) {
   if (item == nullptr) return ListTextSlotMetrics{0, 0, 0};
 
   uint8_t overline_lines =
@@ -97,13 +98,12 @@ ListTextSlotMetrics ResolveListTextSlotMetrics(const ListItem* item) {
   int16_t width = 0;
   width = std::max(width,
                    TextWidth(text_style_label_small(), item->overlineText()));
-  width =
-      std::max(width, TextWidth(text_style_body_large(), item->headlineText()));
+  width = std::max(width, TextWidth(headline_style, item->headlineText()));
   width = std::max(width,
                    TextWidth(text_style_body_medium(), item->supportingText()));
 
   YDim height = overline_lines * text_style_label_small().lineHeight() +
-                headline_lines * text_style_body_large().lineHeight() +
+                headline_lines * headline_style.lineHeight() +
                 supporting_lines * text_style_body_medium().lineHeight();
   return ListTextSlotMetrics{
       width, height,
@@ -168,7 +168,8 @@ ListRowLayoutMetrics ResolveListRowLayout(ListEntry& entry,
   Dimensions trailing =
       MeasureChild(item == nullptr ? nullptr : item->trailing(),
                    WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
-  ListTextSlotMetrics text = ResolveListTextSlotMetrics(item);
+  ListTextSlotMetrics text =
+      ResolveListTextSlotMetrics(item, entry.headlineTextStyle());
 
   bool has_leading = leading.width() > 0 || leading.height() > 0;
   bool has_trailing = trailing.width() > 0 || trailing.height() > 0;

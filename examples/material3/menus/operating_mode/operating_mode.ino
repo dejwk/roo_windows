@@ -15,7 +15,9 @@ class ModeItem final : public material3::StandardMenuItem {
  public:
   ModeItem(roo::string_view label, TextLabel& status, bool selected)
       : StandardMenuItem(material3::StandardMenuItemInit{
-            label, {}, nullptr,
+            label,
+            {},
+            nullptr,
             material3::StandardMenuItemFlags::kSelectable |
                 (selected ? material3::StandardMenuItemFlags::kSelected
                           : material3::StandardMenuItemFlags::kDefault)}),
@@ -68,6 +70,9 @@ class OperatingModeCatalog final : public FlexLayout {
     // the chosen item. The item itself remains the source of selected state.
     material3::MenuPolicy policy;
     policy.selection_mode = material3::SelectionMode::kSingle;
+    // Medium option text matches the trigger's size without changing row
+    // spacing. Density can be configured separately when space is limited.
+    policy.text_size = material3::MenuTextSize::kMedium;
     menu_.setPolicy(policy);
     menu_.addGroup(group_);
     add(title_);

@@ -9,9 +9,15 @@
 #include "roo_windows/core/panel.h"
 #include "roo_windows/core/widget.h"
 #include "roo_windows/material3/menu/menu.h"
+#include "roo_windows/material3/typography.h"
+#include "roo_windows/widgets/text_block.h"
+#include "roo_windows/widgets/text_label.h"
 
 namespace roo_windows::material3 {
 namespace {
+
+// Uses public widget traversal to inspect a menu row's generated text slots.
+Widget* RowChild(Widget& row, int index) { return row.focusChildAt(index); }
 
 class TestPanel final : public Panel {
  public:
@@ -382,6 +388,113 @@ TEST_F(Material3MenuTest, DensityPolicyPropagatesAcrossMenuChain) {
     app_.refresh();
     app_.refresh();
   }
+}
+
+// Verifies one text-size policy reaches retained root labels and newly built
+// submenu labels, and changing it between openings updates the actual widgets.
+TEST_F(Material3MenuTest, TextSizePropagatesAndRefreshesRetainedLabels) {
+  item_.enableSubmenu(app_.context());
+  auto* headline = static_cast<StringViewLabel*>(RowChild(row_, 0));
+  struct TextCase {
+    MenuTextSize size;
+    const TextStyle* style;
+  };
+  const TextCase cases[] = {
+      {MenuTextSize::kDefault, &text_style_body_large()},
+      {MenuTextSize::kSmall, &text_style_body_small()},
+      {MenuTextSize::kMedium, &text_style_body_medium()},
+      {MenuTextSize::kLarge, &text_style_body_large()},
+      {MenuTextSize::kDefault, &text_style_body_large()},
+  };
+  for (const TextCase& test : cases) {
+    MenuPolicy policy;
+    policy.text_size = test.size;
+    menu_.setPolicy(policy);
+    ASSERT_EQ(MenuShowResult::kShown, menu_.show(owner_, source_));
+    EXPECT_EQ(headline, RowChild(row_, 0));
+    EXPECT_EQ(test.style, &headline->textStyle());
+    EXPECT_EQ(test.style->lineHeight(), headline->height());
+    int expected_text_width =
+        test.style->font()
+            .getHorizontalStringMetrics(item_.headlineText(),
+                                        test.style->fontOptions())
+            .advance();
+    EXPECT_EQ(expected_text_width, headline->width());
+    EXPECT_EQ(
+        row_.getSuggestedMinimumDimensions().width(),
+        row_.measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0))
+            .width());
+    CompleteRowTap();
+    ASSERT_NE(nullptr, item_.firstChild());
+    auto* child_headline =
+        static_cast<StringViewLabel*>(RowChild(*item_.firstChild(), 0));
+    EXPECT_EQ(test.style, &child_headline->textStyle());
+    EXPECT_EQ(test.style->lineHeight(), child_headline->height());
+    menu_.dismissChain();
+    app_.refresh();
+    app_.refresh();
+    EXPECT_EQ(&text_style_body_large(), &headline->textStyle());
+  }
+}
+
+/// Exercises the multiline text-block path used by menu primary labels.
+class WrappedMenuItem final : public StandardMenuItem {
+ public:
+  /// Creates an item whose primary label can wrap onto two lines.
+  WrappedMenuItem()
+      : StandardMenuItem(StandardMenuItemInit{"Scheduled maintenance window",
+                                              "Supporting text"}) {}
+
+  /// Allows the primary label to wrap instead of using a single-line label.
+  ListTextPolicy headlinePolicy() const override {
+    return {TextOverflowPolicy::kWrap, 2};
+  }
+};
+
+// Verifies compact multiline rows update retained text blocks, preserve
+// supporting typography, and reserve less height for smaller primary text.
+TEST_F(Material3MenuTest,
+       TextSizeUpdatesWrappedHeadlineWithIndependentDensity) {
+  MenuRow<WrappedMenuItem> row(app_.context());
+  MenuGroup group(app_.context());
+  group.add(row);
+  Menu menu(app_.context());
+  menu.addGroup(group);
+  auto* headline = static_cast<TextBlock*>(RowChild(row, 0));
+  auto* supporting = static_cast<StringViewLabel*>(RowChild(row, 1));
+  MenuPolicy policy;
+  policy.density = DensityOverride::Explicit(Density::kMinus5);
+  int previous_height = 0;
+  int previous_width = 0;
+  for (MenuTextSize size :
+       {MenuTextSize::kLarge, MenuTextSize::kSmall, MenuTextSize::kMedium}) {
+    policy.text_size = size;
+    menu.setPolicy(policy);
+    ASSERT_EQ(MenuShowResult::kShown, menu.show(owner_, source_));
+    const TextStyle& expected =
+        size == MenuTextSize::kLarge   ? text_style_body_large()
+        : size == MenuTextSize::kSmall ? text_style_body_small()
+                                       : text_style_body_medium();
+    EXPECT_EQ(headline, RowChild(row, 0));
+    EXPECT_EQ(&expected, &headline->textStyle());
+    EXPECT_EQ(&text_style_body_medium(), &supporting->textStyle());
+    EXPECT_EQ(policy.density, row.densityOverride());
+    int height = row.getSuggestedMinimumDimensions().height();
+    int width = row.getSuggestedMinimumDimensions().width();
+    if (size == MenuTextSize::kSmall) {
+      EXPECT_LT(height, previous_height);
+      EXPECT_LT(width, previous_width);
+    } else if (size == MenuTextSize::kMedium) {
+      EXPECT_GE(height, previous_height);
+      EXPECT_GT(width, previous_width);
+    }
+    previous_height = height;
+    previous_width = width;
+    menu.dismissChain();
+    app_.refresh();
+  }
+  menu.clearGroups();
+  group.clear();
 }
 
 TEST_F(Material3MenuTest, SubmenuOpensAndBackClosesDeepestFirst) {

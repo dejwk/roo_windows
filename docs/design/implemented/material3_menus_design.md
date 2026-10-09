@@ -606,6 +606,27 @@ focus, and scroll do not.
 Custom items needing a trailing child use a custom `MenuEntry`; the standard
 path never exposes a borrowed `Badge*` or interactive trailing control.
 
+### Primary-label size
+
+`MenuPolicy::text_size` selects `MenuTextSize::kDefault`, `kLarge`, `kMedium`,
+or `kSmall` for the entire menu chain. Default preserves body-large; the three
+explicit sizes map to body-large, body-medium, and body-small. Supporting text,
+shortcuts, colors, and density remain independent. Set the policy while closed;
+the next presentation updates retained root text and newly built submenu rows.
+
+```cpp
+MenuPolicy policy;
+policy.text_size = MenuTextSize::kMedium;
+menu.setPolicy(policy);
+```
+
+The policy stores a byte-sized enum. Rows resolve it through their existing
+menu-owner pointer and a `ListEntry::headlineTextStyle()` override, with no added
+per-row storage. The same style drives descriptor metrics and generated text
+widgets, including wrapped text blocks. Unbinding restores the ordinary list
+style. Smaller text reduces its measured footprint, but density and menu tokens
+still impose minimum row heights.
+
 ### Selection and Invocation
 
 Selection is item-owned through `isSelectable()`, `isSelected()`, and
@@ -808,12 +829,16 @@ enum class MenuShowResult : uint8_t {
   kUnimplemented,
 };
 
+enum class MenuTextSize : uint8_t { kDefault, kLarge, kMedium, kSmall };
+
 struct MenuPolicy {
   ListVariant variant = ListVariant::kExpressive;
   MenuColorStyle color_style = MenuColorStyle::kStandard;
   MenuSeparatorMode separator_mode = MenuSeparatorMode::kNone;
   SelectionMode selection_mode = SelectionMode::kNone;
   LayoutDirection layout_direction = LayoutDirection::kLeftToRight;
+  DensityOverride density = DensityOverride::Explicit(Density::kDefault);
+  MenuTextSize text_size = MenuTextSize::kDefault;
 };
 
 struct MenuBadgeSpec {

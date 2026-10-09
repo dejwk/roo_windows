@@ -609,11 +609,13 @@ void ListEntry::syncTextSlotsFromItem() {
 
     if (mode == TextSlotMode::kLabel) {
       StringViewLabel* label = static_cast<StringViewLabel*>(slot);
+      label->setTextStyle(text_style);
       label->setText(text);
       label->setColor(color);
       return;
     }
     TextBlock* block = static_cast<TextBlock*>(slot);
+    block->setTextStyle(text_style);
     block->setText(ToString(text));
     block->setColor(color);
     block->setWrapMode(policy.overflow == TextOverflowPolicy::kWrap
@@ -626,9 +628,13 @@ void ListEntry::syncTextSlotsFromItem() {
   sync_slot(overline_text_, overline_mode_, item_->overlineText(),
             item_->overlinePolicy(), FontForOverline(), supportingColor());
   sync_slot(headline_text_, headline_mode_, item_->headlineText(),
-            item_->headlinePolicy(), FontForHeadline(), headlineColor());
+            item_->headlinePolicy(), headlineTextStyle(), headlineColor());
   sync_slot(supporting_text_, supporting_mode_, item_->supportingText(),
             item_->supportingPolicy(), FontForSupporting(), supportingColor());
+}
+
+const TextStyle& ListEntry::headlineTextStyle() const {
+  return FontForHeadline();
 }
 
 Color ListEntry::headlineColor() const {
@@ -791,7 +797,8 @@ Dimensions ListEntry::getSuggestedMinimumDimensions() const {
   Dimensions leading = SuggestedMinimumChild(leading_child_);
   Dimensions trailing = SuggestedMinimumChild(trailing_child_);
   Dimensions body = SuggestedMinimumChild(body_child_);
-  TextSlotMetrics text = internal::ResolveListTextSlotMetrics(item_);
+  TextSlotMetrics text =
+      internal::ResolveListTextSlotMetrics(item_, headlineTextStyle());
 
   bool has_leading = leading.width() > 0 || leading.height() > 0;
   bool has_trailing = trailing.width() > 0 || trailing.height() > 0;

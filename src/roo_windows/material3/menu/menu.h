@@ -81,6 +81,14 @@ enum class MenuShowResult : uint8_t {
   kUnimplemented,
 };
 
+/// Primary-label typography used throughout a menu chain.
+enum class MenuTextSize : uint8_t {
+  kDefault,  // Preserves the standard menu style, currently body-large.
+  kLarge,    // Body-large.
+  kMedium,   // Body-medium.
+  kSmall,    // Body-small.
+};
+
 /// Presentation and selection policy shared by one menu chain.
 struct MenuPolicy {
   /// Baseline or expressive row geometry and shapes.
@@ -98,6 +106,10 @@ struct MenuPolicy {
   /// policy follows the live theme. Change policy only while the menu is
   /// closed.
   DensityOverride density = DensityOverride::Explicit(Density::kDefault);
+
+  /// Primary-label size for root and submenu rows. Supporting text and density
+  /// remain independent. Change policy only while the menu is closed.
+  MenuTextSize text_size = MenuTextSize::kDefault;
 };
 
 /// Badge content exposed by a menu item to its bound row.
@@ -267,6 +279,9 @@ class MenuEntry : public ListEntry {
  protected:
   /// Clears the base binding before a derived inline item is destroyed.
   void prepareForItemDestruction();
+
+  /// Resolves primary-label typography from the shared menu policy.
+  const TextStyle& headlineTextStyle() const override;
 
   /// Uses the menu content role for headline text.
   Color headlineColor() const override;
@@ -484,6 +499,9 @@ class Menu {
  private:
   friend class MenuLevelBuilder;
   friend class MenuEntry;
+
+  // Resolves the chain-wide size choice without storing a style in every row.
+  const TextStyle& headlineTextStyle() const;
 
   void bindRootEntries();
   void bindLevelEntries(uint8_t level);

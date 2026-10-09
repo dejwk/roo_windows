@@ -298,6 +298,11 @@ Color MenuEntry::background() const {
   return theme().material3Theme().color.resolve(containerRole());
 }
 
+const TextStyle& MenuEntry::headlineTextStyle() const {
+  return menu_ == nullptr ? ListEntry::headlineTextStyle()
+                          : menu_->headlineTextStyle();
+}
+
 Color MenuEntry::headlineColor() const {
   const ListEntryVisualContext& visual = visualContext();
   const ColorToken role = visual.selected
@@ -347,13 +352,16 @@ void MenuEntry::bindToMenu(Menu& owner, uint8_t level, uint16_t row,
 
 void MenuEntry::unbindFromMenu() {
   bool was_vibrant = vibrant_;
+  bool changed_style = &headlineTextStyle() != &ListEntry::headlineTextStyle();
   menu_ = nullptr;
   level_ = 0;
   row_ = 0;
   level_generation_ = 0;
   submenu_allowed_ = true;
   vibrant_ = false;
-  if (was_vibrant) refreshFromItem();
+  // Borrowed rows can be reused outside this menu; restore their default
+  // text widgets as well as resolving future metrics without a policy owner.
+  if (was_vibrant || changed_style) refreshFromItem();
 }
 
 void MenuEntry::syncAdornments() {
@@ -757,6 +765,19 @@ Menu::Menu(ApplicationContext& context)
     : impl_(new Impl(*this, context)), admission_in_progress_(false) {}
 
 Menu::~Menu() { prepareForDerivedDestruction(); }
+
+const TextStyle& Menu::headlineTextStyle() const {
+  switch (impl_->policy.text_size) {
+    case MenuTextSize::kMedium:
+      return text_style_body_medium();
+    case MenuTextSize::kSmall:
+      return text_style_body_small();
+    case MenuTextSize::kDefault:
+    case MenuTextSize::kLarge:
+      return text_style_body_large();
+  }
+  return text_style_body_large();
+}
 
 void Menu::setPolicy(const MenuPolicy& policy) {
   CHECK(!admission_in_progress_);
