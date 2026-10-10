@@ -330,7 +330,7 @@ void DropdownButton::paint(PaintContext& ctx) const {
   int left = std::min<int>(area.width(), padding.left());
   int right = std::max(left, area.width() - padding.right());
   int top = std::min<int>(area.height(), padding.top());
-  int bottom = std::max(top, area.height() - padding.bottom());
+  int bottom = std::max<int>(top, area.height() - padding.bottom());
   Rect content(left, top, right - 1, bottom - 1);
   if (content.empty()) {
     ctx.clearRect(area);

@@ -1,0 +1,52 @@
+{
+  "scope": "56/96dp, zoom 100%, common zero-surface exterior mask; same legacy integer sampling and additive alpha",
+  "search": "Reach 1..32px, shift 0..16px; continuous least squares followed by integer alpha refinement of best 100 geometries per level; not a proof of global optimum",
+  "legacy_model_verified_exactly": true,
+  "levels": [
+    {
+      "level": 1,
+      "ambient_extent": 4,
+      "key_extent": 2,
+      "key_shift": 1,
+      "ambient_alpha": 21,
+      "key_alpha": 62,
+      "relative_rmse_percent": 16.263189372866773
+    },
+    {
+      "level": 2,
+      "ambient_extent": 8,
+      "key_extent": 2,
+      "key_shift": 1,
+      "ambient_alpha": 23,
+      "key_alpha": 58,
+      "relative_rmse_percent": 23.234858149859654
+    },
+    {
+      "level": 3,
+      "ambient_extent": 3,
+      "key_extent": 8,
+      "key_shift": 4,
+      "ambient_alpha": 29,
+      "key_alpha": 36,
+      "relative_rmse_percent": 20.663868562601078
+    },
+    {
+      "level": 4,
+      "ambient_extent": 4,
+      "key_extent": 8,
+      "key_shift": 7,
+      "ambient_alpha": 34,
+      "key_alpha": 38,
+      "relative_rmse_percent": 27.22309872138709
+    },
+    {
+      "level": 5,
+      "ambient_extent": 6,
+      "key_extent": 10,
+      "key_shift": 8,
+      "ambient_alpha": 23,
+      "key_alpha": 50,
+      "relative_rmse_percent": 27.784552351719743
+    }
+  ]
+}

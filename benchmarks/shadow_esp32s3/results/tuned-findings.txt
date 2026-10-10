@@ -1,0 +1,92 @@
+Parameter-only legacy shadow experiment on ESP32-S3
+
+Makerfabs MaTouch 5-inch, 800x480 RGB565; CPU 240MHz, flash 80MHz;
+8MB OPI PSRAM; 16MHz RGB panel clock; zoom 100%.
+Two runs per firmware, median of 14 warmed batch means per measurement.
+Original six modes retain their previously recorded raw runs. The new tuned
+mode uses the same board, scene cases, timing harness, and compiler settings.
+
+Changes permitted in this experiment:
+- Extent, starting alpha, and vertical offset of each of the two shadows.
+- Ambient placement gains a vertical offset, with corresponding bounds.
+- No change to legacy distance evaluation, integer square root, linear alpha
+  calculation, precomputed alpha_step, plain a+b alpha, or bulk fast paths.
+- No alpha LUT, new per-instance fields, runtime floats, or pixel-loop branches.
+- Six 6-byte parameter rows in flash; default production renderer unchanged.
+
+Fitted parameters, pixels and 8-bit alpha (not CSS blur/opacity tokens):
+Level  Ambient reach/shift/alpha   Key reach/shift/alpha
+    1    4/ 1/ 28                   2/ 1/ 48
+    2    7/ 2/ 29                   2/ 1/ 46
+    3    9/ 4/ 29                   3/ 1/ 41
+    4   10/ 6/ 34                   2/ 2/ 50
+    5   14/ 8/ 34                   3/ 4/ 49
+
+56x56 rounded surface, radius 16, Material level 3:
+Configuration   Pixels   Fixed512    Scanlines    8x8 tiles    Refresh1   Refresh12
+                         us/pixel    ms (us/px)  ms (us/px)    ms         ms
+legacy           3968      2.003   4.950 (1.248)   3.839 (0.967)     8.778    112.479
+legacy_tuned     5476      2.014   8.110 (1.481)   6.791 (1.240)    14.373    188.698
+single_flash     7396      1.740  10.454 (1.413)   9.627 (1.302)    22.712    295.119
+single_ram       7396      1.728  10.391 (1.405)   9.561 (1.293)    22.597    293.837
+double_flash     7396      1.702  10.280 (1.390)   9.454 (1.278)    21.505    285.379
+double_ram       7396      1.678  10.177 (1.376)   9.361 (1.266)    21.387    282.975
+analytic         7396      2.148  12.042 (1.628)  11.129 (1.505)    21.917    289.769
+
+Additional full-refresh scenes (ms, legacy / tuned / two LUTs in flash):
+fab56_l0: 5.425 / 5.537 / 5.218
+fab56_l1: 7.378 / 9.451 / 11.333
+fab56_l5: 13.236 / 20.301 / 32.754
+fab96_l3: 15.485 / 24.151 / 34.499
+menu240_l2: 17.663 / 28.794 / 40.427
+mixed_l3: 14.392 / 21.895 / 33.157
+circle_l3: 11.793 / 18.218 / 24.763
+
+Geometry and algorithm interpretation:
+- Original -> tuned native area: x1.380; native sampling
+  time: x1.638; average time/pixel: x1.187.
+- These averages include the same 2,852 opaque surface pixels, which take the
+  fast return. Remaining sampled pixels: 1,116 original, 2,624 tuned, 4,544 LUT.
+  Thus changing bounds also changes the mix of cheap interior and expensive
+  edge/corner/transparent samples; area normalization is not pure kernel cost.
+- The identical 512 exterior coordinates cost 2.014 us/pixel
+  tuned versus 2.003 original and 1.702 two-LUT flash.
+  This controls query count and coordinates, but geometry still affects branch
+  paths and early-zero decisions. It does not isolate only alpha arithmetic.
+- Two-LUT flash covers 1.351x the tuned native area and takes
+  1.267x its native time. Fixed-coordinate LUT sampling is faster
+  than tuned legacy. Gaussian evaluation is not inherently the dominant cost
+  in these measurements; shadow footprint and bulk/branch behavior matter.
+- There is no exact causal percentage assigning time to geometry vs arithmetic:
+  the models have different support and fast-path eligibility. Full refreshes
+  also include damage restoration, composition, and display-driver work.
+- The zero-elevation control differs between linked firmware images. Treat
+  small timing changes as code-layout/workload effects, not pure math cost.
+
+Visual comparison (compiled C++ versus captured Material Web reference):
+Relative shadow-alpha RMSE %, levels 1..5; 56/96dp equally weighted by image;
+common mask outside all level-zero surfaces. Smaller is better.
+legacy: 54.62, 57.53, 58.39, 56.16, 47.88
+tuned: 8.89, 10.03, 9.02, 10.79, 10.74
+lut: 12.45, 10.40, 9.00, 7.87, 5.91
+- Integer model first matched existing compiled legacy samples exactly; the
+  fitted model then matched compiled tuned samples exactly on this mask.
+- Allowing the ambient layer to move is significant: fitting with its original
+  zero offset gave 16-28% error, versus about 9-11% when both layers can move.
+- Fit searches reaches 1..32px and offsets 0..16px, then refines integer alpha
+  for the best continuous candidates. This is not a global-optimum proof.
+- These are fitted 56/96dp references, not held-out visual tests. The hardware
+  also renders menus, circles, mixed radii and outlines; those cases have no
+  separate browser-reference accuracy claim. Other zoom levels are uncalibrated.
+- Native-scale RGB565 host comparison: tuned-rgb565-comparison.png. RGB565
+  quantization still limits faint tails, particularly on dark backgrounds.
+  No dithering was added. See target RGB565 profiles in the raw run JSON.
+
+Validation and state:
+Focused tuned-mode tests check straight-edge additive/linear values, damage
+bounds, zero elevation, levels above five, and scalar/bulk equality for all
+five levels, sharp/rounded/mixed corners, circles and fractional outlines.
+Default legacy tests and a compiled Gaussian regression also pass.
+Decoration remains 84 bytes; static RAM 30,632 bytes, unchanged from legacy.
+The board is left showing the tuned legacy gallery. The original full flash
+backup remains /tmp/roo-shadow-review/esp32s3-before-benchmark.bin.

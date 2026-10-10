@@ -1,0 +1,75 @@
+ESP32-S3 shadow benchmark results
+
+Historical six-mode report. See tuned-findings.txt for the subsequent seventh
+mode and current board state.
+
+Makerfabs MaTouch 5-inch, 800x480 RGB565. CPU 240 MHz, flash 80 MHz,
+8 MB OPI PSRAM; active RGB panel at 16 MHz. Zoom 100%.
+Two complete runs per configuration; medians of 14 warmed batch means.
+Serial output excluded. Full methodology is in benchmark-notes.txt.
+
+Representative case: 56x56 rounded surface, radius 16, Material level 3.
+Legacy uses calibrated renderer elevation 3. Softer modes use the same
+Material Web key/ambient presets and 3-sigma support.
+
+Configuration    Fixed probe  Scanline     8x8 tiles    1 refresh  12 refresh
+                 us/pixel     us/pixel     us/pixel    ms         ms
+legacy                2.003       1.248       0.967       8.78      112.48
+single_flash          1.740       1.413       1.302      22.71      295.12
+single_ram            1.728       1.405       1.293      22.60      293.84
+double_flash          1.702       1.390       1.278      21.50      285.38
+double_ram            1.678       1.376       1.266      21.39      282.97
+analytic              2.148       1.628       1.505      21.92      289.77
+
+Fixed probe: exactly the same 512 exterior coordinates for every mode.
+Scanline/tiles: logical output pixels across each decoration extent,
+including interior and transparent tails. Extent: legacy 3,968 pixels;
+all soft variants 7,396 pixels (+86.4%). Corner/interior mixes differ.
+Application refreshes include invalidation, background restoration, and
+persistent shadows; their recorded widget area is not a valid divisor.
+Timings measure CPU drawing, not panel scanout FPS or presentation latency.
+
+Memory and output:
+- One table: 256 bytes; two tables: 512 bytes. RAM modes use internal DRAM.
+- Flash modes and analytical mode add no static RAM relative to legacy.
+- Decoration remains 84 bytes in every configuration.
+- Single/double LUT outputs are byte-identical; flash/RAM profiles match.
+- Analytical mode uses Q14, 32-bit integer math and one variable divide per
+  evaluated layer; no alpha LUT and no runtime floating point.
+- Its profile is monotonic and within one rounded 8-bit alpha step of the
+  Gaussian reference. Compiled captures differ from LUT by at most 2 alpha.
+
+Interpretation:
+- LUT sampling is faster on the fixed exterior probe. Full soft shadows
+  are substantially slower because they cover more pixels and exercise
+  the bulk rasterizer differently. Normalization still shows a penalty
+  for whole-decoration sampling, beyond the larger footprint.
+- Two LUTs in flash are a useful starting point for further optimization.
+  RAM placement saves only about 0.5-1.4% in these warmed paths and is not
+  the main performance issue. No cold-cache stress test was performed.
+- Analytical rendering saves the table and has comparable visual quality.
+  Its sampling cost is higher, while application times are much closer.
+  The no-shadow control varies with the separately linked builds too;
+  do not attribute every end-to-end difference solely to LUT arithmetic.
+- Prioritize specialized straight-edge spans, tighter zero-alpha support,
+  corner work, and retaining static shadows during content-only updates.
+  These follow-up optimizations have not been implemented or benchmarked.
+
+RGB565:
+All hardware refreshes use the actual RGB565 display path. The shadow is
+blended in 8-bit channels and quantized only at final RGB565 conversion.
+The measured LUT bottom-edge profile has 13 distinct values on white but
+only 4 on gray 32, including background. More accurate alpha cannot remove
+this banding. The host comparison also quantizes the Material Web reference.
+Ordered dithering at final conversion is a separate possible experiment;
+no dithering was added or benchmarked here.
+
+Visual accuracy at zoom 100%, sizes 56/96dp, levels 1-5:
+Relative shadow-alpha RMSE versus Material Web is about 6-12% for both
+soft models, versus 48-58% for calibrated legacy. See cpp-visual-results.json
+and rgb565-comparison.png; the image is a host comparison, not a photograph.
+
+Status: all six configurations built and measured, focused tests pass.
+The default library renderer remains legacy. The analytical gallery is
+left on the board. The prior flash image is backed up under /tmp:
+/tmp/roo-shadow-review/esp32s3-before-benchmark.bin

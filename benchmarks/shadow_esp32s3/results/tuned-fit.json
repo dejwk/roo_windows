@@ -1,0 +1,57 @@
+{
+  "scope": "56/96dp, zoom 100%, common zero-surface exterior mask; same legacy integer sampling and additive alpha",
+  "search": "Reach 1..32px, shift 0..16px; continuous least squares followed by integer alpha refinement of best 100 geometries per level; not a proof of global optimum",
+  "legacy_model_verified_exactly": true,
+  "levels": [
+    {
+      "level": 1,
+      "ambient_extent": 4,
+      "key_extent": 2,
+      "key_shift": 1,
+      "ambient_alpha": 28,
+      "key_alpha": 48,
+      "ambient_shift": 1,
+      "relative_rmse_percent": 8.89225949983939
+    },
+    {
+      "level": 2,
+      "ambient_extent": 7,
+      "key_extent": 2,
+      "key_shift": 1,
+      "ambient_alpha": 29,
+      "key_alpha": 46,
+      "ambient_shift": 2,
+      "relative_rmse_percent": 10.030462509565748
+    },
+    {
+      "level": 3,
+      "ambient_extent": 9,
+      "key_extent": 3,
+      "key_shift": 1,
+      "ambient_alpha": 29,
+      "key_alpha": 41,
+      "ambient_shift": 4,
+      "relative_rmse_percent": 9.01790400133459
+    },
+    {
+      "level": 4,
+      "ambient_extent": 10,
+      "key_extent": 2,
+      "key_shift": 2,
+      "ambient_alpha": 34,
+      "key_alpha": 50,
+      "ambient_shift": 6,
+      "relative_rmse_percent": 10.790798878608578
+    },
+    {
+      "level": 5,
+      "ambient_extent": 14,
+      "key_extent": 3,
+      "key_shift": 4,
+      "ambient_alpha": 34,
+      "key_alpha": 49,
+      "ambient_shift": 8,
+      "relative_rmse_percent": 10.735731364663662
+    }
+  ]
+}

@@ -13,23 +13,68 @@ namespace roo_windows {
 
 namespace {
 
+#if ROO_WINDOWS_EXPERIMENTAL_SHADOW_LEGACY_TUNED
+// Parameters fitted to 56/96dp Material Web references at zoom 100%. The
+// per-pixel legacy calculation below is unchanged, including additive alpha.
+struct TunedLegacyParameters {
+  uint8_t ambient_extent;
+  uint8_t key_extent;
+  uint8_t ambient_shift;
+  uint8_t key_shift;
+  uint8_t ambient_alpha;
+  uint8_t key_alpha;
+};
+
+constexpr TunedLegacyParameters kTunedLegacyParameters[] = {
+    {0, 0, 0, 0, 0, 0},   {4, 2, 1, 1, 28, 48},  {7, 2, 2, 1, 29, 46},
+    {9, 3, 4, 1, 29, 41}, {10, 2, 6, 2, 34, 50}, {14, 3, 8, 4, 34, 49},
+};
+
+constexpr const TunedLegacyParameters& TunedParameters(int elevation) {
+  return kTunedLegacyParameters[elevation < 0
+                                    ? 0
+                                    : (elevation > 5 ? 5 : elevation)];
+}
+#endif
+
 // Returns the reach of the ambient shadow at the specified elevation.
 constexpr uint8_t CalculateAmbientExtent(int elevation) {
+#if ROO_WINDOWS_EXPERIMENTAL_SHADOW_LEGACY_TUNED
+  return TunedParameters(elevation).ambient_extent;
+#else
   return elevation == 0 ? 0 : Scaled(elevation * 20 / 5 + 12) / 8;
+#endif
 }
 
 // Returns the reach of the 'key' (directional) shadow at the specified
 // elevation.
 constexpr uint8_t CalculateKeyExtent(int elevation) {
+#if ROO_WINDOWS_EXPERIMENTAL_SHADOW_LEGACY_TUNED
+  return TunedParameters(elevation).key_extent;
+#else
   return elevation == 0 ? 0 : Scaled(elevation * 9 + 4) / 8;
+#endif
 }
 
 // Returns how much the 'key' (directional) shadow is shifted at the specified
 // elevation.
 constexpr uint8_t CalculateKeyShift(int elevation) {
+#if ROO_WINDOWS_EXPERIMENTAL_SHADOW_LEGACY_TUNED
+  return TunedParameters(elevation).key_shift;
+#else
   // Matching the ambient extent, so that the shadows transition nicely.
   return elevation == 0 ? 0 : Scaled(elevation * 20 / 5 + 12) / 8 - 1;
   // return (elevation * 8) / 8;
+#endif
+}
+
+// Placement-only parameter; the original ambient shadow remains unshifted.
+constexpr uint8_t CalculateAmbientShift(int elevation) {
+#if ROO_WINDOWS_EXPERIMENTAL_SHADOW_LEGACY_TUNED
+  return TunedParameters(elevation).ambient_shift;
+#else
+  return 0;
+#endif
 }
 
 constexpr int8_t Max(int8_t a, int8_t b) { return a > b ? a : b; }
@@ -39,13 +84,15 @@ constexpr uint8_t HorizExtent(int elevation) {
 }
 
 constexpr uint8_t TopExtent(int elevation) {
-  return Max(CalculateAmbientExtent(elevation),
-             CalculateKeyExtent(elevation) - CalculateKeyShift(elevation));
+  return Max(
+      CalculateAmbientExtent(elevation) - CalculateAmbientShift(elevation),
+      CalculateKeyExtent(elevation) - CalculateKeyShift(elevation));
 }
 
 constexpr uint8_t BottomExtent(int elevation) {
-  return Max(CalculateAmbientExtent(elevation),
-             CalculateKeyExtent(elevation) + CalculateKeyShift(elevation));
+  return Max(
+      CalculateAmbientExtent(elevation) + CalculateAmbientShift(elevation),
+      CalculateKeyExtent(elevation) + CalculateKeyShift(elevation));
 }
 
 // Stores the left and right extents of a combined shadow at a given elevation.
@@ -263,10 +310,15 @@ uint8_t internal::RoundedFillCoverage(roo_display::Box bounds,
 }
 
 Rect CalculateShadowExtents(const Rect& extents, int elevation) {
+#if ROO_WINDOWS_EXPERIMENTAL_SHADOW_LUT_COUNT != 0 || \
+    ROO_WINDOWS_EXPERIMENTAL_SHADOW_ANALYTIC
+  return internal::LookupShadowExtents(extents, elevation);
+#else
   return Rect(extents.xMin() - kHorizShadowExtents[elevation],
               extents.yMin() - kTopExtents[elevation],
               extents.xMax() + kHorizShadowExtents[elevation],
               extents.yMax() + kBottomExtents[elevation]);
+#endif
 }
 
 Decoration::Decoration()
@@ -428,6 +480,13 @@ Decoration::Decoration(
   // }
   inner_corner_radii_ = corner_radii_.inset(outline_width_);
 
+#if ROO_WINDOWS_EXPERIMENTAL_SHADOW_LUT_COUNT != 0 || \
+    ROO_WINDOWS_EXPERIMENTAL_SHADOW_ANALYTIC
+  key_shadow_ =
+      internal::MakeLookupShadow(extents, corner_radii_, elevation, false);
+  ambient_shadow_ =
+      internal::MakeLookupShadow(extents, corner_radii_, elevation, true);
+#else
   int ambient_extent = CalculateAmbientExtent(elevation);
   int key_extent = CalculateKeyExtent(elevation);
   int key_shift = CalculateKeyShift(elevation);
@@ -439,10 +498,15 @@ Decoration::Decoration(
       (uint8_t)std::min<int>(255, corner_radii_.bottom_left + ambient_extent),
   };
   ambient_shadow_.x = extents.xMin() - ambient_extent;
-  ambient_shadow_.y = extents.yMin() - ambient_extent;
+  ambient_shadow_.y =
+      extents.yMin() - ambient_extent + CalculateAmbientShift(elevation);
   ambient_shadow_.w = extents.width() + 2 * ambient_extent;
   ambient_shadow_.h = extents.height() + 2 * ambient_extent;
+#if ROO_WINDOWS_EXPERIMENTAL_SHADOW_LEGACY_TUNED
+  ambient_shadow_.alpha_start = TunedParameters(elevation).ambient_alpha;
+#else
   ambient_shadow_.alpha_start = 60 - elevation;
+#endif
   ambient_shadow_.alpha_step =
       (ambient_extent == 0)
           ? 0
@@ -459,10 +523,15 @@ Decoration::Decoration(
   key_shadow_.y = extents.yMin() - key_extent + key_shift;
   key_shadow_.w = extents.width() + 2 * key_extent;
   key_shadow_.h = extents.height() + 2 * key_extent;
+#if ROO_WINDOWS_EXPERIMENTAL_SHADOW_LEGACY_TUNED
+  key_shadow_.alpha_start = TunedParameters(elevation).key_alpha;
+#else
   key_shadow_.alpha_start = 70 - 2 * elevation;
+#endif
   key_shadow_.alpha_step =
       (key_extent == 0) ? 0 : 256 * key_shadow_.alpha_start / key_extent;
   key_shadow_.border = corner_radii_;
+#endif
 
   shadow_extents_ = CalculateShadowExtents(extents, elevation).asBox();
 }
@@ -494,9 +563,15 @@ roo_display::Color Decoration::readWithContent(
     return content;
   }
   // Calculate shadow alpha.
+#if ROO_WINDOWS_EXPERIMENTAL_SHADOW_LUT_COUNT != 0 || \
+    ROO_WINDOWS_EXPERIMENTAL_SHADOW_ANALYTIC
+  uint8_t combined_shadow_alpha =
+      internal::ReadLookupShadow(key_shadow_, ambient_shadow_, x, y);
+#else
   uint8_t key_shadow_alpha = calcShadowAlpha(key_shadow_, x, y);
   uint8_t ambient_shadow_alpha = calcShadowAlpha(ambient_shadow_, x, y);
   uint8_t combined_shadow_alpha = key_shadow_alpha + ambient_shadow_alpha;
+#endif
   // Shadow color.
   roo_display::Color c =
       roo_display::Color((uint32_t)(combined_shadow_alpha) << 24);
@@ -565,6 +640,16 @@ bool Decoration::readColorRect(int16_t xMin, int16_t yMin, int16_t xMax,
   int16_t yMin_interior = widget_extents_.yMin() + outline_width_;
   int16_t yMax_interior = widget_extents_.yMax() - outline_width_;
   int16_t r_interior = inner_corner_radii_.max();
+#if ROO_WINDOWS_EXPERIMENTAL_SHADOW_LUT_COUNT != 0 || \
+    ROO_WINDOWS_EXPERIMENTAL_SHADOW_ANALYTIC
+  // The blurred mask varies inside each shifted caster too. Keep replicated
+  // strips away from its corner/offset region, including sharp-corner casters.
+  r_interior = std::max<int>(
+      r_interior,
+      corner_radii_.max() +
+          (std::max(key_shadow_.offset_16, ambient_shadow_.offset_16) + 15) /
+              16);
+#endif
   if (press_overlay_ == nullptr) {
     // Fast path 1: rect lies in the "wide" interior band. We are outside
     // rounded corners horizontally, so color depends only on y. This lets us

@@ -1,0 +1,56 @@
+INFO: roo_testing: no frontend selected; defaulting to --config=roo_testing_arduino_esp32.
+INFO: Invocation ID: 1c103788-e80a-4c5d-805f-1b43aa54fb76
+Computing main repo mapping: 
+Loading: 
+Loading: 0 packages loaded
+WARNING: Build option --copt has changed, discarding analysis cache (this can be expensive, see https://bazel.build/advanced/performance/iteration-speed).
+Analyzing: 3 targets (0 packages loaded, 0 targets configured)
+Analyzing: 3 targets (0 packages loaded, 0 targets configured)
+
+INFO: Analyzed 3 targets (0 packages loaded, 1551 targets configured).
+INFO: From Compiling src/signalhandler.cc:
+external/glog+/src/signalhandler.cc: In function 'void google::{anonymous}::DumpStackFrameInfo(const char*, void*)':
+external/glog+/src/signalhandler.cc:247:112: note: '#pragma message: Symbolize functionality is not available for target platform: stack dump will contain empty frames.'
+  247 |           "Symbolize functionality is not available for target platform: stack dump will contain empty frames.")
+      |                                                                                                                ^
+[336 / 1,040] Compiling src/roo_windows/composites/menu/title.cpp; 0s disk-cache, linux-sandbox ... (6 actions, 4 running)
+[522 / 1,040] Compiling src/roo_windows/composites/menu/title.cpp; 1s disk-cache, linux-sandbox ... (6 actions, 4 running)
+[702 / 1,040] Compiling test/decoration_test.cpp; 2s disk-cache, linux-sandbox ... (5 actions, 4 running)
+[846 / 1,040] Compiling src/roo_windows/composites/log/log.cpp; 0s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[905 / 1,040] Compiling src/roo_windows/containers/flex_layout.cpp; 1s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[909 / 1,040] Compiling test/material3_dropdown_button_test.cpp; 2s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[914 / 1,043] Compiling src/roo_windows/containers/scrollable_panel.cpp; 1s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[922 / 1,046] Compiling src/roo_windows/core/animation_registry.cpp; 1s disk-cache, linux-sandbox ... (6 actions running)
+[927 / 1,046] Compiling src/roo_windows/core/application.cpp; 1s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[931 / 1,046] Compiling src/roo_windows/core/click_animation.cpp; 1s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[937 / 1,046] Compiling src/roo_windows/core/focus_manager.cpp; 1s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[942 / 1,046] Compiling src/roo_windows/core/main_window.cpp; 1s disk-cache, linux-sandbox ... (6 actions running)
+[947 / 1,046] Compiling src/roo_windows/core/paint_context.cpp; 1s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[949 / 1,046] Compiling src/roo_windows/core/panel.cpp; 1s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[955 / 1,046] Compiling src/roo_windows/core/task.cpp; 1s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[961 / 1,046] Compiling src/roo_windows/core/transient_presentation.cpp; 1s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[965 / 1,046] Compiling src/roo_windows/core/widget.cpp; 1s disk-cache, linux-sandbox ... (6 actions running)
+[971 / 1,046] Compiling src/roo_windows/dialogs/dialog.cpp; 1s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[979 / 1,046] Compiling src/roo_windows/keyboard/editor_destination.cpp; 1s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[983 / 1,046] Compiling src/roo_windows/material3/app_bar/app_bar.cpp; 1s disk-cache, linux-sandbox ... (6 actions running)
+[989 / 1,046] Compiling src/roo_windows/material3/button/internal/button_appearance.cpp; 0s disk-cache, linux-sandbox ... (6 actions running)
+[993 / 1,046] Compiling src/roo_windows/material3/button/toggle_icon_button.cpp; 1s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[997 / 1,046] Compiling src/roo_windows/material3/checkbox/checkbox.cpp; 1s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[1,003 / 1,046] Compiling src/roo_windows/material3/checkbox/resources/generated/indeterminate_27.cpp; 1s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[1,008 / 1,046] Compiling src/roo_windows/material3/date_picker/date_picker_panel.cpp; 1s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[1,011 / 1,046] Compiling src/roo_windows/material3/dialog/dialog_scaffold.cpp; 1s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[1,016 / 1,046] Compiling src/roo_windows/material3/list/internal/list_row_geometry.cpp; 1s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[1,019 / 1,046] Compiling src/roo_windows/material3/list/list.cpp; 2s disk-cache, linux-sandbox ... (6 actions running)
+[1,026 / 1,046] Compiling src/roo_windows/material3/navigation_rail/navigation_rail.cpp; 1s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[1,030 / 1,046] Compiling src/roo_windows/material3/slider/range_slider.cpp; 1s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[1,036 / 1,046] Compiling src/roo_windows/material3/switch/switch.cpp; 1s disk-cache, linux-sandbox ... (2 actions running)
+INFO: Found 3 test targets...
+INFO: Elapsed time: 38.028s, Critical Path: 3.33s
+INFO: 909 processes: 140 action cache hit, 765 disk cache hit, 3 internal, 141 linux-sandbox.
+INFO: Build completed successfully, 909 total actions
+//:decoration_test                                              (cached) PASSED in 0.1s
+//:material3_dropdown_button_test                               (cached) PASSED in 0.6s
+//:shadow_lookup_test                                                    PASSED in 0.1s
+
+Executed 1 out of 3 tests: 3 tests pass.
+There were tests whose specified size is too big. Use the --test_verbose_timeout_warnings command line option to see which ones these are.

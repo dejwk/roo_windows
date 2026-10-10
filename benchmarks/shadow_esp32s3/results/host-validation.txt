@@ -1,0 +1,7 @@
+Default: shadow_lookup_test, decoration_test, material3_dropdown_button_test passed.
+Single LUT, double LUT, analytical: shadow_lookup_test passed.
+Single and double compiled elevation captures are byte-identical.
+Analytical exhaustive Q14 sweep: monotonic; maximum Gaussian alpha rounding error <=1.
+Analytical vs LUT compiled captures: maximum alpha difference 2.
+LUT generator reproduces formatted header exactly.
+C++ formatting and git diff --check pass.

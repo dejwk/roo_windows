@@ -1,0 +1,60 @@
+<roo_windows::internal::AnalyticShadowEdge(int)>:
+42086408:	004136        	entry	a1, 32
+4208640b:	180c      	movi.n	a8, 1
+4208640d:	029d      	mov.n	a9, a2
+4208640f:	c0d882        	addmi	a8, a8, 0xffffc000
+42086412:	ffa022        	movi	a2, 255
+42086415:	02a987        	bge	a9, a8, 4208641b <roo_windows::internal::AnalyticShadowEdge(int)+0x13>
+42086418:	002406        	j	420864ac <roo_windows::internal::AnalyticShadowEdge(int)+0xa4>
+4208641b:	f87c      	movi.n	a8, -1
+4208641d:	d58280        	extui	a8, a8, 18, 14
+42086420:	020c      	movi.n	a2, 0
+42086422:	02a897        	bge	a8, a9, 42086428 <roo_windows::internal::AnalyticShadowEdge(int)+0x20>
+42086425:	0020c6        	j	420864ac <roo_windows::internal::AnalyticShadowEdge(int)+0xa4>
+42086428:	c4a0a2        	movi	a10, 196
+4208642b:	87daa2        	addmi	a10, a10, 0xffff8700
+4208642e:	608190        	abs	a8, a9
+42086431:	c188a0        	mul16u	a8, a8, a10
+42086434:	bfa0b2        	movi	a11, 191
+42086437:	20d882        	addmi	a8, a8, 0x2000
+4208643a:	41ae80        	srli	a10, a8, 14
+4208643d:	f48e80        	extui	a8, a8, 14, 16
+42086440:	a08880        	addx4	a8, a8, a8
+42086443:	118880        	slli	a8, a8, 8
+42086446:	20d882        	addmi	a8, a8, 0x2000
+42086449:	418e80        	srli	a8, a8, 14
+4208644c:	10c882        	addi	a8, a8, 16
+4208644f:	c188a0        	mul16u	a8, a8, a10
+42086452:	0edbb2        	addmi	a11, a11, 0xe00
+42086455:	20d882        	addmi	a8, a8, 0x2000
+42086458:	418e80        	srli	a8, a8, 14
+4208645b:	88ba      	add.n	a8, a8, a11
+4208645d:	c188a0        	mul16u	a8, a8, a10
+42086460:	d1a0b2        	movi	a11, 209
+42086463:	20d882        	addmi	a8, a8, 0x2000
+42086466:	418e80        	srli	a8, a8, 14
+42086469:	11dbb2        	addmi	a11, a11, 0x1100
+4208646c:	88ba      	add.n	a8, a8, a11
+4208646e:	c188a0        	mul16u	a8, a8, a10
+42086471:	1a0c      	movi.n	a10, 1
+42086473:	20d882        	addmi	a8, a8, 0x2000
+42086476:	418e80        	srli	a8, a8, 14
+42086479:	40d882        	addmi	a8, a8, 0x4000
+4208647c:	01aa40        	slli	a10, a10, 28
+4208647f:	c28a80        	quou	a8, a10, a8
+42086482:	c18880        	mul16u	a8, a8, a8
+42086485:	20d882        	addmi	a8, a8, 0x2000
+42086488:	418e80        	srli	a8, a8, 14
+4208648b:	c18880        	mul16u	a8, a8, a8
+4208648e:	20d882        	addmi	a8, a8, 0x2000
+42086491:	418e80        	srli	a8, a8, 14
+42086494:	0059d6        	bgez	a9, 4208649d <roo_windows::internal::AnalyticShadowEdge(int)+0x95>
+42086497:	80d882        	addmi	a8, a8, 0xffff8000
+4208649a:	608080        	neg	a8, a8
+4208649d:	f48080        	extui	a8, a8, 0, 16
+420864a0:	112880        	slli	a2, a8, 8
+420864a3:	c02280        	sub	a2, a2, a8
+420864a6:	40d222        	addmi	a2, a2, 0x4000
+420864a9:	742f20        	extui	a2, a2, 15, 8
+420864ac:	f01d      	retw.n
+	...

@@ -1,0 +1,20 @@
+INFO: roo_testing: no frontend selected; defaulting to --config=roo_testing_arduino_esp32.
+INFO: Invocation ID: 8c60aef4-59db-4f0e-acbb-9e74f63920ab
+Computing main repo mapping: 
+Loading: 
+Loading: 0 packages loaded
+Analyzing: target //:shadow_lookup_test (0 packages loaded, 0 targets configured)
+Analyzing: target //:shadow_lookup_test (0 packages loaded, 0 targets configured)
+
+INFO: Analyzed target //:shadow_lookup_test (0 packages loaded, 0 targets configured).
+[2 / 4] [Prepa] Linking shadow_lookup_test
+INFO: Found 1 test target...
+Target //:shadow_lookup_test up-to-date:
+  bazel-bin/shadow_lookup_test
+INFO: Elapsed time: 1.442s, Critical Path: 1.23s
+INFO: 5 processes: 2 internal, 3 linux-sandbox.
+INFO: Build completed successfully, 5 total actions
+//:shadow_lookup_test                                                    PASSED in 0.1s
+
+Executed 1 out of 1 test: 1 test passes.
+There were tests whose specified size is too big. Use the --test_verbose_timeout_warnings command line option to see which ones these are.

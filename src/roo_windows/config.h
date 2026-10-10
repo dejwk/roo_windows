@@ -50,3 +50,57 @@
 // (used only when no explicit ROO_WINDOWS_ZOOM is selected)
 
 #endif
+
+/// Opt-in shadow benchmark prototype: 0 keeps the production legacy renderer;
+/// 1 uses a shared Gaussian edge table, 2 uses opacity-baked key/ambient
+/// tables. Nonzero modes interpret elevation as Material Web level 0..5
+/// (clamped). Define globally for the whole build; this is not a stable public
+/// API.
+#ifndef ROO_WINDOWS_EXPERIMENTAL_SHADOW_LUT_COUNT
+#define ROO_WINDOWS_EXPERIMENTAL_SHADOW_LUT_COUNT 0
+#endif
+#if ROO_WINDOWS_EXPERIMENTAL_SHADOW_LUT_COUNT < 0 || \
+    ROO_WINDOWS_EXPERIMENTAL_SHADOW_LUT_COUNT > 2
+#error "Experimental shadow LUT count must be 0, 1, or 2"
+#endif
+
+/// Places experimental LUT bytes in internal ESP32 DRAM instead of flash.
+#ifndef ROO_WINDOWS_EXPERIMENTAL_SHADOW_LUT_RAM
+#define ROO_WINDOWS_EXPERIMENTAL_SHADOW_LUT_RAM 0
+#endif
+#if ROO_WINDOWS_EXPERIMENTAL_SHADOW_LUT_RAM != 0 && \
+    ROO_WINDOWS_EXPERIMENTAL_SHADOW_LUT_RAM != 1
+#error "Experimental shadow LUT RAM must be 0 or 1"
+#endif
+
+/// Evaluates the experimental Gaussian edge analytically with Q14 integer
+/// arithmetic instead of a LUT. Uses the same Material levels and geometry.
+#ifndef ROO_WINDOWS_EXPERIMENTAL_SHADOW_ANALYTIC
+#define ROO_WINDOWS_EXPERIMENTAL_SHADOW_ANALYTIC 0
+#endif
+#if ROO_WINDOWS_EXPERIMENTAL_SHADOW_ANALYTIC != 0 && \
+    ROO_WINDOWS_EXPERIMENTAL_SHADOW_ANALYTIC != 1
+#error "Experimental analytical shadow mode must be 0 or 1"
+#endif
+#if ROO_WINDOWS_EXPERIMENTAL_SHADOW_ANALYTIC && \
+    ROO_WINDOWS_EXPERIMENTAL_SHADOW_LUT_COUNT != 0
+#error "Select analytical shadows or LUT shadows, not both"
+#endif
+
+/// Retunes only legacy linear-shadow parameters to Material Web levels 0..5.
+/// Keeps the legacy rasterizer and additive alpha. Fitted only at zoom 100%.
+#ifndef ROO_WINDOWS_EXPERIMENTAL_SHADOW_LEGACY_TUNED
+#define ROO_WINDOWS_EXPERIMENTAL_SHADOW_LEGACY_TUNED 0
+#endif
+#if ROO_WINDOWS_EXPERIMENTAL_SHADOW_LEGACY_TUNED != 0 && \
+    ROO_WINDOWS_EXPERIMENTAL_SHADOW_LEGACY_TUNED != 1
+#error "Experimental tuned legacy shadow mode must be 0 or 1"
+#endif
+#if ROO_WINDOWS_EXPERIMENTAL_SHADOW_LEGACY_TUNED &&    \
+    (ROO_WINDOWS_EXPERIMENTAL_SHADOW_LUT_COUNT != 0 || \
+     ROO_WINDOWS_EXPERIMENTAL_SHADOW_ANALYTIC)
+#error "Select tuned legacy shadows or Gaussian shadows, not both"
+#endif
+#if ROO_WINDOWS_EXPERIMENTAL_SHADOW_LEGACY_TUNED && ROO_WINDOWS_ZOOM != 100
+#error "Tuned legacy shadow parameters are calibrated only at zoom 100%"
+#endif

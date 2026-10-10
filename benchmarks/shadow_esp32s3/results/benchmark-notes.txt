@@ -1,0 +1,99 @@
+Hardware shadow prototype, based on roo_windows 191b19bc
+
+Target: Makerfabs MaTouch ESP32-S3 Parallel TFT 5 inch, 800x480 RGB565.
+CPU 240 MHz, flash 80 MHz, embedded 8 MB OPI PSRAM, 16 MHz panel clock.
+The existing roo_display RGB driver runs continuously with one PSRAM
+framebuffer and a 10-line bounce buffer. Timing is CPU wall time spent drawing;
+it is not a measurement of the LCD scanout rate or tear-free presentation.
+
+Six separate firmware builds compare the unchanged default renderer with a
+shared 256-byte Gaussian edge integral in flash/DRAM and two opacity-baked
+256-byte tables in flash/DRAM. Both LUT modes evaluate key and ambient layers;
+only the opacity multiplication differs. Alpha remains 8-bit through blending,
+then the display's normal conversion quantizes the final color to RGB565.
+No dithering, floating-point rasterization, frame-sized blur, or shadow bitmap
+cache is used. Table placement is checked on-device and in ELF symbols.
+
+The LUT prototype interprets elevation as Material Web level 0..5, clamped.
+The legacy benchmark maps those levels to [0,1,2,3,4,7], the last commit's
+calibration. This is an explicit prototype flag, not a new stable API.
+
+Scenes: 56x56 surfaces at levels 0/1/3/5; 96x96 at level 3; 240x160 menu at
+level 2; 120x72 surface with mixed corner radii and fractional outline at level
+3; 56x56 circle at level 3; and twelve 56x56 level-3 surfaces.
+All physical sizes are pixels at 100% zoom.
+
+fixed512: 512 identical exterior coordinates, 10 warmups, 7 batches of 150
+calls. This includes transparent tails and measures the entire sample path,
+not just a table load instruction.
+native: full Decoration::readColors scanlines across each renderer's own
+shadow extent, 3 warmups, 7 batches of 12 complete decorations.
+tiles8: same extent via Decoration::readColorRect, in 8x8 tiles, same repeats.
+refresh1/refresh12: actual Application::refresh after full surface invalidation,
+including persistent shadow overflow; 25 warmup frames, 7 batches of 25 frames.
+Serial output and the 2 ms delay between batches are outside timed sections.
+Two complete validated runs per firmware provide 14 batch means per measurement.
+Results use the median of those batch means, with raw values retained.
+These are warmed workloads, not a cold-cache or Wi-Fi-load stress test.
+
+The gallery left on the board has five columns (levels 1 through 5), with
+white, gray 224, and gray 32 backgrounds in three rows. The host comparison
+image reproduces the library's RGB565 conversion, but is not a panel photograph.
+On-device RGB565 edge profiles provide a direct check of blending/quantization.
+
+Host checks: Gaussian table values and baked-opacity equivalence; zero-elevation
+and finite-support bounds; scalar versus bulk sampling across all Material
+levels, sharp/rounded/mixed corners and outlines. Single and double compiled
+capture directories are byte-identical. Default decoration and dropdown tests
+also pass. New pixels intentionally differ from legacy golden captures.
+
+Interpretation limits: compiling distinct firmware changes code/data layout, so
+small end-to-end differences are not pure instruction-cost measurements. The
+zero-shadow control also varies between builds. Prefer consistent trends across
+fixed-coordinate sampling, native/tiled rendering, full refreshes, and repeats.
+Full surface invalidation deliberately includes shadows. These refresh ratios
+do not apply to ordinary content-only damage that leaves a static shadow alone.
+
+Material comparison target:
+https://github.com/material-components/material-web/blob/47adb655bd7a88c4d62e8faac2873084eed555dc/elevation/internal/_elevation.scss
+Android M3 describes shadow elevation as the same concept as M2, adding a
+separate tonal elevation. The prototype targets the concrete Material Web
+recipes used by the base commit, rather than claiming one universal M3 kernel:
+https://developer.android.com/develop/ui/compose/designsystems/material2-material3#surfaces_and_elevation
+
+Additional analytical configuration (user-requested):
+ROO_WINDOWS_EXPERIMENTAL_SHADOW_ANALYTIC=1, LUT_COUNT=0. Same Material presets,
+signed-distance geometry, support, blending, and opacity scaling as single-LUT.
+The Gaussian profile is evaluated continuously with the Abramowitz & Stegun
+7.1.27 rational approximation, quantized to Q14. Four fixed coefficients and
+one 32-bit integer reciprocal per layer; no alpha table, runtime floating point,
+exp, or erf. Corner distances still use the shared integer square root.
+Reference: https://personal.math.ubc.ca/~cbm/aands/page_299.htm
+An exhaustive test of all 32,769 Q14 inputs in [-1,1] checks monotonicity and a
+maximum one-step error against the rounded 8-bit Gaussian alpha reference.
+Analytical output may differ slightly from the quantized LUT, so its visual
+error and RGB565 profiles are checked separately.
+
+Per-pixel normalization:
+fixed512 divides by the identical 512 exterior coordinate queries.
+native/tiles8 divide by each renderer's full decoration extent, including the
+opaque interior and transparent tails, retaining their uniform fill fast paths.
+These are logical output pixels covered by the sampling request. They are not
+LCD bus transactions and do not imply identical corner/interior workload mixes.
+Refresh metrics remain per frame: the recorded logical widget area excludes
+shadow overflow and background restoration, so it is not a valid divisor.
+Cycles/pixel use the measured 240 MHz CPU clock and include interrupts.
+
+Capture integrity: one double-RAM capture contained a partial USB line. It was
+discarded, buffering was fixed to preserve incomplete lines across timeouts,
+and both runs were repeated. Only complete 231-measurement runs are aggregated.
+
+Subsequent parameter-only experiment:
+legacy_tuned is the seventh mode, using the same benchmark harness and clocks.
+Only the legacy layer parameters and placement bounds change; calcShadowDiffusion,
+calcShadowAlpha, additive alpha, and bulk fast paths are preserved. Both layers
+now have configurable setup-time vertical offsets. There is no alpha lookup
+and no additional per-pixel operation. See tuned-findings.txt for the results,
+parameter fitting, scope limits, and comparison with the initial six modes.
+The board now runs this tuned gallery. Its 36-byte parameter table is in flash,
+Decoration is still 84 bytes, and static RAM remains 30,632 bytes.

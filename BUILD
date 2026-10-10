@@ -1457,3 +1457,9 @@ cc_binary(
     srcs = ["benchmarks/material3_elevation_capture.cpp"],
     deps = [":roo_windows"],
 )
+
+cc_test(
+    name = "shadow_lookup_test",
+    srcs = ["test/shadow_lookup_test.cpp"],
+    deps = [":roo_windows", "@roo_testing//:arduino_gtest_main"],
+)

@@ -1,0 +1,72 @@
+INFO: roo_testing: no frontend selected; defaulting to --config=roo_testing_arduino_esp32.
+INFO: Invocation ID: df6b270c-1c9a-409f-9fd8-2559a30d09cc
+Computing main repo mapping: 
+Loading: 
+Loading: 0 packages loaded
+Analyzing: target //:shadow_lookup_test (0 packages loaded, 0 targets configured)
+Analyzing: target //:shadow_lookup_test (0 packages loaded, 0 targets configured)
+
+INFO: Analyzed target //:shadow_lookup_test (0 packages loaded, 0 targets configured).
+[1 / 119] Compiling src/roo_icons/round/48/action.cpp; 1s disk-cache, linux-sandbox ... (6 actions running)
+[2 / 119] Compiling src/roo_icons/round/48/action.cpp; 2s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[7 / 119] Compiling src/roo_icons/outlined/18/image.cpp; 1s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[7 / 119] Compiling src/roo_icons/outlined/18/image.cpp; 2s disk-cache, linux-sandbox ... (6 actions running)
+[8 / 119] Compiling src/roo_icons/outlined/18/image.cpp; 3s disk-cache, linux-sandbox ... (6 actions running)
+[10 / 119] Compiling src/roo_icons/outlined/18/image.cpp; 4s disk-cache, linux-sandbox ... (6 actions running)
+[12 / 119] Compiling src/roo_icons/round/36/search.cpp; 5s disk-cache, linux-sandbox ... (6 actions running)
+[13 / 119] Compiling src/roo_icons/round/36/search.cpp; 6s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[15 / 119] Compiling src/roo_windows/core/panel.cpp; 5s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[17 / 119] Compiling src/roo_windows/core/panel.cpp; 6s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[18 / 119] Compiling src/roo_windows/core/panel.cpp; 7s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[21 / 119] Compiling src/roo_windows/material3/menu/menu_geometry.cpp; 2s disk-cache, linux-sandbox ... (6 actions running)
+[23 / 119] Compiling src/roo_icons/outlined/24/alert.cpp; 2s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[26 / 119] Compiling src/roo_icons/round/36/notification.cpp; 3s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[26 / 119] Compiling src/roo_icons/round/36/notification.cpp; 4s disk-cache, linux-sandbox ... (6 actions running)
+[29 / 119] Compiling src/roo_windows/material3/menu/menu.cpp; 4s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[31 / 119] Compiling src/roo_windows/core/rounded_clip.cpp; 5s disk-cache, linux-sandbox ... (6 actions running)
+[33 / 119] Compiling src/roo_windows/core/rounded_clip.cpp; 6s disk-cache, linux-sandbox ... (6 actions running)
+[36 / 119] Compiling src/roo_windows/material3/list/list.cpp; 2s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[36 / 119] Compiling src/roo_windows/material3/list/list.cpp; 4s disk-cache, linux-sandbox ... (6 actions running)
+[37 / 119] Compiling src/roo_windows/material3/list/list.cpp; 6s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[39 / 119] Compiling src/roo_windows/core/scroll_connection.cpp; 5s disk-cache, linux-sandbox ... (6 actions running)
+[41 / 119] Compiling src/roo_icons/outlined/24/maps.cpp; 6s disk-cache, linux-sandbox ... (6 actions running)
+[42 / 119] Compiling src/roo_icons/outlined/24/maps.cpp; 10s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[45 / 119] Compiling src/roo_icons/outlined/24/navigation.cpp; 7s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[47 / 119] Compiling src/roo_icons/outlined/24/places.cpp; 2s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[47 / 119] Compiling src/roo_icons/outlined/24/places.cpp; 3s disk-cache, linux-sandbox ... (6 actions running)
+[48 / 119] Compiling src/roo_icons/outlined/24/search.cpp; 4s disk-cache, linux-sandbox ... (6 actions running)
+[49 / 119] Compiling src/roo_windows/material3/list/dynamic_list.cpp; 4s disk-cache, linux-sandbox ... (6 actions running)
+[50 / 119] Compiling src/roo_windows/material3/list/dynamic_list.cpp; 6s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[51 / 119] Compiling src/roo_windows/core/task.cpp; 7s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[52 / 119] Compiling src/roo_icons/outlined/24/social.cpp; 8s disk-cache, linux-sandbox ... (6 actions running)
+[53 / 119] Compiling src/roo_icons/outlined/24/social.cpp; 9s disk-cache, linux-sandbox ... (6 actions running)
+[54 / 119] Compiling src/roo_icons/outlined/36/action.cpp; 6s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[56 / 119] Compiling src/roo_windows/material3/layout_scaffold/layout_scaffold.cpp; 5s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[59 / 119] Compiling src/roo_icons/outlined/36/av.cpp; 2s disk-cache, linux-sandbox ... (6 actions running)
+[60 / 119] Compiling src/roo_icons/outlined/36/communication.cpp; 3s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[63 / 119] Compiling src/roo_windows/core/text_input.cpp; 2s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[66 / 119] Compiling src/roo_icons/outlined/36/editor.cpp; 2s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[69 / 119] Compiling src/roo_windows/core/theme.cpp; 1s disk-cache, linux-sandbox ... (6 actions running)
+[72 / 119] Compiling src/roo_windows/material3/dialog/dialog_scaffold.cpp; 2s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[76 / 119] Compiling src/roo_windows/core/touch_sensor.cpp; 2s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[78 / 119] Compiling src/roo_icons/round/36/content.cpp; 2s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[82 / 119] Compiling src/roo_windows/core/transient_presentation.cpp; 2s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[83 / 119] Compiling src/roo_icons/round/24/action.cpp; 2s disk-cache, linux-sandbox ... (6 actions running)
+[86 / 119] Compiling src/roo_icons/round/24/av.cpp; 2s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[89 / 119] Compiling src/roo_windows/core/transient_surface_host.cpp; 2s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[93 / 119] Compiling src/roo_icons/round/24/device.cpp; 2s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[96 / 119] Compiling src/roo_windows/material3/date_picker/date_picker_panel.cpp; 2s disk-cache, linux-sandbox ... (6 actions running)
+[100 / 119] Compiling src/roo_windows/core/widget.cpp; 3s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[103 / 119] Compiling src/roo_icons/round/24/image.cpp; 2s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[108 / 119] Compiling src/roo_windows/decoration/decoration.cpp; 1s disk-cache, linux-sandbox ... (5 actions running)
+[117 / 119] [Prepa] Linking shadow_lookup_test
+INFO: Found 1 test target...
+Target //:shadow_lookup_test up-to-date:
+  bazel-bin/shadow_lookup_test
+INFO: Elapsed time: 71.018s, Critical Path: 10.95s
+INFO: 118 processes: 2 action cache hit, 3 internal, 115 linux-sandbox.
+INFO: Build completed successfully, 118 total actions
+//:shadow_lookup_test                                                    PASSED in 0.1s
+
+Executed 1 out of 1 test: 1 test passes.
+There were tests whose specified size is too big. Use the --test_verbose_timeout_warnings command line option to see which ones these are.

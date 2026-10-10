@@ -1,0 +1,157 @@
+{
+  "repos": {
+    "roo_windows": "191b19bc289802db791641afeaaeab15561d65d9",
+    "roo_display": "bccee1e96cbf07a9e1a757b22cd17306022a26a3",
+    "roo_collections": "d2ff5ae6a652afcc2cf5445858ca01e936dc5611",
+    "roo_fonts_basic": "77906aa0aa7058322ecfb3e065dd38618f29e86c",
+    "roo_fonts_material": "81906c859454d4c8fadb19bf4319385c5e85166a",
+    "roo_locale": "9dd107245fc6c2c924f11131943b29ee1c6405e9",
+    "roo_logging": "485072135c3c2105ce52f4d9598c411123db9660",
+    "roo_icons": "8d417fff51344335a42610604689d477ef1f229c",
+    "roo_io": "eb61e6f9c04b387733d9367c1ca9f545fe8c8a90",
+    "roo_scheduler": "40042c944c5b4db8c474d62ff354dbbc73f1c6a1",
+    "roo_time": "229817712171866fcace63a74c674907bfef039a",
+    "roo_backport": "77aa81a729a40b21c4bd5a69e8abba09863cc281"
+  },
+  "roo_windows_base": "191b19bc",
+  "roo_flags_registry_version": "1.2.5",
+  "roo_threads_registry_version": "1.2.9",
+  "platform": "pioarduino 55.03.35",
+  "arduino": "3.3.5",
+  "compiler": "xtensa-esp-elf GCC 14.2.0+20251107",
+  "board": "Makerfabs MaTouch ESP32-S3 Parallel TFT 5 inch",
+  "serial_id": "E4:B0:63:BA:B4:B0",
+  "display": "800x480 RGB565, 16 MHz PCLK, one PSRAM framebuffer, 10-line DMA bounce buffer",
+  "lut_modes": "0 legacy; 1 shared 256-byte integral with runtime per-layer opacity; 2 two opacity-baked 256-byte tables; same two layers in both LUT modes",
+  "legacy_levels": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    7
+  ],
+  "prototype_levels": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "source_sha256": {
+    "src/roo_windows/config.h": "83b8c0629465258d66da6434c5ac04c2c69fbb3e7808c799ca9d9efce68d8789",
+    "src/roo_windows/decoration/decoration.cpp": "7bd644f96c38302e18f660de419e5f58a166e29bf764401fea84d15a5d93eff8",
+    "src/roo_windows/decoration/decoration.h": "9efb7c63e8118853cfb3e9d13cbc3a66f89aadb18f12ce20641b8ae41c9e762e",
+    "src/roo_windows/decoration/shadow_lookup.cpp": "f87216ce3a12906fac6ad8a022604f086e81413f067ea573d87518c6ebf7851d",
+    "src/roo_windows/decoration/shadow_lookup.h": "76cdece6d7ada895b46fdb0fcdbaa4c8ea12e14a40d9777a261414b3183d5869",
+    "src/roo_windows/decoration/shadow_lookup_tables.h": "dafb2327fa8aa7f69599a42b0e0001e999404c26affe41cc08561761dbaf9c24",
+    "benchmarks/shadow_esp32s3/src/main.cpp": "85cdbe1e150a1c96c2a91681b54ef0253ee707bc21dae83b9df542e47bfde667",
+    "benchmarks/shadow_esp32s3/platformio.ini": "cc4d2244b1813e8c32f974aef07ab13cd3c349f79050d481e6ebd1a53f76aca3"
+  },
+  "firmware": {
+    "legacy": {
+      "bytes": 1050592,
+      "sha256": "64795a18b30d7e307742fb7a4ba8b7ae74bcbdf047d53a34d65d34174cfe1e67",
+      "table_symbols": [],
+      "size_summary": [
+        "RAM:   [=         ]   9.3% (used 30632 bytes from 327680 bytes)",
+        "Flash: [==        ]  16.0% (used 1050191 bytes from 6553600 bytes)"
+      ]
+    },
+    "single_flash": {
+      "bytes": 1051344,
+      "sha256": "3104d52f58e31857bc2fe91efa3ecab3468ac0dda9346372fc4aff2a819bd66a",
+      "table_symbols": [
+        "3c0b0fe8 00000100 d roo_windows::internal::(anonymous namespace)::kEdge"
+      ],
+      "size_summary": [
+        "RAM:   [=         ]   9.3% (used 30632 bytes from 327680 bytes)",
+        "Flash: [==        ]  16.0% (used 1050947 bytes from 6553600 bytes)"
+      ]
+    },
+    "single_ram": {
+      "bytes": 1051344,
+      "sha256": "d915e987a3268fcd671d39d6b6e0b19d5d4155e74bc89ac0d59a56fd690f97e8",
+      "table_symbols": [
+        "3fc97288 00000100 d roo_windows::internal::(anonymous namespace)::kEdge"
+      ],
+      "size_summary": [
+        "RAM:   [=         ]   9.4% (used 30888 bytes from 327680 bytes)",
+        "Flash: [==        ]  16.0% (used 1050947 bytes from 6553600 bytes)"
+      ]
+    },
+    "double_flash": {
+      "bytes": 1051584,
+      "sha256": "46c79370f5018c2ba14776e2c999f117bf9914ae0bb86e5e51d930dc7c6b79c8",
+      "table_symbols": [
+        "3c0b10e8 00000100 d roo_windows::internal::(anonymous namespace)::kKey",
+        "3c0b0fe8 00000100 d roo_windows::internal::(anonymous namespace)::kAmbient"
+      ],
+      "size_summary": [
+        "RAM:   [=         ]   9.3% (used 30632 bytes from 327680 bytes)",
+        "Flash: [==        ]  16.0% (used 1051183 bytes from 6553600 bytes)"
+      ]
+    },
+    "double_ram": {
+      "bytes": 1051584,
+      "sha256": "6906448b98919b952a96bf3932c1e2d02423c178fcc2ae1066c10e187126c15a",
+      "table_symbols": [
+        "3fc97388 00000100 d roo_windows::internal::(anonymous namespace)::kKey",
+        "3fc97288 00000100 d roo_windows::internal::(anonymous namespace)::kAmbient"
+      ],
+      "size_summary": [
+        "RAM:   [=         ]   9.5% (used 31144 bytes from 327680 bytes)",
+        "Flash: [==        ]  16.0% (used 1051183 bytes from 6553600 bytes)"
+      ]
+    },
+    "analytic": {
+      "bytes": 1051232,
+      "sha256": "bbfa90d99d586dafa34c7cb35be4c9effbed6aed21dbe6ce0f4c1a953f1622d6",
+      "table_symbols": [],
+      "size_summary": [
+        "RAM:   [=         ]   9.3% (used 30632 bytes from 327680 bytes)",
+        "Flash: [==        ]  16.0% (used 1050823 bytes from 6553600 bytes)"
+      ]
+    },
+    "legacy_tuned": {
+      "bytes": 1050576,
+      "sha256": "c9e0a50df8b9d7ed0ae21b3a2667659f4383d3d7204600b01637dc7f3f6e6abf",
+      "table_symbols": [],
+      "parameter_symbols": [
+        "3c0b1024 00000024 d roo_windows::(anonymous namespace)::kTunedLegacyParameters"
+      ],
+      "size_summary": [
+        "RAM:   [=         ]   9.3% (used 30632 bytes from 327680 bytes)",
+        "Flash: [==        ]  16.0% (used 1050179 bytes from 6553600 bytes)"
+      ]
+    }
+  },
+  "analytic_source_sha256": {
+    "src/roo_windows/config.h": "27c74cbcd964d6449490136f86ca7d7c1e6a112a983ec0ce7ec5fdb95751ffd9",
+    "src/roo_windows/decoration/decoration.cpp": "878b095f3e09623cc0b5ce8dacd3de8fc6ea2c790800ce39b7eff896f2bb11ae",
+    "src/roo_windows/decoration/decoration.h": "e3547fd7dca116293d76830a3a7be278b3804409321a539a268e7abf5da70900",
+    "src/roo_windows/decoration/shadow_lookup.cpp": "9314434352c30f76b0fa52d0e9c5c1725d4dff37153a308e9a0c4babfaad57d6",
+    "src/roo_windows/decoration/shadow_lookup.h": "64dddd649c7c263586bb8489c1ab38045f728dbca99c0207ba3e2fd39ddc2084",
+    "src/roo_windows/decoration/shadow_lookup_tables.h": "dafb2327fa8aa7f69599a42b0e0001e999404c26affe41cc08561761dbaf9c24",
+    "benchmarks/shadow_esp32s3/src/main.cpp": "1654b4beefb4153f94d71f04f634746ee397df6430b87d29b4a44c3a3e549ed7",
+    "benchmarks/shadow_esp32s3/platformio.ini": "52ef010707c2cb5e0c3b57594a4eb00fb097246fdc1cfd3b12078447cb5f0eb3"
+  },
+  "measurement_count": 3234,
+  "complete_runs": 14,
+  "final_firmware": "legacy_tuned",
+  "source_groups_note": "The first five firmware images predate the analytical-only branch. source_sha256 records their source; analytic_source_sha256 records the added mode. Geometry and LUT branch behavior are unchanged. The seventh mode is a parameter-only legacy extension; tuned_legacy_source_sha256 records its source. Earlier six modes retain their prior raw captures. Default and Gaussian sampling math is unchanged.",
+  "tuned_legacy_source_sha256": {
+    "src/roo_windows/config.h": "63b26211f559582add2919b4858aa2cad60e9795fcc30c3446d904ce9d2b92f4",
+    "src/roo_windows/decoration/decoration.cpp": "88edeb6fa361f4c920d040a48aa81562ea7f35f068751466244e62de59d4f6cd",
+    "src/roo_windows/decoration/decoration.h": "e3547fd7dca116293d76830a3a7be278b3804409321a539a268e7abf5da70900",
+    "src/roo_windows/decoration/shadow_lookup.cpp": "9314434352c30f76b0fa52d0e9c5c1725d4dff37153a308e9a0c4babfaad57d6",
+    "src/roo_windows/decoration/shadow_lookup.h": "64dddd649c7c263586bb8489c1ab38045f728dbca99c0207ba3e2fd39ddc2084",
+    "src/roo_windows/decoration/shadow_lookup_tables.h": "dafb2327fa8aa7f69599a42b0e0001e999404c26affe41cc08561761dbaf9c24",
+    "benchmarks/shadow_esp32s3/src/main.cpp": "ea9ad3b938920215398f9f29b2ef58304b3b83a6a49feb5b97d237df357e80a4",
+    "benchmarks/shadow_esp32s3/platformio.ini": "74b15ff9a30512172c6655f089939ba8ec2140fa96d50f19e163f671010aef5f",
+    "test/shadow_lookup_test.cpp": "b59c1bc413f0c1cd967c6c8ba9e47be8eb8a19c2e1836c1966094b3a6f55d274",
+    "benchmarks/shadow_esp32s3/fit_legacy.py": "5368d72b953339c97e27869d9562a3c01b70015644c2d1383e06712fc37f4f18",
+    "benchmarks/shadow_esp32s3/compare_tuned.py": "3f42368ed0bc0c6e51176263f51edb09cdd87010cafa0d17055de3cfe357d156"
+  }
+}

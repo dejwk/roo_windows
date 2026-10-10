@@ -6,6 +6,7 @@
 #include "roo_windows/core/number.h"
 #include "roo_windows/core/overlay_spec.h"
 #include "roo_windows/core/rect.h"
+#include "roo_windows/decoration/shadow_lookup.h"
 
 namespace roo_windows {
 
@@ -93,8 +94,14 @@ class Decoration : public roo_display::Rasterizable {
   roo_display::Color outline_color_;
   // const uint8_t* corner_alpha_raster_;
 
+#if ROO_WINDOWS_EXPERIMENTAL_SHADOW_LUT_COUNT == 0 && \
+    !ROO_WINDOWS_EXPERIMENTAL_SHADOW_ANALYTIC
   ShadowSpec key_shadow_;
   ShadowSpec ambient_shadow_;
+#else
+  internal::LookupShadowSpec key_shadow_;
+  internal::LookupShadowSpec ambient_shadow_;
+#endif
 
   const PressOverlay* press_overlay_;
 };
