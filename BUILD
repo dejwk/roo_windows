@@ -1460,6 +1460,29 @@ cc_binary(
 
 cc_test(
     name = "shadow_lookup_test",
-    srcs = ["test/shadow_lookup_test.cpp"],
+    srcs = ["test/shadow_lookup_test.cpp", "test/shadow_test_reference.h"],
     deps = [":roo_windows", "@roo_testing//:arduino_gtest_main"],
 )
+
+# Compile the shader and oracle together per zoom, without mixing differently
+# configured roo_windows objects or rebuilding unrelated widget/font sources.
+[
+    cc_test(
+        name = "shadow_gradient_%s_z%s_test" % (mode, zoom),
+        srcs = [
+            "src/roo_windows/decoration/shadow_lookup.cpp",
+            "test/shadow_gradient_test.cpp",
+            "test/shadow_test_reference.h",
+        ] + glob(["src/roo_windows/**/*.h"]),
+        copts = ["-Isrc", "-I."],
+        local_defines = [
+            "ROO_WINDOWS_ZOOM=%s" % zoom,
+            "ROO_WINDOWS_EXPERIMENTAL_SHADOW_LUT_COUNT=2",
+            "ROO_WINDOWS_EXPERIMENTAL_SHADOW_OPTIMIZED=1",
+            "ROO_WINDOWS_EXPERIMENTAL_SHADOW_GRADIENTS=%s" % mode,
+        ],
+        deps = ["@roo_display", "@roo_fonts_basic", "@roo_fonts_material", "@roo_locale", "@roo_logging", "@roo_testing//:arduino_gtest_main"],
+    )
+    for mode in [1, 2]
+    for zoom in [75, 100, 150, 200]
+]

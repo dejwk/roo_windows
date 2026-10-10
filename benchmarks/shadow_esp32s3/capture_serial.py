@@ -9,7 +9,7 @@ import serial
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('variant', choices=[
-    'legacy', 'single_flash', 'single_ram', 'double_flash', 'double_ram', 'analytic', 'legacy_tuned'])
+    'legacy', 'single_flash', 'single_ram', 'double_flash', 'double_ram', 'analytic', 'legacy_tuned', 'double_optimized', 'double_sides', 'double_corners'])
 parser.add_argument('--run', type=int, default=1)
 parser.add_argument('--port', default='/dev/ttyACM0')
 parser.add_argument('--output', type=Path, default=Path(__file__).with_name('results'))
@@ -23,6 +23,7 @@ connection.port = args.port
 connection.open()
 rows = []
 pending = b''
+expected_count = 231
 start = time.monotonic()
 try:
     time.sleep(1)
@@ -30,7 +31,7 @@ try:
     connection.write(b'b')
     connection.flush()
     with stem.with_suffix('.log').open('w') as raw:
-        while time.monotonic() - start < 240:
+        while time.monotonic() - start < 360:
             pending += connection.readline()
             if not pending.endswith(b'\n'):
                 continue
@@ -46,6 +47,7 @@ try:
                     raise SystemExit(f'Wrong firmware: {row}')
                 rows.append(row)
                 if row.get('meta'):
+                    expected_count = row.get('measurements', 231)
                     print(json.dumps(row), flush=True)
             if any(marker in line for marker in (
                     'Guru Meditation', 'assert failed', 'panic', 'Brownout')):
@@ -53,7 +55,7 @@ try:
             if line.startswith('BENCHMARK_DONE'):
                 measurements = [r for r in rows if 'metric' in r]
                 keys = {(r['metric'], r['scene'], r['batch']) for r in measurements}
-                if len(measurements) != 231 or len(keys) != 231:
+                if len(measurements) != expected_count or len(keys) != expected_count:
                     raise SystemExit('Incomplete or duplicate timing records')
                 stem.with_suffix('.json').write_text(json.dumps(rows, indent=2) + '\n')
                 print(f'{line}: {len(rows)} records in '

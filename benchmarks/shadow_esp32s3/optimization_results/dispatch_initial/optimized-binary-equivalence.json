@@ -1,0 +1,44 @@
+{
+  ".iram0.vectors": {
+    "sha256": [
+      "b1454a8ee7b919ef062a4ef593507ea84d4d804e3d3b5d7012368e5fa03ce16e",
+      "b1454a8ee7b919ef062a4ef593507ea84d4d804e3d3b5d7012368e5fa03ce16e"
+    ],
+    "identical": true
+  },
+  ".iram0.text": {
+    "sha256": [
+      "5b2a6852ad8edf99783c766ff1878349973c8958d4b39ada74b90de277c644c5",
+      "5b2a6852ad8edf99783c766ff1878349973c8958d4b39ada74b90de277c644c5"
+    ],
+    "identical": true
+  },
+  ".dram0.data": {
+    "sha256": [
+      "1c6b8b5b2a2fdc58207eb38ebe7b6f7ab14910026b428edf0747386918c4e601",
+      "1c6b8b5b2a2fdc58207eb38ebe7b6f7ab14910026b428edf0747386918c4e601"
+    ],
+    "identical": true
+  },
+  ".flash.text": {
+    "sha256": [
+      "bc343cecbc6fafa979df37c36c0274a2066a579105557bfabcd724003704f260",
+      "bc343cecbc6fafa979df37c36c0274a2066a579105557bfabcd724003704f260"
+    ],
+    "identical": true
+  },
+  ".flash.rodata": {
+    "sha256": [
+      "741647f1546cbdbfc5426ed4aba7b8dd5bf5a2998d4900fd0091e90250ad7735",
+      "741647f1546cbdbfc5426ed4aba7b8dd5bf5a2998d4900fd0091e90250ad7735"
+    ],
+    "identical": true
+  },
+  ".rtc.force_slow": {
+    "sha256": [
+      "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925",
+      "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925"
+    ],
+    "identical": true
+  }
+}

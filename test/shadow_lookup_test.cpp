@@ -1,9 +1,11 @@
 #include "roo_windows/decoration/shadow_lookup.h"
 
 #include <cmath>
+#include <vector>
 
 #include "gtest/gtest.h"
 #include "roo_windows/decoration/decoration.h"
+#include "test/shadow_test_reference.h"
 
 namespace roo_windows {
 namespace {
@@ -117,6 +119,113 @@ TEST(ShadowLookupTest, LegacyDoesNotHaveTables) {
   EXPECT_EQ(nullptr, internal::ShadowLookupTable(true));
 }
 #endif
+#if ROO_WINDOWS_SHADOW_FAST_LUT
+// Verifies every 24-bit input and every 32-bit perfect-square transition.
+TEST(ShadowLookupTest, IntegerNewtonSquareRootIsExact) {
+  uint32_t expected = 0;
+  uint32_t next_square = 1;
+  for (uint32_t value = 0; value < (1u << 24); ++value) {
+    if (value == next_square) {
+      ++expected;
+      next_square = (expected + 1) * (expected + 1);
+    }
+    ASSERT_EQ(expected, internal::ShadowDistanceSqrt(value)) << value;
+  }
+  for (uint32_t root = 4096; root <= 65535; ++root) {
+    uint32_t square = root * root;
+    ASSERT_EQ(root - 1, internal::ShadowDistanceSqrt(square - 1));
+    ASSERT_EQ(root, internal::ShadowDistanceSqrt(square));
+    ASSERT_EQ(root, internal::ShadowDistanceSqrt(square + 1));
+  }
+  EXPECT_EQ(65535, internal::ShadowDistanceSqrt(0xFFFFFFFF));
+}
+
+using test::ReferenceLayer;
+
+// Verifies tail pruning and integer geometry preserve every reference alpha,
+// including samples beyond the tighter damage bounds and large corner radii.
+TEST(ShadowLookupTest, OptimizedSamplesExactlyMatchReference) {
+  for (BorderStyle::CornerRadii radii : {BorderStyle::CornerRadii{0, 0, 0, 0},
+                                         {4, 4, 4, 4},
+                                         {8, 8, 8, 8},
+                                         {12, 12, 12, 12},
+                                         {16, 16, 16, 16},
+                                         {20, 20, 20, 20},
+                                         {24, 24, 24, 24},
+                                         {28, 28, 28, 28},
+                                         {4, 12, 18, 8},
+                                         {255, 160, 90, 30}}) {
+    roo_display::Box box(-10, 30, radii.max() > 28 ? 789 : 45,
+                         radii.max() > 28 ? 509 : 85);
+    for (int level = 0; level <= 5; ++level) {
+      internal::LookupShadowSpec key =
+          internal::MakeLookupShadow(box, radii, level, false);
+      internal::LookupShadowSpec ambient =
+          internal::MakeLookupShadow(box, radii, level, true);
+      roo_display::Box bounds =
+          internal::LookupShadowExtents(
+              Rect(box.xMin(), box.yMin(), box.xMax(), box.yMax()), level)
+              .asBox();
+      int stride = radii.max() > 28 ? 3 : 1;
+      for (int y = box.yMin() - 64; y <= box.yMax() + 64; y += stride) {
+        for (int x = box.xMin() - 64; x <= box.xMax() + 64; x += stride) {
+          int k = ReferenceLayer(key, false, x, y);
+          int a = ReferenceLayer(ambient, true, x, y);
+          int expected = k + a - (k * a + 127) / 255;
+          ASSERT_EQ(expected, internal::ReadLookupShadow(key, ambient, x, y))
+              << x << ',' << y << " L" << level << " R" << int(radii.max());
+          if (x < bounds.xMin() || x > bounds.xMax() || y < bounds.yMin() ||
+              y > bounds.yMax()) {
+            ASSERT_EQ(0, expected);
+          }
+        }
+      }
+    }
+  }
+}
+
+// Verifies rectangles crossing reused row/column bands match scalar samples
+// with fractional outlines, transparent fills, mixed corners and press ink.
+TEST(ShadowLookupTest, OptimizedCrossingSpansPreserveComposition) {
+  PressOverlay ink(30, 45, 20, roo_display::Color(0x80445566));
+  uint32_t state = 0x724981;
+  for (int trial = 0; trial < 240; ++trial) {
+    state = state * 1664525u + 1013904223u;
+    int width = 8 + state % 113;
+    state = state * 1664525u + 1013904223u;
+    int height = 8 + state % 79;
+    int radius = std::min(width, height) / 2;
+    BorderStyle style =
+        trial % 2 == 0 ? BorderStyle(radius, SmallNumber::Of16ths(trial % 60))
+                       : BorderStyle(0, radius, radius / 2, 3,
+                                     SmallNumber::Of16ths(trial % 60));
+    Decoration decoration(
+        roo_display::Box(10, 20, 9 + width, 19 + height), trial % 6,
+        OverlaySpec(), trial % 5 == 0 ? &ink : nullptr,
+        roo_display::Color(trial % 3 == 0 ? 0x80405060 : 0xFF405060),
+        style.corner_radii(), style.outline_width(),
+        roo_display::Color(0xCC8899AA), true);
+    roo_display::Box bounds = decoration.extents();
+    int x0 = bounds.xMin() - trial % 4;
+    int x1 = bounds.xMax() + trial % 3;
+    int y0 = bounds.yMin() - trial % 3;
+    int y1 = bounds.yMax() + trial % 4;
+    std::vector<roo_display::Color> pixels((x1 - x0 + 1) * (y1 - y0 + 1));
+    bool uniform = decoration.readColorRect(x0, y0, x1, y1, pixels.data());
+    int index = 0;
+    for (int y = y0; y <= y1; ++y) {
+      for (int x = x0; x <= x1; ++x) {
+        roo_display::Color expected = decoration.readWithContent(
+            x, y, roo_display::Color(trial % 3 == 0 ? 0x80405060 : 0xFF405060));
+        ASSERT_EQ(expected, pixels[uniform ? 0 : index])
+            << "trial " << trial << " at " << x << ',' << y;
+        ++index;
+      }
+    }
+  }
+}
+#endif
+
 #if ROO_WINDOWS_EXPERIMENTAL_SHADOW_LEGACY_TUNED
 // Verifies fitted level-3 shadow placement and the intentionally additive,
 // piecewise-linear profile on the bottom straight edge.

@@ -1,8 +1,12 @@
-Reference branch: experiment/shadow-two-luts-flash
+Optimization branch: experiment/shadow-two-luts-optimized
 
-Default library renderer and PlatformIO environment: double_flash.
-This branch preserves the measured pre-optimization implementation.
-Global compile definitions can override the default renderer. Every
-benchmark environment explicitly selects its mode, independently of
-this branch default. Historical results and reproduction instructions
-are in results/ and README.txt.
+Default library renderer and PlatformIO environment: double_optimized.
+Optional double_sides and double_corners environments enable flash gradients.
+Every benchmark environment explicitly selects its mode. See README.txt and
+optimization_results/ for reproduction, raw captures, normalized results, and
+storage costs. No change has been merged into main.
+
+Local reference branches (pre-optimization implementation and historical data):
+  experiment/shadow-tuned-legacy    e59c49936668da85860ada05816878ca70729ff0
+  experiment/shadow-one-lut-flash   a829c921b8d529d41bfb62641aa7ed8a03aa4ef8
+  experiment/shadow-two-luts-flash  15fa30711ed179fa26ac3154ba904d04597992e6

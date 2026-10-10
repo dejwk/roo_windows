@@ -21,6 +21,7 @@ SHADOW_LUT_STORAGE uint8_t kEdge[256] = {
     1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   0,   0,   0,   0,
     0,
 };
+constexpr int kEdgeLastNonzero = 250;
 #endif
 
 #if ROO_WINDOWS_EXPERIMENTAL_SHADOW_LUT_COUNT == 2
@@ -40,6 +41,7 @@ SHADOW_LUT_STORAGE uint8_t kKey[256] = {
     1,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
     0,  0,  0,  0,  0,  0,  0,  0,  0,
 };
+constexpr int kKeyLastNonzero = 234;
 #endif
 
 #if ROO_WINDOWS_EXPERIMENTAL_SHADOW_LUT_COUNT == 2
@@ -59,4 +61,5 @@ SHADOW_LUT_STORAGE uint8_t kAmbient[256] = {
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
     0,  0,  0,  0,  0,  0,  0,  0,  0,
 };
+constexpr int kAmbientLastNonzero = 221;
 #endif

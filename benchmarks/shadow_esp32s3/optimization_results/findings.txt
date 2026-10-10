@@ -1,0 +1,102 @@
+ESP32-S3 shadow optimization and flash-gradient measurements
+
+Measured on the USB-attached Makerfabs 5-inch 800x480 RGB565 display, at zoom100
+and 240MHz CPU. Two complete runs per variant, seven warmed batches per run.
+The side and corner tables preserve exact 8-bit alpha and RGB565 output.
+
+56x56 surface, radius16, Material level3:
+variant           gradient B  fixed ns/px  native ns/px  tiles8 ns/px  refresh ms  twelve ms
+double_flash               0       1627.7        1347.3        1237.6      22.930    314.095
+double_optimized           0       1307.1        1104.5         816.3      19.768    275.745
+double_sides             975       1372.5        1141.2         858.4      16.370    222.300
+double_corners         47857       1252.2        1031.4         750.1      16.526    224.585
+
+Core optimizations versus fresh double_flash: 13.8% less time per single-surface refresh,
+42.9% less time per tiled raster. Native bounds shrink 7396 -> 6400 pixels (13.47%).
+Normalized raster columns divide by each variant's actual extent; fixed512 uses
+the same coordinates and denominator for every variant. Refreshes are per frame,
+including composition and RGB565 framebuffer output, not physical panel scan time.
+
+Side profiles versus optimized calculation: 17.2% less time per refresh,
+5.0% more time per fixed sample, and 5.2% more time per tile raster.
+Sides plus corners versus optimized calculation: 16.4% less time per refresh,
+4.2% less time per fixed sample, and 8.1% less time per tile raster.
+
+All requested radii, level3, 56x56 surface (times in ms per single-widget refresh):
+radius   calculated      sides    corners   side saving   corner saving
+     0        2.344      2.299      2.341          1.9%            0.1%
+     4       16.751     12.699     12.933         24.2%           22.8%
+     8       18.418     13.969     14.132         24.2%           23.3%
+    12       18.623     15.268     15.455         18.0%           17.0%
+    16       19.768     16.370     16.526         17.2%           16.4%
+    20       20.935     17.611     17.691         15.9%           15.5%
+    24       22.306     19.113     19.016         14.3%           14.8%
+    28       23.169     19.960     21.141         13.9%            8.8%
+
+Same radii, normalized fixed-coordinate sampling (ns/pixel):
+radius   calculated      sides    corners
+     0       1123.0     1107.8     1112.4
+     4       1158.0     1162.1     1139.1
+     8       1205.6     1232.0     1176.2
+    12       1257.8     1303.9     1217.2
+    16       1307.1     1372.5     1252.2
+    20       1352.0     1439.1     1291.1
+    24       1397.1     1503.8     1336.2
+    28       1444.1     1554.8     1689.7
+
+Other scenes (ms per single-widget refresh):
+scene             calculated      sides    corners
+fab56_l0                5.468      4.985      5.063
+fab56_l1               11.027      8.994      8.960
+fab56_l5               29.051     24.001     24.132
+fab96_l3               32.441     26.976     28.019
+menu240_l2             44.448     33.453     33.122
+mixed_l3               34.847     26.396     26.536
+
+Side data is comfortably under a couple of KB. Exact corner patches are larger:
+zoom    sides B  corner pixels B  descriptors B  combined B
+75          735            25503            480       26718
+100         975            46402            480       47857
+150        1455           104928            480      106863
+200        1935           187024            480      189439
+
+These are gradient-data bytes; every mode also has the original 512 alpha-LUT bytes.
+At zoom100 the complete linked firmware grows by 1,176 bytes for sides
+or 48,276 bytes for sides plus corners, including code/alignment.
+Static RAM is identical across variants (30,776 bytes); Decoration stays 84 bytes.
+All tables are in flash DROM. No per-widget bitmap or RAM gradient copy is used.
+
+All six radii use Scaled(dp) at the configured zoom. Level0 needs no gradient;
+levels1..5 have independent profiles. Left and right share mirrored data; top
+and bottom differ because the two shadow layers have vertical offsets. Other
+radii retain the exact calculation. The cache-miss path reuses geometry rather
+than recalculating it. dispatch_initial/ preserves the slower first attempt.
+
+All three final optimized renderers match 64 original two-LUT raster captures
+byte for byte. The eight cache/zoom tests and composition/legacy regressions pass.
+RGB565 profiles on white, light gray and dark gray backgrounds also match exactly.
+Caching changes speed and storage, not softness, quantization, or banding.
+
+Treat these as warmed scene measurements. Cold-cache and heterogeneous scene
+pressure while streaming unrelated images were not measured. Flat level0 timing
+also changes slightly with firmware layout; small full-refresh differences are
+not a guarantee that one cache setting will win in every application.
+
+For this board and these scenes, use double_sides as the first choice: only 975
+extra data bytes, 14-24% less full-refresh time over the optimized calculation
+for the six requested radii. Relative to unoptimized double_flash, the radius16
+example uses 28.6% less time. Side caching does not win isolated sampling: its
+radius16 fixed-pixel cost is 5.0% higher, so choose based on the actual paint path.
+
+The extra corner storage is hard to justify from these full-refresh results.
+It improves isolated/tiled raster throughput, but full-refresh time is slightly
+worse than sides alone at radii4..20 and only 0.5% better at radius24. The uncached
+radius28 circle is 5.9% slower than sides alone; its fixed-pixel cost is 17.0%
+higher than the calculation baseline. Keep corner caching opt-in and benchmark
+it with the target application's workload. The board is left on double_sides.
+
+See summary.csv for all 228 metrics, cycles/pixel and batch dispersion,
+methodology.txt for denominators and workloads, validation.txt for checks, and
+manifest.json for source/binary hashes and measured flash placement.
+The default branch mode is optimized calculation with no additional gradients;
+double_sides and double_corners are explicit optional PlatformIO environments.

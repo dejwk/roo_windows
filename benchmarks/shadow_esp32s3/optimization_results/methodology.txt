@@ -1,0 +1,68 @@
+Optimization and precomputed-gradient benchmark methodology
+
+Makerfabs MaTouch ESP32-S3 Parallel TFT 5 inch; CPU 240 MHz, flash 80 MHz,
+8 MB OPI PSRAM, 800x480 RGB565 panel at 16 MHz PCLK. Panel DMA remains active.
+All global rendering definitions agree across roo_windows translation units.
+Two complete USB-triggered runs per variant, seven timed batches per run.
+Reported values are the median of all 14 batch means, with ranges and standard
+deviation retained in summary.csv. Serial output, setup and gallery rendering
+are outside timed sections.
+
+Metrics:
+fixed512: 150 iterations per batch after 10 warmups; exactly the same 512 exterior
+  sample coordinates in each renderer. Divide by 512 for ns/pixel and by CPU
+  period for cycles/pixel. This measures decoration sampling, not framebuffer I/O.
+native: 12 iterations per batch after 3 warmups; readColors scanlines across the
+  entire decoration extent, including opaque interior and transparent samples.
+  Divide by the recorded pixels field (actual extent area).
+tiles8: same iteration count, but readColorRect in 8x8 tiles across the extent.
+  Its normalized cost includes the benefit of constant-span and uniform-block
+  reuse. It is not the cost of evaluating each shadow sample independently.
+refresh1/refresh12: 25 application refreshes per batch after an initial frame
+  and 25 warmup refreshes. Invalidate widget interiors, then run normal painting,
+  composition and RGB565 framebuffer output. Report per refresh; the pixels
+  field only counts logical widget area and is not all framebuffer/shadow work.
+
+The harness adds 0/4/8/12/20/24px radii to the previous scenes; the 56px level-3
+surface supplies radius16. Radius28 and mixed4/12/18/8 exercise cache fallback.
+All six cached radii are timed at level3; radius16 additionally at levels0/1/5,
+and a 240x160 radius12 menu at level2. Host tests cover every level at every
+supported zoom (75/100/150/200). Hardware timings use zoom100 only.
+
+Core optimizations retain every 8-bit output alpha: prune only already-zero LUT
+tails, reuse constant row/column spans, share nearest-edge geometry between both
+layers, and use an exact integer Newton square root. Bounds shrink from 86x86 to 80x80 for the level3 56px example: 13.47% fewer
+logical output pixels. No support reduction is attributed to gradient caching;
+all three optimized modes use the same bounds and shared geometry setup.
+
+Side profiles combine both layers, offsets and source-over in advance. One
+horizontal profile serves both left and right; top and bottom have separate
+profiles. Five nonzero levels times three profiles times 65 samples = 975 bytes
+at zoom100. Corner patches store combined alpha for six radii, five levels and
+two vertical orientations; left/right are mirrored. There are 46,402 pixel bytes
+and 480 descriptor bytes, in addition to the 975 side bytes. Only the selected
+zoom is compiled. Unsupported radii and mixed quadrant selections reuse the
+resolved geometry and compute exact alpha. No pre-blending with a background
+or RGB565 quantization is baked into the cache.
+
+These are warmed repeated-scene measurements. Cold-cache latency and workloads
+alternating many levels/radii while streaming unrelated images are not measured.
+Binary layout can affect ESP32 timing, including the flat level0 control; small
+cross-firmware differences should not be interpreted as universal guarantees.
+The fresh double_flash control uses this expanded harness. Its values need not
+match the older eight-scene historical binary in ../results/ exactly.
+
+All four binaries reserve 30,776 static RAM bytes and each Decoration remains
+84 bytes. The older harness used 30,632 bytes; the 144-byte difference is the six
+additional benchmark scenes, not renderer state. LUTs and gradients are verified
+at DROM addresses in the linked ELF. Firmware size, data symbols and hashes are
+in manifest.json; data-only costs at every zoom are in gradient-storage.json.
+
+The initial cache dispatcher is retained in dispatch_initial/. It repeated
+geometry work on a miss. Final results use a dispatcher that reuses the nearest-
+edge coordinates for fallback. The final no-gradient baseline
+uses the same shared geometry setup as the cache modes. Control and side-cache
+runs preceded that baseline-only code change: their final rebuilt executable
+and rendering-data sections are byte-identical, as recorded in
+shared-base-other-variants-equivalence.json. Only build metadata/debug
+information may differ. The baseline and corner-cache runs use final binaries.

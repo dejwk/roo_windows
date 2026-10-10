@@ -68,7 +68,13 @@ int16_t xs[512];
 int16_t ys[512];
 
 const char* Variant() {
-#if ROO_WINDOWS_EXPERIMENTAL_SHADOW_LEGACY_TUNED
+#if ROO_WINDOWS_EXPERIMENTAL_SHADOW_GRADIENTS == 2
+  return "double_corners";
+#elif ROO_WINDOWS_EXPERIMENTAL_SHADOW_GRADIENTS == 1
+  return "double_sides";
+#elif ROO_WINDOWS_SHADOW_FAST_LUT
+  return "double_optimized";
+#elif ROO_WINDOWS_EXPERIMENTAL_SHADOW_LEGACY_TUNED
   return "legacy_tuned";
 #elif ROO_WINDOWS_EXPERIMENTAL_SHADOW_ANALYTIC
   return "analytic";
@@ -139,6 +145,12 @@ const SceneCase kCases[] = {
     {"mixed_l3", 120, 72, BorderStyle(4, 12, 18, 8, SmallNumber::Of16ths(36)),
      3},
     {"circle_l3", 56, 56, BorderStyle(28, 0), 3},
+    {"sharp_l3", 56, 56, BorderStyle(0, 0), 3},
+    {"radius4_l3", 56, 56, BorderStyle(4, 0), 3},
+    {"radius8_l3", 56, 56, BorderStyle(8, 0), 3},
+    {"radius12_l3", 56, 56, BorderStyle(12, 0), 3},
+    {"radius20_l3", 56, 56, BorderStyle(20, 0), 3},
+    {"radius24_l3", 56, 56, BorderStyle(24, 0), 3},
 };
 
 // Emits raw batch means and dispersion; keep aggregation on the host.
@@ -309,12 +321,15 @@ void RunAll() {
       "{\"meta\":true,\"variant\":\"%s\",\"cpu_mhz\":%u,\"flash_hz\":%u,"
       "\"psram_bytes\":%u,\"heap_bytes\":%u,\"decoration_bytes\":%u,"
       "\"table_address\":\"%p\",\"table_internal\":%d,\"table_drom\":%d,"
-      "\"table_bytes\":%d,\"zoom\":100,\"display\":\"800x480 RGB565 16MHz\"}\n",
+      "\"table_bytes\":%d,\"gradient_bytes\":%lu,\"measurements\":%u,\"zoom\":"
+      "100,\"display\":\"800x480 RGB565 16MHz\"}\n",
       Variant(), ESP.getCpuFreqMHz(), ESP.getFlashChipSpeed(),
       ESP.getPsramSize(), ESP.getFreeHeap(), unsigned(sizeof(Decoration)),
       table, table == nullptr ? 0 : esp_ptr_internal(table),
       table == nullptr ? 0 : esp_ptr_in_drom(table),
-      ROO_WINDOWS_EXPERIMENTAL_SHADOW_LUT_COUNT * 256);
+      ROO_WINDOWS_EXPERIMENTAL_SHADOW_LUT_COUNT * 256,
+      (unsigned long)roo_windows::internal::ShadowGradientBytes(),
+      unsigned((4 * (sizeof(kCases) / sizeof(kCases[0])) + 1) * 7));
   for (const SceneCase& item : kCases) {
     RunRaster(item);
     RunRefresh(item, 1);

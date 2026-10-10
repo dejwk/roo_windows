@@ -1,0 +1,80 @@
+{
+  "double_flash": {
+    ".iram0.vectors": {
+      "sha256": "b1454a8ee7b919ef062a4ef593507ea84d4d804e3d3b5d7012368e5fa03ce16e",
+      "identical": true
+    },
+    ".iram0.text": {
+      "sha256": "eefef7d7422f9fd37b3615e85bc87f9651d8b731d962ea9b088ec73958a86107",
+      "identical": true
+    },
+    ".dram0.data": {
+      "sha256": "b51110e46924ceeaa48dc7a90123ad16d44a095e272652c445fd2083949ea405",
+      "identical": true
+    },
+    ".flash.text": {
+      "sha256": "9a81bd99d84788727095467c608e2a15521101e496500f737d786845ade41620",
+      "identical": true
+    },
+    ".flash.rodata": {
+      "sha256": "c9cf62583e591c2f1da86ff58321a7cc786838408ed64283ac107fe24fc04679",
+      "identical": true
+    },
+    ".rtc.force_slow": {
+      "sha256": "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925",
+      "identical": true
+    }
+  },
+  "double_sides": {
+    ".iram0.vectors": {
+      "sha256": "b1454a8ee7b919ef062a4ef593507ea84d4d804e3d3b5d7012368e5fa03ce16e",
+      "identical": true
+    },
+    ".iram0.text": {
+      "sha256": "a487c6a32b42b29820f006559e60de84d892ef4d4e1cf926bf1270b6be4aae87",
+      "identical": true
+    },
+    ".dram0.data": {
+      "sha256": "241148e48b79635f415e50cf1c93a73b7117c60e1dbf2898aec672d6251237fd",
+      "identical": true
+    },
+    ".flash.text": {
+      "sha256": "e3a55000208ccc80843e37d3c6f53ebf10f65941a5441e338b7bfe1eecd8e89c",
+      "identical": true
+    },
+    ".flash.rodata": {
+      "sha256": "db94e5a1ffe911b5693e76a168c5e38a717e6451ed1fc929e058ed95056dc16b",
+      "identical": true
+    },
+    ".rtc.force_slow": {
+      "sha256": "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925",
+      "identical": true
+    }
+  },
+  "double_corners": {
+    ".iram0.vectors": {
+      "sha256": "b1454a8ee7b919ef062a4ef593507ea84d4d804e3d3b5d7012368e5fa03ce16e",
+      "identical": true
+    },
+    ".iram0.text": {
+      "sha256": "30105d30ba96981ec97a1da53deb1c5e28ba8a12d52cac2d101f838732e49543",
+      "identical": true
+    },
+    ".dram0.data": {
+      "sha256": "415e1862ba96dd19c98268508a27f5e3276596f42c18a550f93544c6fa43356d",
+      "identical": true
+    },
+    ".flash.text": {
+      "sha256": "c47af49d3100c56f686c9719302ed864e2db343a27496ea7a587f7052c104ac8",
+      "identical": true
+    },
+    ".flash.rodata": {
+      "sha256": "85c9f27520531b1533422e52ccedd86e7da8fb4abdd5a5b90f25e6e34eb3b269",
+      "identical": true
+    },
+    ".rtc.force_slow": {
+      "sha256": "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925",
+      "identical": true
+    }
+  }
+}

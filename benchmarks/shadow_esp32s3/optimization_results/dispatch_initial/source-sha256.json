@@ -1,0 +1,11 @@
+{
+  "src/roo_windows/config.h": "bfc3bd89e3b1ee5b49f69a957c6940e7b2f6f725015b4761be7660d2ead6aa40",
+  "src/roo_windows/decoration/decoration.cpp": "f234a3a476095ba8ced007905df991b507d983e3604c7bbe859daac3bf0cf66c",
+  "src/roo_windows/decoration/decoration.h": "e3547fd7dca116293d76830a3a7be278b3804409321a539a268e7abf5da70900",
+  "src/roo_windows/decoration/shadow_lookup.cpp": "aaa75c236a75cabba577e85decec2ca04eef46a848c76363b99792163cdbff0b",
+  "src/roo_windows/decoration/shadow_lookup.h": "e40ef5750bd10fced71ff1ca9c38b873ce8e1b444ca5a7f820553c638a0c5676",
+  "src/roo_windows/decoration/shadow_lookup_tables.h": "a899cfd9f4d1683c89f4e52315f24f8f1dda9339dbb27a4cbb5ce659e532acbc",
+  "src/roo_windows/decoration/shadow_gradient_tables.h": "ff151a0de712edcbafd75168dac207ba4be39f7ee7901ea849b3d14ee1d73267",
+  "benchmarks/shadow_esp32s3/src/main.cpp": "6143cc49ce5483a254042023849e663d851ce458d1604c0baa96ba055880adcf",
+  "benchmarks/shadow_esp32s3/platformio.ini": "a9cf7d88b64d8822dabd0a78cf6422f40153c8a1d013cf13be9c4d8b6c7a30da"
+}

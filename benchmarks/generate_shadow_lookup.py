@@ -14,7 +14,7 @@ for name, opacity in [('kEdge', None), ('kKey', 77), ('kAmbient', 38)]:
     lines += [f'#if ROO_WINDOWS_EXPERIMENTAL_SHADOW_LUT_COUNT {condition}',
               f'SHADOW_LUT_STORAGE uint8_t {name}[256] = {{']
     lines += ['  ' + ', '.join(map(str, values[i:i+16])) + ',' for i in range(0,256,16)]
-    lines += ['};', '#endif', '']
+    lines += ['};', f'constexpr int {name}LastNonzero = {max(i for i, value in enumerate(values) if value != 0)};', '#endif', '']
 destination = root/'src/roo_windows/decoration/shadow_lookup_tables.h'
 destination.write_text('\n'.join(lines))
 subprocess.run(['clang-format', '-i', str(destination)], check=True)

@@ -146,8 +146,13 @@ inline uint8_t calcRoundCornerAlpha(int16_t x, int16_t y, int16_t corner_radius,
   // if (x + y <= corner_radius) return 0xFF;
 
   // '15' chosen experimentally to make full circle look the most round.
+#if ROO_WINDOWS_SHADOW_FAST_LUT
+  int16_t rd = corner_radius * 16 + outline_width_frac -
+               internal::ShadowDistanceSqrt(256 * (x * x + y * y));
+#else
   int16_t rd =
       corner_radius * 16 + outline_width_frac - isqrt24(256 * (x * x + y * y));
+#endif
   if (rd < 0) return 0;
   if (rd >= 16) return 0xFF;
   return rd * 17;
@@ -635,6 +640,46 @@ bool Decoration::readUniformColorRect(int16_t xMin, int16_t yMin, int16_t xMax,
 
 bool Decoration::readColorRect(int16_t xMin, int16_t yMin, int16_t xMax,
                                int16_t yMax, roo_display::Color* result) const {
+#if ROO_WINDOWS_SHADOW_FAST_LUT
+  if (press_overlay_ == nullptr) {
+    if (readUniformColorRect(xMin, yMin, xMax, yMax, result)) return true;
+    int radius = corner_radii_.max();
+    int offset =
+        (std::max(key_shadow_.offset_16, ambient_shadow_.offset_16) + 15) / 16;
+    int fill_margin =
+        std::max<int>(radius, outline_width_ + (outline_width_frac_ < 15));
+    int x_margin = std::max(
+        fill_margin, offset + outline_width_ + (outline_width_frac_ < 15));
+    int left = std::max<int>(xMin, widget_extents_.xMin() + x_margin);
+    int right = std::min<int>(xMax, widget_extents_.xMax() - x_margin);
+    int top = widget_extents_.yMin() + fill_margin + offset;
+    int bottom = widget_extents_.yMax() - fill_margin;
+    int width = xMax - xMin + 1;
+    // In the middle columns, only y can affect the surface and either shadow.
+    // Across the shifted layers' middle rows, only x can affect them. Split
+    // rectangles that cross these bands instead of discarding all span reuse.
+    for (int y = yMin; y <= yMax; ++y) {
+      roo_display::Color* row = result;
+      int x = xMin;
+      if (left <= right) {
+        for (; x < left; ++x) *result++ = read(x, y);
+        roo_display::Color center = read(x, y);
+        std::fill_n(result, right - left + 1, center);
+        result += right - left + 1;
+        x = right + 1;
+      }
+      for (; x <= xMax; ++x) *result++ = read(x, y);
+      if (y >= top && y <= bottom) {
+        int last = std::min<int>(yMax, bottom);
+        for (; y < last; ++y) {
+          std::copy_n(row, width, result);
+          result += width;
+        }
+      }
+    }
+    return false;
+  }
+#endif
   int16_t xMin_interior = widget_extents_.xMin() + outline_width_;
   int16_t xMax_interior = widget_extents_.xMax() - outline_width_;
   int16_t yMin_interior = widget_extents_.yMin() + outline_width_;

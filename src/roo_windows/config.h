@@ -104,3 +104,30 @@
 #if ROO_WINDOWS_EXPERIMENTAL_SHADOW_LEGACY_TUNED && ROO_WINDOWS_ZOOM != 100
 #error "Tuned legacy shadow parameters are calibrated only at zoom 100%"
 #endif
+
+/// Preserves two-table output while tightening support and reusing flat spans.
+/// This optimization branch enables it by default; the benchmark can disable
+/// it.
+#ifndef ROO_WINDOWS_EXPERIMENTAL_SHADOW_OPTIMIZED
+#define ROO_WINDOWS_EXPERIMENTAL_SHADOW_OPTIMIZED 1
+#endif
+#if ROO_WINDOWS_EXPERIMENTAL_SHADOW_OPTIMIZED != 0 && \
+    ROO_WINDOWS_EXPERIMENTAL_SHADOW_OPTIMIZED != 1
+#error "Experimental shadow optimization must be 0 or 1"
+#endif
+#define ROO_WINDOWS_SHADOW_FAST_LUT             \
+  (ROO_WINDOWS_EXPERIMENTAL_SHADOW_OPTIMIZED && \
+   ROO_WINDOWS_EXPERIMENTAL_SHADOW_LUT_COUNT == 2)
+
+/// Precomputed flash gradients: 0 none, 1 straight sides, 2 sides and corners
+/// at Scaled(4/8/12/16/20/24) radii. Other corners retain exact calculation.
+#ifndef ROO_WINDOWS_EXPERIMENTAL_SHADOW_GRADIENTS
+#define ROO_WINDOWS_EXPERIMENTAL_SHADOW_GRADIENTS 0
+#endif
+#if ROO_WINDOWS_EXPERIMENTAL_SHADOW_GRADIENTS < 0 || \
+    ROO_WINDOWS_EXPERIMENTAL_SHADOW_GRADIENTS > 2
+#error "Experimental shadow gradients must be 0, 1, or 2"
+#endif
+#if ROO_WINDOWS_EXPERIMENTAL_SHADOW_GRADIENTS && !ROO_WINDOWS_SHADOW_FAST_LUT
+#error "Precomputed gradients require optimized two-table shadows"
+#endif

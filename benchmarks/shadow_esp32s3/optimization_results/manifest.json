@@ -1,0 +1,111 @@
+{
+  "platform": "pioarduino 55.03.35",
+  "arduino": "3.3.5",
+  "compiler": "xtensa-esp-elf GCC 14.2.0+20251107",
+  "board": "Makerfabs MaTouch ESP32-S3 Parallel TFT 5 inch",
+  "serial_id": "E4:B0:63:BA:B4:B0",
+  "display": "800x480 RGB565, 16 MHz PCLK, one PSRAM framebuffer, 10-line DMA bounce buffer",
+  "roo_flags_registry_version": "1.2.5",
+  "roo_threads_registry_version": "1.2.9",
+  "repos": {
+    "roo_windows": "15fa30711ed179fa26ac3154ba904d04597992e6",
+    "roo_display": "bccee1e96cbf07a9e1a757b22cd17306022a26a3",
+    "roo_collections": "d2ff5ae6a652afcc2cf5445858ca01e936dc5611",
+    "roo_fonts_basic": "77906aa0aa7058322ecfb3e065dd38618f29e86c",
+    "roo_fonts_material": "81906c859454d4c8fadb19bf4319385c5e85166a",
+    "roo_locale": "9dd107245fc6c2c924f11131943b29ee1c6405e9",
+    "roo_logging": "485072135c3c2105ce52f4d9598c411123db9660",
+    "roo_icons": "8d417fff51344335a42610604689d477ef1f229c",
+    "roo_io": "eb61e6f9c04b387733d9367c1ca9f545fe8c8a90",
+    "roo_scheduler": "40042c944c5b4db8c474d62ff354dbbc73f1c6a1",
+    "roo_time": "229817712171866fcace63a74c674907bfef039a",
+    "roo_backport": "77aa81a729a40b21c4bd5a69e8abba09863cc281"
+  },
+  "reference_branches": {
+    "base": "0c7fb044aab429021e6c24d0be8b752ae4ab2cf9",
+    "references": {
+      "experiment/shadow-tuned-legacy": "e59c49936668da85860ada05816878ca70729ff0",
+      "experiment/shadow-one-lut-flash": "a829c921b8d529d41bfb62641aa7ed8a03aa4ef8",
+      "experiment/shadow-two-luts-flash": "15fa30711ed179fa26ac3154ba904d04597992e6"
+    }
+  },
+  "branch": "experiment/shadow-two-luts-optimized",
+  "source_note": "Source hashes describe the final implementation before its results commit. Control and side-cache runs used the pre-shared-base binaries; final rebuilt code and rendering-data sections are byte-identical, with only build metadata/debug information differing. See shared-base-other-variants-equivalence.json. The no-gradient baseline and corner-cache runs use the final binaries.",
+  "source_sha256": {
+    "src/roo_windows/config.h": "bfc3bd89e3b1ee5b49f69a957c6940e7b2f6f725015b4761be7660d2ead6aa40",
+    "src/roo_windows/decoration/decoration.cpp": "f234a3a476095ba8ced007905df991b507d983e3604c7bbe859daac3bf0cf66c",
+    "src/roo_windows/decoration/decoration.h": "e3547fd7dca116293d76830a3a7be278b3804409321a539a268e7abf5da70900",
+    "src/roo_windows/decoration/shadow_lookup.cpp": "077782d52fb0c2d432ea7b098bbbf3b1d8ad4f8f0ea506cf9d829c83789a3dc4",
+    "src/roo_windows/decoration/shadow_lookup.h": "e40ef5750bd10fced71ff1ca9c38b873ce8e1b444ca5a7f820553c638a0c5676",
+    "src/roo_windows/decoration/shadow_lookup_tables.h": "a899cfd9f4d1683c89f4e52315f24f8f1dda9339dbb27a4cbb5ce659e532acbc",
+    "src/roo_windows/decoration/shadow_gradient_tables.h": "ff151a0de712edcbafd75168dac207ba4be39f7ee7901ea849b3d14ee1d73267",
+    "benchmarks/shadow_esp32s3/src/main.cpp": "6143cc49ce5483a254042023849e663d851ce458d1604c0baa96ba055880adcf",
+    "benchmarks/shadow_esp32s3/platformio.ini": "a9cf7d88b64d8822dabd0a78cf6422f40153c8a1d013cf13be9c4d8b6c7a30da"
+  },
+  "firmware": {
+    "double_flash": {
+      "ram_bytes": 30776,
+      "flash_bytes": 1051459,
+      "image_bytes": 1051856,
+      "measured_sha256": "386c06ae4a339dd67c0257d4fd8b8b0cbcc26ce2c0ab6ddcb0d6b4516556319d",
+      "final_rebuild_sha256": "607c4533b85eb437d83dceee3b15bd1123a5af7e126909dc1919f8f3dea5b941",
+      "flash_table_symbols": [
+        "3c0b1150 00000100 d roo_windows::internal::(anonymous namespace)::kKey",
+        "3c0b1050 00000100 d roo_windows::internal::(anonymous namespace)::kAmbient"
+      ]
+    },
+    "double_optimized": {
+      "ram_bytes": 30776,
+      "flash_bytes": 1051527,
+      "image_bytes": 1051936,
+      "measured_sha256": "14fcae37920d570a7dfb3dbc7f05f58ae7e7df8b5b1e2695ba95a57ad9e2d240",
+      "final_rebuild_sha256": "14fcae37920d570a7dfb3dbc7f05f58ae7e7df8b5b1e2695ba95a57ad9e2d240",
+      "flash_table_symbols": [
+        "3c0b1160 00000100 d roo_windows::internal::(anonymous namespace)::kKey",
+        "3c0b1060 00000100 d roo_windows::internal::(anonymous namespace)::kAmbient"
+      ]
+    },
+    "double_sides": {
+      "ram_bytes": 30776,
+      "flash_bytes": 1052703,
+      "image_bytes": 1053104,
+      "measured_sha256": "4711b667b0a31bc88deef6268932101e3e050b271a3cef9a28dc75a6057d14f0",
+      "final_rebuild_sha256": "babfb48274e592b71915cfbe27aa9db3f84df48239a0065e5249fb878390d70e",
+      "flash_table_symbols": [
+        "3c0b1050 000003cf d roo_windows::internal::(anonymous namespace)::kSideGradients",
+        "3c0b151f 00000100 d roo_windows::internal::(anonymous namespace)::kKey",
+        "3c0b141f 00000100 d roo_windows::internal::(anonymous namespace)::kAmbient"
+      ]
+    },
+    "double_corners": {
+      "ram_bytes": 30776,
+      "flash_bytes": 1099803,
+      "image_bytes": 1100208,
+      "measured_sha256": "482f8b3fcae9222afaae081b54aa335de9876b4961f66b4723e1af824d7df1ea",
+      "final_rebuild_sha256": "482f8b3fcae9222afaae081b54aa335de9876b4961f66b4723e1af824d7df1ea",
+      "flash_table_symbols": [
+        "3c0b1058 0000b542 d roo_windows::internal::(anonymous namespace)::kCornerPixels",
+        "3c0bc77c 000003cf d roo_windows::internal::(anonymous namespace)::kSideGradients",
+        "3c0bc59c 000001e0 d roo_windows::internal::(anonymous namespace)::kCornerGradients",
+        "3c0bcc4b 00000100 d roo_windows::internal::(anonymous namespace)::kKey",
+        "3c0bcb4b 00000100 d roo_windows::internal::(anonymous namespace)::kAmbient"
+      ]
+    }
+  },
+  "measurement_plan": {
+    "zoom": 100,
+    "complete_runs_per_variant": 2,
+    "batches_per_run": 7,
+    "timing_records_per_run": 399,
+    "warmup": "10 fixed samples, 3 full native/tiled rasters, 1 initial refresh plus 25 warmup refreshes",
+    "normalization": "fixed512 uses identical 512 exterior coordinates; native and tiles8 divide by actual decoration extent; application refreshes remain per frame",
+    "hardware_coverage": "14 scenes: levels 0/1/3/5 at radius16, level2 menu at radius12, all radii4..24 at level3, sharp corners, radius28, and mixed4/12/18/8 with fractional outline; 12-surface refresh at level3 radius16",
+    "cache_conditions": "Warmed repeated scenes; heterogeneous multi-level/radius cache pressure and cold-cache latency are not measured."
+  },
+  "final_firmware": "double_sides",
+  "complete_runs": 8,
+  "measurement_count": 3192,
+  "normalized_metric_rows": 228,
+  "rgb565_profiles_identical": true,
+  "final_firmware_sha256": "babfb48274e592b71915cfbe27aa9db3f84df48239a0065e5249fb878390d70e"
+}

@@ -9,6 +9,7 @@ from pathlib import Path
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--input', type=Path, default=Path(__file__).with_name('results'))
+parser.add_argument('--baseline', default='legacy', help='Variant used for ratios')
 args = parser.parse_args()
 samples = defaultdict(list)
 pixels = {}
@@ -28,12 +29,12 @@ for path in sorted(args.input.glob('*-run*.json')):
 
 measurements = []
 for (variant, metric, scene), values in sorted(samples.items()):
-    baseline = samples.get(('legacy', metric, scene))
+    baseline = samples.get((args.baseline, metric, scene))
     median = statistics.median(values)
     count = pixels[variant, metric, scene]
     normalize = metric in ('fixed512', 'native', 'tiles8')
     per_pixel = median / count if normalize else None
-    baseline_per_pixel = (statistics.median(baseline) / pixels['legacy', metric, scene]
+    baseline_per_pixel = (statistics.median(baseline) / pixels[args.baseline, metric, scene]
                           if normalize and baseline else None)
     measurements.append({
         'variant': variant, 'metric': metric, 'scene': scene,
@@ -44,14 +45,15 @@ for (variant, metric, scene), values in sorted(samples.items()):
         'us_per_pixel': per_pixel,
         'ns_per_pixel': per_pixel * 1000 if normalize else None,
         'cycles_per_pixel': per_pixel * metadata[variant]['cpu_mhz'] if normalize else None,
-        'normalized_ratio_to_legacy': (per_pixel / baseline_per_pixel
+        f'normalized_ratio_to_{args.baseline}': (per_pixel / baseline_per_pixel
                                        if baseline_per_pixel else None),
         'median_us': median, 'min_us': min(values), 'max_us': max(values),
         'mean_us': statistics.mean(values),
         'stdev_us': statistics.stdev(values) if len(values) > 1 else 0,
-        'ratio_to_legacy': median / statistics.median(baseline) if baseline else None,
+        f'ratio_to_{args.baseline}': median / statistics.median(baseline) if baseline else None,
     })
 summary = {
+    'baseline': args.baseline,
     'hardware': metadata,
     'measurements': measurements,
     'rgb565_profiles': [
@@ -62,7 +64,7 @@ summary = {
 (args.input / 'summary.json').write_text(json.dumps(summary, indent=2) + '\n')
 if measurements:
     with (args.input / 'summary.csv').open('w', newline='') as out:
-        writer = csv.DictWriter(out, fieldnames=measurements[0].keys())
+        writer = csv.DictWriter(out, fieldnames=measurements[0].keys(), lineterminator="\n")
         writer.writeheader()
         writer.writerows(measurements)
 for scene, metric in [
@@ -74,12 +76,14 @@ for scene, metric in [
     print(metric, scene)
     for row in measurements:
         if row['scene'] == scene and row['metric'] == metric:
-            print(f"  {row['variant']:14} {row['median_us']:10.2f} us  "
-                  f"x{row['ratio_to_legacy']:.3f}  "
+            ratio = row[f'ratio_to_{args.baseline}']
+            relative = f"x{ratio:.3f}" if ratio is not None else "no baseline"
+            print(f"  {row['variant']:16} {row['median_us']:10.2f} us  "
+                  f"{relative}  "
                   f"range {row['min_us']:.2f}..{row['max_us']:.2f}")
 
 print('Level-3 56px surface: normalized rendering, ns per logical output pixel')
-for variant in ['legacy', 'single_flash', 'single_ram', 'double_flash', 'double_ram', 'analytic', 'legacy_tuned']:
+for variant in ['legacy', 'single_flash', 'single_ram', 'double_flash', 'double_ram', 'analytic', 'legacy_tuned', 'double_optimized', 'double_sides', 'double_corners']:
     values = {r['metric']: r for r in measurements
               if r['variant'] == variant and r['scene'] == 'fab56_l3'}
     if 'native' in values:
