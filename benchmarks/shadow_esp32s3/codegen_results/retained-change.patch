@@ -1,0 +1,210 @@
+diff --git a/src/roo_windows/decoration/decoration.cpp b/src/roo_windows/decoration/decoration.cpp
+index 5ac26f03..5694a3db 100644
+--- a/src/roo_windows/decoration/decoration.cpp
++++ b/src/roo_windows/decoration/decoration.cpp
+@@ -147,8 +147,16 @@ inline uint8_t calcRoundCornerAlpha(int16_t x, int16_t y, int16_t corner_radius,
+ 
+   // '15' chosen experimentally to make full circle look the most round.
+ #if ROO_WINDOWS_SHADOW_FAST_LUT
+-  int16_t rd = corner_radius * 16 + outline_width_frac -
+-               internal::ShadowDistanceSqrt(256 * (x * x + y * y));
++  uint32_t squared = 256u * (uint32_t(x) * x + uint32_t(y) * y);
++  uint32_t outer = corner_radius * 16 + outline_width_frac;
++  // Only the one-pixel antialiasing band needs a square root. Comparing
++  // squared thresholds preserves the original floor-sqrt rounding exactly.
++  if (squared >= outer * outer) return 0;
++  if (outer >= 16) {
++    uint32_t inner = outer - 15;
++    if (squared < inner * inner) return 255;
++  }
++  int16_t rd = outer - internal::ShadowDistanceSqrt(squared);
+ #else
+   int16_t rd =
+       corner_radius * 16 + outline_width_frac - isqrt24(256 * (x * x + y * y));
+@@ -543,18 +551,42 @@ Decoration::Decoration(
+ 
+ void Decoration::readColors(const int16_t* x, const int16_t* y, uint32_t count,
+                             roo_display::Color* result) const {
++#if ROO_WINDOWS_SHADOW_FAST_LUT
++  while (count >= 4) {
++    result[0] = read(x[0], y[0]);
++    result[1] = read(x[1], y[1]);
++    result[2] = read(x[2], y[2]);
++    result[3] = read(x[3], y[3]);
++    x += 4;
++    y += 4;
++    result += 4;
++    count -= 4;
++  }
++#endif
+   while (count-- > 0) {
+     *result++ = read(*x++, *y++);
+   }
+ }
+ 
+-roo_display::Color Decoration::read(int16_t x, int16_t y) const {
++#if ROO_WINDOWS_SHADOW_FAST_LUT
++__attribute__((always_inline)) inline
++#endif
++    roo_display::Color Decoration::read(int16_t x, int16_t y) const {
+   return readWithContent(x, y, bgcolor_);
+ }
+ 
+ roo_display::Color Decoration::readWithContent(
+     int16_t x, int16_t y, roo_display::Color content,
+     const roo_display::Color* resolved_outline) const {
++#if ROO_WINDOWS_SHADOW_FAST_LUT
++  // Neither the fill, outline nor press mask covers exterior pixels.
++  if (x < widget_extents_.xMin() || x > widget_extents_.xMax() ||
++      y < widget_extents_.yMin() || y > widget_extents_.yMax()) {
++    return roo_display::Color(
++        uint32_t(internal::ReadLookupShadow(key_shadow_, ambient_shadow_, x, y))
++        << 24);
++  }
++#endif
+   int16_t xMin_interior = widget_extents_.xMin() + outline_width_;
+   int16_t xMax_interior = widget_extents_.xMax() - outline_width_;
+   int16_t yMin_interior = widget_extents_.yMin() + outline_width_;
+diff --git a/src/roo_windows/decoration/shadow_lookup.cpp b/src/roo_windows/decoration/shadow_lookup.cpp
+index fe03dd5f..023dfb81 100644
+--- a/src/roo_windows/decoration/shadow_lookup.cpp
++++ b/src/roo_windows/decoration/shadow_lookup.cpp
+@@ -54,9 +54,17 @@ uint8_t ReadUncachedGradientLayer(const LookupShadowSpec& spec, int edge_x,
+   radius *= 16;
+   int dx = radius - edge_x;
+   int dy = radius - edge_y;
+-  int distance = dx > 0 && dy > 0
+-                     ? ShadowDistanceSqrt(uint32_t(dx) * dx + uint32_t(dy) * dy)
+-                     : std::max(dx, dy);
++  int distance;
++  if (dx > 0 && dy > 0) {
++    uint32_t squared = uint32_t(dx) * dx + uint32_t(dy) * dy;
++    // A radial rejection also removes transparent pixels inside the layer
++    // bounding box. The +1 preserves floor-sqrt quantization at the boundary.
++    uint32_t limit = radius + spec.reach_16 + 1;
++    if (squared >= limit * limit) return 0;
++    distance = ShadowDistanceSqrt(squared);
++  } else {
++    distance = std::max(dx, dy);
++  }
+   int index = std::max(
+       0, std::min(255, (128 * 4096 + (distance - radius - spec.spread_16) *
+                                          spec.index_scale) >>
+@@ -92,13 +100,16 @@ uint8_t ReadCachedShadow(const LookupShadowSpec& key,
+ #if ROO_WINDOWS_EXPERIMENTAL_SHADOW_GRADIENTS
+   if (edge_key_y >= key_radius * 16 && edge_ambient_y >= ambient_radius * 16 &&
+       edge_x <= edge_key_y && edge_x <= edge_ambient_y) {
+-    int distance = right ? x - key.x - key.w + 1 : key.x - x;
++    // Pixel-center edge coordinates also give the integer profile index.
++    // Reusing them keeps original x/y coordinates out of the live register set.
++    int distance = (8 - edge_x) >> 4;
+     return SideGradient(key.level, 0, distance);
+   }
+   if (key_bottom == ambient_bottom &&
+       edge_x >= std::max(key_radius, ambient_radius) * 16 &&
+       edge_key_y <= edge_x && edge_ambient_y <= edge_x) {
+-    int distance = key_bottom ? y - key.y - key.h + 1 : key.y - y;
++    int distance =
++        (8 - edge_key_y + (key_bottom ? key.offset_16 : -key.offset_16)) >> 4;
+     return SideGradient(key.level, key_bottom ? 2 : 1, distance);
+   }
+ #if ROO_WINDOWS_EXPERIMENTAL_SHADOW_GRADIENTS == 2
+diff --git a/test/shadow_lookup_test.cpp b/test/shadow_lookup_test.cpp
+index 3077fc26..bbe90445 100644
+--- a/test/shadow_lookup_test.cpp
++++ b/test/shadow_lookup_test.cpp
+@@ -140,6 +140,94 @@ TEST(ShadowLookupTest, IntegerNewtonSquareRootIsExact) {
+   EXPECT_EQ(65535, internal::ShadowDistanceSqrt(0xFFFFFFFF));
+ }
+ 
++// Verifies exact antialias coverage throughout each corner square, including
++// large radii and all sixteen fractional outline positions.
++TEST(ShadowLookupTest, CornerCoverageMatchesIndependentSquareRoot) {
++  for (int radius : {1, 2, 3, 4, 8, 12, 16, 24, 28, 64, 127, 128, 255}) {
++    uint8_t r = radius;
++    for (int fraction = 0; fraction < 16; ++fraction) {
++      Decoration decoration(
++          roo_display::Box(10, 20, 12 + 2 * radius, 22 + 2 * radius), 0,
++          OverlaySpec(), nullptr, roo_display::Color(0xFFFFFFFF),
++          BorderStyle::CornerRadii{r, r, r, r}, SmallNumber::Of16ths(fraction),
++          roo_display::Color(0), true);
++      for (int dy = 0; dy <= radius; ++dy) {
++        for (int dx = 0; dx <= radius; ++dx) {
++          int distance = int(std::sqrt(256.0 * (dx * dx + dy * dy)));
++          int expected =
++              std::clamp((radius * 16 + 15 - fraction - distance) * 17, 0, 255);
++          roo_display::Color actual =
++              decoration.readWithContent(10 + radius - dx, 20 + radius - dy,
++                                         roo_display::Color(0xFFFFFFFF));
++          ASSERT_EQ(expected, actual.a())
++              << "radius=" << radius << " fraction=" << fraction << " at " << dx
++              << ',' << dy;
++        }
++      }
++    }
++  }
++}
++
++// Verifies the exterior fast path ignores fill, outline and press masks while
++// preserving both shadow layers, including fractional and asymmetric outlines.
++TEST(ShadowLookupTest, ExteriorContainsOnlyReferenceShadow) {
++  PressOverlay ink(40, 50, 80, roo_display::Color(0x80445566));
++  const roo_display::Color outline(0xFF8899AA);
++  roo_display::Box box(40, 50, 95, 105);
++  for (int level = 0; level <= 5; ++level) {
++    BorderStyle style(4, 12, 18, 8, SmallNumber::Of16ths(36));
++    Decoration decoration(box, level, OverlaySpec(), &ink,
++                          roo_display::Color(0x80405060), style.corner_radii(),
++                          style.outline_width(), outline, true);
++    auto key =
++        internal::MakeLookupShadow(box, style.corner_radii(), level, false);
++    internal::LookupShadowSpec ambient =
++        internal::MakeLookupShadow(box, style.corner_radii(), level, true);
++    for (int y = 10; y <= 145; ++y) {
++      for (int x = 0; x <= 135; ++x) {
++        if (x >= box.xMin() && x <= box.xMax() && y >= box.yMin() &&
++            y <= box.yMax())
++          continue;
++        int k = test::ReferenceLayer(key, false, x, y);
++        int a = test::ReferenceLayer(ambient, true, x, y);
++        uint32_t expected = uint32_t(k + a - (k * a + 127) / 255) << 24;
++        EXPECT_EQ(
++            expected,
++            decoration
++                .readWithContent(x, y, roo_display::Color(0x80405060), &outline)
++                .asArgb());
++      }
++    }
++  }
++}
++
++// Verifies batches, including zero and nonmultiples of four, preserve sample
++// order and write exactly the requested number of colors.
++TEST(ShadowLookupTest, SampleBatchesPreserveRemaindersAndBounds) {
++  Decoration decoration(
++      roo_display::Box(40, 50, 95, 105), 3, OverlaySpec(), nullptr,
++      roo_display::Color(0xFFF8F8F8), BorderStyle::CornerRadii{4, 12, 18, 8},
++      SmallNumber::Of16ths(36), roo_display::Color(0xFF223344));
++  int16_t xs[19];
++  int16_t ys[19];
++  for (int i = 0; i < 19; ++i) {
++    xs[i] = 30 + (i * 17) % 82;
++    ys[i] = 40 + (i * 23) % 82;
++  }
++  const roo_display::Color sentinel(0x12345678);
++  for (int count = 0; count <= 19; ++count) {
++    std::vector<roo_display::Color> colors(count + 2, sentinel);
++    decoration.readColors(xs, ys, count, colors.data() + 1);
++    EXPECT_EQ(sentinel, colors.front());
++    EXPECT_EQ(sentinel, colors.back());
++    for (int i = 0; i < count; ++i) {
++      EXPECT_EQ(decoration.readWithContent(xs[i], ys[i],
++                                           roo_display::Color(0xFFF8F8F8)),
++                colors[i + 1]);
++    }
++  }
++}
++
+ using test::ReferenceLayer;
+ 
+ // Verifies tail pruning and integer geometry preserve every reference alpha,

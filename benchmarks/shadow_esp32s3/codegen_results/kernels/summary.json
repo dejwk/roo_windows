@@ -1,0 +1,74 @@
+[
+  {
+    "kernel": "identity",
+    "scale": 1,
+    "cycles_per_call": 29.77662109375,
+    "ns_per_call": 124.06925455729167
+  },
+  {
+    "kernel": "newton3",
+    "scale": 1,
+    "cycles_per_call": 80.65689453125,
+    "ns_per_call": 336.0703938802083
+  },
+  {
+    "kernel": "newton2",
+    "scale": 1,
+    "cycles_per_call": 79.7990234375,
+    "ns_per_call": 332.4959309895833
+  },
+  {
+    "kernel": "bounded",
+    "scale": 1,
+    "cycles_per_call": 79.12861328125,
+    "ns_per_call": 329.7025553385417
+  },
+  {
+    "kernel": "float",
+    "scale": 1,
+    "cycles_per_call": 119.2593359375,
+    "ns_per_call": 496.9138997395833
+  },
+  {
+    "kernel": "legacy",
+    "scale": 1,
+    "cycles_per_call": 132.7876171875,
+    "ns_per_call": 553.28173828125
+  },
+  {
+    "kernel": "identity",
+    "scale": 8,
+    "cycles_per_call": 29.77587890625,
+    "ns_per_call": 124.066162109375
+  },
+  {
+    "kernel": "newton3",
+    "scale": 8,
+    "cycles_per_call": 81.47513671875,
+    "ns_per_call": 339.479736328125
+  },
+  {
+    "kernel": "newton2",
+    "scale": 8,
+    "cycles_per_call": 80.25392578125,
+    "ns_per_call": 334.391357421875
+  },
+  {
+    "kernel": "bounded",
+    "scale": 8,
+    "cycles_per_call": 84.64384765625,
+    "ns_per_call": 352.6826985677083
+  },
+  {
+    "kernel": "float",
+    "scale": 8,
+    "cycles_per_call": 119.04140625,
+    "ns_per_call": 496.005859375
+  },
+  {
+    "kernel": "legacy",
+    "scale": 8,
+    "cycles_per_call": 193.497265625,
+    "ns_per_call": 806.2386067708334
+  }
+]

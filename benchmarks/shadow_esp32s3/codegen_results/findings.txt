@@ -1,0 +1,184 @@
+Generated-code optimization review (ESP32-S3, 800x480 RGB565)
+
+This pass follows e613ff41. The retained implementation is the compact
+combination, using the platform's normal -Os compiler setting. It preserves
+the two 256-byte flash LUTs and exact alpha values. No added per-instance
+fields or runtime tables. Optional side/corner caches remain selectable.
+
+Main result: the retained plain two-LUT core uses 29.2% less time per fixed
+sample, 25.0% less time per tiled output pixel, and 28.0% less time for a single
+level-3 widget refresh than the fresh prior-core control. Linked flash grows by
+192 bytes; static RAM and Decoration size are unchanged. The side cache
+still helps larger/mixed surfaces (about 6-7% here). The full corner cache
+is not recommended for this workload: its small sampling advantage does
+not compensate for its slower full refresh and roughly 48KB storage cost.
+
+Retained changes:
+- Reject exterior pixels before setting up fill/outline/press coverage.
+- Reject fully covered/transparent corner pixels with squared thresholds;
+  only the one-pixel antialiasing band needs a coverage square root.
+- Reject radial shadow samples beyond the last nonzero LUT entry, before sqrt.
+- Inline the small read() wrapper; unroll readColors() four samples at a time.
+- Derive side-cache indices from existing edge coordinates, reducing live
+  variables. The side-cache shader's entry frame drops from 80 to 48 bytes.
+- Keep the original exact three-step integer Newton sqrt.
+
+Level 3, 56x56 surface, radius 16, zoom 100:
+All sampling variants below use the same 512 exterior coordinates and the
+same 6400-pixel native/tiled extent. Times exclude serial I/O.
+
+configuration             fixed ns/px  native ns/px  tile ns/px refresh1 ms refresh12 ms
+core_baseline                  1307.07       1104.47      816.45      19.764      275.747
+compact_core                    925.76        843.20      612.76      14.239      201.488
+baseline                       1372.83       1141.26      858.26      16.364      222.256
+compact_sides                   906.08        834.51      623.32      14.138      192.705
+compact_corners                 901.60        819.82      598.76      16.008      212.978
+o3_core                        1140.20        955.22      650.43      16.476      217.757
+local_o3                       1181.85        983.33      691.73      13.988      188.485
+
+core_baseline is the prior optimized plain two-LUT firmware, freshly rerun
+with an identical binary (also matches the prior manifest hash). baseline
+is the prior side-cache firmware, freshly rerun in this pass. compact_core
+is the new default implementation; compact_sides/corners add the respective
+precomputed gradient caches. o3_core/local_o3 only switch the original two
+rendering translation units to O3, without the compact code changes.
+
+Isolated and combined experiments based on the prior side-cache firmware:
+name                  fixed ns/px   refresh1 ms   scope
+baseline                   1372.83        16.364   full 14 scenes
+aa_bounds                  1373.02        16.302   full 14 scenes
+sqrt2                      1369.60        16.710   full 14 scenes
+radial_reject              1330.07        16.094   full 14 scenes
+unroll4                    1342.47        15.755   full 14 scenes
+local_o3                   1181.85        13.988   full 14 scenes
+exterior_first             1112.80        15.493   3-scene screen
+inline_read                1320.10        16.732   3-scene screen
+cache_liveness             1277.02        16.663   3-scene screen
+combined_o3                 943.44        18.279   3-scene screen
+combined_unroll             912.10        14.694   3-scene screen
+compact                     906.08        14.128   3-scene screen
+
+Definitions:
+aa_bounds: exact squared-distance coverage rejection.
+sqrt2: closer secant seed, two integer Newton divisions, exact final correction.
+radial_reject: exact circular rejection inside the rectangular shadow support.
+unroll4: four explicit samples per readColors loop iteration.
+local_o3: O3 pragmas limited to decoration.cpp and shadow_lookup.cpp.
+exterior_first: skip fill/outline/press setup outside the widget rectangle.
+inline_read: force only the tiny read() wrapper inline.
+cache_liveness: reuse edge coordinates for side-cache indices.
+combined_o3: aa_bounds + radial_reject + exterior_first + cache_liveness + O3.
+combined_unroll: combined_o3 plus unroll4.
+compact: aa_bounds + radial_reject + exterior_first + cache_liveness +
+         inline_read + unroll4, with the normal -Os setting.
+
+What the generated code showed:
+- Default Arduino build uses -Os. The original sampling loop calls read(),
+  which calls readWithContent(), which calls coverage and shadow helpers.
+  Removing wrappers/branches matters even when the shadow math is unchanged.
+- CLZ already maps to nsau. min/max use target instructions where applicable.
+  Source-over division by 255 already uses a reciprocal multiply and shifts;
+  it is not a per-pixel integer divide. Manual reciprocal coding is low priority.
+- Each original calculated radial distance uses three quou instructions.
+  Reducing divisions alone was not enough: the improved seed needs extra
+  arithmetic. The isolated and whole-renderer measurements confirm this.
+- The side-cache shader originally has an 80-byte entry frame and spills
+  original coordinates. Edge-coordinate reuse reduces it to 48 bytes.
+  These are individual function frames, not a measured maximum call-stack size.
+- O3 inlines many more operations. It helps the baseline renderer, but adds
+  about 8.7KB of flash in the side-cache build. The compact combination adds
+  only 140 linked bytes there. Static RAM and sizeof(Decoration) remain the
+  same (30776 benchmark bytes and 84 bytes per Decoration).
+- Optimizations do not compose additively. combined_o3 improves standalone
+  sampling substantially but regresses full refresh. Its generated coverage
+  call structure differs from local_o3; image layout/cache effects can also
+  affect whole-firmware timings. No dynamic instruction profiler was used,
+  so the exact cause of every timing difference is not claimed to be proven.
+
+Square-root kernel measurements (same firmware, display DMA active):
+The benchmark includes function-pointer dispatch, loop and input-load cost.
+Do not interpret these as isolated instruction latency or subtract overhead
+as though it were necessarily additive. Scale 1 uses typical corner-sized
+inputs; scale 8 exercises large radii and the 32-bit legacy fallback.
+  scale 1 identity    29.78 cycles/call (124.07 ns)
+  scale 1 newton3     80.66 cycles/call (336.07 ns)
+  scale 1 newton2     79.80 cycles/call (332.50 ns)
+  scale 1 bounded     79.13 cycles/call (329.70 ns)
+  scale 1 float      119.26 cycles/call (496.91 ns)
+  scale 1 legacy     132.79 cycles/call (553.28 ns)
+  scale 8 identity    29.78 cycles/call (124.07 ns)
+  scale 8 newton3     81.48 cycles/call (339.48 ns)
+  scale 8 newton2     80.25 cycles/call (334.39 ns)
+  scale 8 bounded     84.64 cycles/call (352.68 ns)
+  scale 8 float      119.04 cycles/call (496.01 ns)
+  scale 8 legacy     193.50 cycles/call (806.24 ns)
+
+The two-division secant-seed implementation and corrected sqrtf passed an
+exhaustive host check of all 2^32 inputs. Hardware kernel checks cover the
+sample corpus, not all 2^32 float inputs. A bounded two-step version retains
+the old seed below 2^18 and uses three steps above; the reduced domain was
+checked exhaustively. An attempted 2^20 threshold failed at 262596 and was
+rejected before hardware measurement. The bounded shortcut's small-input
+benefit is small and it regresses larger inputs. Neither alternate was retained.
+
+The linked sqrtf is not a single hardware square-root instruction: the S3
+library uses sqrt0.s followed by a refinement sequence. It is slower here.
+A cheap integer distance approximation, (123*max + 51*min + 64)/128,
+was checked for image error, not benchmarked on hardware: for radius16/level3
+it changes 20.4% of visible shadow RGB565 pixels over white, with a maximum
+alpha error of 13/255. Across tested radii/levels the maximum is 38/255.
+This was rejected for appearance; see approx_quality.json and its script.
+
+Validation:
+- All 9 targeted Bazel tests pass: shadow_lookup_test and both gradient caches
+  at zoom 75, 100, 150, 200. New cases independently verify all fractional
+  coverage positions, exterior composition with press/outline, and batch tails.
+- 64 elevation captures are byte-identical to the original two-LUT captures.
+- RGB565 edge profiles are identical in all completed full-suite captures.
+- Retained core/side binaries have identical executable and rendering-data
+  sections to the measured compact prototypes after formatting and guarding
+  the optimizations. See retained-equivalence.json.
+- GCC -fanalyzer with the test configuration was run on both translation units,
+  baseline and candidate. No diagnostic in the changed shadow code. Two
+  diagnostics in dependent raster-stream headers reproduce on the baseline;
+  they are recorded, not asserted to be newly introduced or fully resolved.
+
+Method and limitations:
+This pass collected 4893 rendering timing batches (11 full runs and six
+screening runs), plus 84 same-image kernel timing batches. Two earlier core
+control runs are also archived for reference and are excluded from that total.
+Each full run has 399 timing batch means (7 per metric/scene), 14 scenes,
+25 refreshes per refresh batch, 150 fixed-sampling iterations, and 12 native
+or tiled iterations. Screening runs deliberately stop after the first three
+scenes (84 timing rows); they are explicitly marked and are not full-suite
+results. One partial USB line interrupted a screen; the reader was fixed to
+accumulate complete lines, and that experiment was rerun. Only complete
+captures are included in aggregates.
+
+Sampling metrics measure ARGB decoration output. RGB565 conversion/blending,
+framework work and PSRAM output are included in refresh1/refresh12. Refresh
+pixel counts only describe logical widget area; they are not a count of all
+written pixels, so refresh time is deliberately not normalized per pixel.
+This is warm steady-state performance at 240MHz CPU / 80MHz flash, with the
+16MHz display running. Small differences can reflect compiler layout and
+cache behavior; cold-cache and mixed-application workloads are not covered.
+
+Reproduction:
+Use a separate worktree at e613ff41, apply the experiment's change.patch, then
+build/run benchmarks/shadow_esp32s3 with its double_sides environment; *_core
+experiments use double_optimized. Existing capture_serial.py and
+analyze_hardware.py provide full-suite capture/aggregation. Benchmark scripts
+can use PYTHONPATH=benchmarks/shadow_esp32s3/offline_tools to keep installed
+pioarduino Python dependencies. Do not apply several single-experiment patches
+on top of each other: combined experiments have their own complete patch.
+The kernel experiment's patch adds the 'k' command to the baseline sketch.
+Standalone numerical check sources and captured compiler output are retained.
+
+Remaining opportunities, not measured in this pass: hoisting all row-constant
+geometry out of arbitrary-pixel sampling, profiling RoundedDecoration/Clipper
+composition, and explicit instruction/data-cache placement under realistic
+mixed UI workloads. These results identify a faster measured configuration;
+they are not a claim of globally optimal code for every target or workload.
+
+Board left running the retained compact side-cache firmware; its flash hash
+verification is saved under retained_sides/final-flash.log.

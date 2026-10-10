@@ -147,8 +147,16 @@ inline uint8_t calcRoundCornerAlpha(int16_t x, int16_t y, int16_t corner_radius,
 
   // '15' chosen experimentally to make full circle look the most round.
 #if ROO_WINDOWS_SHADOW_FAST_LUT
-  int16_t rd = corner_radius * 16 + outline_width_frac -
-               internal::ShadowDistanceSqrt(256 * (x * x + y * y));
+  uint32_t squared = 256u * (uint32_t(x) * x + uint32_t(y) * y);
+  uint32_t outer = corner_radius * 16 + outline_width_frac;
+  // Only the one-pixel antialiasing band needs a square root. Comparing
+  // squared thresholds preserves the original floor-sqrt rounding exactly.
+  if (squared >= outer * outer) return 0;
+  if (outer >= 16) {
+    uint32_t inner = outer - 15;
+    if (squared < inner * inner) return 255;
+  }
+  int16_t rd = outer - internal::ShadowDistanceSqrt(squared);
 #else
   int16_t rd =
       corner_radius * 16 + outline_width_frac - isqrt24(256 * (x * x + y * y));
@@ -543,18 +551,42 @@ Decoration::Decoration(
 
 void Decoration::readColors(const int16_t* x, const int16_t* y, uint32_t count,
                             roo_display::Color* result) const {
+#if ROO_WINDOWS_SHADOW_FAST_LUT
+  while (count >= 4) {
+    result[0] = read(x[0], y[0]);
+    result[1] = read(x[1], y[1]);
+    result[2] = read(x[2], y[2]);
+    result[3] = read(x[3], y[3]);
+    x += 4;
+    y += 4;
+    result += 4;
+    count -= 4;
+  }
+#endif
   while (count-- > 0) {
     *result++ = read(*x++, *y++);
   }
 }
 
-roo_display::Color Decoration::read(int16_t x, int16_t y) const {
+#if ROO_WINDOWS_SHADOW_FAST_LUT
+__attribute__((always_inline)) inline
+#endif
+    roo_display::Color Decoration::read(int16_t x, int16_t y) const {
   return readWithContent(x, y, bgcolor_);
 }
 
 roo_display::Color Decoration::readWithContent(
     int16_t x, int16_t y, roo_display::Color content,
     const roo_display::Color* resolved_outline) const {
+#if ROO_WINDOWS_SHADOW_FAST_LUT
+  // Neither the fill, outline nor press mask covers exterior pixels.
+  if (x < widget_extents_.xMin() || x > widget_extents_.xMax() ||
+      y < widget_extents_.yMin() || y > widget_extents_.yMax()) {
+    return roo_display::Color(
+        uint32_t(internal::ReadLookupShadow(key_shadow_, ambient_shadow_, x, y))
+        << 24);
+  }
+#endif
   int16_t xMin_interior = widget_extents_.xMin() + outline_width_;
   int16_t xMax_interior = widget_extents_.xMax() - outline_width_;
   int16_t yMin_interior = widget_extents_.yMin() + outline_width_;

@@ -1,0 +1,21 @@
+--- a/src/roo_windows/decoration/decoration.cpp
++++ b/src/roo_windows/decoration/decoration.cpp
+@@ -147,8 +147,16 @@
+ 
+   // '15' chosen experimentally to make full circle look the most round.
+ #if ROO_WINDOWS_SHADOW_FAST_LUT
+-  int16_t rd = corner_radius * 16 + outline_width_frac -
+-               internal::ShadowDistanceSqrt(256 * (x * x + y * y));
++  uint32_t squared = 256u * (uint32_t(x) * x + uint32_t(y) * y);
++  uint32_t outer = corner_radius * 16 + outline_width_frac;
++  // Only the one-pixel antialiasing band needs a square root. Comparing
++  // squared thresholds preserves the original floor-sqrt rounding exactly.
++  if (squared >= outer * outer) return 0;
++  if (outer >= 16) {
++    uint32_t inner = outer - 15;
++    if (squared < inner * inner) return 255;
++  }
++  int16_t rd = outer - internal::ShadowDistanceSqrt(squared);
+ #else
+   int16_t rd =
+       corner_radius * 16 + outline_width_frac - isqrt24(256 * (x * x + y * y));

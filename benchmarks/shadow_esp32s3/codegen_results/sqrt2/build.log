@@ -1,0 +1,171 @@
+Processing double_sides (platform: /home/dawidk/.platformio/platforms/espressif32; board: lolin_s3; framework: arduino)
+--------------------------------------------------------------------------------
+Warning: No internet connection detected, Python dependency check will be skipped.
+Warning: No internet connection detected, Python dependency check will be skipped.
+Verbose mode can be enabled via `-v, --verbose` option
+Warning: No internet connection detected, Python dependency check will be skipped.
+CONFIGURATION: https://docs.platformio.org/page/boards/espressif32/lolin_s3.html
+PLATFORM: Espressif 32 (55.3.35) > WEMOS LOLIN S3
+HARDWARE: ESP32S3 240MHz, 320KB RAM, 16MB Flash
+DEBUG: Current (cmsis-dap) External (cmsis-dap, esp-bridge, esp-builtin, esp-prog, iot-bus-jtag, jlink, minimodule, olimex-arm-usb-ocd, olimex-arm-usb-ocd-h, olimex-arm-usb-tiny-h, olimex-jtag-tiny, tumpa)
+PACKAGES:
+ - contrib-piohome @ 3.4.4
+ - framework-arduinoespressif32 @ 3.3.5
+ - framework-arduinoespressif32-libs @ 5.5.0+sha.9bb7aa84fe
+ - tool-esptoolpy @ 5.1.0
+ - tool-mklittlefs @ 3.2.0
+ - toolchain-xtensa-esp-elf @ 14.2.0+20251107
+LDF: Library Dependency Finder -> https://bit.ly/configure-pio-ldf
+LDF Modes: Finder ~ chain, Compatibility ~ soft
+Found 68 compatible libraries
+Scanning dependencies...
+Dependency Graph
+|-- roo_display @ 3.4.0
+|-- roo_scheduler @ 2.3.0
+|-- roo_windows @ 1.9.0
+Building in release mode
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/composites/log/log.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/composites/menu/basic_navigation_item.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/composites/menu/slider_with_caption.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/composites/menu/title.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/containers/accelerated_scrollable_panel.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/containers/aligned_layout.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/containers/blit_cache_container.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/containers/flex_layout.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/containers/holder.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/containers/horizontal_layout.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/containers/horizontal_page_host.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/containers/navigation_panel.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/containers/navigation_rail.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/containers/scroll_motion_controller.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/containers/scrollable_panel.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/containers/vertical_layout.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/core/animation_registry.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/core/application.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/core/application_context.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/core/background_deferral.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/core/blit_plan.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/core/child_layout.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/core/click_animation.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/core/clipper.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/core/container.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/core/destination.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/core/display_window.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/core/exclusion.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/core/focus_manager.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/core/gesture_detector.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/core/key_source.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/core/main_window.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/core/navigation_host.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/core/overlay_spec.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/core/paint_context.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/core/panel.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/core/presentation_registry.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/core/rounded_clip.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/core/scroll_connection.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/core/surface_widget.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/core/task.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/core/task_panel.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/core/text_input.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/core/transient_presentation.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/core/transient_surface_host.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/core/widget.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/decoration/decoration.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/decoration/shadow_lookup.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/dialogs/alert_dialog.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/dialogs/dialog.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/indicators/impl/battery.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/indicators/impl/walltime.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/indicators/impl/wifi.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/keyboard/editor_destination.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/keyboard/keyboard.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/material3/app_bar/app_bar.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/material3/app_bar/app_bar_scroll_behavior.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/material3/badge/badge.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/material3/button/button.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/material3/button/icon_button.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/material3/button/internal/button_appearance.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/material3/button/internal/button_geometry.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/material3/button/navigation.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/material3/button/toggle_icon_button.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/material3/card/flex_card.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/material3/checkbox/checkbox.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/material3/date_picker/date_picker.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/material3/date_picker/date_picker_panel.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/material3/date_picker/docked_date_picker_field.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/material3/dialog/basic_dialog.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/material3/dialog/dialog_scaffold.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/material3/dialog/full_screen_dialog.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/material3/layout_scaffold/layout_scaffold.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/material3/list/dynamic_list.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/material3/list/internal/list_row_geometry.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/material3/list/list.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/material3/menu/menu.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/material3/menu/menu_geometry.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/material3/menu/menu_surface.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/material3/navigation_bar/navigation_bar.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/material3/navigation_destination/navigation_destination.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/material3/navigation_rail/navigation_rail.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/material3/progress_indicator/progress_indicator.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/material3/radio_button/radio_button.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/material3/slider/range_slider.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/material3/slider/slider.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/material3/slider/slider_paint_internal.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/material3/slider/value_indicator.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/material3/snackbar/snackbar.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/material3/switch/switch.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/material3/tabs/tabs.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/material3/text_field/secure_text_field.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/material3/text_field/text_field.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/material3/utilities/dropdown_button.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/widgets/button.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/widgets/checkbox.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/widgets/divider.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/widgets/icon.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/widgets/icon_with_caption.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/widgets/image.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/widgets/progress_bar.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/widgets/radio_button.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/widgets/slider.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/widgets/switch.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/widgets/text_block.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/widgets/text_field.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/widgets/text_label.cpp.o
+Compiling .pio/build/double_sides/lib548/roo_windows/roo_windows/widgets/toggle_buttons.cpp.o
+Compiling .pio/build/double_sides/src/main.cpp.o
+Linking .pio/build/double_sides/firmware.elf
+                            Memory Type Usage Summary
+┏━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━┓
+┃ Memory Type/Section ┃ Used [bytes] ┃ Used [%] ┃ Remain [bytes] ┃ Total [bytes] ┃
+┡━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━┩
+│ Flash Code          │       589156 │          │                │               │
+│    .text            │       589156 │          │                │               │
+│ Flash Data          │       374612 │          │                │               │
+│    .rodata          │       374356 │          │                │               │
+│    .appdesc         │          256 │          │                │               │
+│ DIRAM               │        89051 │    26.06 │         252709 │        341760 │
+│    .text            │        58275 │    17.05 │                │               │
+│    .bss             │        16200 │     4.74 │                │               │
+│    .data            │        14576 │     4.26 │                │               │
+│ IRAM                │        16384 │    100.0 │              0 │         16384 │
+│    .text            │        15356 │    93.73 │                │               │
+│    .vectors         │         1028 │     6.27 │                │               │
+└─────────────────────┴──────────────┴──────────┴────────────────┴───────────────┘
+Total image size: 1053003 bytes (.bin may be padded larger)
+Note: The reported total sizes may be smaller than those in the technical reference manual due to reserved memory and application configuration. The total flash size available for the application is not included by default, as it cannot be reliably determined due to the presence of other data like the bootloader, partition table, and application partition size.
+Retrieving maximum program size .pio/build/double_sides/firmware.elf
+Checking size .pio/build/double_sides/firmware.elf
+Advanced Memory Usage is available via "PlatformIO Home > Project Inspect"
+RAM:   [=         ]   9.4% (used 30776 bytes from 327680 bytes)
+Flash: [==        ]  16.1% (used 1052747 bytes from 6553600 bytes)
+Building .pio/build/double_sides/firmware.bin
+esptool v5.1.0
+Creating ESP32S3 image...
+Merged 2 ELF sections.
+Successfully created ESP32S3 image.
+========================= [SUCCESS] Took 56.70 seconds =========================
+
+Environment    Status    Duration
+-------------  --------  ------------
+double_sides   SUCCESS   00:00:56.702
+========================= 1 succeeded in 00:00:56.702 =========================

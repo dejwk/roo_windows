@@ -1,0 +1,1 @@
+Two original-seed Newton iterations plus one decrement failed below 2^20: input 262596 returned 513 instead of floor-sqrt 512. Tightened threshold to 2^18 and tested exhaustively.

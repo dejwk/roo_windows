@@ -1,0 +1,5 @@
+{
+  "src/roo_windows/decoration/decoration.cpp": "32c4162de1a1d91b7be69f13472b8737fbccc5ba363b423a42527ff363b82397",
+  "src/roo_windows/decoration/shadow_lookup.cpp": "ef6bbcb7350515cadc10c7c3e3819ed006353ac9203317c04156d686eb5b66fe",
+  "test/shadow_lookup_test.cpp": "56b86ce234c3838c39233e99b72d4cb5f884187d982f416f0d6b525f5623f475"
+}

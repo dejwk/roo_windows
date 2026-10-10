@@ -1,0 +1,1 @@
+Deliberately captures only first three scenes (fab56_l0, fab56_l1, fab56_l3); 84 timing batches. Firmware continues running other scenes; next flash resets it. Not a completed full-suite run.

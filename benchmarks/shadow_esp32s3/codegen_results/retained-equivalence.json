@@ -1,0 +1,90 @@
+{
+  "retained_core": {
+    ".iram0.vectors": {
+      "identical": true,
+      "hashes": [
+        "b1454a8ee7b919ef062a4ef593507ea84d4d804e3d3b5d7012368e5fa03ce16e",
+        "b1454a8ee7b919ef062a4ef593507ea84d4d804e3d3b5d7012368e5fa03ce16e"
+      ]
+    },
+    ".iram0.text": {
+      "identical": true,
+      "hashes": [
+        "80c3a438924723a66f9fbfeeeac8f5612ddebce6f77eb4d73c6a842a4c89c0e9",
+        "80c3a438924723a66f9fbfeeeac8f5612ddebce6f77eb4d73c6a842a4c89c0e9"
+      ]
+    },
+    ".dram0.data": {
+      "identical": true,
+      "hashes": [
+        "2dde05b8bb7b827f16c4a7a9c38e9f7bb968cf1164cef086e0c4c947c8919b89",
+        "2dde05b8bb7b827f16c4a7a9c38e9f7bb968cf1164cef086e0c4c947c8919b89"
+      ]
+    },
+    ".flash.text": {
+      "identical": true,
+      "hashes": [
+        "7a353656725d824e15792df2fb26376bbaf8a08cc549b83feefb166364a5c4ee",
+        "7a353656725d824e15792df2fb26376bbaf8a08cc549b83feefb166364a5c4ee"
+      ]
+    },
+    ".flash.rodata": {
+      "identical": true,
+      "hashes": [
+        "bd401fb2fdc63927cce1cb7b6c803064322e8e950570c0cc7184df81add351cb",
+        "bd401fb2fdc63927cce1cb7b6c803064322e8e950570c0cc7184df81add351cb"
+      ]
+    },
+    ".rtc.force_slow": {
+      "identical": true,
+      "hashes": [
+        "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925",
+        "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925"
+      ]
+    }
+  },
+  "retained_sides": {
+    ".iram0.vectors": {
+      "identical": true,
+      "hashes": [
+        "b1454a8ee7b919ef062a4ef593507ea84d4d804e3d3b5d7012368e5fa03ce16e",
+        "b1454a8ee7b919ef062a4ef593507ea84d4d804e3d3b5d7012368e5fa03ce16e"
+      ]
+    },
+    ".iram0.text": {
+      "identical": true,
+      "hashes": [
+        "956fb14a62bea8b99606ab5261ce9380957a928a60d373ff99c5be5a5d58791b",
+        "956fb14a62bea8b99606ab5261ce9380957a928a60d373ff99c5be5a5d58791b"
+      ]
+    },
+    ".dram0.data": {
+      "identical": true,
+      "hashes": [
+        "6f1ed9cb08a02857c3a1d0bd1f17cace215e31b3329d3d5067b5a9c42dee0537",
+        "6f1ed9cb08a02857c3a1d0bd1f17cace215e31b3329d3d5067b5a9c42dee0537"
+      ]
+    },
+    ".flash.text": {
+      "identical": true,
+      "hashes": [
+        "56ff01b4cf45abde7864282582fd786da61f1751f55805f63e70a694a347dc0f",
+        "56ff01b4cf45abde7864282582fd786da61f1751f55805f63e70a694a347dc0f"
+      ]
+    },
+    ".flash.rodata": {
+      "identical": true,
+      "hashes": [
+        "ad3847eb10a1e9431b9ac09d6df72fea74b8ca4ea3e28c43883a264c33b7e61a",
+        "ad3847eb10a1e9431b9ac09d6df72fea74b8ca4ea3e28c43883a264c33b7e61a"
+      ]
+    },
+    ".rtc.force_slow": {
+      "identical": true,
+      "hashes": [
+        "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925",
+        "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925"
+      ]
+    }
+  }
+}

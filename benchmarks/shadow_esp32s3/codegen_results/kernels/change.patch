@@ -1,0 +1,118 @@
+--- a/benchmarks/shadow_esp32s3/src/main.cpp
++++ b/benchmarks/shadow_esp32s3/src/main.cpp
+@@ -15,6 +15,103 @@
+ #include "roo_windows.h"
+ #include "roo_windows/decoration/decoration.h"
+ #include "roo_windows/decoration/shadow_lookup.h"
++
++// Standalone timing experiment inserted into the existing board sketch.
++#include "roo_windows/internal/isqrt.h"
++
++__attribute__((noinline)) uint32_t KernelNewton3(uint32_t value) {
++  if (value < 4) return value == 0 ? 0 : 1;
++  int bits = 32 - __builtin_clz(value);
++  uint32_t root = 3u << ((bits + 1) / 2 - 2);
++  root = (root + value / root) / 2;
++  root = (root + value / root) / 2;
++  root = (root + value / root) / 2;
++  if (root == 65536 || root * root > value) --root;
++  return root;
++}
++
++__attribute__((noinline)) uint32_t KernelBounded(uint32_t value) {
++  if (value < 4) return value == 0 ? 0 : 1;
++  int bits = 32 - __builtin_clz(value);
++  uint32_t root = 3u << ((bits + 1) / 2 - 2);
++  root = (root + value / root) / 2;
++  root = (root + value / root) / 2;
++  if (value >= (1u << 18)) root = (root + value / root) / 2;
++  if (root == 65536 || root * root > value) --root;
++  return root;
++}
++
++__attribute__((noinline)) uint32_t KernelNewton2(uint32_t value) {
++  if (value < 4) return value == 0 ? 0 : 1;
++  int shift = (31 - __builtin_clz(value)) / 2;
++  uint32_t root = ((value >> shift) + (2u << shift)) / 3;
++  root = (root + value / root) / 2;
++  root = (root + value / root) / 2;
++  if (root == 65536 || root * root > value) --root;
++  return root;
++}
++
++__attribute__((noinline)) uint32_t KernelFloat(uint32_t value) {
++  uint32_t root = uint32_t(__builtin_sqrtf(float(value)));
++  if (root == 65536 || root * root > value) --root;
++  return root;
++}
++
++__attribute__((noinline)) uint32_t KernelLegacy(uint32_t value) {
++  return value < (1u << 24) ? roo_windows::isqrt24(value)
++                            : roo_windows::isqrt32(value);
++}
++
++__attribute__((noinline)) uint32_t KernelIdentity(uint32_t value) {
++  return value;
++}
++
++void RunKernels() {
++  struct Kernel {
++    const char* name;
++    uint32_t (*function)(uint32_t);
++  };
++  const Kernel kernels[] = {{"identity", KernelIdentity},
++                            {"newton3", KernelNewton3},
++                            {"newton2", KernelNewton2},
++                            {"bounded", KernelBounded},
++                            {"float", KernelFloat},
++                            {"legacy", KernelLegacy}};
++  uint32_t inputs[512];
++  volatile uint32_t sink = 0;
++  for (int scale : {1, 8}) {
++    for (int i = 0; i < 512; ++i) {
++      uint32_t dx = (8 + (i * 17 % 560)) * scale;
++      uint32_t dy = (8 + (i * 43 % 560)) * scale;
++      inputs[i] = dx * dx + dy * dy;
++    }
++    for (const Kernel& kernel : kernels) {
++      uint32_t mismatches = 0;
++      if (kernel.function != KernelIdentity) {
++        for (uint32_t value : inputs) {
++          if (kernel.function(value) != KernelNewton3(value)) ++mismatches;
++        }
++      }
++      for (int batch = -1; batch < 7; ++batch) {
++        uint32_t sum = 0;
++        uint32_t start = ESP.getCycleCount();
++        for (int repeat = 0; repeat < 100; ++repeat) {
++          for (uint32_t value : inputs) sum += kernel.function(value);
++        }
++        uint32_t cycles = ESP.getCycleCount() - start;
++        sink = sum;
++        if (batch >= 0) {
++          Serial.printf("{\"kernel\":\"%s\",\"scale\":%d,\"batch\":%d,"
++                        "\"cycles\":%lu,\"samples\":51200,\"mismatches\":%lu}\n",
++                        kernel.name, scale, batch, (unsigned long)cycles,
++                        (unsigned long)mismatches);
++        }
++        delay(2);
++      }
++    }
++  }
++  Serial.printf("KERNELS_DONE %lu\n", (unsigned long)sink);
++}
+ 
+ namespace {
+ using namespace roo_windows;
+@@ -352,6 +449,10 @@
+ }
+ 
+ void loop() {
+-  if (Serial.available() > 0 && Serial.read() == 'b') RunAll();
++  if (Serial.available() > 0) {
++    int command = Serial.read();
++    if (command == 'b') RunAll();
++    if (command == 'k') RunKernels();
++  }
+   delay(10);
+ }

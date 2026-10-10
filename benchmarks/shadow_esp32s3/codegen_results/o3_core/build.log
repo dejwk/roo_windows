@@ -1,0 +1,64 @@
+Processing double_optimized (platform: /home/dawidk/.platformio/platforms/espressif32; board: lolin_s3; framework: arduino)
+--------------------------------------------------------------------------------
+Warning: No internet connection detected, Python dependency check will be skipped.
+Warning: No internet connection detected, Python dependency check will be skipped.
+Verbose mode can be enabled via `-v, --verbose` option
+Warning: No internet connection detected, Python dependency check will be skipped.
+CONFIGURATION: https://docs.platformio.org/page/boards/espressif32/lolin_s3.html
+PLATFORM: Espressif 32 (55.3.35) > WEMOS LOLIN S3
+HARDWARE: ESP32S3 240MHz, 320KB RAM, 16MB Flash
+DEBUG: Current (cmsis-dap) External (cmsis-dap, esp-bridge, esp-builtin, esp-prog, iot-bus-jtag, jlink, minimodule, olimex-arm-usb-ocd, olimex-arm-usb-ocd-h, olimex-arm-usb-tiny-h, olimex-jtag-tiny, tumpa)
+PACKAGES:
+ - contrib-piohome @ 3.4.4
+ - framework-arduinoespressif32 @ 3.3.5
+ - framework-arduinoespressif32-libs @ 5.5.0+sha.9bb7aa84fe
+ - tool-esptoolpy @ 5.1.0
+ - tool-mklittlefs @ 3.2.0
+ - toolchain-xtensa-esp-elf @ 14.2.0+20251107
+LDF: Library Dependency Finder -> https://bit.ly/configure-pio-ldf
+LDF Modes: Finder ~ chain, Compatibility ~ soft
+Found 68 compatible libraries
+Scanning dependencies...
+Dependency Graph
+|-- roo_display @ 3.4.0
+|-- roo_scheduler @ 2.3.0
+|-- roo_windows @ 1.9.0
+Building in release mode
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/decoration/decoration.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/decoration/shadow_lookup.cpp.o
+Linking .pio/build/double_optimized/firmware.elf
+                            Memory Type Usage Summary
+┏━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━┓
+┃ Memory Type/Section ┃ Used [bytes] ┃ Used [%] ┃ Remain [bytes] ┃ Total [bytes] ┃
+┡━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━┩
+│ Flash Code          │       597272 │          │                │               │
+│    .text            │       597272 │          │                │               │
+│ Flash Data          │       373716 │          │                │               │
+│    .rodata          │       373460 │          │                │               │
+│    .appdesc         │          256 │          │                │               │
+│ DIRAM               │        89051 │    26.06 │         252709 │        341760 │
+│    .text            │        58275 │    17.05 │                │               │
+│    .bss             │        16200 │     4.74 │                │               │
+│    .data            │        14576 │     4.26 │                │               │
+│ IRAM                │        16384 │    100.0 │              0 │         16384 │
+│    .text            │        15356 │    93.73 │                │               │
+│    .vectors         │         1028 │     6.27 │                │               │
+└─────────────────────┴──────────────┴──────────┴────────────────┴───────────────┘
+Total image size: 1060223 bytes (.bin may be padded larger)
+Note: The reported total sizes may be smaller than those in the technical reference manual due to reserved memory and application configuration. The total flash size available for the application is not included by default, as it cannot be reliably determined due to the presence of other data like the bootloader, partition table, and application partition size.
+Retrieving maximum program size .pio/build/double_optimized/firmware.elf
+Checking size .pio/build/double_optimized/firmware.elf
+Advanced Memory Usage is available via "PlatformIO Home > Project Inspect"
+RAM:   [=         ]   9.4% (used 30776 bytes from 327680 bytes)
+Flash: [==        ]  16.2% (used 1059967 bytes from 6553600 bytes)
+Building .pio/build/double_optimized/firmware.bin
+esptool v5.1.0
+Creating ESP32S3 image...
+Merged 2 ELF sections.
+Successfully created ESP32S3 image.
+========================= [SUCCESS] Took 13.65 seconds =========================
+
+Environment       Status    Duration
+----------------  --------  ------------
+double_optimized  SUCCESS   00:00:13.653
+========================= 1 succeeded in 00:00:13.653 =========================

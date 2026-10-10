@@ -1,0 +1,17 @@
+#include <cstdint>
+#include <cstdio>
+#include <chrono>
+uint32_t candidate(uint32_t value) {
+  uint32_t root = uint32_t(__builtin_sqrtf(float(value)));
+  if (root == 65536 || root * root > value) --root;
+  return root;
+}
+int main() {
+ uint32_t expected=0; uint64_t next=1;
+ for (uint64_t v=0; v<(1ULL<<32); ++v) {
+   if(v==next) { ++expected; next=uint64_t(expected+1)*(expected+1); }
+   uint32_t result=candidate(v);
+   if(result!=expected) { printf("FAIL %llu actual=%u expected=%u\n", (unsigned long long)v,result,expected); return 1; }
+ }
+ puts("PASS all 4294967296 inputs");
+}

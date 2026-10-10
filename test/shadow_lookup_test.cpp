@@ -140,6 +140,94 @@ TEST(ShadowLookupTest, IntegerNewtonSquareRootIsExact) {
   EXPECT_EQ(65535, internal::ShadowDistanceSqrt(0xFFFFFFFF));
 }
 
+// Verifies exact antialias coverage throughout each corner square, including
+// large radii and all sixteen fractional outline positions.
+TEST(ShadowLookupTest, CornerCoverageMatchesIndependentSquareRoot) {
+  for (int radius : {1, 2, 3, 4, 8, 12, 16, 24, 28, 64, 127, 128, 255}) {
+    uint8_t r = radius;
+    for (int fraction = 0; fraction < 16; ++fraction) {
+      Decoration decoration(
+          roo_display::Box(10, 20, 12 + 2 * radius, 22 + 2 * radius), 0,
+          OverlaySpec(), nullptr, roo_display::Color(0xFFFFFFFF),
+          BorderStyle::CornerRadii{r, r, r, r}, SmallNumber::Of16ths(fraction),
+          roo_display::Color(0), true);
+      for (int dy = 0; dy <= radius; ++dy) {
+        for (int dx = 0; dx <= radius; ++dx) {
+          int distance = int(std::sqrt(256.0 * (dx * dx + dy * dy)));
+          int expected =
+              std::clamp((radius * 16 + 15 - fraction - distance) * 17, 0, 255);
+          roo_display::Color actual =
+              decoration.readWithContent(10 + radius - dx, 20 + radius - dy,
+                                         roo_display::Color(0xFFFFFFFF));
+          ASSERT_EQ(expected, actual.a())
+              << "radius=" << radius << " fraction=" << fraction << " at " << dx
+              << ',' << dy;
+        }
+      }
+    }
+  }
+}
+
+// Verifies the exterior fast path ignores fill, outline and press masks while
+// preserving both shadow layers, including fractional and asymmetric outlines.
+TEST(ShadowLookupTest, ExteriorContainsOnlyReferenceShadow) {
+  PressOverlay ink(40, 50, 80, roo_display::Color(0x80445566));
+  const roo_display::Color outline(0xFF8899AA);
+  roo_display::Box box(40, 50, 95, 105);
+  for (int level = 0; level <= 5; ++level) {
+    BorderStyle style(4, 12, 18, 8, SmallNumber::Of16ths(36));
+    Decoration decoration(box, level, OverlaySpec(), &ink,
+                          roo_display::Color(0x80405060), style.corner_radii(),
+                          style.outline_width(), outline, true);
+    auto key =
+        internal::MakeLookupShadow(box, style.corner_radii(), level, false);
+    internal::LookupShadowSpec ambient =
+        internal::MakeLookupShadow(box, style.corner_radii(), level, true);
+    for (int y = 10; y <= 145; ++y) {
+      for (int x = 0; x <= 135; ++x) {
+        if (x >= box.xMin() && x <= box.xMax() && y >= box.yMin() &&
+            y <= box.yMax())
+          continue;
+        int k = test::ReferenceLayer(key, false, x, y);
+        int a = test::ReferenceLayer(ambient, true, x, y);
+        uint32_t expected = uint32_t(k + a - (k * a + 127) / 255) << 24;
+        EXPECT_EQ(
+            expected,
+            decoration
+                .readWithContent(x, y, roo_display::Color(0x80405060), &outline)
+                .asArgb());
+      }
+    }
+  }
+}
+
+// Verifies batches, including zero and nonmultiples of four, preserve sample
+// order and write exactly the requested number of colors.
+TEST(ShadowLookupTest, SampleBatchesPreserveRemaindersAndBounds) {
+  Decoration decoration(
+      roo_display::Box(40, 50, 95, 105), 3, OverlaySpec(), nullptr,
+      roo_display::Color(0xFFF8F8F8), BorderStyle::CornerRadii{4, 12, 18, 8},
+      SmallNumber::Of16ths(36), roo_display::Color(0xFF223344));
+  int16_t xs[19];
+  int16_t ys[19];
+  for (int i = 0; i < 19; ++i) {
+    xs[i] = 30 + (i * 17) % 82;
+    ys[i] = 40 + (i * 23) % 82;
+  }
+  const roo_display::Color sentinel(0x12345678);
+  for (int count = 0; count <= 19; ++count) {
+    std::vector<roo_display::Color> colors(count + 2, sentinel);
+    decoration.readColors(xs, ys, count, colors.data() + 1);
+    EXPECT_EQ(sentinel, colors.front());
+    EXPECT_EQ(sentinel, colors.back());
+    for (int i = 0; i < count; ++i) {
+      EXPECT_EQ(decoration.readWithContent(xs[i], ys[i],
+                                           roo_display::Color(0xFFF8F8F8)),
+                colors[i + 1]);
+    }
+  }
+}
+
 using test::ReferenceLayer;
 
 // Verifies tail pruning and integer geometry preserve every reference alpha,

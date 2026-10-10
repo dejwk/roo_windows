@@ -1,0 +1,775 @@
+[
+  {
+    "meta": true,
+    "variant": "double_sides",
+    "cpu_mhz": 240,
+    "flash_hz": 80000000,
+    "psram_bytes": 8388608,
+    "heap_bytes": 300596,
+    "decoration_bytes": 84,
+    "table_address": "0x3c0c151f",
+    "table_internal": 0,
+    "table_drom": 1,
+    "table_bytes": 512,
+    "gradient_bytes": 975,
+    "measurements": 399,
+    "zoom": 100,
+    "display": "800x480 RGB565 16MHz"
+  },
+  {
+    "variant": "double_sides",
+    "metric": "fixed512",
+    "scene": "fab56_l0",
+    "batch": 0,
+    "iterations": 150,
+    "us": 123.94,
+    "pixels": 512
+  },
+  {
+    "variant": "double_sides",
+    "metric": "fixed512",
+    "scene": "fab56_l0",
+    "batch": 1,
+    "iterations": 150,
+    "us": 124.06,
+    "pixels": 512
+  },
+  {
+    "variant": "double_sides",
+    "metric": "fixed512",
+    "scene": "fab56_l0",
+    "batch": 2,
+    "iterations": 150,
+    "us": 124.54,
+    "pixels": 512
+  },
+  {
+    "variant": "double_sides",
+    "metric": "fixed512",
+    "scene": "fab56_l0",
+    "batch": 3,
+    "iterations": 150,
+    "us": 124.1933,
+    "pixels": 512
+  },
+  {
+    "variant": "double_sides",
+    "metric": "fixed512",
+    "scene": "fab56_l0",
+    "batch": 4,
+    "iterations": 150,
+    "us": 123.9867,
+    "pixels": 512
+  },
+  {
+    "variant": "double_sides",
+    "metric": "fixed512",
+    "scene": "fab56_l0",
+    "batch": 5,
+    "iterations": 150,
+    "us": 123.9933,
+    "pixels": 512
+  },
+  {
+    "variant": "double_sides",
+    "metric": "fixed512",
+    "scene": "fab56_l0",
+    "batch": 6,
+    "iterations": 150,
+    "us": 124.0067,
+    "pixels": 512
+  },
+  {
+    "variant": "double_sides",
+    "metric": "native",
+    "scene": "fab56_l0",
+    "batch": 0,
+    "iterations": 12,
+    "us": 2196.8333,
+    "pixels": 3136
+  },
+  {
+    "variant": "double_sides",
+    "metric": "native",
+    "scene": "fab56_l0",
+    "batch": 1,
+    "iterations": 12,
+    "us": 2198.5833,
+    "pixels": 3136
+  },
+  {
+    "variant": "double_sides",
+    "metric": "native",
+    "scene": "fab56_l0",
+    "batch": 2,
+    "iterations": 12,
+    "us": 2202.4167,
+    "pixels": 3136
+  },
+  {
+    "variant": "double_sides",
+    "metric": "native",
+    "scene": "fab56_l0",
+    "batch": 3,
+    "iterations": 12,
+    "us": 2198.25,
+    "pixels": 3136
+  },
+  {
+    "variant": "double_sides",
+    "metric": "native",
+    "scene": "fab56_l0",
+    "batch": 4,
+    "iterations": 12,
+    "us": 2202.5833,
+    "pixels": 3136
+  },
+  {
+    "variant": "double_sides",
+    "metric": "native",
+    "scene": "fab56_l0",
+    "batch": 5,
+    "iterations": 12,
+    "us": 2198.5833,
+    "pixels": 3136
+  },
+  {
+    "variant": "double_sides",
+    "metric": "native",
+    "scene": "fab56_l0",
+    "batch": 6,
+    "iterations": 12,
+    "us": 2202.9167,
+    "pixels": 3136
+  },
+  {
+    "variant": "double_sides",
+    "metric": "tiles8",
+    "scene": "fab56_l0",
+    "batch": 0,
+    "iterations": 12,
+    "us": 761.4167,
+    "pixels": 3136
+  },
+  {
+    "variant": "double_sides",
+    "metric": "tiles8",
+    "scene": "fab56_l0",
+    "batch": 1,
+    "iterations": 12,
+    "us": 755.0833,
+    "pixels": 3136
+  },
+  {
+    "variant": "double_sides",
+    "metric": "tiles8",
+    "scene": "fab56_l0",
+    "batch": 2,
+    "iterations": 12,
+    "us": 763.5,
+    "pixels": 3136
+  },
+  {
+    "variant": "double_sides",
+    "metric": "tiles8",
+    "scene": "fab56_l0",
+    "batch": 3,
+    "iterations": 12,
+    "us": 756.9167,
+    "pixels": 3136
+  },
+  {
+    "variant": "double_sides",
+    "metric": "tiles8",
+    "scene": "fab56_l0",
+    "batch": 4,
+    "iterations": 12,
+    "us": 763.6667,
+    "pixels": 3136
+  },
+  {
+    "variant": "double_sides",
+    "metric": "tiles8",
+    "scene": "fab56_l0",
+    "batch": 5,
+    "iterations": 12,
+    "us": 756.5833,
+    "pixels": 3136
+  },
+  {
+    "variant": "double_sides",
+    "metric": "tiles8",
+    "scene": "fab56_l0",
+    "batch": 6,
+    "iterations": 12,
+    "us": 763.8333,
+    "pixels": 3136
+  },
+  {
+    "variant": "double_sides",
+    "metric": "refresh1",
+    "scene": "fab56_l0",
+    "batch": 0,
+    "iterations": 25,
+    "us": 5316.12,
+    "pixels": 3136
+  },
+  {
+    "variant": "double_sides",
+    "metric": "refresh1",
+    "scene": "fab56_l0",
+    "batch": 1,
+    "iterations": 25,
+    "us": 5332.08,
+    "pixels": 3136
+  },
+  {
+    "variant": "double_sides",
+    "metric": "refresh1",
+    "scene": "fab56_l0",
+    "batch": 2,
+    "iterations": 25,
+    "us": 5341.92,
+    "pixels": 3136
+  },
+  {
+    "variant": "double_sides",
+    "metric": "refresh1",
+    "scene": "fab56_l0",
+    "batch": 3,
+    "iterations": 25,
+    "us": 5308.04,
+    "pixels": 3136
+  },
+  {
+    "variant": "double_sides",
+    "metric": "refresh1",
+    "scene": "fab56_l0",
+    "batch": 4,
+    "iterations": 25,
+    "us": 5313.0,
+    "pixels": 3136
+  },
+  {
+    "variant": "double_sides",
+    "metric": "refresh1",
+    "scene": "fab56_l0",
+    "batch": 5,
+    "iterations": 25,
+    "us": 5339.88,
+    "pixels": 3136
+  },
+  {
+    "variant": "double_sides",
+    "metric": "refresh1",
+    "scene": "fab56_l0",
+    "batch": 6,
+    "iterations": 25,
+    "us": 5325.68,
+    "pixels": 3136
+  },
+  {
+    "variant": "double_sides",
+    "metric": "fixed512",
+    "scene": "fab56_l1",
+    "batch": 0,
+    "iterations": 150,
+    "us": 383.1533,
+    "pixels": 512
+  },
+  {
+    "variant": "double_sides",
+    "metric": "fixed512",
+    "scene": "fab56_l1",
+    "batch": 1,
+    "iterations": 150,
+    "us": 383.0533,
+    "pixels": 512
+  },
+  {
+    "variant": "double_sides",
+    "metric": "fixed512",
+    "scene": "fab56_l1",
+    "batch": 2,
+    "iterations": 150,
+    "us": 382.9467,
+    "pixels": 512
+  },
+  {
+    "variant": "double_sides",
+    "metric": "fixed512",
+    "scene": "fab56_l1",
+    "batch": 3,
+    "iterations": 150,
+    "us": 383.1533,
+    "pixels": 512
+  },
+  {
+    "variant": "double_sides",
+    "metric": "fixed512",
+    "scene": "fab56_l1",
+    "batch": 4,
+    "iterations": 150,
+    "us": 383.1133,
+    "pixels": 512
+  },
+  {
+    "variant": "double_sides",
+    "metric": "fixed512",
+    "scene": "fab56_l1",
+    "batch": 5,
+    "iterations": 150,
+    "us": 382.96,
+    "pixels": 512
+  },
+  {
+    "variant": "double_sides",
+    "metric": "fixed512",
+    "scene": "fab56_l1",
+    "batch": 6,
+    "iterations": 150,
+    "us": 383.5333,
+    "pixels": 512
+  },
+  {
+    "variant": "double_sides",
+    "metric": "native",
+    "scene": "fab56_l1",
+    "batch": 0,
+    "iterations": 12,
+    "us": 3471.5,
+    "pixels": 4096
+  },
+  {
+    "variant": "double_sides",
+    "metric": "native",
+    "scene": "fab56_l1",
+    "batch": 1,
+    "iterations": 12,
+    "us": 3468.0833,
+    "pixels": 4096
+  },
+  {
+    "variant": "double_sides",
+    "metric": "native",
+    "scene": "fab56_l1",
+    "batch": 2,
+    "iterations": 12,
+    "us": 3467.6667,
+    "pixels": 4096
+  },
+  {
+    "variant": "double_sides",
+    "metric": "native",
+    "scene": "fab56_l1",
+    "batch": 3,
+    "iterations": 12,
+    "us": 3476.9167,
+    "pixels": 4096
+  },
+  {
+    "variant": "double_sides",
+    "metric": "native",
+    "scene": "fab56_l1",
+    "batch": 4,
+    "iterations": 12,
+    "us": 3469.25,
+    "pixels": 4096
+  },
+  {
+    "variant": "double_sides",
+    "metric": "native",
+    "scene": "fab56_l1",
+    "batch": 5,
+    "iterations": 12,
+    "us": 3472.3333,
+    "pixels": 4096
+  },
+  {
+    "variant": "double_sides",
+    "metric": "native",
+    "scene": "fab56_l1",
+    "batch": 6,
+    "iterations": 12,
+    "us": 3467.1667,
+    "pixels": 4096
+  },
+  {
+    "variant": "double_sides",
+    "metric": "tiles8",
+    "scene": "fab56_l1",
+    "batch": 0,
+    "iterations": 12,
+    "us": 2046.8333,
+    "pixels": 4096
+  },
+  {
+    "variant": "double_sides",
+    "metric": "tiles8",
+    "scene": "fab56_l1",
+    "batch": 1,
+    "iterations": 12,
+    "us": 2052.0,
+    "pixels": 4096
+  },
+  {
+    "variant": "double_sides",
+    "metric": "tiles8",
+    "scene": "fab56_l1",
+    "batch": 2,
+    "iterations": 12,
+    "us": 2050.3333,
+    "pixels": 4096
+  },
+  {
+    "variant": "double_sides",
+    "metric": "tiles8",
+    "scene": "fab56_l1",
+    "batch": 3,
+    "iterations": 12,
+    "us": 2050.5833,
+    "pixels": 4096
+  },
+  {
+    "variant": "double_sides",
+    "metric": "tiles8",
+    "scene": "fab56_l1",
+    "batch": 4,
+    "iterations": 12,
+    "us": 2052.0833,
+    "pixels": 4096
+  },
+  {
+    "variant": "double_sides",
+    "metric": "tiles8",
+    "scene": "fab56_l1",
+    "batch": 5,
+    "iterations": 12,
+    "us": 2050.75,
+    "pixels": 4096
+  },
+  {
+    "variant": "double_sides",
+    "metric": "tiles8",
+    "scene": "fab56_l1",
+    "batch": 6,
+    "iterations": 12,
+    "us": 2051.25,
+    "pixels": 4096
+  },
+  {
+    "variant": "double_sides",
+    "metric": "refresh1",
+    "scene": "fab56_l1",
+    "batch": 0,
+    "iterations": 25,
+    "us": 10681.64,
+    "pixels": 3136
+  },
+  {
+    "variant": "double_sides",
+    "metric": "refresh1",
+    "scene": "fab56_l1",
+    "batch": 1,
+    "iterations": 25,
+    "us": 10657.44,
+    "pixels": 3136
+  },
+  {
+    "variant": "double_sides",
+    "metric": "refresh1",
+    "scene": "fab56_l1",
+    "batch": 2,
+    "iterations": 25,
+    "us": 10680.04,
+    "pixels": 3136
+  },
+  {
+    "variant": "double_sides",
+    "metric": "refresh1",
+    "scene": "fab56_l1",
+    "batch": 3,
+    "iterations": 25,
+    "us": 10698.52,
+    "pixels": 3136
+  },
+  {
+    "variant": "double_sides",
+    "metric": "refresh1",
+    "scene": "fab56_l1",
+    "batch": 4,
+    "iterations": 25,
+    "us": 10682.12,
+    "pixels": 3136
+  },
+  {
+    "variant": "double_sides",
+    "metric": "refresh1",
+    "scene": "fab56_l1",
+    "batch": 5,
+    "iterations": 25,
+    "us": 10677.28,
+    "pixels": 3136
+  },
+  {
+    "variant": "double_sides",
+    "metric": "refresh1",
+    "scene": "fab56_l1",
+    "batch": 6,
+    "iterations": 25,
+    "us": 10690.6,
+    "pixels": 3136
+  },
+  {
+    "variant": "double_sides",
+    "metric": "fixed512",
+    "scene": "fab56_l3",
+    "batch": 0,
+    "iterations": 150,
+    "us": 482.72,
+    "pixels": 512
+  },
+  {
+    "variant": "double_sides",
+    "metric": "fixed512",
+    "scene": "fab56_l3",
+    "batch": 1,
+    "iterations": 150,
+    "us": 483.04,
+    "pixels": 512
+  },
+  {
+    "variant": "double_sides",
+    "metric": "fixed512",
+    "scene": "fab56_l3",
+    "batch": 2,
+    "iterations": 150,
+    "us": 482.76,
+    "pixels": 512
+  },
+  {
+    "variant": "double_sides",
+    "metric": "fixed512",
+    "scene": "fab56_l3",
+    "batch": 3,
+    "iterations": 150,
+    "us": 483.0667,
+    "pixels": 512
+  },
+  {
+    "variant": "double_sides",
+    "metric": "fixed512",
+    "scene": "fab56_l3",
+    "batch": 4,
+    "iterations": 150,
+    "us": 483.6933,
+    "pixels": 512
+  },
+  {
+    "variant": "double_sides",
+    "metric": "fixed512",
+    "scene": "fab56_l3",
+    "batch": 5,
+    "iterations": 150,
+    "us": 483.3267,
+    "pixels": 512
+  },
+  {
+    "variant": "double_sides",
+    "metric": "fixed512",
+    "scene": "fab56_l3",
+    "batch": 6,
+    "iterations": 150,
+    "us": 482.8,
+    "pixels": 512
+  },
+  {
+    "variant": "double_sides",
+    "metric": "native",
+    "scene": "fab56_l3",
+    "batch": 0,
+    "iterations": 12,
+    "us": 5635.5833,
+    "pixels": 6400
+  },
+  {
+    "variant": "double_sides",
+    "metric": "native",
+    "scene": "fab56_l3",
+    "batch": 1,
+    "iterations": 12,
+    "us": 5647.0833,
+    "pixels": 6400
+  },
+  {
+    "variant": "double_sides",
+    "metric": "native",
+    "scene": "fab56_l3",
+    "batch": 2,
+    "iterations": 12,
+    "us": 5648.1667,
+    "pixels": 6400
+  },
+  {
+    "variant": "double_sides",
+    "metric": "native",
+    "scene": "fab56_l3",
+    "batch": 3,
+    "iterations": 12,
+    "us": 5638.0,
+    "pixels": 6400
+  },
+  {
+    "variant": "double_sides",
+    "metric": "native",
+    "scene": "fab56_l3",
+    "batch": 4,
+    "iterations": 12,
+    "us": 5638.9167,
+    "pixels": 6400
+  },
+  {
+    "variant": "double_sides",
+    "metric": "native",
+    "scene": "fab56_l3",
+    "batch": 5,
+    "iterations": 12,
+    "us": 5652.25,
+    "pixels": 6400
+  },
+  {
+    "variant": "double_sides",
+    "metric": "native",
+    "scene": "fab56_l3",
+    "batch": 6,
+    "iterations": 12,
+    "us": 5639.75,
+    "pixels": 6400
+  },
+  {
+    "variant": "double_sides",
+    "metric": "tiles8",
+    "scene": "fab56_l3",
+    "batch": 0,
+    "iterations": 12,
+    "us": 3788.0833,
+    "pixels": 6400
+  },
+  {
+    "variant": "double_sides",
+    "metric": "tiles8",
+    "scene": "fab56_l3",
+    "batch": 1,
+    "iterations": 12,
+    "us": 3781.3333,
+    "pixels": 6400
+  },
+  {
+    "variant": "double_sides",
+    "metric": "tiles8",
+    "scene": "fab56_l3",
+    "batch": 2,
+    "iterations": 12,
+    "us": 3785.8333,
+    "pixels": 6400
+  },
+  {
+    "variant": "double_sides",
+    "metric": "tiles8",
+    "scene": "fab56_l3",
+    "batch": 3,
+    "iterations": 12,
+    "us": 3784.75,
+    "pixels": 6400
+  },
+  {
+    "variant": "double_sides",
+    "metric": "tiles8",
+    "scene": "fab56_l3",
+    "batch": 4,
+    "iterations": 12,
+    "us": 3781.4167,
+    "pixels": 6400
+  },
+  {
+    "variant": "double_sides",
+    "metric": "tiles8",
+    "scene": "fab56_l3",
+    "batch": 5,
+    "iterations": 12,
+    "us": 3785.6667,
+    "pixels": 6400
+  },
+  {
+    "variant": "double_sides",
+    "metric": "tiles8",
+    "scene": "fab56_l3",
+    "batch": 6,
+    "iterations": 12,
+    "us": 3786.0,
+    "pixels": 6400
+  },
+  {
+    "variant": "double_sides",
+    "metric": "refresh1",
+    "scene": "fab56_l3",
+    "batch": 0,
+    "iterations": 25,
+    "us": 18230.08,
+    "pixels": 3136
+  },
+  {
+    "variant": "double_sides",
+    "metric": "refresh1",
+    "scene": "fab56_l3",
+    "batch": 1,
+    "iterations": 25,
+    "us": 18226.24,
+    "pixels": 3136
+  },
+  {
+    "variant": "double_sides",
+    "metric": "refresh1",
+    "scene": "fab56_l3",
+    "batch": 2,
+    "iterations": 25,
+    "us": 18318.88,
+    "pixels": 3136
+  },
+  {
+    "variant": "double_sides",
+    "metric": "refresh1",
+    "scene": "fab56_l3",
+    "batch": 3,
+    "iterations": 25,
+    "us": 18279.32,
+    "pixels": 3136
+  },
+  {
+    "variant": "double_sides",
+    "metric": "refresh1",
+    "scene": "fab56_l3",
+    "batch": 4,
+    "iterations": 25,
+    "us": 18265.08,
+    "pixels": 3136
+  },
+  {
+    "variant": "double_sides",
+    "metric": "refresh1",
+    "scene": "fab56_l3",
+    "batch": 5,
+    "iterations": 25,
+    "us": 18355.76,
+    "pixels": 3136
+  },
+  {
+    "variant": "double_sides",
+    "metric": "refresh1",
+    "scene": "fab56_l3",
+    "batch": 6,
+    "iterations": 25,
+    "us": 18347.76,
+    "pixels": 3136
+  }
+]

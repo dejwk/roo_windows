@@ -1,0 +1,18 @@
+--- a/src/roo_windows/decoration/shadow_lookup.h
++++ b/src/roo_windows/decoration/shadow_lookup.h
+@@ -45,14 +45,7 @@
+ #if ROO_WINDOWS_SHADOW_FAST_LUT
+ /// Computes exact floor(sqrt(value)) using a bounded integer Newton iteration.
+ inline uint16_t ShadowDistanceSqrt(uint32_t value) {
+-  if (value < 4) return value == 0 ? 0 : 1;
+-  int bits = 32 - __builtin_clz(value);
+-  uint32_t root = 3u << ((bits + 1) / 2 - 2);
+-  root = (root + value / root) / 2;
+-  root = (root + value / root) / 2;
+-  root = (root + value / root) / 2;
+-  // The seed is between 0.75 and 1.5 times the true root. Three steps leave
+-  // less than one integer of error; a square comparison resolves rounding.
++  uint32_t root = uint32_t(__builtin_sqrtf(float(value)));
+   if (root == 65536 || root * root > value) --root;
+   return root;
+ }

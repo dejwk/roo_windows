@@ -1,0 +1,63 @@
+INFO: roo_testing: no frontend selected; defaulting to --config=roo_testing_arduino_esp32.
+INFO: Invocation ID: fadb576c-4ac4-4c29-8425-d4983c2fb40e
+Computing main repo mapping:
+Loading:
+Loading: 0 packages loaded
+Analyzing: 9 targets (0 packages loaded, 0 targets configured)
+Analyzing: 9 targets (0 packages loaded, 0 targets configured)
+
+INFO: Analyzed 9 targets (0 packages loaded, 35 targets configured).
+INFO: From Compiling src/signalhandler.cc:
+external/glog+/src/signalhandler.cc: In function 'void google::{anonymous}::DumpStackFrameInfo(const char*, void*)':
+external/glog+/src/signalhandler.cc:247:112: note: '#pragma message: Symbolize functionality is not available for target platform: stack dump will contain empty frames.'
+  247 |           "Symbolize functionality is not available for target platform: stack dump will contain empty frames.")
+      |                                                                                                                ^
+[337 / 987] Compiling src/roo_windows/decoration/shadow_lookup.cpp; 0s disk-cache, linux-sandbox ... (6 actions, 3 running)
+[721 / 1,082] Compiling src/roo_windows/composites/log/log.cpp; 0s disk-cache, linux-sandbox ... (6 actions, 2 running)
+[929 / 1,089] Compiling src/roo_windows/composites/log/log.cpp; 1s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[947 / 1,096] Compiling src/roo_windows/widgets/toggle_buttons.cpp; 1s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[952 / 1,097] Compiling test/shadow_lookup_test.cpp; 1s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[958 / 1,097] 3 / 9 tests; Compiling src/roo_windows/composites/menu/slider_with_caption.cpp; 1s disk-cache, linux-sandbox ... (6 actions running)
+[968 / 1,097] 8 / 9 tests; Compiling src/roo_windows/composites/menu/title.cpp; 1s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[973 / 1,097] 8 / 9 tests; Compiling src/roo_windows/widgets/icon_with_caption.cpp; 1s disk-cache, linux-sandbox ... (6 actions running)
+[977 / 1,097] 8 / 9 tests; Compiling src/roo_windows/containers/accelerated_scrollable_panel.cpp; 1s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[982 / 1,097] 8 / 9 tests; Compiling src/roo_windows/material3/text_field/text_field.cpp; 1s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[987 / 1,097] 8 / 9 tests; Compiling src/roo_windows/material3/snackbar/snackbar.cpp; 1s disk-cache, linux-sandbox ... (6 actions running)
+[994 / 1,097] 8 / 9 tests; Compiling src/roo_windows/material3/radio_button/radio_button.cpp; 1s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[999 / 1,097] 8 / 9 tests; Compiling src/roo_windows/material3/navigation_bar/navigation_bar.cpp; 1s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[1,002 / 1,097] 8 / 9 tests; Compiling src/roo_windows/containers/holder.cpp; 1s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[1,006 / 1,097] 8 / 9 tests; Compiling src/roo_windows/material3/list/list.cpp; 2s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[1,011 / 1,097] 8 / 9 tests; Compiling src/roo_windows/material3/dialog/dialog_scaffold.cpp; 1s disk-cache, linux-sandbox ... (6 actions running)
+[1,014 / 1,097] 8 / 9 tests; Compiling src/roo_windows/containers/horizontal_page_host.cpp; 1s disk-cache, linux-sandbox ... (6 actions running)
+[1,021 / 1,097] 8 / 9 tests; Compiling src/roo_windows/material3/checkbox/resources/generated/check_36.cpp; 1s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[1,026 / 1,097] 8 / 9 tests; Compiling src/roo_windows/material3/checkbox/checkbox.cpp; 1s disk-cache, linux-sandbox ... (6 actions running)
+[1,033 / 1,097] 8 / 9 tests; Compiling src/roo_windows/material3/button/icon_button.cpp; 1s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[1,040 / 1,097] 8 / 9 tests; Compiling src/roo_windows/material3/app_bar/app_bar.cpp; 1s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[1,043 / 1,097] 8 / 9 tests; Compiling src/roo_windows/keyboard/keyboard.cpp; 1s disk-cache, linux-sandbox ... (6 actions running)
+[1,049 / 1,097] 8 / 9 tests; Compiling src/roo_windows/indicators/impl/battery.cpp; 1s disk-cache, linux-sandbox ... (6 actions running)
+[1,052 / 1,097] 8 / 9 tests; Compiling src/roo_windows/dialogs/dialog.cpp; 1s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[1,058 / 1,097] 8 / 9 tests; Compiling src/roo_windows/core/widget.cpp; 1s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[1,063 / 1,097] 8 / 9 tests; Compiling src/roo_windows/core/text_input.cpp; 1s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[1,067 / 1,097] 8 / 9 tests; Compiling src/roo_windows/core/task.cpp; 1s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[1,071 / 1,097] 8 / 9 tests; Compiling src/roo_windows/core/application.cpp; 1s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[1,076 / 1,097] 8 / 9 tests; Compiling src/roo_windows/core/overlay_spec.cpp; 1s disk-cache, linux-sandbox ... (6 actions running)
+[1,081 / 1,097] 8 / 9 tests; Compiling src/roo_windows/core/main_window.cpp; 2s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[1,086 / 1,097] 8 / 9 tests; Compiling src/roo_windows/core/destination.cpp; 1s disk-cache, linux-sandbox ... (6 actions, 5 running)
+[1,092 / 1,097] 8 / 9 tests; Compiling src/roo_windows/core/canvas.cpp; 1s disk-cache, linux-sandbox
+[1,097 / 1,098] 9 / 9 tests; Testing //:shadow_lookup_test; 1s disk-cache, linux-sandbox
+INFO: Found 9 test targets...
+INFO: Elapsed time: 40.647s, Critical Path: 3.85s
+INFO: 939 processes: 159 action cache hit, 764 disk cache hit, 11 internal, 164 linux-sandbox.
+INFO: Build completed successfully, 939 total actions
+//:shadow_gradient_1_z100_test                                           PASSED in 0.2s
+//:shadow_gradient_1_z150_test                                           PASSED in 0.3s
+//:shadow_gradient_1_z200_test                                           PASSED in 0.6s
+//:shadow_gradient_1_z75_test                                            PASSED in 0.1s
+//:shadow_gradient_2_z100_test                                           PASSED in 0.2s
+//:shadow_gradient_2_z150_test                                           PASSED in 0.3s
+//:shadow_gradient_2_z200_test                                           PASSED in 0.5s
+//:shadow_gradient_2_z75_test                                            PASSED in 0.1s
+//:shadow_lookup_test                                                    PASSED in 1.2s
+
+Executed 9 out of 9 tests: 9 tests pass.
+There were tests whose specified size is too big. Use the --test_verbose_timeout_warnings command line option to see which ones these are.

@@ -1,0 +1,2 @@
+{"meta": true, "variant": "double_sides", "cpu_mhz": 240, "flash_hz": 80000000, "psram_bytes": 8388608, "heap_bytes": 300596, "decoration_bytes": 84, "table_address": "0x3c0b151f", "table_internal": 0, "table_drom": 1, "table_bytes": 512, "gradient_bytes": 975, "measurements": 399, "zoom": 100, "display": "800x480 RGB565 16MHz"}
+BENCHMARK_DONE double_sides: 403 records in 125.2s

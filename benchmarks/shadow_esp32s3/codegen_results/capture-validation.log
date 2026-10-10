@@ -1,0 +1,20 @@
+INFO: roo_testing: no frontend selected; defaulting to --config=roo_testing_arduino_esp32.
+INFO: Invocation ID: 4cd333eb-9f0c-4a2a-8a00-34b57eaefff0
+Computing main repo mapping:
+Loading:
+Loading: 0 packages loaded
+Analyzing: target //:material3_elevation_capture (0 packages loaded, 0 targets configured)
+Analyzing: target //:material3_elevation_capture (0 packages loaded, 0 targets configured)
+
+INFO: Analyzed target //:material3_elevation_capture (0 packages loaded, 1 target configured).
+[5 / 7] Linking material3_elevation_capture; 0s disk-cache, linux-sandbox
+INFO: Found 1 target...
+Target //:material3_elevation_capture up-to-date:
+  bazel-bin/material3_elevation_capture
+INFO: Elapsed time: 1.341s, Critical Path: 1.20s
+INFO: 4 processes: 3 action cache hit, 2 internal, 2 linux-sandbox.
+INFO: Build completed successfully, 4 total actions
+INFO:
+INFO:
+INFO: Running command line: bazel-bin/material3_elevation_capture <args omitted>
+Exported 64 production-rasterizer samples at zoom 100

@@ -1,0 +1,62 @@
+[
+  {
+    "experiment": "baseline",
+    "samples": 2927256,
+    "equal": true,
+    "sha256": "9ef8e62042c43e4754e52feae60b57c7380b48906b6b9d30b627ec9c33374df7"
+  },
+  {
+    "experiment": "aa_bounds",
+    "samples": 2927256,
+    "equal": true,
+    "sha256": "9ef8e62042c43e4754e52feae60b57c7380b48906b6b9d30b627ec9c33374df7"
+  },
+  {
+    "experiment": "sqrt2",
+    "samples": 2927256,
+    "equal": true,
+    "sha256": "9ef8e62042c43e4754e52feae60b57c7380b48906b6b9d30b627ec9c33374df7"
+  },
+  {
+    "experiment": "radial_reject",
+    "samples": 2927256,
+    "equal": true,
+    "sha256": "9ef8e62042c43e4754e52feae60b57c7380b48906b6b9d30b627ec9c33374df7"
+  },
+  {
+    "experiment": "unroll4",
+    "samples": 2927256,
+    "equal": true,
+    "sha256": "9ef8e62042c43e4754e52feae60b57c7380b48906b6b9d30b627ec9c33374df7"
+  },
+  {
+    "experiment": "local_o3",
+    "samples": 2927256,
+    "equal": true,
+    "sha256": "9ef8e62042c43e4754e52feae60b57c7380b48906b6b9d30b627ec9c33374df7"
+  },
+  {
+    "experiment": "exterior_first",
+    "samples": 2927256,
+    "equal": true,
+    "sha256": "9ef8e62042c43e4754e52feae60b57c7380b48906b6b9d30b627ec9c33374df7"
+  },
+  {
+    "experiment": "fp_sqrt",
+    "samples": 2927256,
+    "equal": true,
+    "sha256": "9ef8e62042c43e4754e52feae60b57c7380b48906b6b9d30b627ec9c33374df7"
+  },
+  {
+    "experiment": "exact_combo",
+    "samples": 2927256,
+    "equal": true,
+    "sha256": "9ef8e62042c43e4754e52feae60b57c7380b48906b6b9d30b627ec9c33374df7"
+  },
+  {
+    "experiment": "o3_combo",
+    "samples": 2927256,
+    "equal": true,
+    "sha256": "9ef8e62042c43e4754e52feae60b57c7380b48906b6b9d30b627ec9c33374df7"
+  }
+]

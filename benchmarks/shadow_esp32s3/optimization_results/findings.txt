@@ -1,3 +1,6 @@
+Further generated-code optimization results are in ../codegen_results/findings.txt.
+The measurements below describe the preceding e613ff41 implementation.
+
 ESP32-S3 shadow optimization and flash-gradient measurements
 
 Measured on the USB-attached Makerfabs 5-inch 800x480 RGB565 display, at zoom100

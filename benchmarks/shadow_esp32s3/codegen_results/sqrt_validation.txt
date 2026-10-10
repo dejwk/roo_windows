@@ -1,0 +1,1 @@
+Host exhaustive validation: check_sqrt.cpp.txt (secant seed, two Newton steps) and check_sqrt_fp.cpp.txt each passed all 4294967296 uint32 inputs. The bounded original-seed variant passed all 262144 inputs below 2^18. Compile these standalone artifacts with g++ -O3 -x c++ FILE -o /tmp/check and run the executable. Neither alternative is retained in the library.

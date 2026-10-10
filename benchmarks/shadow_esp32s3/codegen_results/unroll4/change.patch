@@ -1,0 +1,19 @@
+--- a/src/roo_windows/decoration/decoration.cpp
++++ b/src/roo_windows/decoration/decoration.cpp
+@@ -543,6 +543,16 @@
+ 
+ void Decoration::readColors(const int16_t* x, const int16_t* y, uint32_t count,
+                             roo_display::Color* result) const {
++  while (count >= 4) {
++    result[0] = read(x[0], y[0]);
++    result[1] = read(x[1], y[1]);
++    result[2] = read(x[2], y[2]);
++    result[3] = read(x[3], y[3]);
++    x += 4;
++    y += 4;
++    result += 4;
++    count -= 4;
++  }
+   while (count-- > 0) {
+     *result++ = read(*x++, *y++);
+   }

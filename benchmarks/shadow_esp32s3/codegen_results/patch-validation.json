@@ -1,0 +1,28 @@
+{
+  "base_commit": "e613ff41",
+  "all_apply": true,
+  "patches": [
+    "benchmarks/shadow_esp32s3/codegen_results/aa_bounds/change.patch",
+    "benchmarks/shadow_esp32s3/codegen_results/additional_patches/bounded_newton2.patch",
+    "benchmarks/shadow_esp32s3/codegen_results/additional_patches/combined.patch",
+    "benchmarks/shadow_esp32s3/codegen_results/additional_patches/exact_combo.patch",
+    "benchmarks/shadow_esp32s3/codegen_results/additional_patches/fp_sqrt.patch",
+    "benchmarks/shadow_esp32s3/codegen_results/additional_patches/kernels.patch",
+    "benchmarks/shadow_esp32s3/codegen_results/additional_patches/o3_combo.patch",
+    "benchmarks/shadow_esp32s3/codegen_results/cache_liveness/change.patch",
+    "benchmarks/shadow_esp32s3/codegen_results/combined_o3/change.patch",
+    "benchmarks/shadow_esp32s3/codegen_results/combined_unroll/change.patch",
+    "benchmarks/shadow_esp32s3/codegen_results/compact/change.patch",
+    "benchmarks/shadow_esp32s3/codegen_results/compact_core/change.patch",
+    "benchmarks/shadow_esp32s3/codegen_results/compact_sides/change.patch",
+    "benchmarks/shadow_esp32s3/codegen_results/exterior_first/change.patch",
+    "benchmarks/shadow_esp32s3/codegen_results/inline_read/change.patch",
+    "benchmarks/shadow_esp32s3/codegen_results/kernels/change.patch",
+    "benchmarks/shadow_esp32s3/codegen_results/local_o3/change.patch",
+    "benchmarks/shadow_esp32s3/codegen_results/o3_core/change.patch",
+    "benchmarks/shadow_esp32s3/codegen_results/radial_reject/change.patch",
+    "benchmarks/shadow_esp32s3/codegen_results/retained-change.patch",
+    "benchmarks/shadow_esp32s3/codegen_results/sqrt2/change.patch",
+    "benchmarks/shadow_esp32s3/codegen_results/unroll4/change.patch"
+  ]
+}

@@ -1,0 +1,11 @@
+--- a/src/roo_windows/decoration/decoration.cpp
++++ b/src/roo_windows/decoration/decoration.cpp
+@@ -548,7 +548,7 @@
+   }
+ }
+ 
+-roo_display::Color Decoration::read(int16_t x, int16_t y) const {
++__attribute__((always_inline)) inline roo_display::Color Decoration::read(int16_t x, int16_t y) const {
+   return readWithContent(x, y, bgcolor_);
+ }
+ 

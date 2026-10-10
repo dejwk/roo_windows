@@ -1,0 +1,498 @@
+In file included from external/roo_testing+/roo_testing/frameworks/esp-idf/components/freertos/FreeRTOS-Kernel/portable/linux/include/freertos/portmacro_idf.h:21,
+                 from external/roo_testing+/roo_testing/frameworks/esp-idf/components/freertos/FreeRTOS-Kernel/portable/linux/include/freertos/portmacro.h:158,
+                 from external/roo_testing+/roo_testing/frameworks/esp-idf/components/freertos/FreeRTOS-Kernel/include/freertos/portable.h:57,
+                 from external/roo_testing+/roo_testing/frameworks/esp-idf/components/freertos/FreeRTOS-Kernel/include/freertos/FreeRTOS.h:69,
+                 from external/roo_testing+/roo_testing/frameworks/arduino-esp32/cores/esp32/Arduino.h:33,
+                 from external/roo_logging+/src/roo_logging.h:126,
+                 from external/roo_io+/src/roo_io/status.h:3,
+                 from external/roo_io+/src/roo_io/fs/directory.h:5,
+                 from external/roo_io+/src/roo_io/fs/filesystem.h:5,
+                 from external/roo_io+/src/roo_io.h:7,
+                 from external/roo_display+/src/roo_display/color/color.h:7,
+                 from external/roo_display+/src/roo_display/core/rasterizable.h:3,
+                 from src/roo_windows/decoration/decoration.h:3,
+                 from /tmp/roo-shadow-review/codegen/static_sources/src/roo_windows/decoration/decoration.cpp:1:
+external/roo_testing+/roo_testing/frameworks/esp-idf/components/freertos/FreeRTOS-Kernel/portable/linux/include/freertos/../spinlock.h: In function ‘void spinlock_initialize(spinlock_t*)’:
+external/roo_testing+/roo_testing/frameworks/esp-idf/components/freertos/FreeRTOS-Kernel/portable/linux/include/freertos/../spinlock.h:44:83: warning: unused parameter ‘lock’ [-Wunused-parameter]
+   44 | static inline void __attribute__((always_inline)) spinlock_initialize(spinlock_t *lock)
+      |                                                                       ~~~~~~~~~~~~^~~~
+external/roo_testing+/roo_testing/frameworks/esp-idf/components/freertos/FreeRTOS-Kernel/portable/linux/include/freertos/../spinlock.h: In function ‘bool spinlock_acquire(spinlock_t*, int32_t)’:
+external/roo_testing+/roo_testing/frameworks/esp-idf/components/freertos/FreeRTOS-Kernel/portable/linux/include/freertos/../spinlock.h:48:80: warning: unused parameter ‘lock’ [-Wunused-parameter]
+   48 | static inline bool __attribute__((always_inline)) spinlock_acquire(spinlock_t *lock, int32_t timeout)
+      |                                                                    ~~~~~~~~~~~~^~~~
+external/roo_testing+/roo_testing/frameworks/esp-idf/components/freertos/FreeRTOS-Kernel/portable/linux/include/freertos/../spinlock.h:48:94: warning: unused parameter ‘timeout’ [-Wunused-parameter]
+   48 | static inline bool __attribute__((always_inline)) spinlock_acquire(spinlock_t *lock, int32_t timeout)
+      |                                                                                      ~~~~~~~~^~~~~~~
+external/roo_testing+/roo_testing/frameworks/esp-idf/components/freertos/FreeRTOS-Kernel/portable/linux/include/freertos/../spinlock.h: In function ‘void spinlock_release(spinlock_t*)’:
+external/roo_testing+/roo_testing/frameworks/esp-idf/components/freertos/FreeRTOS-Kernel/portable/linux/include/freertos/../spinlock.h:53:80: warning: unused parameter ‘lock’ [-Wunused-parameter]
+   53 | static inline void __attribute__((always_inline)) spinlock_release(spinlock_t *lock)
+      |                                                                    ~~~~~~~~~~~~^~~~
+In file included from external/roo_time+/src/roo_time.h:7,
+                 from external/roo_logging+/src/roo_logging/config.h:4,
+                 from external/roo_logging+/src/roo_logging/base.h:38,
+                 from external/roo_logging+/src/roo_logging.h:133:
+external/roo_time+/src/roo_time/wall_time.h: In member function ‘tm roo_time::DateTime::tmStruct() const’:
+external/roo_time+/src/roo_time/wall_time.h:311:29: warning: missing initializer for member ‘tm::tm_gmtoff’ [-Wmissing-field-initializers]
+  311 |               .tm_isdst = -1};
+      |                             ^
+external/roo_time+/src/roo_time/wall_time.h:311:29: warning: missing initializer for member ‘tm::tm_zone’ [-Wmissing-field-initializers]
+In file included from external/roo_display+/src/roo_display/core/device.h:5,
+                 from external/roo_display+/src/roo_display/core/buffered_drawing.h:16,
+                 from external/roo_display+/src/roo_display/core/rasterizable.h:5:
+external/roo_display+/src/roo_display/color/blending.h: In member function ‘roo_display::Color roo_display::BlendOp<roo_display::BlendingMode::kSource>::blend(roo_display::Color, roo_display::Color) const’:
+external/roo_display+/src/roo_display/color/blending.h:204:28: warning: unused parameter ‘dst’ [-Wunused-parameter]
+  204 |   inline Color blend(Color dst, Color src) const { return src; }
+      |                      ~~~~~~^~~
+external/roo_display+/src/roo_display/color/blending.h: In member function ‘roo_display::Color roo_display::BlendOp<roo_display::BlendingMode::kSource>::blendTransparentSrc(roo_display::Color, roo_display::Color) const’:
+external/roo_display+/src/roo_display/color/blending.h:206:42: warning: unused parameter ‘dst’ [-Wunused-parameter]
+  206 |   inline Color blendTransparentSrc(Color dst, Color src) const { return src; }
+      |                                    ~~~~~~^~~
+external/roo_display+/src/roo_display/color/blending.h: In member function ‘roo_display::Color roo_display::BlendOp<roo_display::BlendingMode::kSource>::blendTransparentDst(roo_display::Color, roo_display::Color) const’:
+external/roo_display+/src/roo_display/color/blending.h:208:42: warning: unused parameter ‘dst’ [-Wunused-parameter]
+  208 |   inline Color blendTransparentDst(Color dst, Color src) const { return src; }
+      |                                    ~~~~~~^~~
+external/roo_display+/src/roo_display/color/blending.h: In member function ‘roo_display::Color roo_display::BlendOp<roo_display::BlendingMode::kSourceOverOpaque>::blendTransparentSrc(roo_display::Color, roo_display::Color) const’:
+external/roo_display+/src/roo_display/color/blending.h:239:53: warning: unused parameter ‘src’ [-Wunused-parameter]
+  239 |   inline Color blendTransparentSrc(Color dst, Color src) const { return dst; }
+      |                                               ~~~~~~^~~
+external/roo_display+/src/roo_display/color/blending.h: In member function ‘roo_display::Color roo_display::BlendOp<roo_display::BlendingMode::kSourceOver>::blendTransparentSrc(roo_display::Color, roo_display::Color) const’:
+external/roo_display+/src/roo_display/color/blending.h:328:53: warning: unused parameter ‘src’ [-Wunused-parameter]
+  328 |   inline Color blendTransparentSrc(Color dst, Color src) const { return dst; }
+      |                                               ~~~~~~^~~
+external/roo_display+/src/roo_display/color/blending.h: In member function ‘roo_display::Color roo_display::BlendOp<roo_display::BlendingMode::kSourceOver>::blendTransparentDst(roo_display::Color, roo_display::Color) const’:
+external/roo_display+/src/roo_display/color/blending.h:330:42: warning: unused parameter ‘dst’ [-Wunused-parameter]
+  330 |   inline Color blendTransparentDst(Color dst, Color src) const { return src; }
+      |                                    ~~~~~~^~~
+external/roo_display+/src/roo_display/color/blending.h: In member function ‘roo_display::Color roo_display::BlendOp<roo_display::BlendingMode::kSourceAtop>::blendTransparentSrc(roo_display::Color, roo_display::Color) const’:
+external/roo_display+/src/roo_display/color/blending.h:371:53: warning: unused parameter ‘src’ [-Wunused-parameter]
+  371 |   inline Color blendTransparentSrc(Color dst, Color src) const { return dst; }
+      |                                               ~~~~~~^~~
+external/roo_display+/src/roo_display/color/blending.h: In member function ‘roo_display::Color roo_display::BlendOp<roo_display::BlendingMode::kSourceAtop>::blendTransparentDst(roo_display::Color, roo_display::Color) const’:
+external/roo_display+/src/roo_display/color/blending.h:373:53: warning: unused parameter ‘src’ [-Wunused-parameter]
+  373 |   inline Color blendTransparentDst(Color dst, Color src) const { return dst; }
+      |                                               ~~~~~~^~~
+external/roo_display+/src/roo_display/color/blending.h: In member function ‘roo_display::Color roo_display::BlendOp<roo_display::BlendingMode::kDestination>::blend(roo_display::Color, roo_display::Color) const’:
+external/roo_display+/src/roo_display/color/blending.h:378:39: warning: unused parameter ‘src’ [-Wunused-parameter]
+  378 |   inline Color blend(Color dst, Color src) const { return dst; }
+      |                                 ~~~~~~^~~
+external/roo_display+/src/roo_display/color/blending.h: In member function ‘roo_display::Color roo_display::BlendOp<roo_display::BlendingMode::kDestination>::blendTransparentSrc(roo_display::Color, roo_display::Color) const’:
+external/roo_display+/src/roo_display/color/blending.h:380:53: warning: unused parameter ‘src’ [-Wunused-parameter]
+  380 |   inline Color blendTransparentSrc(Color dst, Color src) const { return dst; }
+      |                                               ~~~~~~^~~
+external/roo_display+/src/roo_display/color/blending.h: In member function ‘roo_display::Color roo_display::BlendOp<roo_display::BlendingMode::kDestination>::blendTransparentDst(roo_display::Color, roo_display::Color) const’:
+external/roo_display+/src/roo_display/color/blending.h:382:53: warning: unused parameter ‘src’ [-Wunused-parameter]
+  382 |   inline Color blendTransparentDst(Color dst, Color src) const { return dst; }
+      |                                               ~~~~~~^~~
+external/roo_display+/src/roo_display/color/blending.h: In member function ‘roo_display::Color roo_display::BlendOp<roo_display::BlendingMode::kDestinationOverOpaque>::blendTransparentDst(roo_display::Color, roo_display::Color) const’:
+external/roo_display+/src/roo_display/color/blending.h:404:42: warning: unused parameter ‘dst’ [-Wunused-parameter]
+  404 |   inline Color blendTransparentDst(Color dst, Color src) const { return src; }
+      |                                    ~~~~~~^~~
+external/roo_display+/src/roo_display/color/blending.h: In member function ‘roo_display::Color roo_display::BlendOp<roo_display::BlendingMode::kDestinationOver>::blendTransparentDst(roo_display::Color, roo_display::Color) const’:
+external/roo_display+/src/roo_display/color/blending.h:418:42: warning: unused parameter ‘dst’ [-Wunused-parameter]
+  418 |   inline Color blendTransparentDst(Color dst, Color src) const { return src; }
+      |                                    ~~~~~~^~~
+external/roo_display+/src/roo_display/color/blending.h: In member function ‘roo_display::Color roo_display::BlendOp<roo_display::BlendingMode::kSourceIn>::blendTransparentDst(roo_display::Color, roo_display::Color) const’:
+external/roo_display+/src/roo_display/color/blending.h:466:42: warning: unused parameter ‘dst’ [-Wunused-parameter]
+  466 |   inline Color blendTransparentDst(Color dst, Color src) const {
+      |                                    ~~~~~~^~~
+external/roo_display+/src/roo_display/color/blending.h: In member function ‘roo_display::Color roo_display::BlendOp<roo_display::BlendingMode::kDestinationIn>::blendTransparentSrc(roo_display::Color, roo_display::Color) const’:
+external/roo_display+/src/roo_display/color/blending.h:477:53: warning: unused parameter ‘src’ [-Wunused-parameter]
+  477 |   inline Color blendTransparentSrc(Color dst, Color src) const {
+      |                                               ~~~~~~^~~
+external/roo_display+/src/roo_display/color/blending.h: In member function ‘roo_display::Color roo_display::BlendOp<roo_display::BlendingMode::kDestinationAtop>::blendTransparentSrc(roo_display::Color, roo_display::Color) const’:
+external/roo_display+/src/roo_display/color/blending.h:493:42: warning: unused parameter ‘dst’ [-Wunused-parameter]
+  493 |   inline Color blendTransparentSrc(Color dst, Color src) const { return src; }
+      |                                    ~~~~~~^~~
+external/roo_display+/src/roo_display/color/blending.h: In member function ‘roo_display::Color roo_display::BlendOp<roo_display::BlendingMode::kDestinationAtop>::blendTransparentDst(roo_display::Color, roo_display::Color) const’:
+external/roo_display+/src/roo_display/color/blending.h:495:42: warning: unused parameter ‘dst’ [-Wunused-parameter]
+  495 |   inline Color blendTransparentDst(Color dst, Color src) const { return src; }
+      |                                    ~~~~~~^~~
+external/roo_display+/src/roo_display/color/blending.h: In member function ‘roo_display::Color roo_display::BlendOp<roo_display::BlendingMode::kSourceOut>::blendTransparentDst(roo_display::Color, roo_display::Color) const’:
+external/roo_display+/src/roo_display/color/blending.h:523:42: warning: unused parameter ‘dst’ [-Wunused-parameter]
+  523 |   inline Color blendTransparentDst(Color dst, Color src) const { return src; }
+      |                                    ~~~~~~^~~
+external/roo_display+/src/roo_display/color/blending.h: In member function ‘roo_display::Color roo_display::BlendOp<roo_display::BlendingMode::kDestinationOut>::blendTransparentSrc(roo_display::Color, roo_display::Color) const’:
+external/roo_display+/src/roo_display/color/blending.h:532:53: warning: unused parameter ‘src’ [-Wunused-parameter]
+  532 |   inline Color blendTransparentSrc(Color dst, Color src) const { return dst; }
+      |                                               ~~~~~~^~~
+external/roo_display+/src/roo_display/color/blending.h: In member function ‘roo_display::Color roo_display::BlendOp<roo_display::BlendingMode::kXor>::blendTransparentSrc(roo_display::Color, roo_display::Color) const’:
+external/roo_display+/src/roo_display/color/blending.h:570:53: warning: unused parameter ‘src’ [-Wunused-parameter]
+  570 |   inline Color blendTransparentSrc(Color dst, Color src) const { return dst; }
+      |                                               ~~~~~~^~~
+external/roo_display+/src/roo_display/core/device.h: In member function ‘virtual void roo_display::DisplayDevice::setBgColorHint(roo_display::Color)’:
+external/roo_display+/src/roo_display/core/device.h:303:37: warning: unused parameter ‘bgcolor’ [-Wunused-parameter]
+  303 |   virtual void setBgColorHint(Color bgcolor) {}
+      |                               ~~~~~~^~~~~~~
+In file included from external/roo_display+/src/roo_display/core/buffered_drawing.h:17:
+external/roo_display+/src/roo_display/core/drawable.h: In member function ‘virtual void roo_display::Drawable::drawInteriorTo(const roo_display::Surface&) const’:
+external/roo_display+/src/roo_display/core/drawable.h:275:46: warning: unused parameter ‘s’ [-Wunused-parameter]
+  275 |   virtual void drawInteriorTo(const Surface &s) const {}
+      |                               ~~~~~~~~~~~~~~~^
+external/roo_display+/src/roo_display/core/rasterizable.h: In member function ‘virtual bool roo_display::Rasterizable::readUniformColorRect(int16_t, int16_t, int16_t, int16_t, roo_display::Color*) const’:
+external/roo_display+/src/roo_display/core/rasterizable.h:54:45: warning: unused parameter ‘xMin’ [-Wunused-parameter]
+   54 |   virtual bool readUniformColorRect(int16_t xMin, int16_t yMin, int16_t xMax,
+      |                                     ~~~~~~~~^~~~
+external/roo_display+/src/roo_display/core/rasterizable.h:54:59: warning: unused parameter ‘yMin’ [-Wunused-parameter]
+   54 |   virtual bool readUniformColorRect(int16_t xMin, int16_t yMin, int16_t xMax,
+      |                                                   ~~~~~~~~^~~~
+external/roo_display+/src/roo_display/core/rasterizable.h:54:73: warning: unused parameter ‘xMax’ [-Wunused-parameter]
+   54 |   virtual bool readUniformColorRect(int16_t xMin, int16_t yMin, int16_t xMax,
+      |                                                                 ~~~~~~~~^~~~
+external/roo_display+/src/roo_display/core/rasterizable.h:55:45: warning: unused parameter ‘yMax’ [-Wunused-parameter]
+   55 |                                     int16_t yMax, Color* result) const {
+      |                                     ~~~~~~~~^~~~
+external/roo_display+/src/roo_display/core/rasterizable.h:55:58: warning: unused parameter ‘result’ [-Wunused-parameter]
+   55 |                                     int16_t yMax, Color* result) const {
+      |                                                   ~~~~~~~^~~~~~
+In file included from external/roo_display+/src/roo_display/image/image.h:5,
+                 from src/roo_windows/decoration/decoration.h:4:
+external/roo_display+/src/roo_display/color/color_modes.h: In member function ‘roo_display::Color roo_display::RawColorInterpolator<roo_display::Grayscale4>::operator()(uint8_t, uint8_t, uint16_t, const roo_display::Grayscale4&) const’:
+external/roo_display+/src/roo_display/color/color_modes.h:400:45: warning: unused parameter ‘mode’ [-Wunused-parameter]
+  400 |                           const Grayscale4& mode) const {
+      |                           ~~~~~~~~~~~~~~~~~~^~~~
+external/roo_display+/src/roo_display/color/color_modes.h: In member function ‘uint8_t roo_display::RawSubByteBlender<roo_display::Alpha4, roo_display::BlendingMode::kSourceOver>::operator()(uint8_t, roo_display::Color, const roo_display::Alpha4&) const’:
+external/roo_display+/src/roo_display/color/color_modes.h:486:68: warning: unused parameter ‘mode’ [-Wunused-parameter]
+  486 |   inline uint8_t operator()(uint8_t bg, Color color, const Alpha4& mode) const {
+      |                                                      ~~~~~~~~~~~~~~^~~~
+external/roo_display+/src/roo_display/color/color_modes.h: In member function ‘uint8_t roo_display::RawSubByteBlender<roo_display::Monochrome, roo_display::BlendingMode::kSourceOver>::operator()(uint8_t, roo_display::Color, const roo_display::Monochrome&) const’:
+external/roo_display+/src/roo_display/color/color_modes.h:551:47: warning: unused parameter ‘color’ [-Wunused-parameter]
+  551 |   inline uint8_t operator()(uint8_t bg, Color color,
+      |                                         ~~~~~~^~~~~
+In file included from external/roo_display+/src/roo_display/image/image.h:10:
+external/roo_display+/src/roo_display/internal/raw_streamable.h: In member function ‘void roo_display::RawStreamableFilledRect::RawStream::skip(uint32_t)’:
+external/roo_display+/src/roo_display/internal/raw_streamable.h:246:24: warning: unused parameter ‘count’ [-Wunused-parameter]
+  246 |     void skip(uint32_t count) {}
+      |               ~~~~~~~~~^~~~~
+external/roo_display+/src/roo_display/internal/raw_streamable.h: In member function ‘std::unique_ptr<roo_display::RawStreamableFilledRect::RawStream> roo_display::RawStreamableFilledRect::CreateClippedRawStream(const roo_display::Box&) const’:
+external/roo_display+/src/roo_display/internal/raw_streamable.h:269:64: warning: unused parameter ‘clip_box’ [-Wunused-parameter]
+  269 |   std::unique_ptr<RawStream> CreateClippedRawStream(const Box &clip_box) const {
+      |                                                     ~~~~~~~~~~~^~~~~~~~
+In file included from src/roo_windows/core/border_style.h:5,
+                 from src/roo_windows/decoration/decoration.h:5:
+src/roo_windows/core/number.h: In constructor ‘roo_windows::SmallNumber::SmallNumber(uint16_t, bool)’:
+src/roo_windows/core/number.h:71:34: warning: unused parameter ‘dummy’ [-Wunused-parameter]
+   71 |   SmallNumber(uint16_t val, bool dummy) : val_(val) {}
+      |                             ~~~~~^~~~~
+In file included from external/roo_display+/src/roo_display/filter/background_fill_optimizer.h:7,
+                 from external/roo_display+/src/roo_display.h:12,
+                 from src/roo_windows/core/theme.h:3,
+                 from src/roo_windows/core/overlay_spec.h:7,
+                 from src/roo_windows/decoration/decoration.h:7:
+external/roo_display+/src/roo_display/internal/nibble_rect.h: In constructor ‘roo_display::internal::NibbleRectWindowIterator::NibbleRectWindowIterator(const roo_display::internal::NibbleRect*, int16_t, int16_t, int16_t, int16_t)’:
+external/roo_display+/src/roo_display/internal/nibble_rect.h:66:48: warning: unused parameter ‘y1’ [-Wunused-parameter]
+   66 |                            int16_t x1, int16_t y1)
+      |                                        ~~~~~~~~^~
+In file included from external/roo_display+/src/roo_display/filter/front_to_back_writer.h:6,
+                 from external/roo_display+/src/roo_display.h:14:
+external/roo_display+/src/roo_display/core/offscreen.h: At global scope:
+external/roo_display+/src/roo_display/core/offscreen.h:73:3: warning: type qualifiers ignored on function return type [-Wignored-qualifiers]
+   73 |   const uint32_t offset() const { return offset_; }
+      |   ^~~~~
+external/roo_display+/src/roo_display.h:284:3: warning: type qualifiers ignored on function return type [-Wignored-qualifiers]
+  284 |   const uint16_t width() const { return bounds_.width(); }
+      |   ^~~~~
+external/roo_display+/src/roo_display.h:288:3: warning: type qualifiers ignored on function return type [-Wignored-qualifiers]
+  288 |   const uint16_t height() const { return bounds_.height(); }
+      |   ^~~~~
+/tmp/roo-shadow-review/codegen/static_sources/src/roo_windows/decoration/decoration.cpp: In function ‘constexpr uint8_t roo_windows::{anonymous}::CalculateAmbientShift(int)’:
+/tmp/roo-shadow-review/codegen/static_sources/src/roo_windows/decoration/decoration.cpp:72:45: warning: unused parameter ‘elevation’ [-Wunused-parameter]
+   72 | constexpr uint8_t CalculateAmbientShift(int elevation) {
+      |                                         ~~~~^~~~~~~~~
+external/roo_display+/src/roo_display/color/blending.h: In instantiation of ‘uint8_t roo_display::RawSubByteBlender<ColorMode, roo_display::BlendingMode::kSource>::operator()(uint8_t, roo_display::Color, ColorMode&) const [with ColorMode = roo_display::Monochrome; uint8_t = unsigned char]’:
+external/roo_display+/src/roo_display/color/blending.h:841:57:   required from ‘roo_display::ColorStorageType<ColorMode> roo_display::internal::ApplyRawSubByteBlendingResolver<ColorMode>::operator()(roo_display::ColorStorageType<ColorMode>, roo_display::Color, ColorMode&) const [with roo_display::BlendingMode blending_mode = roo_display::BlendingMode::kSource; ColorMode = roo_display::Monochrome; roo_display::ColorStorageType<ColorMode> = unsigned char]’
+  841 |     return RawSubByteBlender<ColorMode, blending_mode>()(dst, src, color_mode);
+      |            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~
+external/roo_display+/src/roo_display/color/blending.h:146:62:   required from ‘decltype (declval<Functor>().operator()<roo_display::BlendingMode::kSourceOver>(roo_display::internal::BlenderSpecialization::args ...)) roo_display::internal::BlenderSpecialization(roo_display::BlendingMode, Args&& ...) [with Functor = ApplyRawSubByteBlendingResolver<roo_display::Monochrome>; Args = {unsigned char&, roo_display::Color&, roo_display::Monochrome&}; decltype (declval<Functor>().operator()<roo_display::BlendingMode::kSourceOver>(roo_display::internal::BlenderSpecialization::args ...)) = unsigned char]’
+  146 |     return functor.template operator()<BlendingMode::kSource>(
+      |            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+  147 |         std::forward<Args>(args)...);
+      |         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+external/roo_display+/src/roo_display/color/blending.h:882:60:   required from ‘roo_display::ColorStorageType<ColorMode> roo_display::ApplyRawSubByteBlending(BlendingMode, uint8_t, Color, ColorMode&) [with ColorMode = Monochrome; ColorStorageType<ColorMode> = unsigned char; uint8_t = unsigned char]’
+  881 |   return internal::BlenderSpecialization<
+      |          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  882 |       internal::ApplyRawSubByteBlendingResolver<ColorMode>>(blending_mode, dst,
+      |       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~
+  883 |                                                             src, color_mode);
+      |                                                             ~~~~~~~~~~~~~~~~
+external/roo_display+/src/roo_display/core/offscreen.h:1385:41:   required from ‘void roo_display::internal::GenericFiller<ColorMode, pixel_order, byte_order, pixels_per_byte, storage_type>::operator()(roo::byte*, uint32_t) [with ColorMode = roo_display::Monochrome; roo_display::ColorPixelOrder pixel_order = roo_display::ColorPixelOrder::kMsbFirst; roo_io::ByteOrder byte_order = roo_io::kBigEndian; unsigned char pixels_per_byte = 8; storage_type = unsigned char; roo::byte = std::byte; uint32_t = unsigned int]’
+ 1385 |     auto color = ApplyRawSubByteBlending(
+      |                  ~~~~~~~~~~~~~~~~~~~~~~~^
+ 1386 |         blending_mode_, io.loadRaw(*target, pixel_index), color_, color_mode_);
+      |         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+external/roo_display+/src/roo_display/core/offscreen.h:1830:11:   required from ‘void roo_display::OffscreenDevice<ColorMode, pixel_order, byte_order, pixels_per_byte, storage_type>::fillPixels(roo_display::BlendingMode, roo_display::Color, int16_t*, int16_t*, uint16_t) [with ColorMode = roo_display::Monochrome; roo_display::ColorPixelOrder pixel_order = roo_display::ColorPixelOrder::kMsbFirst; roo_io::ByteOrder byte_order = roo_io::kBigEndian; signed char pixels_per_byte = 8; storage_type = unsigned char; int16_t = short int; uint16_t = short unsigned int]’
+ 1830 |       fill(buffer, *x++ + *y++ * w);
+      |       ~~~~^~~~~~~~~~~~~~~~~~~~~~~~~
+external/roo_display+/src/roo_display/filter/front_to_back_writer.h:122:35:   required from here
+  122 |     offscreen_.output().fillPixels(mode, color::Black, &x, &y, 1);
+      |     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+external/roo_display+/src/roo_display/color/blending.h:798:30: warning: unused parameter ‘dst’ [-Wunused-parameter]
+  798 |   uint8_t operator()(uint8_t dst, Color src, ColorMode& color_mode) const {
+      |                      ~~~~~~~~^~~
+external/roo_display+/src/roo_display/color/blending.h: In instantiation of ‘uint8_t roo_display::RawSubByteBlender<ColorMode, roo_display::BlendingMode::kDestination>::operator()(uint8_t, roo_display::Color, const ColorMode&) const [with ColorMode = roo_display::Monochrome; uint8_t = unsigned char]’:
+external/roo_display+/src/roo_display/color/blending.h:841:57:   required from ‘roo_display::ColorStorageType<ColorMode> roo_display::internal::ApplyRawSubByteBlendingResolver<ColorMode>::operator()(roo_display::ColorStorageType<ColorMode>, roo_display::Color, ColorMode&) const [with roo_display::BlendingMode blending_mode = roo_display::BlendingMode::kDestination; ColorMode = roo_display::Monochrome; roo_display::ColorStorageType<ColorMode> = unsigned char]’
+  841 |     return RawSubByteBlender<ColorMode, blending_mode>()(dst, src, color_mode);
+      |            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~
+external/roo_display+/src/roo_display/color/blending.h:163:71:   required from ‘decltype (declval<Functor>().operator()<roo_display::BlendingMode::kSourceOver>(roo_display::internal::BlenderSpecialization::args ...)) roo_display::internal::BlenderSpecialization(roo_display::BlendingMode, Args&& ...) [with Functor = ApplyRawSubByteBlendingResolver<roo_display::Monochrome>; Args = {unsigned char&, roo_display::Color&, roo_display::Monochrome&}; decltype (declval<Functor>().operator()<roo_display::BlendingMode::kSourceOver>(roo_display::internal::BlenderSpecialization::args ...)) = unsigned char]’
+  163 |         return functor.template operator()<BlendingMode::kDestination>(
+      |                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+  164 |             std::forward<Args>(args)...);
+      |             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+external/roo_display+/src/roo_display/color/blending.h:882:60:   required from ‘roo_display::ColorStorageType<ColorMode> roo_display::ApplyRawSubByteBlending(BlendingMode, uint8_t, Color, ColorMode&) [with ColorMode = Monochrome; ColorStorageType<ColorMode> = unsigned char; uint8_t = unsigned char]’
+  881 |   return internal::BlenderSpecialization<
+      |          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  882 |       internal::ApplyRawSubByteBlendingResolver<ColorMode>>(blending_mode, dst,
+      |       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~
+  883 |                                                             src, color_mode);
+      |                                                             ~~~~~~~~~~~~~~~~
+external/roo_display+/src/roo_display/core/offscreen.h:1385:41:   required from ‘void roo_display::internal::GenericFiller<ColorMode, pixel_order, byte_order, pixels_per_byte, storage_type>::operator()(roo::byte*, uint32_t) [with ColorMode = roo_display::Monochrome; roo_display::ColorPixelOrder pixel_order = roo_display::ColorPixelOrder::kMsbFirst; roo_io::ByteOrder byte_order = roo_io::kBigEndian; unsigned char pixels_per_byte = 8; storage_type = unsigned char; roo::byte = std::byte; uint32_t = unsigned int]’
+ 1385 |     auto color = ApplyRawSubByteBlending(
+      |                  ~~~~~~~~~~~~~~~~~~~~~~~^
+ 1386 |         blending_mode_, io.loadRaw(*target, pixel_index), color_, color_mode_);
+      |         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+external/roo_display+/src/roo_display/core/offscreen.h:1830:11:   required from ‘void roo_display::OffscreenDevice<ColorMode, pixel_order, byte_order, pixels_per_byte, storage_type>::fillPixels(roo_display::BlendingMode, roo_display::Color, int16_t*, int16_t*, uint16_t) [with ColorMode = roo_display::Monochrome; roo_display::ColorPixelOrder pixel_order = roo_display::ColorPixelOrder::kMsbFirst; roo_io::ByteOrder byte_order = roo_io::kBigEndian; signed char pixels_per_byte = 8; storage_type = unsigned char; int16_t = short int; uint16_t = short unsigned int]’
+ 1830 |       fill(buffer, *x++ + *y++ * w);
+      |       ~~~~^~~~~~~~~~~~~~~~~~~~~~~~~
+external/roo_display+/src/roo_display/filter/front_to_back_writer.h:122:35:   required from here
+  122 |     offscreen_.output().fillPixels(mode, color::Black, &x, &y, 1);
+      |     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+external/roo_display+/src/roo_display/color/blending.h:805:41: warning: unused parameter ‘src’ [-Wunused-parameter]
+  805 |   uint8_t operator()(uint8_t dst, Color src,
+      |                                   ~~~~~~^~~
+external/roo_display+/src/roo_display/color/blending.h:806:39: warning: unused parameter ‘color_mode’ [-Wunused-parameter]
+  806 |                      const ColorMode& color_mode) const {
+      |                      ~~~~~~~~~~~~~~~~~^~~~~~~~~~
+In file included from external/roo_display+/src/roo_display/core/rasterizable.h:7:
+external/roo_display+/src/roo_display/core/streamable.h: In function ‘std::unique_ptr<roo_display::PixelStream> roo_display::SubRectangle(Stream, const Box&, const Box&) [with Stream = RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8>]’:
+external/roo_display+/src/roo_display/core/streamable.h:593:19: warning: use of uninitialized value ‘<unknown>’ [CWE-457] [-Wanalyzer-use-of-uninitialized-value]
+  593 |       line_offset));
+      |                   ^
+  ‘std::unique_ptr<roo_display::PixelStream> roo_display::SubRectangle(Stream, const Box&, const Box&) [with Stream = RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8>]’: events 1-4
+    │
+    │  583 | inline std::unique_ptr<PixelStream> SubRectangle(Stream stream,
+    │      |        ~~~                          ^~~~~~~~~~~~
+    │      |        |                            |
+    │      |        |                            (1) entry to ‘roo_display::SubRectangle<RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8> >’
+    │      |        (2) region created on stack here
+    │      |        (3) capacity: 8 bytes
+    │......
+    │  591 |   return std::unique_ptr<PixelStream>(new internal::SubRectangleStream<Stream>(
+    │      |                                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    │      |                                       |
+    │      |                                       (4) calling ‘roo_display::RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, roo_display::Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8>::RasterPixelStream’ from ‘roo_display::SubRectangle<RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8> >’
+    │  592 |       std::move(stream), extents.area() - skipped, bounds.width(),
+    │      |       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    │  593 |       line_offset));
+    │      |       ~~~~~~~~~~~~
+    │
+    └──> ‘constexpr roo_display::RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, roo_display::Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8>::RasterPixelStream(roo_display::RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, roo_display::Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8>&&)’: events 5-6
+           │
+           │external/roo_display+/src/roo_display/core/raster.h:77:7:
+           │   77 | class RasterPixelStream : public PixelStream {
+           │      |       ^~~~~~~~~~~~~~~~~
+           │      |       |
+           │      |       (5) entry to ‘roo_display::RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, roo_display::Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8>::RasterPixelStream’
+           │      |       (6) following ‘true’ branch... ─>─┐
+           │      |                                         │
+           │
+         ‘constexpr roo_display::RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, roo_display::Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8>::RasterPixelStream(roo_display::RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, roo_display::Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8>&&)’: event 7
+           │
+           │      |                                         │
+           │      |┌────────────────────────────────────────┘
+           │   77 |│class RasterPixelStream : public PixelStream {
+           │      |│      ^~~~~~~~~~~~~~~~~
+           │      |│      |
+           │      |└─────>(7) ...to here
+           │
+    <──────┘
+    │
+  ‘std::unique_ptr<roo_display::PixelStream> roo_display::SubRectangle(Stream, const Box&, const Box&) [with Stream = RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8>]’: events 8-9
+    │
+    │external/roo_display+/src/roo_display/core/streamable.h:591:39:
+    │  591 |   return std::unique_ptr<PixelStream>(new internal::SubRectangleStream<Stream>(
+    │      |                                       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    │      |                                       |
+    │      |                                       (8) returning to ‘roo_display::SubRectangle<RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8> >’ from ‘roo_display::RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, roo_display::Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8>::RasterPixelStream’
+    │      |                                       (9) calling ‘roo_display::internal::SubRectangleStream<roo_display::RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, roo_display::Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8> >::SubRectangleStream’ from ‘roo_display::SubRectangle<RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8> >’
+    │  592 |       std::move(stream), extents.area() - skipped, bounds.width(),
+    │      |       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    │  593 |       line_offset));
+    │      |       ~~~~~~~~~~~~
+    │
+    └──> ‘roo_display::internal::SubRectangleStream<Delegate>::SubRectangleStream(Delegate, uint32_t, int16_t, int16_t) [with Delegate = roo_display::RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, roo_display::Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8>]’: events 10-11
+           │
+           │  467 |   SubRectangleStream(Delegate delegate, uint32_t count, int16_t width,
+           │      |   ^~~~~~~~~~~~~~~~~~
+           │      |   |
+           │      |   (10) entry to ‘roo_display::internal::SubRectangleStream<roo_display::RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, roo_display::Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8> >::SubRectangleStream’
+           │  468 |                      int16_t width_skip)
+           │  469 |       : stream_(std::move(delegate)),
+           │      |         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+           │      |         |
+           │      |         (11) calling ‘roo_display::RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, roo_display::Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8>::RasterPixelStream’ from ‘roo_display::internal::SubRectangleStream<roo_display::RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, roo_display::Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8> >::SubRectangleStream’
+           │
+           └──> ‘constexpr roo_display::RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, roo_display::Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8>::RasterPixelStream(roo_display::RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, roo_display::Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8>&&)’: events 12-13
+                  │
+                  │external/roo_display+/src/roo_display/core/raster.h:77:7:
+                  │   77 | class RasterPixelStream : public PixelStream {
+                  │      |       ^~~~~~~~~~~~~~~~~
+                  │      |       |
+                  │      |       (12) entry to ‘roo_display::RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, roo_display::Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8>::RasterPixelStream’
+                  │      |       (13) following ‘true’ branch... ─>─┐
+                  │      |                                          │
+                  │
+                ‘constexpr roo_display::RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, roo_display::Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8>::RasterPixelStream(roo_display::RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, roo_display::Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8>&&)’: event 14
+                  │
+                  │      |                                          │
+                  │      |┌─────────────────────────────────────────┘
+                  │   77 |│class RasterPixelStream : public PixelStream {
+                  │      |│      ^~~~~~~~~~~~~~~~~
+                  │      |│      |
+                  │      |└─────>(14) ...to here
+                  │
+           <──────┘
+           │
+         ‘roo_display::internal::SubRectangleStream<Delegate>::SubRectangleStream(Delegate, uint32_t, int16_t, int16_t) [with Delegate = roo_display::RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, roo_display::Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8>]’: event 15
+           │
+           │external/roo_display+/src/roo_display/core/streamable.h:469:9:
+           │  469 |       : stream_(std::move(delegate)),
+           │      |         ^~~~~~~~~~~~~~~~~~~~~~~~~~~~
+           │      |         |
+           │      |         (15) returning to ‘roo_display::internal::SubRectangleStream<roo_display::RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, roo_display::Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8> >::SubRectangleStream’ from ‘roo_display::RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, roo_display::Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8>::RasterPixelStream’
+           │
+    <──────┘
+    │
+  ‘std::unique_ptr<roo_display::PixelStream> roo_display::SubRectangle(Stream, const Box&, const Box&) [with Stream = RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8>]’: events 16-17
+    │
+    │  591 |   return std::unique_ptr<PixelStream>(new internal::SubRectangleStream<Stream>(
+    │      |                                       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    │      |                                       |
+    │      |                                       (16) returning to ‘roo_display::SubRectangle<RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8> >’ from ‘roo_display::internal::SubRectangleStream<roo_display::RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, roo_display::Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8> >::SubRectangleStream’
+    │  592 |       std::move(stream), extents.area() - skipped, bounds.width(),
+    │      |       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    │  593 |       line_offset));
+    │      |       ~~~~~~~~~~~~~
+    │      |                   |
+    │      |                   (17) ⚠️  use of uninitialized value ‘<unknown>’ here
+    │
+In file included from external/roo_display+/src/roo_display/image/image_stream.h:5,
+                 from external/roo_display+/src/roo_display/image/image.h:9:
+In destructor ‘virtual roo_display::RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, roo_display::Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8>::~RasterPixelStream()’,
+    inlined from ‘std::unique_ptr<roo_display::PixelStream> roo_display::SubRectangle(Stream, const Box&, const Box&) [with Stream = RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8>]’ at external/roo_display+/src/roo_display/core/streamable.h:591:39:
+external/roo_display+/src/roo_display/core/raster.h:77:7: warning: leak of ‘operator new(352)’ [CWE-401] [-Wanalyzer-malloc-leak]
+   77 | class RasterPixelStream : public PixelStream {
+      |       ^~~~~~~~~~~~~~~~~
+  ‘std::unique_ptr<roo_display::PixelStream> roo_display::SubRectangle(Stream, const Box&, const Box&) [with Stream = RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8>]’: events 1-3
+    │
+    │external/roo_display+/src/roo_display/core/streamable.h:583:37:
+    │  583 | inline std::unique_ptr<PixelStream> SubRectangle(Stream stream,
+    │      |                                     ^~~~~~~~~~~~
+    │      |                                     |
+    │      |                                     (1) entry to ‘roo_display::SubRectangle<RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8> >’
+    │......
+    │  591 |   return std::unique_ptr<PixelStream>(new internal::SubRectangleStream<Stream>(
+    │      |                                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    │      |                                       |
+    │      |                                       (2) allocated here
+    │      |                                       (3) calling ‘roo_display::RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, roo_display::Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8>::RasterPixelStream’ from ‘roo_display::SubRectangle<RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8> >’
+    │  592 |       std::move(stream), extents.area() - skipped, bounds.width(),
+    │      |       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    │  593 |       line_offset));
+    │      |       ~~~~~~~~~~~~
+    │
+    └──> ‘constexpr roo_display::RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, roo_display::Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8>::RasterPixelStream(roo_display::RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, roo_display::Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8>&&)’: events 4-5
+           │
+           │external/roo_display+/src/roo_display/core/raster.h:77:7:
+           │   77 | class RasterPixelStream : public PixelStream {
+           │      |       ^~~~~~~~~~~~~~~~~
+           │      |       |
+           │      |       (4) entry to ‘roo_display::RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, roo_display::Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8>::RasterPixelStream’
+           │      |       (5) following ‘true’ branch... ─>─┐
+           │      |                                         │
+           │
+         ‘constexpr roo_display::RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, roo_display::Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8>::RasterPixelStream(roo_display::RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, roo_display::Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8>&&)’: event 6
+           │
+           │      |                                         │
+           │      |┌────────────────────────────────────────┘
+           │   77 |│class RasterPixelStream : public PixelStream {
+           │      |│      ^~~~~~~~~~~~~~~~~
+           │      |│      |
+           │      |└─────>(6) ...to here
+           │
+    <──────┘
+    │
+  ‘std::unique_ptr<roo_display::PixelStream> roo_display::SubRectangle(Stream, const Box&, const Box&) [with Stream = RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8>]’: events 7-8
+    │
+    │external/roo_display+/src/roo_display/core/streamable.h:591:39:
+    │  591 |   return std::unique_ptr<PixelStream>(new internal::SubRectangleStream<Stream>(
+    │      |                                       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    │      |                                       |
+    │      |                                       (7) returning to ‘roo_display::SubRectangle<RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8> >’ from ‘roo_display::RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, roo_display::Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8>::RasterPixelStream’
+    │      |                                       (8) calling ‘roo_display::internal::SubRectangleStream<roo_display::RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, roo_display::Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8> >::SubRectangleStream’ from ‘roo_display::SubRectangle<RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8> >’
+    │  592 |       std::move(stream), extents.area() - skipped, bounds.width(),
+    │      |       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    │  593 |       line_offset));
+    │      |       ~~~~~~~~~~~~
+    │
+    └──> ‘roo_display::internal::SubRectangleStream<Delegate>::SubRectangleStream(Delegate, uint32_t, int16_t, int16_t) [with Delegate = roo_display::RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, roo_display::Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8>]’: events 9-10
+           │
+           │  467 |   SubRectangleStream(Delegate delegate, uint32_t count, int16_t width,
+           │      |   ^~~~~~~~~~~~~~~~~~
+           │      |   |
+           │      |   (9) entry to ‘roo_display::internal::SubRectangleStream<roo_display::RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, roo_display::Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8> >::SubRectangleStream’
+           │  468 |                      int16_t width_skip)
+           │  469 |       : stream_(std::move(delegate)),
+           │      |         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+           │      |         |
+           │      |         (10) calling ‘roo_display::RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, roo_display::Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8>::RasterPixelStream’ from ‘roo_display::internal::SubRectangleStream<roo_display::RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, roo_display::Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8> >::SubRectangleStream’
+           │
+           └──> ‘constexpr roo_display::RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, roo_display::Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8>::RasterPixelStream(roo_display::RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, roo_display::Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8>&&)’: events 11-12
+                  │
+                  │external/roo_display+/src/roo_display/core/raster.h:77:7:
+                  │   77 | class RasterPixelStream : public PixelStream {
+                  │      |       ^~~~~~~~~~~~~~~~~
+                  │      |       |
+                  │      |       (11) entry to ‘roo_display::RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, roo_display::Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8>::RasterPixelStream’
+                  │      |       (12) following ‘true’ branch... ─>─┐
+                  │      |                                          │
+                  │
+                ‘constexpr roo_display::RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, roo_display::Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8>::RasterPixelStream(roo_display::RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, roo_display::Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8>&&)’: event 13
+                  │
+                  │      |                                          │
+                  │      |┌─────────────────────────────────────────┘
+                  │   77 |│class RasterPixelStream : public PixelStream {
+                  │      |│      ^~~~~~~~~~~~~~~~~
+                  │      |│      |
+                  │      |└─────>(13) ...to here
+                  │
+           <──────┘
+           │
+         ‘roo_display::internal::SubRectangleStream<Delegate>::SubRectangleStream(Delegate, uint32_t, int16_t, int16_t) [with Delegate = roo_display::RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, roo_display::Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8>]’: event 14
+           │
+           │external/roo_display+/src/roo_display/core/streamable.h:469:9:
+           │  469 |       : stream_(std::move(delegate)),
+           │      |         ^~~~~~~~~~~~~~~~~~~~~~~~~~~~
+           │      |         |
+           │      |         (14) returning to ‘roo_display::internal::SubRectangleStream<roo_display::RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, roo_display::Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8> >::SubRectangleStream’ from ‘roo_display::RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, roo_display::Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8>::RasterPixelStream’
+           │
+    <──────┘
+    │
+  ‘std::unique_ptr<roo_display::PixelStream> roo_display::SubRectangle(Stream, const Box&, const Box&) [with Stream = RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8>]’: events 15-16
+    │
+    │  591 |   return std::unique_ptr<PixelStream>(new internal::SubRectangleStream<Stream>(
+    │      |                                       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    │      |                                       |
+    │      |                                       (15) returning to ‘roo_display::SubRectangle<RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8> >’ from ‘roo_display::internal::SubRectangleStream<roo_display::RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, roo_display::Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8> >::SubRectangleStream’
+    │      |                                       (16) inlined call to ‘roo_display::RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, roo_display::Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8>::~RasterPixelStream’ from ‘roo_display::SubRectangle<RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8> >’
+    │  592 |       std::move(stream), extents.area() - skipped, bounds.width(),
+    │      |       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    │  593 |       line_offset));
+    │      |       ~~~~~~~~~~~~
+    │
+    └──> ‘virtual roo_display::RasterPixelStream<roo_io::UnsafeGenericMemoryIterable<const std::byte*>, roo_display::Monochrome, roo_display::ColorPixelOrder::kMsbFirst, roo_io::kBigEndian, 8>::~RasterPixelStream()’: event 17
+           │
+           │external/roo_display+/src/roo_display/core/raster.h:77:7:
+           │   77 | class RasterPixelStream : public PixelStream {
+           │      |       ^~~~~~~~~~~~~~~~~
+           │      |       |
+           │      |       (17) ⚠️  ‘operator new(352)’ leaks here; was allocated at (2)
+           │

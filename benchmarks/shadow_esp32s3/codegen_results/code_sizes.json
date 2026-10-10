@@ -1,0 +1,1206 @@
+[
+  {
+    "experiment": "aa_bounds",
+    "function": "roo_windows::Decoration::readColors(short const*, short const*, unsigned long, roo_display::Color*) const",
+    "bytes": 35,
+    "entry_frame_bytes": 32,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "aa_bounds",
+    "function": "roo_windows::internal::RoundedDecoration::readColorRect(short, short, short, short, roo_display::Color*) const",
+    "bytes": 64,
+    "entry_frame_bytes": 48,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "aa_bounds",
+    "function": "roo_windows::internal::ShadowDistanceSqrt(unsigned long)",
+    "bytes": 81,
+    "entry_frame_bytes": 32,
+    "integer_division_instructions": 3
+  },
+  {
+    "experiment": "aa_bounds",
+    "function": "roo_windows::(anonymous namespace)::calcRoundCornerAlpha(short, short, short, unsigned char)",
+    "bytes": 184,
+    "entry_frame_bytes": 32,
+    "integer_division_instructions": 3
+  },
+  {
+    "experiment": "aa_bounds",
+    "function": "roo_windows::internal::RoundedDecoration::readColors(short const*, short const*, unsigned long, roo_display::Color*) const",
+    "bytes": 203,
+    "entry_frame_bytes": 80,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "aa_bounds",
+    "function": "roo_windows::(anonymous namespace)::calcRoundRectAlpha(short, short, short, short, roo_windows::BorderStyle::CornerRadii, unsigned char, short, short)",
+    "bytes": 225,
+    "entry_frame_bytes": 48,
+    "integer_division_instructions": 1
+  },
+  {
+    "experiment": "aa_bounds",
+    "function": "roo_windows::Decoration::readWithContent(short, short, roo_display::Color, roo_display::Color const*) const",
+    "bytes": 377,
+    "entry_frame_bytes": 64,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "aa_bounds",
+    "function": "roo_windows::Decoration::readColorRect(short, short, short, short, roo_display::Color*) const",
+    "bytes": 559,
+    "entry_frame_bytes": 96,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "aa_bounds",
+    "function": "roo_windows::internal::ReadLookupShadow(roo_windows::internal::LookupShadowSpec const&, roo_windows::internal::LookupShadowSpec const&, short, short)",
+    "bytes": 645,
+    "entry_frame_bytes": 80,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "baseline",
+    "function": "roo_windows::Decoration::readColors(short const*, short const*, unsigned long, roo_display::Color*) const",
+    "bytes": 35,
+    "entry_frame_bytes": 32,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "baseline",
+    "function": "roo_windows::internal::RoundedDecoration::readColorRect(short, short, short, short, roo_display::Color*) const",
+    "bytes": 64,
+    "entry_frame_bytes": 48,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "baseline",
+    "function": "roo_windows::internal::ShadowDistanceSqrt(unsigned long)",
+    "bytes": 81,
+    "entry_frame_bytes": 32,
+    "integer_division_instructions": 3
+  },
+  {
+    "experiment": "baseline",
+    "function": "roo_windows::(anonymous namespace)::calcRoundCornerAlpha(short, short, short, unsigned char)",
+    "bytes": 162,
+    "entry_frame_bytes": 32,
+    "integer_division_instructions": 3
+  },
+  {
+    "experiment": "baseline",
+    "function": "roo_windows::internal::RoundedDecoration::readColors(short const*, short const*, unsigned long, roo_display::Color*) const",
+    "bytes": 203,
+    "entry_frame_bytes": 80,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "baseline",
+    "function": "roo_windows::(anonymous namespace)::calcRoundRectAlpha(short, short, short, short, roo_windows::BorderStyle::CornerRadii, unsigned char, short, short)",
+    "bytes": 225,
+    "entry_frame_bytes": 48,
+    "integer_division_instructions": 1
+  },
+  {
+    "experiment": "baseline",
+    "function": "roo_windows::Decoration::readWithContent(short, short, roo_display::Color, roo_display::Color const*) const",
+    "bytes": 377,
+    "entry_frame_bytes": 64,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "baseline",
+    "function": "roo_windows::Decoration::readColorRect(short, short, short, short, roo_display::Color*) const",
+    "bytes": 559,
+    "entry_frame_bytes": 96,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "baseline",
+    "function": "roo_windows::internal::ReadLookupShadow(roo_windows::internal::LookupShadowSpec const&, roo_windows::internal::LookupShadowSpec const&, short, short)",
+    "bytes": 645,
+    "entry_frame_bytes": 80,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "cache_liveness",
+    "function": "roo_windows::Decoration::readColors(short const*, short const*, unsigned long, roo_display::Color*) const",
+    "bytes": 35,
+    "entry_frame_bytes": 32,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "cache_liveness",
+    "function": "roo_windows::internal::RoundedDecoration::readColorRect(short, short, short, short, roo_display::Color*) const",
+    "bytes": 64,
+    "entry_frame_bytes": 48,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "cache_liveness",
+    "function": "roo_windows::internal::ShadowDistanceSqrt(unsigned long)",
+    "bytes": 81,
+    "entry_frame_bytes": 32,
+    "integer_division_instructions": 3
+  },
+  {
+    "experiment": "cache_liveness",
+    "function": "roo_windows::(anonymous namespace)::calcRoundCornerAlpha(short, short, short, unsigned char)",
+    "bytes": 162,
+    "entry_frame_bytes": 32,
+    "integer_division_instructions": 3
+  },
+  {
+    "experiment": "cache_liveness",
+    "function": "roo_windows::internal::RoundedDecoration::readColors(short const*, short const*, unsigned long, roo_display::Color*) const",
+    "bytes": 203,
+    "entry_frame_bytes": 80,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "cache_liveness",
+    "function": "roo_windows::(anonymous namespace)::calcRoundRectAlpha(short, short, short, short, roo_windows::BorderStyle::CornerRadii, unsigned char, short, short)",
+    "bytes": 225,
+    "entry_frame_bytes": 48,
+    "integer_division_instructions": 1
+  },
+  {
+    "experiment": "cache_liveness",
+    "function": "roo_windows::Decoration::readWithContent(short, short, roo_display::Color, roo_display::Color const*) const",
+    "bytes": 377,
+    "entry_frame_bytes": 64,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "cache_liveness",
+    "function": "roo_windows::Decoration::readColorRect(short, short, short, short, roo_display::Color*) const",
+    "bytes": 559,
+    "entry_frame_bytes": 96,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "cache_liveness",
+    "function": "roo_windows::internal::ReadLookupShadow(roo_windows::internal::LookupShadowSpec const&, roo_windows::internal::LookupShadowSpec const&, short, short)",
+    "bytes": 605,
+    "entry_frame_bytes": 48,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "combined_o3",
+    "function": "roo_windows::internal::RoundedDecoration::readColorRect(short, short, short, short, roo_display::Color*) const",
+    "bytes": 64,
+    "entry_frame_bytes": 48,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "combined_o3",
+    "function": "roo_windows::internal::RoundedDecoration::readColors(short const*, short const*, unsigned long, roo_display::Color*) const",
+    "bytes": 203,
+    "entry_frame_bytes": 80,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "combined_o3",
+    "function": "roo_windows::(anonymous namespace)::calcRoundRectAlpha(short, short, short, short, roo_windows::BorderStyle::CornerRadii, unsigned char, short, short)",
+    "bytes": 778,
+    "entry_frame_bytes": 48,
+    "integer_division_instructions": 9
+  },
+  {
+    "experiment": "combined_o3",
+    "function": "roo_windows::internal::ReadLookupShadow(roo_windows::internal::LookupShadowSpec const&, roo_windows::internal::LookupShadowSpec const&, short, short)",
+    "bytes": 905,
+    "entry_frame_bytes": 48,
+    "integer_division_instructions": 6
+  },
+  {
+    "experiment": "combined_o3",
+    "function": "roo_windows::Decoration::readWithContent(short, short, roo_display::Color, roo_display::Color const*) const",
+    "bytes": 995,
+    "entry_frame_bytes": 64,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "combined_o3",
+    "function": "roo_windows::Decoration::readColors(short const*, short const*, unsigned long, roo_display::Color*) const",
+    "bytes": 1131,
+    "entry_frame_bytes": 80,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "combined_o3",
+    "function": "roo_windows::Decoration::readColorRect(short, short, short, short, roo_display::Color*) const",
+    "bytes": 1769,
+    "entry_frame_bytes": 128,
+    "integer_division_instructions": 1
+  },
+  {
+    "experiment": "combined_unroll",
+    "function": "roo_windows::internal::RoundedDecoration::readColorRect(short, short, short, short, roo_display::Color*) const",
+    "bytes": 64,
+    "entry_frame_bytes": 48,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "combined_unroll",
+    "function": "roo_windows::internal::RoundedDecoration::readColors(short const*, short const*, unsigned long, roo_display::Color*) const",
+    "bytes": 203,
+    "entry_frame_bytes": 80,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "combined_unroll",
+    "function": "roo_windows::(anonymous namespace)::calcRoundRectAlpha(short, short, short, short, roo_windows::BorderStyle::CornerRadii, unsigned char, short, short)",
+    "bytes": 778,
+    "entry_frame_bytes": 48,
+    "integer_division_instructions": 9
+  },
+  {
+    "experiment": "combined_unroll",
+    "function": "roo_windows::internal::ReadLookupShadow(roo_windows::internal::LookupShadowSpec const&, roo_windows::internal::LookupShadowSpec const&, short, short)",
+    "bytes": 905,
+    "entry_frame_bytes": 48,
+    "integer_division_instructions": 6
+  },
+  {
+    "experiment": "combined_unroll",
+    "function": "roo_windows::Decoration::readWithContent(short, short, roo_display::Color, roo_display::Color const*) const",
+    "bytes": 995,
+    "entry_frame_bytes": 64,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "combined_unroll",
+    "function": "roo_windows::Decoration::readColors(short const*, short const*, unsigned long, roo_display::Color*) const",
+    "bytes": 1279,
+    "entry_frame_bytes": 96,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "combined_unroll",
+    "function": "roo_windows::Decoration::readColorRect(short, short, short, short, roo_display::Color*) const",
+    "bytes": 1769,
+    "entry_frame_bytes": 128,
+    "integer_division_instructions": 1
+  },
+  {
+    "experiment": "compact",
+    "function": "roo_windows::internal::RoundedDecoration::readColorRect(short, short, short, short, roo_display::Color*) const",
+    "bytes": 64,
+    "entry_frame_bytes": 48,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "compact",
+    "function": "roo_windows::internal::ShadowDistanceSqrt(unsigned long)",
+    "bytes": 81,
+    "entry_frame_bytes": 32,
+    "integer_division_instructions": 3
+  },
+  {
+    "experiment": "compact",
+    "function": "roo_windows::Decoration::readColors(short const*, short const*, unsigned long, roo_display::Color*) const",
+    "bytes": 170,
+    "entry_frame_bytes": 48,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "compact",
+    "function": "roo_windows::(anonymous namespace)::calcRoundCornerAlpha(short, short, short, unsigned char)",
+    "bytes": 184,
+    "entry_frame_bytes": 32,
+    "integer_division_instructions": 3
+  },
+  {
+    "experiment": "compact",
+    "function": "roo_windows::internal::RoundedDecoration::readColors(short const*, short const*, unsigned long, roo_display::Color*) const",
+    "bytes": 203,
+    "entry_frame_bytes": 80,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "compact",
+    "function": "roo_windows::(anonymous namespace)::calcRoundRectAlpha(short, short, short, short, roo_windows::BorderStyle::CornerRadii, unsigned char, short, short)",
+    "bytes": 225,
+    "entry_frame_bytes": 48,
+    "integer_division_instructions": 1
+  },
+  {
+    "experiment": "compact",
+    "function": "roo_windows::Decoration::readWithContent(short, short, roo_display::Color, roo_display::Color const*) const",
+    "bytes": 324,
+    "entry_frame_bytes": 64,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "compact",
+    "function": "roo_windows::Decoration::readColorRect(short, short, short, short, roo_display::Color*) const",
+    "bytes": 559,
+    "entry_frame_bytes": 96,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "compact",
+    "function": "roo_windows::internal::ReadLookupShadow(roo_windows::internal::LookupShadowSpec const&, roo_windows::internal::LookupShadowSpec const&, short, short)",
+    "bytes": 607,
+    "entry_frame_bytes": 48,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "compact_core",
+    "function": "roo_windows::internal::RoundedDecoration::readColorRect(short, short, short, short, roo_display::Color*) const",
+    "bytes": 64,
+    "entry_frame_bytes": 48,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "compact_core",
+    "function": "roo_windows::internal::ShadowDistanceSqrt(unsigned long)",
+    "bytes": 81,
+    "entry_frame_bytes": 32,
+    "integer_division_instructions": 3
+  },
+  {
+    "experiment": "compact_core",
+    "function": "roo_windows::Decoration::readColors(short const*, short const*, unsigned long, roo_display::Color*) const",
+    "bytes": 170,
+    "entry_frame_bytes": 48,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "compact_core",
+    "function": "roo_windows::(anonymous namespace)::calcRoundCornerAlpha(short, short, short, unsigned char)",
+    "bytes": 184,
+    "entry_frame_bytes": 32,
+    "integer_division_instructions": 3
+  },
+  {
+    "experiment": "compact_core",
+    "function": "roo_windows::internal::RoundedDecoration::readColors(short const*, short const*, unsigned long, roo_display::Color*) const",
+    "bytes": 203,
+    "entry_frame_bytes": 80,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "compact_core",
+    "function": "roo_windows::(anonymous namespace)::calcRoundRectAlpha(short, short, short, short, roo_windows::BorderStyle::CornerRadii, unsigned char, short, short)",
+    "bytes": 225,
+    "entry_frame_bytes": 48,
+    "integer_division_instructions": 1
+  },
+  {
+    "experiment": "compact_core",
+    "function": "roo_windows::Decoration::readWithContent(short, short, roo_display::Color, roo_display::Color const*) const",
+    "bytes": 324,
+    "entry_frame_bytes": 64,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "compact_core",
+    "function": "roo_windows::internal::ReadLookupShadow(roo_windows::internal::LookupShadowSpec const&, roo_windows::internal::LookupShadowSpec const&, short, short)",
+    "bytes": 459,
+    "entry_frame_bytes": 48,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "compact_core",
+    "function": "roo_windows::Decoration::readColorRect(short, short, short, short, roo_display::Color*) const",
+    "bytes": 559,
+    "entry_frame_bytes": 96,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "compact_corners",
+    "function": "roo_windows::internal::RoundedDecoration::readColorRect(short, short, short, short, roo_display::Color*) const",
+    "bytes": 64,
+    "entry_frame_bytes": 48,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "compact_corners",
+    "function": "roo_windows::internal::ShadowDistanceSqrt(unsigned long)",
+    "bytes": 81,
+    "entry_frame_bytes": 32,
+    "integer_division_instructions": 3
+  },
+  {
+    "experiment": "compact_corners",
+    "function": "roo_windows::Decoration::readColors(short const*, short const*, unsigned long, roo_display::Color*) const",
+    "bytes": 170,
+    "entry_frame_bytes": 48,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "compact_corners",
+    "function": "roo_windows::(anonymous namespace)::calcRoundCornerAlpha(short, short, short, unsigned char)",
+    "bytes": 184,
+    "entry_frame_bytes": 32,
+    "integer_division_instructions": 3
+  },
+  {
+    "experiment": "compact_corners",
+    "function": "roo_windows::internal::RoundedDecoration::readColors(short const*, short const*, unsigned long, roo_display::Color*) const",
+    "bytes": 203,
+    "entry_frame_bytes": 80,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "compact_corners",
+    "function": "roo_windows::(anonymous namespace)::calcRoundRectAlpha(short, short, short, short, roo_windows::BorderStyle::CornerRadii, unsigned char, short, short)",
+    "bytes": 225,
+    "entry_frame_bytes": 48,
+    "integer_division_instructions": 1
+  },
+  {
+    "experiment": "compact_corners",
+    "function": "roo_windows::Decoration::readWithContent(short, short, roo_display::Color, roo_display::Color const*) const",
+    "bytes": 324,
+    "entry_frame_bytes": 64,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "compact_corners",
+    "function": "roo_windows::Decoration::readColorRect(short, short, short, short, roo_display::Color*) const",
+    "bytes": 559,
+    "entry_frame_bytes": 96,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "compact_corners",
+    "function": "roo_windows::internal::ReadLookupShadow(roo_windows::internal::LookupShadowSpec const&, roo_windows::internal::LookupShadowSpec const&, short, short)",
+    "bytes": 823,
+    "entry_frame_bytes": 80,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "compact_sides",
+    "function": "roo_windows::internal::RoundedDecoration::readColorRect(short, short, short, short, roo_display::Color*) const",
+    "bytes": 64,
+    "entry_frame_bytes": 48,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "compact_sides",
+    "function": "roo_windows::internal::ShadowDistanceSqrt(unsigned long)",
+    "bytes": 81,
+    "entry_frame_bytes": 32,
+    "integer_division_instructions": 3
+  },
+  {
+    "experiment": "compact_sides",
+    "function": "roo_windows::Decoration::readColors(short const*, short const*, unsigned long, roo_display::Color*) const",
+    "bytes": 170,
+    "entry_frame_bytes": 48,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "compact_sides",
+    "function": "roo_windows::(anonymous namespace)::calcRoundCornerAlpha(short, short, short, unsigned char)",
+    "bytes": 184,
+    "entry_frame_bytes": 32,
+    "integer_division_instructions": 3
+  },
+  {
+    "experiment": "compact_sides",
+    "function": "roo_windows::internal::RoundedDecoration::readColors(short const*, short const*, unsigned long, roo_display::Color*) const",
+    "bytes": 203,
+    "entry_frame_bytes": 80,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "compact_sides",
+    "function": "roo_windows::(anonymous namespace)::calcRoundRectAlpha(short, short, short, short, roo_windows::BorderStyle::CornerRadii, unsigned char, short, short)",
+    "bytes": 225,
+    "entry_frame_bytes": 48,
+    "integer_division_instructions": 1
+  },
+  {
+    "experiment": "compact_sides",
+    "function": "roo_windows::Decoration::readWithContent(short, short, roo_display::Color, roo_display::Color const*) const",
+    "bytes": 324,
+    "entry_frame_bytes": 64,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "compact_sides",
+    "function": "roo_windows::Decoration::readColorRect(short, short, short, short, roo_display::Color*) const",
+    "bytes": 559,
+    "entry_frame_bytes": 96,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "compact_sides",
+    "function": "roo_windows::internal::ReadLookupShadow(roo_windows::internal::LookupShadowSpec const&, roo_windows::internal::LookupShadowSpec const&, short, short)",
+    "bytes": 607,
+    "entry_frame_bytes": 48,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "core_baseline",
+    "function": "roo_windows::Decoration::readColors(short const*, short const*, unsigned long, roo_display::Color*) const",
+    "bytes": 35,
+    "entry_frame_bytes": 32,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "core_baseline",
+    "function": "roo_windows::internal::RoundedDecoration::readColorRect(short, short, short, short, roo_display::Color*) const",
+    "bytes": 64,
+    "entry_frame_bytes": 48,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "core_baseline",
+    "function": "roo_windows::internal::ShadowDistanceSqrt(unsigned long)",
+    "bytes": 81,
+    "entry_frame_bytes": 32,
+    "integer_division_instructions": 3
+  },
+  {
+    "experiment": "core_baseline",
+    "function": "roo_windows::(anonymous namespace)::calcRoundCornerAlpha(short, short, short, unsigned char)",
+    "bytes": 162,
+    "entry_frame_bytes": 32,
+    "integer_division_instructions": 3
+  },
+  {
+    "experiment": "core_baseline",
+    "function": "roo_windows::internal::RoundedDecoration::readColors(short const*, short const*, unsigned long, roo_display::Color*) const",
+    "bytes": 203,
+    "entry_frame_bytes": 80,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "core_baseline",
+    "function": "roo_windows::(anonymous namespace)::calcRoundRectAlpha(short, short, short, short, roo_windows::BorderStyle::CornerRadii, unsigned char, short, short)",
+    "bytes": 225,
+    "entry_frame_bytes": 48,
+    "integer_division_instructions": 1
+  },
+  {
+    "experiment": "core_baseline",
+    "function": "roo_windows::Decoration::readWithContent(short, short, roo_display::Color, roo_display::Color const*) const",
+    "bytes": 377,
+    "entry_frame_bytes": 64,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "core_baseline",
+    "function": "roo_windows::internal::ReadLookupShadow(roo_windows::internal::LookupShadowSpec const&, roo_windows::internal::LookupShadowSpec const&, short, short)",
+    "bytes": 435,
+    "entry_frame_bytes": 48,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "core_baseline",
+    "function": "roo_windows::Decoration::readColorRect(short, short, short, short, roo_display::Color*) const",
+    "bytes": 559,
+    "entry_frame_bytes": 96,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "exterior_first",
+    "function": "roo_windows::Decoration::readColors(short const*, short const*, unsigned long, roo_display::Color*) const",
+    "bytes": 35,
+    "entry_frame_bytes": 32,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "exterior_first",
+    "function": "roo_windows::internal::RoundedDecoration::readColorRect(short, short, short, short, roo_display::Color*) const",
+    "bytes": 64,
+    "entry_frame_bytes": 48,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "exterior_first",
+    "function": "roo_windows::internal::ShadowDistanceSqrt(unsigned long)",
+    "bytes": 81,
+    "entry_frame_bytes": 32,
+    "integer_division_instructions": 3
+  },
+  {
+    "experiment": "exterior_first",
+    "function": "roo_windows::(anonymous namespace)::calcRoundCornerAlpha(short, short, short, unsigned char)",
+    "bytes": 162,
+    "entry_frame_bytes": 32,
+    "integer_division_instructions": 3
+  },
+  {
+    "experiment": "exterior_first",
+    "function": "roo_windows::internal::RoundedDecoration::readColors(short const*, short const*, unsigned long, roo_display::Color*) const",
+    "bytes": 203,
+    "entry_frame_bytes": 80,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "exterior_first",
+    "function": "roo_windows::(anonymous namespace)::calcRoundRectAlpha(short, short, short, short, roo_windows::BorderStyle::CornerRadii, unsigned char, short, short)",
+    "bytes": 225,
+    "entry_frame_bytes": 48,
+    "integer_division_instructions": 1
+  },
+  {
+    "experiment": "exterior_first",
+    "function": "roo_windows::Decoration::readWithContent(short, short, roo_display::Color, roo_display::Color const*) const",
+    "bytes": 324,
+    "entry_frame_bytes": 64,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "exterior_first",
+    "function": "roo_windows::Decoration::readColorRect(short, short, short, short, roo_display::Color*) const",
+    "bytes": 559,
+    "entry_frame_bytes": 96,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "exterior_first",
+    "function": "roo_windows::internal::ReadLookupShadow(roo_windows::internal::LookupShadowSpec const&, roo_windows::internal::LookupShadowSpec const&, short, short)",
+    "bytes": 645,
+    "entry_frame_bytes": 80,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "inline_read",
+    "function": "roo_windows::Decoration::readColors(short const*, short const*, unsigned long, roo_display::Color*) const",
+    "bytes": 39,
+    "entry_frame_bytes": 32,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "inline_read",
+    "function": "roo_windows::internal::RoundedDecoration::readColorRect(short, short, short, short, roo_display::Color*) const",
+    "bytes": 64,
+    "entry_frame_bytes": 48,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "inline_read",
+    "function": "roo_windows::internal::ShadowDistanceSqrt(unsigned long)",
+    "bytes": 81,
+    "entry_frame_bytes": 32,
+    "integer_division_instructions": 3
+  },
+  {
+    "experiment": "inline_read",
+    "function": "roo_windows::(anonymous namespace)::calcRoundCornerAlpha(short, short, short, unsigned char)",
+    "bytes": 162,
+    "entry_frame_bytes": 32,
+    "integer_division_instructions": 3
+  },
+  {
+    "experiment": "inline_read",
+    "function": "roo_windows::internal::RoundedDecoration::readColors(short const*, short const*, unsigned long, roo_display::Color*) const",
+    "bytes": 203,
+    "entry_frame_bytes": 80,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "inline_read",
+    "function": "roo_windows::(anonymous namespace)::calcRoundRectAlpha(short, short, short, short, roo_windows::BorderStyle::CornerRadii, unsigned char, short, short)",
+    "bytes": 225,
+    "entry_frame_bytes": 48,
+    "integer_division_instructions": 1
+  },
+  {
+    "experiment": "inline_read",
+    "function": "roo_windows::Decoration::readWithContent(short, short, roo_display::Color, roo_display::Color const*) const",
+    "bytes": 377,
+    "entry_frame_bytes": 64,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "inline_read",
+    "function": "roo_windows::Decoration::readColorRect(short, short, short, short, roo_display::Color*) const",
+    "bytes": 559,
+    "entry_frame_bytes": 96,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "inline_read",
+    "function": "roo_windows::internal::ReadLookupShadow(roo_windows::internal::LookupShadowSpec const&, roo_windows::internal::LookupShadowSpec const&, short, short)",
+    "bytes": 645,
+    "entry_frame_bytes": 80,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "kernels",
+    "function": "roo_windows::Decoration::readColors(short const*, short const*, unsigned long, roo_display::Color*) const",
+    "bytes": 35,
+    "entry_frame_bytes": 32,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "kernels",
+    "function": "roo_windows::internal::RoundedDecoration::readColorRect(short, short, short, short, roo_display::Color*) const",
+    "bytes": 64,
+    "entry_frame_bytes": 48,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "kernels",
+    "function": "roo_windows::internal::ShadowDistanceSqrt(unsigned long)",
+    "bytes": 81,
+    "entry_frame_bytes": 32,
+    "integer_division_instructions": 3
+  },
+  {
+    "experiment": "kernels",
+    "function": "roo_windows::(anonymous namespace)::calcRoundCornerAlpha(short, short, short, unsigned char)",
+    "bytes": 162,
+    "entry_frame_bytes": 32,
+    "integer_division_instructions": 3
+  },
+  {
+    "experiment": "kernels",
+    "function": "roo_windows::internal::RoundedDecoration::readColors(short const*, short const*, unsigned long, roo_display::Color*) const",
+    "bytes": 203,
+    "entry_frame_bytes": 80,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "kernels",
+    "function": "roo_windows::(anonymous namespace)::calcRoundRectAlpha(short, short, short, short, roo_windows::BorderStyle::CornerRadii, unsigned char, short, short)",
+    "bytes": 225,
+    "entry_frame_bytes": 48,
+    "integer_division_instructions": 1
+  },
+  {
+    "experiment": "kernels",
+    "function": "roo_windows::Decoration::readWithContent(short, short, roo_display::Color, roo_display::Color const*) const",
+    "bytes": 377,
+    "entry_frame_bytes": 64,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "kernels",
+    "function": "roo_windows::Decoration::readColorRect(short, short, short, short, roo_display::Color*) const",
+    "bytes": 559,
+    "entry_frame_bytes": 96,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "kernels",
+    "function": "roo_windows::internal::ReadLookupShadow(roo_windows::internal::LookupShadowSpec const&, roo_windows::internal::LookupShadowSpec const&, short, short)",
+    "bytes": 645,
+    "entry_frame_bytes": 80,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "local_o3",
+    "function": "roo_windows::internal::RoundedDecoration::readColorRect(short, short, short, short, roo_display::Color*) const",
+    "bytes": 64,
+    "entry_frame_bytes": 48,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "local_o3",
+    "function": "roo_windows::internal::RoundedDecoration::readColors(short const*, short const*, unsigned long, roo_display::Color*) const",
+    "bytes": 203,
+    "entry_frame_bytes": 80,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "local_o3",
+    "function": "roo_windows::(anonymous namespace)::calcRoundRectAlpha(short, short, short, short, roo_windows::BorderStyle::CornerRadii, unsigned char, short, short)",
+    "bytes": 777,
+    "entry_frame_bytes": 48,
+    "integer_division_instructions": 12
+  },
+  {
+    "experiment": "local_o3",
+    "function": "roo_windows::internal::ReadLookupShadow(roo_windows::internal::LookupShadowSpec const&, roo_windows::internal::LookupShadowSpec const&, short, short)",
+    "bytes": 953,
+    "entry_frame_bytes": 80,
+    "integer_division_instructions": 6
+  },
+  {
+    "experiment": "local_o3",
+    "function": "roo_windows::Decoration::readWithContent(short, short, roo_display::Color, roo_display::Color const*) const",
+    "bytes": 1565,
+    "entry_frame_bytes": 64,
+    "integer_division_instructions": 6
+  },
+  {
+    "experiment": "local_o3",
+    "function": "roo_windows::Decoration::readColors(short const*, short const*, unsigned long, roo_display::Color*) const",
+    "bytes": 1762,
+    "entry_frame_bytes": 96,
+    "integer_division_instructions": 9
+  },
+  {
+    "experiment": "local_o3",
+    "function": "roo_windows::Decoration::readColorRect(short, short, short, short, roo_display::Color*) const",
+    "bytes": 2363,
+    "entry_frame_bytes": 128,
+    "integer_division_instructions": 9
+  },
+  {
+    "experiment": "o3_core",
+    "function": "roo_windows::internal::RoundedDecoration::readColorRect(short, short, short, short, roo_display::Color*) const",
+    "bytes": 64,
+    "entry_frame_bytes": 48,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "o3_core",
+    "function": "roo_windows::internal::ReadLookupShadow(roo_windows::internal::LookupShadowSpec const&, roo_windows::internal::LookupShadowSpec const&, short, short)",
+    "bytes": 197,
+    "entry_frame_bytes": 32,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "o3_core",
+    "function": "roo_windows::internal::RoundedDecoration::readColors(short const*, short const*, unsigned long, roo_display::Color*) const",
+    "bytes": 203,
+    "entry_frame_bytes": 80,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "o3_core",
+    "function": "roo_windows::(anonymous namespace)::calcRoundRectAlpha(short, short, short, short, roo_windows::BorderStyle::CornerRadii, unsigned char, short, short)",
+    "bytes": 777,
+    "entry_frame_bytes": 48,
+    "integer_division_instructions": 12
+  },
+  {
+    "experiment": "o3_core",
+    "function": "roo_windows::Decoration::readWithContent(short, short, roo_display::Color, roo_display::Color const*) const",
+    "bytes": 1565,
+    "entry_frame_bytes": 64,
+    "integer_division_instructions": 6
+  },
+  {
+    "experiment": "o3_core",
+    "function": "roo_windows::Decoration::readColors(short const*, short const*, unsigned long, roo_display::Color*) const",
+    "bytes": 1762,
+    "entry_frame_bytes": 96,
+    "integer_division_instructions": 9
+  },
+  {
+    "experiment": "o3_core",
+    "function": "roo_windows::Decoration::readColorRect(short, short, short, short, roo_display::Color*) const",
+    "bytes": 2363,
+    "entry_frame_bytes": 128,
+    "integer_division_instructions": 9
+  },
+  {
+    "experiment": "radial_reject",
+    "function": "roo_windows::Decoration::readColors(short const*, short const*, unsigned long, roo_display::Color*) const",
+    "bytes": 35,
+    "entry_frame_bytes": 32,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "radial_reject",
+    "function": "roo_windows::internal::RoundedDecoration::readColorRect(short, short, short, short, roo_display::Color*) const",
+    "bytes": 64,
+    "entry_frame_bytes": 48,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "radial_reject",
+    "function": "roo_windows::internal::ShadowDistanceSqrt(unsigned long)",
+    "bytes": 81,
+    "entry_frame_bytes": 32,
+    "integer_division_instructions": 3
+  },
+  {
+    "experiment": "radial_reject",
+    "function": "roo_windows::(anonymous namespace)::calcRoundCornerAlpha(short, short, short, unsigned char)",
+    "bytes": 162,
+    "entry_frame_bytes": 32,
+    "integer_division_instructions": 3
+  },
+  {
+    "experiment": "radial_reject",
+    "function": "roo_windows::internal::RoundedDecoration::readColors(short const*, short const*, unsigned long, roo_display::Color*) const",
+    "bytes": 203,
+    "entry_frame_bytes": 80,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "radial_reject",
+    "function": "roo_windows::(anonymous namespace)::calcRoundRectAlpha(short, short, short, short, roo_windows::BorderStyle::CornerRadii, unsigned char, short, short)",
+    "bytes": 225,
+    "entry_frame_bytes": 48,
+    "integer_division_instructions": 1
+  },
+  {
+    "experiment": "radial_reject",
+    "function": "roo_windows::Decoration::readWithContent(short, short, roo_display::Color, roo_display::Color const*) const",
+    "bytes": 377,
+    "entry_frame_bytes": 64,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "radial_reject",
+    "function": "roo_windows::Decoration::readColorRect(short, short, short, short, roo_display::Color*) const",
+    "bytes": 559,
+    "entry_frame_bytes": 96,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "radial_reject",
+    "function": "roo_windows::internal::ReadLookupShadow(roo_windows::internal::LookupShadowSpec const&, roo_windows::internal::LookupShadowSpec const&, short, short)",
+    "bytes": 647,
+    "entry_frame_bytes": 80,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "retained_core",
+    "function": "roo_windows::internal::RoundedDecoration::readColorRect(short, short, short, short, roo_display::Color*) const",
+    "bytes": 64,
+    "entry_frame_bytes": 48,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "retained_core",
+    "function": "roo_windows::internal::ShadowDistanceSqrt(unsigned long)",
+    "bytes": 81,
+    "entry_frame_bytes": 32,
+    "integer_division_instructions": 3
+  },
+  {
+    "experiment": "retained_core",
+    "function": "roo_windows::Decoration::readColors(short const*, short const*, unsigned long, roo_display::Color*) const",
+    "bytes": 170,
+    "entry_frame_bytes": 48,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "retained_core",
+    "function": "roo_windows::(anonymous namespace)::calcRoundCornerAlpha(short, short, short, unsigned char)",
+    "bytes": 184,
+    "entry_frame_bytes": 32,
+    "integer_division_instructions": 3
+  },
+  {
+    "experiment": "retained_core",
+    "function": "roo_windows::internal::RoundedDecoration::readColors(short const*, short const*, unsigned long, roo_display::Color*) const",
+    "bytes": 203,
+    "entry_frame_bytes": 80,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "retained_core",
+    "function": "roo_windows::(anonymous namespace)::calcRoundRectAlpha(short, short, short, short, roo_windows::BorderStyle::CornerRadii, unsigned char, short, short)",
+    "bytes": 225,
+    "entry_frame_bytes": 48,
+    "integer_division_instructions": 1
+  },
+  {
+    "experiment": "retained_core",
+    "function": "roo_windows::Decoration::readWithContent(short, short, roo_display::Color, roo_display::Color const*) const",
+    "bytes": 324,
+    "entry_frame_bytes": 64,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "retained_core",
+    "function": "roo_windows::internal::ReadLookupShadow(roo_windows::internal::LookupShadowSpec const&, roo_windows::internal::LookupShadowSpec const&, short, short)",
+    "bytes": 459,
+    "entry_frame_bytes": 48,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "retained_core",
+    "function": "roo_windows::Decoration::readColorRect(short, short, short, short, roo_display::Color*) const",
+    "bytes": 559,
+    "entry_frame_bytes": 96,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "retained_sides",
+    "function": "roo_windows::internal::RoundedDecoration::readColorRect(short, short, short, short, roo_display::Color*) const",
+    "bytes": 64,
+    "entry_frame_bytes": 48,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "retained_sides",
+    "function": "roo_windows::internal::ShadowDistanceSqrt(unsigned long)",
+    "bytes": 81,
+    "entry_frame_bytes": 32,
+    "integer_division_instructions": 3
+  },
+  {
+    "experiment": "retained_sides",
+    "function": "roo_windows::Decoration::readColors(short const*, short const*, unsigned long, roo_display::Color*) const",
+    "bytes": 170,
+    "entry_frame_bytes": 48,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "retained_sides",
+    "function": "roo_windows::(anonymous namespace)::calcRoundCornerAlpha(short, short, short, unsigned char)",
+    "bytes": 184,
+    "entry_frame_bytes": 32,
+    "integer_division_instructions": 3
+  },
+  {
+    "experiment": "retained_sides",
+    "function": "roo_windows::internal::RoundedDecoration::readColors(short const*, short const*, unsigned long, roo_display::Color*) const",
+    "bytes": 203,
+    "entry_frame_bytes": 80,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "retained_sides",
+    "function": "roo_windows::(anonymous namespace)::calcRoundRectAlpha(short, short, short, short, roo_windows::BorderStyle::CornerRadii, unsigned char, short, short)",
+    "bytes": 225,
+    "entry_frame_bytes": 48,
+    "integer_division_instructions": 1
+  },
+  {
+    "experiment": "retained_sides",
+    "function": "roo_windows::Decoration::readWithContent(short, short, roo_display::Color, roo_display::Color const*) const",
+    "bytes": 324,
+    "entry_frame_bytes": 64,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "retained_sides",
+    "function": "roo_windows::Decoration::readColorRect(short, short, short, short, roo_display::Color*) const",
+    "bytes": 559,
+    "entry_frame_bytes": 96,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "retained_sides",
+    "function": "roo_windows::internal::ReadLookupShadow(roo_windows::internal::LookupShadowSpec const&, roo_windows::internal::LookupShadowSpec const&, short, short)",
+    "bytes": 607,
+    "entry_frame_bytes": 48,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "sqrt2",
+    "function": "roo_windows::Decoration::readColors(short const*, short const*, unsigned long, roo_display::Color*) const",
+    "bytes": 35,
+    "entry_frame_bytes": 32,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "sqrt2",
+    "function": "roo_windows::internal::RoundedDecoration::readColorRect(short, short, short, short, roo_display::Color*) const",
+    "bytes": 64,
+    "entry_frame_bytes": 48,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "sqrt2",
+    "function": "roo_windows::internal::ShadowDistanceSqrt(unsigned long)",
+    "bytes": 89,
+    "entry_frame_bytes": 32,
+    "integer_division_instructions": 2
+  },
+  {
+    "experiment": "sqrt2",
+    "function": "roo_windows::(anonymous namespace)::calcRoundCornerAlpha(short, short, short, unsigned char)",
+    "bytes": 170,
+    "entry_frame_bytes": 32,
+    "integer_division_instructions": 2
+  },
+  {
+    "experiment": "sqrt2",
+    "function": "roo_windows::internal::RoundedDecoration::readColors(short const*, short const*, unsigned long, roo_display::Color*) const",
+    "bytes": 203,
+    "entry_frame_bytes": 80,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "sqrt2",
+    "function": "roo_windows::(anonymous namespace)::calcRoundRectAlpha(short, short, short, short, roo_windows::BorderStyle::CornerRadii, unsigned char, short, short)",
+    "bytes": 225,
+    "entry_frame_bytes": 48,
+    "integer_division_instructions": 1
+  },
+  {
+    "experiment": "sqrt2",
+    "function": "roo_windows::Decoration::readWithContent(short, short, roo_display::Color, roo_display::Color const*) const",
+    "bytes": 377,
+    "entry_frame_bytes": 64,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "sqrt2",
+    "function": "roo_windows::Decoration::readColorRect(short, short, short, short, roo_display::Color*) const",
+    "bytes": 559,
+    "entry_frame_bytes": 96,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "sqrt2",
+    "function": "roo_windows::internal::ReadLookupShadow(roo_windows::internal::LookupShadowSpec const&, roo_windows::internal::LookupShadowSpec const&, short, short)",
+    "bytes": 645,
+    "entry_frame_bytes": 80,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "unroll4",
+    "function": "roo_windows::internal::RoundedDecoration::readColorRect(short, short, short, short, roo_display::Color*) const",
+    "bytes": 64,
+    "entry_frame_bytes": 48,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "unroll4",
+    "function": "roo_windows::internal::ShadowDistanceSqrt(unsigned long)",
+    "bytes": 81,
+    "entry_frame_bytes": 32,
+    "integer_division_instructions": 3
+  },
+  {
+    "experiment": "unroll4",
+    "function": "roo_windows::Decoration::readColors(short const*, short const*, unsigned long, roo_display::Color*) const",
+    "bytes": 150,
+    "entry_frame_bytes": 48,
+    "integer_division_instructions": 1
+  },
+  {
+    "experiment": "unroll4",
+    "function": "roo_windows::(anonymous namespace)::calcRoundCornerAlpha(short, short, short, unsigned char)",
+    "bytes": 162,
+    "entry_frame_bytes": 32,
+    "integer_division_instructions": 3
+  },
+  {
+    "experiment": "unroll4",
+    "function": "roo_windows::internal::RoundedDecoration::readColors(short const*, short const*, unsigned long, roo_display::Color*) const",
+    "bytes": 203,
+    "entry_frame_bytes": 80,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "unroll4",
+    "function": "roo_windows::(anonymous namespace)::calcRoundRectAlpha(short, short, short, short, roo_windows::BorderStyle::CornerRadii, unsigned char, short, short)",
+    "bytes": 225,
+    "entry_frame_bytes": 48,
+    "integer_division_instructions": 1
+  },
+  {
+    "experiment": "unroll4",
+    "function": "roo_windows::Decoration::readWithContent(short, short, roo_display::Color, roo_display::Color const*) const",
+    "bytes": 377,
+    "entry_frame_bytes": 64,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "unroll4",
+    "function": "roo_windows::Decoration::readColorRect(short, short, short, short, roo_display::Color*) const",
+    "bytes": 559,
+    "entry_frame_bytes": 96,
+    "integer_division_instructions": 0
+  },
+  {
+    "experiment": "unroll4",
+    "function": "roo_windows::internal::ReadLookupShadow(roo_windows::internal::LookupShadowSpec const&, roo_windows::internal::LookupShadowSpec const&, short, short)",
+    "bytes": 645,
+    "entry_frame_bytes": 80,
+    "integer_division_instructions": 0
+  }
+]

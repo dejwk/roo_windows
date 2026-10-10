@@ -1,0 +1,6 @@
+{
+  "src/roo_windows/decoration/decoration.cpp": "f234a3a476095ba8ced007905df991b507d983e3604c7bbe859daac3bf0cf66c",
+  "src/roo_windows/decoration/shadow_lookup.cpp": "077782d52fb0c2d432ea7b098bbbf3b1d8ad4f8f0ea506cf9d829c83789a3dc4",
+  "src/roo_windows/decoration/shadow_lookup.h": "7b17c721935831b0bb4b7ef52aed76666a6727e1f0bca87c0d0dd3484a8a622f",
+  "firmware.bin": "fe31db5343f571a1b8932ce874b20ea76bdd1e441d68a73c60e6c12e300acbaf"
+}

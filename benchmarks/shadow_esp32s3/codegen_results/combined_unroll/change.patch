@@ -1,0 +1,110 @@
+--- a/src/roo_windows/decoration/decoration.cpp
++++ b/src/roo_windows/decoration/decoration.cpp
+@@ -8,6 +8,8 @@
+ // #include "roo_windows/shadows/quarter_circle.h"
+ 
+ #include "roo_windows/internal/isqrt.h"
++
++#pragma GCC optimize("O3")
+ 
+ namespace roo_windows {
+ 
+@@ -147,8 +149,16 @@
+ 
+   // '15' chosen experimentally to make full circle look the most round.
+ #if ROO_WINDOWS_SHADOW_FAST_LUT
+-  int16_t rd = corner_radius * 16 + outline_width_frac -
+-               internal::ShadowDistanceSqrt(256 * (x * x + y * y));
++  uint32_t squared = 256u * (uint32_t(x) * x + uint32_t(y) * y);
++  uint32_t outer = corner_radius * 16 + outline_width_frac;
++  // Only the one-pixel antialiasing band needs a square root. Comparing
++  // squared thresholds preserves the original floor-sqrt rounding exactly.
++  if (squared >= outer * outer) return 0;
++  if (outer >= 16) {
++    uint32_t inner = outer - 15;
++    if (squared < inner * inner) return 255;
++  }
++  int16_t rd = outer - internal::ShadowDistanceSqrt(squared);
+ #else
+   int16_t rd =
+       corner_radius * 16 + outline_width_frac - isqrt24(256 * (x * x + y * y));
+@@ -543,6 +553,16 @@
+ 
+ void Decoration::readColors(const int16_t* x, const int16_t* y, uint32_t count,
+                             roo_display::Color* result) const {
++  while (count >= 4) {
++    result[0] = read(x[0], y[0]);
++    result[1] = read(x[1], y[1]);
++    result[2] = read(x[2], y[2]);
++    result[3] = read(x[3], y[3]);
++    x += 4;
++    y += 4;
++    result += 4;
++    count -= 4;
++  }
+   while (count-- > 0) {
+     *result++ = read(*x++, *y++);
+   }
+@@ -555,6 +575,15 @@
+ roo_display::Color Decoration::readWithContent(
+     int16_t x, int16_t y, roo_display::Color content,
+     const roo_display::Color* resolved_outline) const {
++#if ROO_WINDOWS_SHADOW_FAST_LUT
++  // Neither the fill, outline nor press mask covers exterior pixels.
++  if (x < widget_extents_.xMin() || x > widget_extents_.xMax() ||
++      y < widget_extents_.yMin() || y > widget_extents_.yMax()) {
++    return roo_display::Color(
++        uint32_t(internal::ReadLookupShadow(key_shadow_, ambient_shadow_, x, y))
++        << 24);
++  }
++#endif
+   int16_t xMin_interior = widget_extents_.xMin() + outline_width_;
+   int16_t xMax_interior = widget_extents_.xMax() - outline_width_;
+   int16_t yMin_interior = widget_extents_.yMin() + outline_width_;
+--- a/src/roo_windows/decoration/shadow_lookup.cpp
++++ b/src/roo_windows/decoration/shadow_lookup.cpp
+@@ -14,6 +14,8 @@
+ #else
+ #define SHADOW_LUT_STORAGE const
+ #endif
++
++#pragma GCC optimize("O3")
+ 
+ namespace roo_windows::internal {
+ namespace {
+@@ -54,9 +56,15 @@
+   radius *= 16;
+   int dx = radius - edge_x;
+   int dy = radius - edge_y;
+-  int distance = dx > 0 && dy > 0
+-                     ? ShadowDistanceSqrt(uint32_t(dx) * dx + uint32_t(dy) * dy)
+-                     : std::max(dx, dy);
++  int distance;
++  if (dx > 0 && dy > 0) {
++    uint32_t squared = uint32_t(dx) * dx + uint32_t(dy) * dy;
++    uint32_t limit = radius + spec.reach_16 + 1;
++    if (squared >= limit * limit) return 0;
++    distance = ShadowDistanceSqrt(squared);
++  } else {
++    distance = std::max(dx, dy);
++  }
+   int index = std::max(
+       0, std::min(255, (128 * 4096 + (distance - radius - spec.spread_16) *
+                                          spec.index_scale) >>
+@@ -92,13 +100,14 @@
+ #if ROO_WINDOWS_EXPERIMENTAL_SHADOW_GRADIENTS
+   if (edge_key_y >= key_radius * 16 && edge_ambient_y >= ambient_radius * 16 &&
+       edge_x <= edge_key_y && edge_x <= edge_ambient_y) {
+-    int distance = right ? x - key.x - key.w + 1 : key.x - x;
++    int distance = (8 - edge_x) >> 4;
+     return SideGradient(key.level, 0, distance);
+   }
+   if (key_bottom == ambient_bottom &&
+       edge_x >= std::max(key_radius, ambient_radius) * 16 &&
+       edge_key_y <= edge_x && edge_ambient_y <= edge_x) {
+-    int distance = key_bottom ? y - key.y - key.h + 1 : key.y - y;
++    int distance =
++        (8 - edge_key_y + (key_bottom ? key.offset_16 : -key.offset_16)) >> 4;
+     return SideGradient(key.level, key_bottom ? 2 : 1, distance);
+   }
+ #if ROO_WINDOWS_EXPERIMENTAL_SHADOW_GRADIENTS == 2

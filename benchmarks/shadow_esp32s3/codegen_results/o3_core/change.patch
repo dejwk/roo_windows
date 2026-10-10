@@ -1,0 +1,22 @@
+--- a/src/roo_windows/decoration/decoration.cpp
++++ b/src/roo_windows/decoration/decoration.cpp
+@@ -8,6 +8,8 @@
+ // #include "roo_windows/shadows/quarter_circle.h"
+ 
+ #include "roo_windows/internal/isqrt.h"
++
++#pragma GCC optimize("O3")
+ 
+ namespace roo_windows {
+ 
+--- a/src/roo_windows/decoration/shadow_lookup.cpp
++++ b/src/roo_windows/decoration/shadow_lookup.cpp
+@@ -14,6 +14,8 @@
+ #else
+ #define SHADOW_LUT_STORAGE const
+ #endif
++
++#pragma GCC optimize("O3")
+ 
+ namespace roo_windows::internal {
+ namespace {

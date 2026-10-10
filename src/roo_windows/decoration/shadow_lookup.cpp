@@ -54,9 +54,17 @@ uint8_t ReadUncachedGradientLayer(const LookupShadowSpec& spec, int edge_x,
   radius *= 16;
   int dx = radius - edge_x;
   int dy = radius - edge_y;
-  int distance = dx > 0 && dy > 0
-                     ? ShadowDistanceSqrt(uint32_t(dx) * dx + uint32_t(dy) * dy)
-                     : std::max(dx, dy);
+  int distance;
+  if (dx > 0 && dy > 0) {
+    uint32_t squared = uint32_t(dx) * dx + uint32_t(dy) * dy;
+    // A radial rejection also removes transparent pixels inside the layer
+    // bounding box. The +1 preserves floor-sqrt quantization at the boundary.
+    uint32_t limit = radius + spec.reach_16 + 1;
+    if (squared >= limit * limit) return 0;
+    distance = ShadowDistanceSqrt(squared);
+  } else {
+    distance = std::max(dx, dy);
+  }
   int index = std::max(
       0, std::min(255, (128 * 4096 + (distance - radius - spec.spread_16) *
                                          spec.index_scale) >>
@@ -92,13 +100,16 @@ uint8_t ReadCachedShadow(const LookupShadowSpec& key,
 #if ROO_WINDOWS_EXPERIMENTAL_SHADOW_GRADIENTS
   if (edge_key_y >= key_radius * 16 && edge_ambient_y >= ambient_radius * 16 &&
       edge_x <= edge_key_y && edge_x <= edge_ambient_y) {
-    int distance = right ? x - key.x - key.w + 1 : key.x - x;
+    // Pixel-center edge coordinates also give the integer profile index.
+    // Reusing them keeps original x/y coordinates out of the live register set.
+    int distance = (8 - edge_x) >> 4;
     return SideGradient(key.level, 0, distance);
   }
   if (key_bottom == ambient_bottom &&
       edge_x >= std::max(key_radius, ambient_radius) * 16 &&
       edge_key_y <= edge_x && edge_ambient_y <= edge_x) {
-    int distance = key_bottom ? y - key.y - key.h + 1 : key.y - y;
+    int distance =
+        (8 - edge_key_y + (key_bottom ? key.offset_16 : -key.offset_16)) >> 4;
     return SideGradient(key.level, key_bottom ? 2 : 1, distance);
   }
 #if ROO_WINDOWS_EXPERIMENTAL_SHADOW_GRADIENTS == 2

@@ -1,0 +1,12 @@
+--- a/src/roo_windows/decoration/shadow_lookup.h
++++ b/src/roo_windows/decoration/shadow_lookup.h
+@@ -50,7 +50,8 @@
+   uint32_t root = 3u << ((bits + 1) / 2 - 2);
+   root = (root + value / root) / 2;
+   root = (root + value / root) / 2;
+-  root = (root + value / root) / 2;
++  // Below 2^18, two iterations already reach floor-sqrt or its successor.
++  if (value >= (1u << 18)) root = (root + value / root) / 2;
+   // The seed is between 0.75 and 1.5 times the true root. Three steps leave
+   // less than one integer of error; a square comparison resolves rounding.
+   if (root == 65536 || root * root > value) --root;

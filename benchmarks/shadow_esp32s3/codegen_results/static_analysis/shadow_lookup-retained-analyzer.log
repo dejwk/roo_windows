@@ -1,0 +1,247 @@
+In file included from src/roo_windows/core/border_style.h:5,
+                 from /tmp/roo-shadow-review/codegen/static_retained_sources/src/roo_windows/decoration/shadow_lookup.h:6,
+                 from /tmp/roo-shadow-review/codegen/static_retained_sources/src/roo_windows/decoration/shadow_lookup.cpp:1:
+src/roo_windows/core/number.h: In constructor ‘roo_windows::SmallNumber::SmallNumber(uint16_t, bool)’:
+src/roo_windows/core/number.h:71:34: warning: unused parameter ‘dummy’ [-Wunused-parameter]
+   71 |   SmallNumber(uint16_t val, bool dummy) : val_(val) {}
+      |                             ~~~~~^~~~~
+In file included from external/roo_testing+/roo_testing/frameworks/esp-idf/components/freertos/FreeRTOS-Kernel/portable/linux/include/freertos/portmacro_idf.h:21,
+                 from external/roo_testing+/roo_testing/frameworks/esp-idf/components/freertos/FreeRTOS-Kernel/portable/linux/include/freertos/portmacro.h:158,
+                 from external/roo_testing+/roo_testing/frameworks/esp-idf/components/freertos/FreeRTOS-Kernel/include/freertos/portable.h:57,
+                 from external/roo_testing+/roo_testing/frameworks/esp-idf/components/freertos/FreeRTOS-Kernel/include/freertos/FreeRTOS.h:69,
+                 from external/roo_testing+/roo_testing/frameworks/arduino-esp32/cores/esp32/Arduino.h:33,
+                 from external/roo_logging+/src/roo_logging.h:126,
+                 from external/roo_display+/src/roo_display/core/box.h:5,
+                 from src/roo_windows/core/rect.h:5,
+                 from src/roo_windows/core/border_style.h:6:
+external/roo_testing+/roo_testing/frameworks/esp-idf/components/freertos/FreeRTOS-Kernel/portable/linux/include/freertos/../spinlock.h: In function ‘void spinlock_initialize(spinlock_t*)’:
+external/roo_testing+/roo_testing/frameworks/esp-idf/components/freertos/FreeRTOS-Kernel/portable/linux/include/freertos/../spinlock.h:44:83: warning: unused parameter ‘lock’ [-Wunused-parameter]
+   44 | static inline void __attribute__((always_inline)) spinlock_initialize(spinlock_t *lock)
+      |                                                                       ~~~~~~~~~~~~^~~~
+external/roo_testing+/roo_testing/frameworks/esp-idf/components/freertos/FreeRTOS-Kernel/portable/linux/include/freertos/../spinlock.h: In function ‘bool spinlock_acquire(spinlock_t*, int32_t)’:
+external/roo_testing+/roo_testing/frameworks/esp-idf/components/freertos/FreeRTOS-Kernel/portable/linux/include/freertos/../spinlock.h:48:80: warning: unused parameter ‘lock’ [-Wunused-parameter]
+   48 | static inline bool __attribute__((always_inline)) spinlock_acquire(spinlock_t *lock, int32_t timeout)
+      |                                                                    ~~~~~~~~~~~~^~~~
+external/roo_testing+/roo_testing/frameworks/esp-idf/components/freertos/FreeRTOS-Kernel/portable/linux/include/freertos/../spinlock.h:48:94: warning: unused parameter ‘timeout’ [-Wunused-parameter]
+   48 | static inline bool __attribute__((always_inline)) spinlock_acquire(spinlock_t *lock, int32_t timeout)
+      |                                                                                      ~~~~~~~~^~~~~~~
+external/roo_testing+/roo_testing/frameworks/esp-idf/components/freertos/FreeRTOS-Kernel/portable/linux/include/freertos/../spinlock.h: In function ‘void spinlock_release(spinlock_t*)’:
+external/roo_testing+/roo_testing/frameworks/esp-idf/components/freertos/FreeRTOS-Kernel/portable/linux/include/freertos/../spinlock.h:53:80: warning: unused parameter ‘lock’ [-Wunused-parameter]
+   53 | static inline void __attribute__((always_inline)) spinlock_release(spinlock_t *lock)
+      |                                                                    ~~~~~~~~~~~~^~~~
+In file included from external/roo_time+/src/roo_time.h:7,
+                 from external/roo_logging+/src/roo_logging/config.h:4,
+                 from external/roo_logging+/src/roo_logging/base.h:38,
+                 from external/roo_logging+/src/roo_logging.h:133:
+external/roo_time+/src/roo_time/wall_time.h: In member function ‘tm roo_time::DateTime::tmStruct() const’:
+external/roo_time+/src/roo_time/wall_time.h:311:29: warning: missing initializer for member ‘tm::tm_gmtoff’ [-Wmissing-field-initializers]
+  311 |               .tm_isdst = -1};
+      |                             ^
+external/roo_time+/src/roo_time/wall_time.h:311:29: warning: missing initializer for member ‘tm::tm_zone’ [-Wmissing-field-initializers]
+In file included from external/roo_display+/src/roo_display/core/device.h:5,
+                 from external/roo_display+/src/roo_display.h:8,
+                 from src/roo_windows/core/theme.h:3,
+                 from /tmp/roo-shadow-review/codegen/static_retained_sources/src/roo_windows/decoration/shadow_lookup.cpp:5:
+external/roo_display+/src/roo_display/color/blending.h: In member function ‘roo_display::Color roo_display::BlendOp<roo_display::BlendingMode::kSource>::blend(roo_display::Color, roo_display::Color) const’:
+external/roo_display+/src/roo_display/color/blending.h:204:28: warning: unused parameter ‘dst’ [-Wunused-parameter]
+  204 |   inline Color blend(Color dst, Color src) const { return src; }
+      |                      ~~~~~~^~~
+external/roo_display+/src/roo_display/color/blending.h: In member function ‘roo_display::Color roo_display::BlendOp<roo_display::BlendingMode::kSource>::blendTransparentSrc(roo_display::Color, roo_display::Color) const’:
+external/roo_display+/src/roo_display/color/blending.h:206:42: warning: unused parameter ‘dst’ [-Wunused-parameter]
+  206 |   inline Color blendTransparentSrc(Color dst, Color src) const { return src; }
+      |                                    ~~~~~~^~~
+external/roo_display+/src/roo_display/color/blending.h: In member function ‘roo_display::Color roo_display::BlendOp<roo_display::BlendingMode::kSource>::blendTransparentDst(roo_display::Color, roo_display::Color) const’:
+external/roo_display+/src/roo_display/color/blending.h:208:42: warning: unused parameter ‘dst’ [-Wunused-parameter]
+  208 |   inline Color blendTransparentDst(Color dst, Color src) const { return src; }
+      |                                    ~~~~~~^~~
+external/roo_display+/src/roo_display/color/blending.h: In member function ‘roo_display::Color roo_display::BlendOp<roo_display::BlendingMode::kSourceOverOpaque>::blendTransparentSrc(roo_display::Color, roo_display::Color) const’:
+external/roo_display+/src/roo_display/color/blending.h:239:53: warning: unused parameter ‘src’ [-Wunused-parameter]
+  239 |   inline Color blendTransparentSrc(Color dst, Color src) const { return dst; }
+      |                                               ~~~~~~^~~
+external/roo_display+/src/roo_display/color/blending.h: In member function ‘roo_display::Color roo_display::BlendOp<roo_display::BlendingMode::kSourceOver>::blendTransparentSrc(roo_display::Color, roo_display::Color) const’:
+external/roo_display+/src/roo_display/color/blending.h:328:53: warning: unused parameter ‘src’ [-Wunused-parameter]
+  328 |   inline Color blendTransparentSrc(Color dst, Color src) const { return dst; }
+      |                                               ~~~~~~^~~
+external/roo_display+/src/roo_display/color/blending.h: In member function ‘roo_display::Color roo_display::BlendOp<roo_display::BlendingMode::kSourceOver>::blendTransparentDst(roo_display::Color, roo_display::Color) const’:
+external/roo_display+/src/roo_display/color/blending.h:330:42: warning: unused parameter ‘dst’ [-Wunused-parameter]
+  330 |   inline Color blendTransparentDst(Color dst, Color src) const { return src; }
+      |                                    ~~~~~~^~~
+external/roo_display+/src/roo_display/color/blending.h: In member function ‘roo_display::Color roo_display::BlendOp<roo_display::BlendingMode::kSourceAtop>::blendTransparentSrc(roo_display::Color, roo_display::Color) const’:
+external/roo_display+/src/roo_display/color/blending.h:371:53: warning: unused parameter ‘src’ [-Wunused-parameter]
+  371 |   inline Color blendTransparentSrc(Color dst, Color src) const { return dst; }
+      |                                               ~~~~~~^~~
+external/roo_display+/src/roo_display/color/blending.h: In member function ‘roo_display::Color roo_display::BlendOp<roo_display::BlendingMode::kSourceAtop>::blendTransparentDst(roo_display::Color, roo_display::Color) const’:
+external/roo_display+/src/roo_display/color/blending.h:373:53: warning: unused parameter ‘src’ [-Wunused-parameter]
+  373 |   inline Color blendTransparentDst(Color dst, Color src) const { return dst; }
+      |                                               ~~~~~~^~~
+external/roo_display+/src/roo_display/color/blending.h: In member function ‘roo_display::Color roo_display::BlendOp<roo_display::BlendingMode::kDestination>::blend(roo_display::Color, roo_display::Color) const’:
+external/roo_display+/src/roo_display/color/blending.h:378:39: warning: unused parameter ‘src’ [-Wunused-parameter]
+  378 |   inline Color blend(Color dst, Color src) const { return dst; }
+      |                                 ~~~~~~^~~
+external/roo_display+/src/roo_display/color/blending.h: In member function ‘roo_display::Color roo_display::BlendOp<roo_display::BlendingMode::kDestination>::blendTransparentSrc(roo_display::Color, roo_display::Color) const’:
+external/roo_display+/src/roo_display/color/blending.h:380:53: warning: unused parameter ‘src’ [-Wunused-parameter]
+  380 |   inline Color blendTransparentSrc(Color dst, Color src) const { return dst; }
+      |                                               ~~~~~~^~~
+external/roo_display+/src/roo_display/color/blending.h: In member function ‘roo_display::Color roo_display::BlendOp<roo_display::BlendingMode::kDestination>::blendTransparentDst(roo_display::Color, roo_display::Color) const’:
+external/roo_display+/src/roo_display/color/blending.h:382:53: warning: unused parameter ‘src’ [-Wunused-parameter]
+  382 |   inline Color blendTransparentDst(Color dst, Color src) const { return dst; }
+      |                                               ~~~~~~^~~
+external/roo_display+/src/roo_display/color/blending.h: In member function ‘roo_display::Color roo_display::BlendOp<roo_display::BlendingMode::kDestinationOverOpaque>::blendTransparentDst(roo_display::Color, roo_display::Color) const’:
+external/roo_display+/src/roo_display/color/blending.h:404:42: warning: unused parameter ‘dst’ [-Wunused-parameter]
+  404 |   inline Color blendTransparentDst(Color dst, Color src) const { return src; }
+      |                                    ~~~~~~^~~
+external/roo_display+/src/roo_display/color/blending.h: In member function ‘roo_display::Color roo_display::BlendOp<roo_display::BlendingMode::kDestinationOver>::blendTransparentDst(roo_display::Color, roo_display::Color) const’:
+external/roo_display+/src/roo_display/color/blending.h:418:42: warning: unused parameter ‘dst’ [-Wunused-parameter]
+  418 |   inline Color blendTransparentDst(Color dst, Color src) const { return src; }
+      |                                    ~~~~~~^~~
+external/roo_display+/src/roo_display/color/blending.h: In member function ‘roo_display::Color roo_display::BlendOp<roo_display::BlendingMode::kSourceIn>::blendTransparentDst(roo_display::Color, roo_display::Color) const’:
+external/roo_display+/src/roo_display/color/blending.h:466:42: warning: unused parameter ‘dst’ [-Wunused-parameter]
+  466 |   inline Color blendTransparentDst(Color dst, Color src) const {
+      |                                    ~~~~~~^~~
+external/roo_display+/src/roo_display/color/blending.h: In member function ‘roo_display::Color roo_display::BlendOp<roo_display::BlendingMode::kDestinationIn>::blendTransparentSrc(roo_display::Color, roo_display::Color) const’:
+external/roo_display+/src/roo_display/color/blending.h:477:53: warning: unused parameter ‘src’ [-Wunused-parameter]
+  477 |   inline Color blendTransparentSrc(Color dst, Color src) const {
+      |                                               ~~~~~~^~~
+external/roo_display+/src/roo_display/color/blending.h: In member function ‘roo_display::Color roo_display::BlendOp<roo_display::BlendingMode::kDestinationAtop>::blendTransparentSrc(roo_display::Color, roo_display::Color) const’:
+external/roo_display+/src/roo_display/color/blending.h:493:42: warning: unused parameter ‘dst’ [-Wunused-parameter]
+  493 |   inline Color blendTransparentSrc(Color dst, Color src) const { return src; }
+      |                                    ~~~~~~^~~
+external/roo_display+/src/roo_display/color/blending.h: In member function ‘roo_display::Color roo_display::BlendOp<roo_display::BlendingMode::kDestinationAtop>::blendTransparentDst(roo_display::Color, roo_display::Color) const’:
+external/roo_display+/src/roo_display/color/blending.h:495:42: warning: unused parameter ‘dst’ [-Wunused-parameter]
+  495 |   inline Color blendTransparentDst(Color dst, Color src) const { return src; }
+      |                                    ~~~~~~^~~
+external/roo_display+/src/roo_display/color/blending.h: In member function ‘roo_display::Color roo_display::BlendOp<roo_display::BlendingMode::kSourceOut>::blendTransparentDst(roo_display::Color, roo_display::Color) const’:
+external/roo_display+/src/roo_display/color/blending.h:523:42: warning: unused parameter ‘dst’ [-Wunused-parameter]
+  523 |   inline Color blendTransparentDst(Color dst, Color src) const { return src; }
+      |                                    ~~~~~~^~~
+external/roo_display+/src/roo_display/color/blending.h: In member function ‘roo_display::Color roo_display::BlendOp<roo_display::BlendingMode::kDestinationOut>::blendTransparentSrc(roo_display::Color, roo_display::Color) const’:
+external/roo_display+/src/roo_display/color/blending.h:532:53: warning: unused parameter ‘src’ [-Wunused-parameter]
+  532 |   inline Color blendTransparentSrc(Color dst, Color src) const { return dst; }
+      |                                               ~~~~~~^~~
+external/roo_display+/src/roo_display/color/blending.h: In member function ‘roo_display::Color roo_display::BlendOp<roo_display::BlendingMode::kXor>::blendTransparentSrc(roo_display::Color, roo_display::Color) const’:
+external/roo_display+/src/roo_display/color/blending.h:570:53: warning: unused parameter ‘src’ [-Wunused-parameter]
+  570 |   inline Color blendTransparentSrc(Color dst, Color src) const { return dst; }
+      |                                               ~~~~~~^~~
+external/roo_display+/src/roo_display/core/device.h: In member function ‘virtual void roo_display::DisplayDevice::setBgColorHint(roo_display::Color)’:
+external/roo_display+/src/roo_display/core/device.h:303:37: warning: unused parameter ‘bgcolor’ [-Wunused-parameter]
+  303 |   virtual void setBgColorHint(Color bgcolor) {}
+      |                               ~~~~~~^~~~~~~
+In file included from external/roo_display+/src/roo_display.h:9:
+external/roo_display+/src/roo_display/core/drawable.h: In member function ‘virtual void roo_display::Drawable::drawInteriorTo(const roo_display::Surface&) const’:
+external/roo_display+/src/roo_display/core/drawable.h:275:46: warning: unused parameter ‘s’ [-Wunused-parameter]
+  275 |   virtual void drawInteriorTo(const Surface &s) const {}
+      |                               ~~~~~~~~~~~~~~~^
+In file included from external/roo_display+/src/roo_display/filter/blender.h:5,
+                 from external/roo_display+/src/roo_display/filter/background.h:4,
+                 from external/roo_display+/src/roo_display.h:11:
+external/roo_display+/src/roo_display/core/rasterizable.h: In member function ‘virtual bool roo_display::Rasterizable::readUniformColorRect(int16_t, int16_t, int16_t, int16_t, roo_display::Color*) const’:
+external/roo_display+/src/roo_display/core/rasterizable.h:54:45: warning: unused parameter ‘xMin’ [-Wunused-parameter]
+   54 |   virtual bool readUniformColorRect(int16_t xMin, int16_t yMin, int16_t xMax,
+      |                                     ~~~~~~~~^~~~
+external/roo_display+/src/roo_display/core/rasterizable.h:54:59: warning: unused parameter ‘yMin’ [-Wunused-parameter]
+   54 |   virtual bool readUniformColorRect(int16_t xMin, int16_t yMin, int16_t xMax,
+      |                                                   ~~~~~~~~^~~~
+external/roo_display+/src/roo_display/core/rasterizable.h:54:73: warning: unused parameter ‘xMax’ [-Wunused-parameter]
+   54 |   virtual bool readUniformColorRect(int16_t xMin, int16_t yMin, int16_t xMax,
+      |                                                                 ~~~~~~~~^~~~
+external/roo_display+/src/roo_display/core/rasterizable.h:55:45: warning: unused parameter ‘yMax’ [-Wunused-parameter]
+   55 |                                     int16_t yMax, Color* result) const {
+      |                                     ~~~~~~~~^~~~
+external/roo_display+/src/roo_display/core/rasterizable.h:55:58: warning: unused parameter ‘result’ [-Wunused-parameter]
+   55 |                                     int16_t yMax, Color* result) const {
+      |                                                   ~~~~~~~^~~~~~
+In file included from external/roo_display+/src/roo_display/filter/background_fill_optimizer.h:7,
+                 from external/roo_display+/src/roo_display.h:12:
+external/roo_display+/src/roo_display/internal/nibble_rect.h: In constructor ‘roo_display::internal::NibbleRectWindowIterator::NibbleRectWindowIterator(const roo_display::internal::NibbleRect*, int16_t, int16_t, int16_t, int16_t)’:
+external/roo_display+/src/roo_display/internal/nibble_rect.h:66:48: warning: unused parameter ‘y1’ [-Wunused-parameter]
+   66 |                            int16_t x1, int16_t y1)
+      |                                        ~~~~~~~~^~
+In file included from external/roo_display+/src/roo_display/color/scrim.h:17,
+                 from external/roo_display+/src/roo_display/core/offscreen.h:9,
+                 from external/roo_display+/src/roo_display/filter/front_to_back_writer.h:6,
+                 from external/roo_display+/src/roo_display.h:14:
+external/roo_display+/src/roo_display/color/color_modes.h: In member function ‘roo_display::Color roo_display::RawColorInterpolator<roo_display::Grayscale4>::operator()(uint8_t, uint8_t, uint16_t, const roo_display::Grayscale4&) const’:
+external/roo_display+/src/roo_display/color/color_modes.h:400:45: warning: unused parameter ‘mode’ [-Wunused-parameter]
+  400 |                           const Grayscale4& mode) const {
+      |                           ~~~~~~~~~~~~~~~~~~^~~~
+external/roo_display+/src/roo_display/color/color_modes.h: In member function ‘uint8_t roo_display::RawSubByteBlender<roo_display::Alpha4, roo_display::BlendingMode::kSourceOver>::operator()(uint8_t, roo_display::Color, const roo_display::Alpha4&) const’:
+external/roo_display+/src/roo_display/color/color_modes.h:486:68: warning: unused parameter ‘mode’ [-Wunused-parameter]
+  486 |   inline uint8_t operator()(uint8_t bg, Color color, const Alpha4& mode) const {
+      |                                                      ~~~~~~~~~~~~~~^~~~
+external/roo_display+/src/roo_display/color/color_modes.h: In member function ‘uint8_t roo_display::RawSubByteBlender<roo_display::Monochrome, roo_display::BlendingMode::kSourceOver>::operator()(uint8_t, roo_display::Color, const roo_display::Monochrome&) const’:
+external/roo_display+/src/roo_display/color/color_modes.h:551:47: warning: unused parameter ‘color’ [-Wunused-parameter]
+  551 |   inline uint8_t operator()(uint8_t bg, Color color,
+      |                                         ~~~~~~^~~~~
+external/roo_display+/src/roo_display/core/offscreen.h: At global scope:
+external/roo_display+/src/roo_display/core/offscreen.h:73:3: warning: type qualifiers ignored on function return type [-Wignored-qualifiers]
+   73 |   const uint32_t offset() const { return offset_; }
+      |   ^~~~~
+external/roo_display+/src/roo_display.h:284:3: warning: type qualifiers ignored on function return type [-Wignored-qualifiers]
+  284 |   const uint16_t width() const { return bounds_.width(); }
+      |   ^~~~~
+external/roo_display+/src/roo_display.h:288:3: warning: type qualifiers ignored on function return type [-Wignored-qualifiers]
+  288 |   const uint16_t height() const { return bounds_.height(); }
+      |   ^~~~~
+external/roo_display+/src/roo_display/color/blending.h: In instantiation of ‘uint8_t roo_display::RawSubByteBlender<ColorMode, roo_display::BlendingMode::kSource>::operator()(uint8_t, roo_display::Color, ColorMode&) const [with ColorMode = roo_display::Monochrome; uint8_t = unsigned char]’:
+external/roo_display+/src/roo_display/color/blending.h:841:57:   required from ‘roo_display::ColorStorageType<ColorMode> roo_display::internal::ApplyRawSubByteBlendingResolver<ColorMode>::operator()(roo_display::ColorStorageType<ColorMode>, roo_display::Color, ColorMode&) const [with roo_display::BlendingMode blending_mode = roo_display::BlendingMode::kSource; ColorMode = roo_display::Monochrome; roo_display::ColorStorageType<ColorMode> = unsigned char]’
+  841 |     return RawSubByteBlender<ColorMode, blending_mode>()(dst, src, color_mode);
+      |            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~
+external/roo_display+/src/roo_display/color/blending.h:146:62:   required from ‘decltype (declval<Functor>().operator()<roo_display::BlendingMode::kSourceOver>(roo_display::internal::BlenderSpecialization::args ...)) roo_display::internal::BlenderSpecialization(roo_display::BlendingMode, Args&& ...) [with Functor = ApplyRawSubByteBlendingResolver<roo_display::Monochrome>; Args = {unsigned char&, roo_display::Color&, roo_display::Monochrome&}; decltype (declval<Functor>().operator()<roo_display::BlendingMode::kSourceOver>(roo_display::internal::BlenderSpecialization::args ...)) = unsigned char]’
+  146 |     return functor.template operator()<BlendingMode::kSource>(
+      |            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+  147 |         std::forward<Args>(args)...);
+      |         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+external/roo_display+/src/roo_display/color/blending.h:882:60:   required from ‘roo_display::ColorStorageType<ColorMode> roo_display::ApplyRawSubByteBlending(BlendingMode, uint8_t, Color, ColorMode&) [with ColorMode = Monochrome; ColorStorageType<ColorMode> = unsigned char; uint8_t = unsigned char]’
+  881 |   return internal::BlenderSpecialization<
+      |          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  882 |       internal::ApplyRawSubByteBlendingResolver<ColorMode>>(blending_mode, dst,
+      |       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~
+  883 |                                                             src, color_mode);
+      |                                                             ~~~~~~~~~~~~~~~~
+external/roo_display+/src/roo_display/core/offscreen.h:1385:41:   required from ‘void roo_display::internal::GenericFiller<ColorMode, pixel_order, byte_order, pixels_per_byte, storage_type>::operator()(roo::byte*, uint32_t) [with ColorMode = roo_display::Monochrome; roo_display::ColorPixelOrder pixel_order = roo_display::ColorPixelOrder::kMsbFirst; roo_io::ByteOrder byte_order = roo_io::kBigEndian; unsigned char pixels_per_byte = 8; storage_type = unsigned char; roo::byte = std::byte; uint32_t = unsigned int]’
+ 1385 |     auto color = ApplyRawSubByteBlending(
+      |                  ~~~~~~~~~~~~~~~~~~~~~~~^
+ 1386 |         blending_mode_, io.loadRaw(*target, pixel_index), color_, color_mode_);
+      |         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+external/roo_display+/src/roo_display/core/offscreen.h:1830:11:   required from ‘void roo_display::OffscreenDevice<ColorMode, pixel_order, byte_order, pixels_per_byte, storage_type>::fillPixels(roo_display::BlendingMode, roo_display::Color, int16_t*, int16_t*, uint16_t) [with ColorMode = roo_display::Monochrome; roo_display::ColorPixelOrder pixel_order = roo_display::ColorPixelOrder::kMsbFirst; roo_io::ByteOrder byte_order = roo_io::kBigEndian; signed char pixels_per_byte = 8; storage_type = unsigned char; int16_t = short int; uint16_t = short unsigned int]’
+ 1830 |       fill(buffer, *x++ + *y++ * w);
+      |       ~~~~^~~~~~~~~~~~~~~~~~~~~~~~~
+external/roo_display+/src/roo_display/filter/front_to_back_writer.h:122:35:   required from here
+  122 |     offscreen_.output().fillPixels(mode, color::Black, &x, &y, 1);
+      |     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+external/roo_display+/src/roo_display/color/blending.h:798:30: warning: unused parameter ‘dst’ [-Wunused-parameter]
+  798 |   uint8_t operator()(uint8_t dst, Color src, ColorMode& color_mode) const {
+      |                      ~~~~~~~~^~~
+external/roo_display+/src/roo_display/color/blending.h: In instantiation of ‘uint8_t roo_display::RawSubByteBlender<ColorMode, roo_display::BlendingMode::kDestination>::operator()(uint8_t, roo_display::Color, const ColorMode&) const [with ColorMode = roo_display::Monochrome; uint8_t = unsigned char]’:
+external/roo_display+/src/roo_display/color/blending.h:841:57:   required from ‘roo_display::ColorStorageType<ColorMode> roo_display::internal::ApplyRawSubByteBlendingResolver<ColorMode>::operator()(roo_display::ColorStorageType<ColorMode>, roo_display::Color, ColorMode&) const [with roo_display::BlendingMode blending_mode = roo_display::BlendingMode::kDestination; ColorMode = roo_display::Monochrome; roo_display::ColorStorageType<ColorMode> = unsigned char]’
+  841 |     return RawSubByteBlender<ColorMode, blending_mode>()(dst, src, color_mode);
+      |            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~
+external/roo_display+/src/roo_display/color/blending.h:163:71:   required from ‘decltype (declval<Functor>().operator()<roo_display::BlendingMode::kSourceOver>(roo_display::internal::BlenderSpecialization::args ...)) roo_display::internal::BlenderSpecialization(roo_display::BlendingMode, Args&& ...) [with Functor = ApplyRawSubByteBlendingResolver<roo_display::Monochrome>; Args = {unsigned char&, roo_display::Color&, roo_display::Monochrome&}; decltype (declval<Functor>().operator()<roo_display::BlendingMode::kSourceOver>(roo_display::internal::BlenderSpecialization::args ...)) = unsigned char]’
+  163 |         return functor.template operator()<BlendingMode::kDestination>(
+      |                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+  164 |             std::forward<Args>(args)...);
+      |             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+external/roo_display+/src/roo_display/color/blending.h:882:60:   required from ‘roo_display::ColorStorageType<ColorMode> roo_display::ApplyRawSubByteBlending(BlendingMode, uint8_t, Color, ColorMode&) [with ColorMode = Monochrome; ColorStorageType<ColorMode> = unsigned char; uint8_t = unsigned char]’
+  881 |   return internal::BlenderSpecialization<
+      |          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  882 |       internal::ApplyRawSubByteBlendingResolver<ColorMode>>(blending_mode, dst,
+      |       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~
+  883 |                                                             src, color_mode);
+      |                                                             ~~~~~~~~~~~~~~~~
+external/roo_display+/src/roo_display/core/offscreen.h:1385:41:   required from ‘void roo_display::internal::GenericFiller<ColorMode, pixel_order, byte_order, pixels_per_byte, storage_type>::operator()(roo::byte*, uint32_t) [with ColorMode = roo_display::Monochrome; roo_display::ColorPixelOrder pixel_order = roo_display::ColorPixelOrder::kMsbFirst; roo_io::ByteOrder byte_order = roo_io::kBigEndian; unsigned char pixels_per_byte = 8; storage_type = unsigned char; roo::byte = std::byte; uint32_t = unsigned int]’
+ 1385 |     auto color = ApplyRawSubByteBlending(
+      |                  ~~~~~~~~~~~~~~~~~~~~~~~^
+ 1386 |         blending_mode_, io.loadRaw(*target, pixel_index), color_, color_mode_);
+      |         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+external/roo_display+/src/roo_display/core/offscreen.h:1830:11:   required from ‘void roo_display::OffscreenDevice<ColorMode, pixel_order, byte_order, pixels_per_byte, storage_type>::fillPixels(roo_display::BlendingMode, roo_display::Color, int16_t*, int16_t*, uint16_t) [with ColorMode = roo_display::Monochrome; roo_display::ColorPixelOrder pixel_order = roo_display::ColorPixelOrder::kMsbFirst; roo_io::ByteOrder byte_order = roo_io::kBigEndian; signed char pixels_per_byte = 8; storage_type = unsigned char; int16_t = short int; uint16_t = short unsigned int]’
+ 1830 |       fill(buffer, *x++ + *y++ * w);
+      |       ~~~~^~~~~~~~~~~~~~~~~~~~~~~~~
+external/roo_display+/src/roo_display/filter/front_to_back_writer.h:122:35:   required from here
+  122 |     offscreen_.output().fillPixels(mode, color::Black, &x, &y, 1);
+      |     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+external/roo_display+/src/roo_display/color/blending.h:805:41: warning: unused parameter ‘src’ [-Wunused-parameter]
+  805 |   uint8_t operator()(uint8_t dst, Color src,
+      |                                   ~~~~~~^~~
+external/roo_display+/src/roo_display/color/blending.h:806:39: warning: unused parameter ‘color_mode’ [-Wunused-parameter]
+  806 |                      const ColorMode& color_mode) const {
+      |                      ~~~~~~~~~~~~~~~~~^~~~~~~~~~

@@ -1,0 +1,21 @@
+--- a/src/roo_windows/decoration/shadow_lookup.cpp
++++ b/src/roo_windows/decoration/shadow_lookup.cpp
+@@ -54,9 +54,15 @@
+   radius *= 16;
+   int dx = radius - edge_x;
+   int dy = radius - edge_y;
+-  int distance = dx > 0 && dy > 0
+-                     ? ShadowDistanceSqrt(uint32_t(dx) * dx + uint32_t(dy) * dy)
+-                     : std::max(dx, dy);
++  int distance;
++  if (dx > 0 && dy > 0) {
++    uint32_t squared = uint32_t(dx) * dx + uint32_t(dy) * dy;
++    uint32_t limit = radius + spec.reach_16 + 1;
++    if (squared >= limit * limit) return 0;
++    distance = ShadowDistanceSqrt(squared);
++  } else {
++    distance = std::max(dx, dy);
++  }
+   int index = std::max(
+       0, std::min(255, (128 * 4096 + (distance - radius - spec.spread_16) *
+                                          spec.index_scale) >>
