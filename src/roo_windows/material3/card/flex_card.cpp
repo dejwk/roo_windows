@@ -1,5 +1,6 @@
 #include "roo_windows/material3/card/flex_card.h"
 
+#include "roo_windows/material3/internal/elevation.h"
 #include "roo_windows/material3/theme.h"
 
 namespace roo_windows {
@@ -227,8 +228,9 @@ uint8_t FlexCard::getElevation() const { return elevation_override_; }
 FlexCard::Tokens FlexCard::styleDefaults(Style style) {
   switch (style) {
     case Style::kElevated:
-      return Tokens{::roo_windows::material3::ColorToken::kNone, 3,
-                    SmallNumber(0), (uint8_t)Scaled(12)};
+      return Tokens{::roo_windows::material3::ColorToken::kNone,
+                    internal::RendererElevation(3), SmallNumber(0),
+                    (uint8_t)Scaled(12)};
     case Style::kFilled:
       return Tokens{::roo_windows::material3::ColorToken::kNone, 0,
                     SmallNumber(0), (uint8_t)Scaled(12)};

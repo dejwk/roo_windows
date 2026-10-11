@@ -5,6 +5,7 @@
 
 #include "roo_display/color/color.h"
 #include "roo_windows/material3/button/internal/button_geometry.h"
+#include "roo_windows/material3/internal/elevation.h"
 
 using roo_display::AlphaBlend;
 using roo_display::color::Transparent;
@@ -93,8 +94,8 @@ ButtonAppearance ResolveButtonAppearance(const Theme& theme, ButtonVariant v,
       tokens.paint_container ? colors.resolve(container) : Transparent,
       colors.resolve(tokens.content),
       tokens.paint_outline ? colors.resolve(tokens.outline) : Transparent,
-      tokens.resting_elevation,
-      tokens.pressed_elevation,
+      RendererElevation(tokens.resting_elevation),
+      RendererElevation(tokens.pressed_elevation),
   };
 }
 
@@ -102,7 +103,7 @@ uint8_t ResolveButtonElevation(ButtonVariant variant, bool enabled,
                                bool pressed) {
   (void)pressed;
   if (!enabled) return 0;
-  return variant == ButtonVariant::kElevated ? 3 : 0;
+  return variant == ButtonVariant::kElevated ? RendererElevation(3) : 0;
 }
 
 // Before layout, retain the nominal height used by the old button shape

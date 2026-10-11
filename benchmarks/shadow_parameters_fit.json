@@ -1,0 +1,62 @@
+{
+  "reference_heights_dp": [
+    0.0,
+    3.0,
+    5.0,
+    8.0,
+    10.0,
+    14.0
+  ],
+  "key": [
+    {
+      "parameter": "offset",
+      "constraint": "free_intercept",
+      "A": 3.2183622568085243e-71,
+      "x0": -158.48931924611142,
+      "alpha": 31.778960489561193,
+      "y0": -0.09274635566601613,
+      "value_at_zero_dp": 0.3565908301416689,
+      "gain_to_12_dp": 2.4193449159230047,
+      "anchor_rmse_dp": 0.2829981058850081,
+      "anchor_max_error_dp": 0.4284586271066384
+    },
+    {
+      "parameter": "blur",
+      "constraint": "free_intercept",
+      "A": 0.9676300610063198,
+      "x0": -0.0,
+      "alpha": 0.5208840009526267,
+      "y0": -0.025465001148427646,
+      "value_at_zero_dp": 0.025465001148427646,
+      "gain_to_12_dp": 3.5305112292274425,
+      "anchor_rmse_dp": 0.1952370314481539,
+      "anchor_max_error_dp": 0.26311235614724504
+    }
+  ],
+  "ambient": [
+    {
+      "layer": "ambient",
+      "parameter": "offset",
+      "A": 0.29536194914303787,
+      "alpha": 1.2621567045489686,
+      "anchor_rmse_dp": 0.2965938151427796,
+      "anchor_max_error_dp": 0.5985389356872295
+    },
+    {
+      "layer": "ambient",
+      "parameter": "blur",
+      "A": 1.5842575616751684,
+      "alpha": 0.7785000686139598,
+      "anchor_rmse_dp": 0.4284734147619472,
+      "anchor_max_error_dp": 0.7261876169106047
+    },
+    {
+      "layer": "ambient",
+      "parameter": "spread",
+      "A": 0.289127889356667,
+      "alpha": 1.1458896433855448,
+      "anchor_rmse_dp": 0.09324557431823656,
+      "anchor_max_error_dp": 0.17176308047424182
+    }
+  ]
+}

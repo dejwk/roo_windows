@@ -1,0 +1,74 @@
+[
+  {
+    "size_dp": 56,
+    "material_level": 0,
+    "half_dp_index": 0,
+    "identical": true
+  },
+  {
+    "size_dp": 56,
+    "material_level": 1,
+    "half_dp_index": 2,
+    "identical": true
+  },
+  {
+    "size_dp": 56,
+    "material_level": 2,
+    "half_dp_index": 6,
+    "identical": true
+  },
+  {
+    "size_dp": 56,
+    "material_level": 3,
+    "half_dp_index": 12,
+    "identical": true
+  },
+  {
+    "size_dp": 56,
+    "material_level": 4,
+    "half_dp_index": 16,
+    "identical": true
+  },
+  {
+    "size_dp": 56,
+    "material_level": 5,
+    "half_dp_index": 24,
+    "identical": true
+  },
+  {
+    "size_dp": 96,
+    "material_level": 0,
+    "half_dp_index": 0,
+    "identical": true
+  },
+  {
+    "size_dp": 96,
+    "material_level": 1,
+    "half_dp_index": 2,
+    "identical": true
+  },
+  {
+    "size_dp": 96,
+    "material_level": 2,
+    "half_dp_index": 6,
+    "identical": true
+  },
+  {
+    "size_dp": 96,
+    "material_level": 3,
+    "half_dp_index": 12,
+    "identical": true
+  },
+  {
+    "size_dp": 96,
+    "material_level": 4,
+    "half_dp_index": 16,
+    "identical": true
+  },
+  {
+    "size_dp": 96,
+    "material_level": 5,
+    "half_dp_index": 24,
+    "identical": true
+  }
+]

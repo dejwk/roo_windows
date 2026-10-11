@@ -1,0 +1,72 @@
+{
+  "model": "a*h*h + b*h + c; h and output in logical dp",
+  "method": "Unconstrained ordinary least squares; six original reference points, equally weighted",
+  "fitted_heights_dp": [
+    0.0,
+    1.0,
+    3.0,
+    6.0,
+    8.0,
+    12.0
+  ],
+  "extrapolation_range_dp": [
+    12,
+    15.5
+  ],
+  "fits": [
+    {
+      "layer": "key",
+      "parameter": "offset",
+      "a": 0.023697981559930248,
+      "b": 0.0022177921754297043,
+      "c": 0.4856964864191386,
+      "anchor_rmse_dp": 0.33939378095320694,
+      "anchor_max_error_dp": 0.48838773984550143
+    },
+    {
+      "layer": "key",
+      "parameter": "blur",
+      "a": -0.018280588088711684,
+      "b": 0.48262148018938456,
+      "c": 0.6941041614752047,
+      "anchor_rmse_dp": 0.47697721962953193,
+      "anchor_max_error_dp": 0.8415549464241225
+    },
+    {
+      "layer": "key",
+      "parameter": "spread",
+      "a": 0.0,
+      "b": 0.0,
+      "c": 0.0,
+      "anchor_rmse_dp": 0.0,
+      "anchor_max_error_dp": 0.0
+    },
+    {
+      "layer": "ambient",
+      "parameter": "offset",
+      "a": -0.005532020931971094,
+      "b": 0.7376526289558933,
+      "c": 0.0459257413406433,
+      "anchor_rmse_dp": 0.23987945861204657,
+      "anchor_max_error_dp": 0.4069025666583599
+    },
+    {
+      "layer": "ambient",
+      "parameter": "blur",
+      "a": -0.06372290057313726,
+      "b": 1.6861500124595064,
+      "c": 0.7668527286319459,
+      "anchor_rmse_dp": 0.5673063821898722,
+      "anchor_max_error_dp": 0.7668527286319459
+    },
+    {
+      "layer": "ambient",
+      "parameter": "spread",
+      "a": -0.0017991527535509537,
+      "b": 0.4921554946424122,
+      "c": 0.2820533266882632,
+      "anchor_rmse_dp": 0.20109344751245511,
+      "anchor_max_error_dp": 0.2820533266882632
+    }
+  ]
+}

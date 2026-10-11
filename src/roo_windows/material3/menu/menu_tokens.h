@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 
+#include "roo_windows/material3/internal/elevation.h"
 #include "roo_windows/material3/theme.h"
 
 namespace roo_windows::material3::internal {
@@ -24,7 +25,7 @@ struct MenuTokens {
   int16_t viewport_margin_dp;
   int16_t submenu_gutter_dp;
   int16_t panel_corner_radius_dp;
-  uint8_t elevation;  // Renderer parameter (0..31), not dp or an M3 level.
+  uint8_t elevation;  // Resolved renderer index; Gaussian mode uses half-dp.
   ColorToken panel_container;
   ColorToken panel_content;
   ColorToken selected_container;
@@ -45,7 +46,7 @@ inline constexpr MenuTokens kBaselineMenuTokens = {
     8,
     4,
     4,
-    3,
+    RendererElevation(3),
     ColorToken::kSurfaceContainer,
     ColorToken::kOnSurface,
     ColorToken::kSecondaryContainer,
@@ -56,16 +57,16 @@ inline constexpr MenuTokens kExpressiveStandardMenuTokens = {
     112, 280, 12, 4, 56, 20, 16, 2, 12, 8, 4,
     // Slightly less than the style guide's 16dp recommendation to avoid
     // clipping the panel's corner radius when using 4dp padding.
-    14, 3, ColorToken::kSurfaceContainerLow, ColorToken::kOnSurface,
-    ColorToken::kTertiaryContainer, ColorToken::kOnTertiaryContainer,
-    ColorToken::kOutlineVariant};
+    14, RendererElevation(3), ColorToken::kSurfaceContainerLow,
+    ColorToken::kOnSurface, ColorToken::kTertiaryContainer,
+    ColorToken::kOnTertiaryContainer, ColorToken::kOutlineVariant};
 
 inline constexpr MenuTokens kExpressiveVibrantMenuTokens = {
     112, 280, 12, 4, 56, 20, 16, 2, 12, 8, 4,
     // Slightly less than the style guide's 16dp recommendation to avoid
     // clipping the panel's corner radius when using 4dp padding.
-    14, 3, ColorToken::kTertiaryContainer, ColorToken::kOnTertiaryContainer,
-    ColorToken::kTertiaryContainer, ColorToken::kOnTertiaryContainer,
-    ColorToken::kOnTertiaryContainer};
+    14, RendererElevation(3), ColorToken::kTertiaryContainer,
+    ColorToken::kOnTertiaryContainer, ColorToken::kTertiaryContainer,
+    ColorToken::kOnTertiaryContainer, ColorToken::kOnTertiaryContainer};
 
 }  // namespace roo_windows::material3::internal

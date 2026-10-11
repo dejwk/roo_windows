@@ -260,6 +260,7 @@ filegroup(
 filegroup(
     name = "all_example_builds",
     srcs = [
+        "//examples/decoration/shadow_curves",
         ":material3_example_builds",
         "//examples/flex_layout/01_toolbar",
         "//examples/flex_layout/02_settings_rows",

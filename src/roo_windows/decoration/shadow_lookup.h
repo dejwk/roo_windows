@@ -22,8 +22,11 @@ struct LookupShadowSpec {
   uint16_t reach_16;
 };
 
-/// Resolves an experimental Material level (clamped to 0..5) at configured
-/// zoom.
+/// Resolves a half-dp elevation index at the configured zoom. Indices 0..31
+/// represent 0..15.5 logical dp; out-of-range values clamp to that range.
+/// Uses fitted key/ambient parameters referenced to heights 0/3/5/8/10/14 dp.
+/// Zero disables both layers. Layer parameters round to the nearest sixteenth
+/// of a pixel.
 LookupShadowSpec MakeLookupShadow(roo_display::Box bounds,
                                   BorderStyle::CornerRadii radii, int level,
                                   bool ambient);
@@ -31,7 +34,7 @@ LookupShadowSpec MakeLookupShadow(roo_display::Box bounds,
 /// Returns finite shadow support, also used by damage and clipping.
 Rect LookupShadowExtents(const Rect& bounds, int level);
 
-/// Samples two layers of the same rounded surface and Material level,
+/// Samples two layers of the same rounded surface and half-dp elevation,
 /// combining their black alphas with source-over.
 uint8_t ReadLookupShadow(const LookupShadowSpec& key,
                          const LookupShadowSpec& ambient, int16_t x, int16_t y);
@@ -57,6 +60,11 @@ inline uint16_t ShadowDistanceSqrt(uint32_t value) {
   return root;
 }
 #endif
+
+/// Samples one layer for visual inspection, bypassing combined gradient caches.
+/// Zero elevation disables the layer; ambient selects the ambient opacity.
+uint8_t ReadLookupShadowLayer(const LookupShadowSpec& spec, bool ambient,
+                              int16_t x, int16_t y);
 
 /// Returns flash bytes occupied by optional side/corner gradient data.
 uint32_t ShadowGradientBytes();

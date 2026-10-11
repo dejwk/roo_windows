@@ -1,0 +1,67 @@
+{
+  "model": "A*h**alpha, A >= 0, alpha > 0; h and output in logical dp",
+  "method": "Least squares in original dp units; six original reference points, equally weighted",
+  "fitted_heights_dp": [
+    0.0,
+    3.0,
+    5.0,
+    8.0,
+    10.0,
+    14.0
+  ],
+  "extrapolation_range_dp": [
+    14.0,
+    15.5
+  ],
+  "fits": [
+    {
+      "layer": "key",
+      "parameter": "offset",
+      "A": 0.04584428858500022,
+      "alpha": 1.675748148916954,
+      "anchor_rmse_dp": 0.39066383641206553,
+      "anchor_max_error_dp": 0.7110515979183067
+    },
+    {
+      "layer": "key",
+      "parameter": "blur",
+      "A": 0.9901573547231713,
+      "alpha": 0.5143296548268854,
+      "anchor_rmse_dp": 0.19545685381556138,
+      "anchor_max_error_dp": 0.2657146810750688
+    },
+    {
+      "layer": "key",
+      "parameter": "spread",
+      "A": 0.0,
+      "alpha": null,
+      "anchor_rmse_dp": 0.0,
+      "anchor_max_error_dp": 0.0
+    },
+    {
+      "layer": "ambient",
+      "parameter": "offset",
+      "A": 0.29536194914303787,
+      "alpha": 1.2621567045489686,
+      "anchor_rmse_dp": 0.2965938151427796,
+      "anchor_max_error_dp": 0.5985389356872295
+    },
+    {
+      "layer": "ambient",
+      "parameter": "blur",
+      "A": 1.5842575616751684,
+      "alpha": 0.7785000686139598,
+      "anchor_rmse_dp": 0.4284734147619472,
+      "anchor_max_error_dp": 0.7261876169106047
+    },
+    {
+      "layer": "ambient",
+      "parameter": "spread",
+      "A": 0.289127889356667,
+      "alpha": 1.1458896433855448,
+      "anchor_rmse_dp": 0.09324557431823656,
+      "anchor_max_error_dp": 0.17176308047424182
+    }
+  ],
+  "zero_curve_note": "For an all-zero curve, A = 0 and alpha is unidentifiable (null)."
+}

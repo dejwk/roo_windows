@@ -1496,6 +1496,6 @@ cc_test(
         ],
         deps = ["@roo_display", "@roo_fonts_basic", "@roo_fonts_material", "@roo_locale", "@roo_logging", "@roo_testing//:arduino_gtest_main"],
     )
-    for mode in [1, 2]
+    for mode in [0, 1, 2]
     for zoom in [75, 100, 150, 200]
 ]

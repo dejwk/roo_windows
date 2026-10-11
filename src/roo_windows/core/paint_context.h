@@ -19,7 +19,8 @@ struct PaintDecoration {
   roo_display::Color background = roo_display::color::Transparent;
   /// Corner radii used for rounded-rectangle decorations.
   BorderStyle::CornerRadii corner_radii = {0, 0, 0, 0};
-  /// Renderer-specific shadow parameter (0..31), not pixels or Material dp.
+  /// Gaussian shadow elevation in half-dp steps (0..31 = 0..15.5 logical dp).
+  /// Legacy builds retain their original renderer-specific parameter.
   uint8_t elevation = 0;
   /// Outline width applied around the decoration.
   SmallNumber outline_width = SmallNumber(0);

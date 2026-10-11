@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """Generate exact flash shadow gradients for each supported zoom and level."""
+import csv
 import json
+from fractions import Fraction
+from functools import cache
 import math
 import subprocess
 from pathlib import Path
@@ -8,19 +11,41 @@ from pathlib import Path
 root = Path(__file__).resolve().parents[1]
 base = [round(255 * .5 * math.erfc((-3 + 6*i/255) / math.sqrt(2))) for i in range(256)]
 luts = [[(v*opacity+127)//255 for v in base] for opacity in (77, 38)]
-key = [(0,0,0),(1,2,0),(1,2,0),(1,3,0),(2,3,0),(4,4,0)]
-ambient = [(0,0,0),(1,3,1),(2,6,2),(4,8,3),(6,10,4),(8,12,6)]
+recipes = list(csv.DictReader((root/'benchmarks/shadow_parameters.csv').open()))
 
 
 def scaled(n, zoom):
     return n*zoom//100
 
 
-def parameters(level, zoom, layer):
-    offset, blur, spread = (key if layer == 0 else ambient)[level]
-    sigma = scaled(blur*8, zoom)
-    scale = (255*4096+3*sigma)//(6*sigma)
-    return scaled(offset*16, zoom), scaled(spread*16, zoom), scale
+@cache
+def logical_parameters(elevation, layer):
+    """Read the same authoritative logical recipes used to generate C++ presets."""
+    row = recipes[elevation]
+    prefix = 'key' if layer == 0 else 'ambient'
+    return tuple(Fraction(row[f'{prefix}_{metric}_dp'])
+                 for metric in ('offset', 'blur', 'spread'))
+
+
+def round_positive(value):
+    return int(value + Fraction(1, 2))
+
+
+@cache
+def parameters(elevation, zoom, layer):
+    offset, blur, spread = logical_parameters(elevation, layer)
+    factor = Fraction(zoom, 100)
+    sigma = round_positive(blur * 8 * factor)
+    scale = (255 * 4096 + 3 * sigma) // (6 * sigma) if sigma else 0
+    return (round_positive(offset * 16 * factor),
+            round_positive(spread * 16 * factor), scale)
+
+
+def reach(params, layer):
+    if params[2] == 0:
+        return 0
+    last = max(i for i, value in enumerate(luts[layer]) if value)
+    return params[1] + ((last + 1 - 128) * 4096 - 1) // params[2]
 
 
 def opacity(distance, params, layer):
@@ -55,9 +80,13 @@ for zoom in (75,100,150,200):
                '#elif ROO_WINDOWS_ZOOM < 150' if zoom==100 else
                '#elif ROO_WINDOWS_ZOOM < 200' if zoom==150 else '#else')
     lines.append(condition)
-    limit=scaled(32,zoom)
+    # Include the largest shifted nonzero support at this zoom. Negative
+    # indices also cover each profile's transition to full opacity.
+    limit = max((reach(p, layer) + abs(p[0]) + 8) // 16
+                for elevation in range(1, 32) for layer in range(2)
+                for p in [parameters(elevation, zoom, layer)])
     side=[]
-    for level in range(1,6):
+    for level in range(1,32):
         for direction in range(3):  # horizontal, top, bottom
             for d in range(-limit,limit+1):
                 values=[]
@@ -66,12 +95,20 @@ for zoom in (75,100,150,200):
                     delta=0 if direction==0 else params[0] if direction==1 else -params[0]
                     values.append(opacity(d*16-8+delta,params,layer))
                 side.append(composite(values))
+            for d, expected in [(-limit - 1, 104), (limit + 1, 0)]:
+                values = []
+                for layer in range(2):
+                    params = parameters(level, zoom, layer)
+                    delta = (0 if direction == 0 else params[0]
+                             if direction == 1 else -params[0])
+                    values.append(opacity(d * 16 - 8 + delta, params, layer))
+                assert composite(values) == expected, (zoom, level, direction)
     lines += [f'constexpr int kSideLimit = {limit};', f'constexpr int kSideStride = {2*limit+1};']
     lines += array('kSideGradients',side)
     lines += ['#if ROO_WINDOWS_EXPERIMENTAL_SHADOW_GRADIENTS == 2']
     metadata=[]
     corners=[]
-    for level in range(1,6):
+    for level in range(1,32):
         params=[parameters(level,zoom,l) for l in range(2)]
         reaches=[]
         for layer in range(2):
@@ -105,7 +142,17 @@ lines += ['#endif','']
 dest=root/'src/roo_windows/decoration/shadow_gradient_tables.h'
 dest.write_text('\n'.join(lines))
 subprocess.run(['clang-format', '-i', str(dest)], check=True)
-results = root/'benchmarks/shadow_esp32s3/optimization_results'
+results = root/'benchmarks/shadow_esp32s3/authoritative_results'
 results.mkdir(exist_ok=True)
 (results/'gradient-storage.json').write_text(json.dumps(footprints,indent=2)+'\n')
+# Keep the 32 logical recipes reviewable without decoding generated pixels.
+with (results / 'parameters.csv').open('w') as out:
+    writer = csv.writer(out, lineterminator='\n')
+    writer.writerow(['index', 'elevation_dp', 'key_offset_dp', 'key_blur_dp',
+                     'key_spread_dp', 'ambient_offset_dp', 'ambient_blur_dp',
+                     'ambient_spread_dp'])
+    for level in range(32):
+        writer.writerow([level, level / 2] +
+                        [str(x) for layer in range(2)
+                         for x in logical_parameters(level, layer)])
 print(json.dumps(footprints,indent=2))

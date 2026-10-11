@@ -10,6 +10,8 @@ from PIL import Image, ImageDraw, ImageFont
 parser = argparse.ArgumentParser(description=__doc__)
 for name in ('reference', 'legacy', 'lut', 'analytic', 'output'):
     parser.add_argument('--' + name, type=Path, required=True)
+parser.add_argument('--half-dp', action='store_true',
+                    help='LUT and analytical capture indices are half-dp heights')
 args = parser.parse_args()
 args.output.mkdir(parents=True, exist_ok=True)
 errors = {name: [] for name in ('legacy', 'lut', 'analytic')}
@@ -21,7 +23,8 @@ for size in (56, 96):
     refs = np.stack([strip[:, i*dimension:(i+1)*dimension, 3] / 255 for i in range(6)])
     candidates = {}
     for name in errors:
-        levels = (0, 1, 2, 3, 4, 7) if name == 'legacy' else range(6)
+        levels = ((0, 1, 2, 3, 4, 7) if name == 'legacy' else
+                  (0, 2, 6, 12, 16, 24) if args.half_dp else range(6))
         candidates[name] = np.stack([
             np.array(Image.open(getattr(args, name) / f'roo_z100_s{size}_e{i}.pgm')) / 255
             for i in levels])

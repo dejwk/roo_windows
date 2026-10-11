@@ -1,0 +1,41 @@
+roo-half-dp-tests.log
+//:shadow_gradient_0_z100_test                                           PASSED in 1.7s
+//:shadow_lookup_test                                                    PASSED in 2.9s
+Executed 2 out of 2 tests: 2 tests pass.
+
+roo-half-dp-matrix.log
+//:shadow_gradient_0_z100_test                                  (cached) PASSED in 1.7s
+//:flex_card_test                                                        PASSED in 0.0s
+//:material3_button_test                                                 PASSED in 0.4s
+//:material3_dropdown_button_test                                        PASSED in 0.4s
+//:material3_menu_geometry_test                                          PASSED in 0.0s
+//:material3_menu_test                                                   PASSED in 0.5s
+//:material3_snackbar_test                                               PASSED in 0.4s
+//:shadow_gradient_0_z150_test                                           PASSED in 2.2s
+//:shadow_gradient_0_z200_test                                           PASSED in 4.4s
+//:shadow_gradient_0_z75_test                                            PASSED in 0.6s
+//:shadow_gradient_1_z100_test                                           PASSED in 1.1s
+//:shadow_gradient_1_z150_test                                           PASSED in 2.0s
+//:shadow_gradient_1_z200_test                                           PASSED in 3.9s
+//:shadow_gradient_1_z75_test                                            PASSED in 0.5s
+//:shadow_gradient_2_z100_test                                           PASSED in 1.1s
+//:shadow_gradient_2_z150_test                                           PASSED in 2.2s
+//:shadow_gradient_2_z200_test                                           PASSED in 3.3s
+//:shadow_gradient_2_z75_test                                            PASSED in 0.6s
+//:decoration_test                                                       FAILED in 0.1s
+Executed 18 out of 19 tests: 18 tests pass and 1 fails locally.
+
+roo-half-dp-single.log
+//:shadow_lookup_test                                                    PASSED in 0.2s
+Executed 1 out of 1 test: 1 test passes.
+
+roo-half-dp-analytic.log
+//:shadow_lookup_test                                                    PASSED in 0.2s
+Executed 1 out of 1 test: 1 test passes.
+
+roo-half-dp-legacy.log
+//:decoration_test                                              (cached) PASSED in 0.1s
+//:flex_card_test                                                        PASSED in 0.0s
+//:material3_button_test                                                 PASSED in 0.4s
+//:shadow_lookup_test                                                    PASSED in 0.1s
+Executed 3 out of 4 tests: 4 tests pass.

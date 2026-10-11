@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include "roo_windows/core/theme.h"
+#include "roo_windows/decoration/shadow_parameters.h"
 #include "roo_windows/internal/isqrt.h"
 
 #if ROO_WINDOWS_EXPERIMENTAL_SHADOW_LUT_RAM && defined(ESP_PLATFORM) && \
@@ -18,8 +19,6 @@
 namespace roo_windows::internal {
 namespace {
 
-#if ROO_WINDOWS_EXPERIMENTAL_SHADOW_LUT_COUNT != 0 || \
-    ROO_WINDOWS_EXPERIMENTAL_SHADOW_ANALYTIC
 #include "roo_windows/decoration/shadow_lookup_tables.h"
 
 #if ROO_WINDOWS_SHADOW_FAST_LUT
@@ -138,20 +137,7 @@ uint8_t ReadCachedShadow(const LookupShadowSpec& key,
 }
 #endif
 
-struct LayerPreset {
-  int8_t offset;
-  uint8_t blur;
-  uint8_t spread;
-};
-
-// Material Web 47adb655, elevation/internal/_elevation.scss. Coordinates in dp;
-// key opacity is 77/255, ambient is 38/255. Runtime uses no floating point.
-constexpr LayerPreset kKeyPresets[] = {{0, 0, 0}, {1, 2, 0}, {1, 2, 0},
-                                       {1, 3, 0}, {2, 3, 0}, {4, 4, 0}};
-constexpr LayerPreset kAmbientPresets[] = {{0, 0, 0}, {1, 3, 1},  {2, 6, 2},
-                                           {4, 8, 3}, {6, 10, 4}, {8, 12, 6}};
-
-int ClampLevel(int level) { return std::max(0, std::min(5, level)); }
+int ClampLevel(int level) { return std::max(0, std::min(31, level)); }
 
 // Signed distance to a spread-adjusted rounded rectangle, in sixteenths.
 // Straight strips avoid square roots. Half-pixel centers avoid scale-dependent
@@ -210,7 +196,6 @@ uint8_t ReadLayer(const LookupShadowSpec& spec, int x, int y) {
 #endif
 #endif
 }
-#endif
 }  // namespace
 
 #if ROO_WINDOWS_EXPERIMENTAL_SHADOW_ANALYTIC
@@ -241,8 +226,6 @@ LookupShadowSpec MakeLookupShadow(roo_display::Box bounds,
                                   BorderStyle::CornerRadii radii, int level,
                                   bool ambient) {
   LookupShadowSpec spec{};
-#if ROO_WINDOWS_EXPERIMENTAL_SHADOW_LUT_COUNT != 0 || \
-    ROO_WINDOWS_EXPERIMENTAL_SHADOW_ANALYTIC
   const LayerPreset& preset = ambient ? kAmbientPresets[ClampLevel(level)]
                                       : kKeyPresets[ClampLevel(level)];
   spec.x = bounds.xMin();
@@ -250,11 +233,10 @@ LookupShadowSpec MakeLookupShadow(roo_display::Box bounds,
   spec.w = bounds.width();
   spec.h = bounds.height();
   spec.radii = radii;
-  spec.offset_16 = Scaled(int(preset.offset) * 16);
-  static_assert(Scaled(6 * 16) <= 255, "Spread must fit its packed byte");
-  spec.spread_16 = Scaled(int(preset.spread) * 16);
+  spec.offset_16 = preset.offset_16;
+  spec.spread_16 = preset.spread_16;
   spec.level = ClampLevel(level);
-  int sigma_16 = Scaled(int(preset.blur) * 8);
+  int sigma_16 = preset.sigma_16;
   spec.reach_16 = spec.spread_16 + 3 * sigma_16;
   spec.index_scale =
       sigma_16 == 0 ? 0 : (255 * 4096 + 3 * sigma_16) / (6 * sigma_16);
@@ -267,13 +249,10 @@ LookupShadowSpec MakeLookupShadow(roo_display::Box bounds,
     spec.reach_16 = spec.spread_16 + last_distance;
   }
 #endif
-#endif
   return spec;
 }
 
 Rect LookupShadowExtents(const Rect& bounds, int level) {
-#if ROO_WINDOWS_EXPERIMENTAL_SHADOW_LUT_COUNT != 0 || \
-    ROO_WINDOWS_EXPERIMENTAL_SHADOW_ANALYTIC
   int horizontal = 0;
   int top = 0;
   int bottom = 0;
@@ -293,16 +272,11 @@ Rect LookupShadowExtents(const Rect& bounds, int level) {
   }
   return Rect(bounds.xMin() - horizontal, bounds.yMin() - top,
               bounds.xMax() + horizontal, bounds.yMax() + bottom);
-#else
-  return bounds;
-#endif
 }
 
 uint8_t ReadLookupShadow(const LookupShadowSpec& key,
                          const LookupShadowSpec& ambient, int16_t x,
                          int16_t y) {
-#if ROO_WINDOWS_EXPERIMENTAL_SHADOW_LUT_COUNT != 0 || \
-    ROO_WINDOWS_EXPERIMENTAL_SHADOW_ANALYTIC
 #if ROO_WINDOWS_SHADOW_FAST_LUT
   return ReadCachedShadow(key, ambient, x, y);
 #else
@@ -310,9 +284,12 @@ uint8_t ReadLookupShadow(const LookupShadowSpec& key,
   uint16_t a = ReadLayer<true>(ambient, x, y);
   return k + a - (k * a + 127) / 255;
 #endif
-#else
-  return 0;
-#endif
+}
+
+uint8_t ReadLookupShadowLayer(const LookupShadowSpec& spec, bool ambient,
+                              int16_t x, int16_t y) {
+  if (spec.level == 0) return 0;
+  return ambient ? ReadLayer<true>(spec, x, y) : ReadLayer<false>(spec, x, y);
 }
 
 uint32_t ShadowGradientBytes() {

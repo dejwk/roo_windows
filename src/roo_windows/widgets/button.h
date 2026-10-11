@@ -53,7 +53,7 @@ class Button : public SurfaceWidget {
   /// click dispatch.
   bool isClickable() const override { return true; }
 
-  /// Sets resting and pressed renderer elevations (0..31), not Material dp. The
+  /// Sets resting and pressed elevation indices (Gaussian: half-dp, 0..31). The
   /// current elevation follows `isPressed()`.
   void setElevation(uint8_t resting, uint8_t pressed);
 

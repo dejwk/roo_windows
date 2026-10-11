@@ -1,0 +1,66 @@
+Half-dp elevation expansion on experiment/shadow-two-luts-optimized
+
+Renderer contract
+  Gaussian renderer indices 0..31 now mean 0..15.5 logical dp, in 0.5 dp steps.
+  An index is independent of zoom: 12 means 6 dp at every supported zoom.
+  Material levels 0..5 map to indices 0, 2, 6, 12, 16, 24. Built-in Material
+  defaults and the benchmark adapter preserve their previous reference looks.
+  Explicit caller overrides use the new indices. Legacy and tuned-legacy modes
+  retain their original units. A Dp/SmallNumber public API is not introduced.
+
+Interpolation policy
+  Source: Material Web commit 47adb655bd7a88c4d62e8faac2873084eed555dc,
+  elevation/internal/_elevation.scss:
+  https://github.com/material-components/material-web/blob/47adb655bd7a88c4d62e8faac2873084eed555dc/elevation/internal/_elevation.scss
+  That source uses piecewise-linear functions of semantic level 0..5, not a
+  single linear function of physical height. Here each offset/blur/spread is
+  interpolated separately over nominal heights 0, 1, 3, 6, 8, 12 dp. Extending
+  the final 8..12 dp slopes above 12 dp is the explicitly chosen roo_windows
+  policy, not an additional Material reference or Android physics formula.
+  A nonlinear interpolation could also be precomputed at the same runtime
+  cost, but would define a different curve between the reference heights.
+  parameters.csv lists all logical recipes, with exact rational fractions.
+
+Rasterization
+  Apply zoom to the logical recipe, then round to nearest 1/16 device pixel,
+  with positive ties rounding up. Sigma is half the CSS blur parameter.
+  All interpolation is constexpr. Per-pixel geometry, Gaussian falloff,
+  opacity (key 77/255, ambient 38/255), and source-over combination are unchanged.
+  The optimized bounds use each layer's last nonzero LUT entry: if reach is
+  spread plus that entry's radial distance, expressed in sixteenths, exterior
+  padding is max over layers of (reach + 8)/16 horizontally,
+  max(0, (reach - offset + 8)/16) above, and (reach + offset + 8)/16 below,
+  using integer division. New heights therefore use the same tight bound rule.
+  At 15.5 dp and zoom 100, padding is 23 px left/right, 13 px top, 33 px bottom.
+
+Storage and performance
+  ESP32-S3 double_optimized builds successfully: 1,052,123 linked flash bytes,
+  30,776 static RAM bytes. Both 192-byte parameter arrays are in .flash.rodata;
+  interpolation emits no runtime function. LookupShadowSpec remains 20 bytes.
+  Static RAM matches the previous benchmark build. The per-pixel algorithm is
+  unchanged; timings have NOT been rerun and no measured speedup is claimed.
+  Default build still uses two flash alpha LUTs and no side/corner cache.
+  Optional caches now cover all 31 nonzero heights, with only the configured
+  zoom's data linked. At zoom 100: sides 6,231 bytes; corner pixels 341,786 bytes;
+  corner metadata 2,976 bytes; combined 350,993 bytes. This excludes base alpha
+  LUTs, parameter arrays, and linker alignment. See gradient-storage.json for
+  all zooms. Full corner caching becomes considerably more expensive in flash.
+
+Validation
+  All 32 indices: independent parameter equations, bounds containment, and
+  cached/uncached pixel equivalence pass at 75%, 100%, 150%, and 200% zoom
+  (12 shader configurations). Scalar/bulk and bounds tests pass in the default
+  two-LUT, shared one-LUT, and integer analytical configurations.
+  Six Material component targets pass: buttons, cards, menu geometry, menus,
+  snackbars, and dropdown buttons.
+  All 12 captured references (six Material heights at 56/96 dp surface sizes)
+  are byte-identical to the previous optimized prototype at zoom 100.
+  anchor-comparison.json records the mapping. elevations-rgb565.png shows all
+  32 heights at native 100% raster size, from compiled C++ alpha captures with
+  host RGB565 quantization; it is not a panel photograph.
+  Two nonzero-shadow decoration goldens target the original legacy renderer
+  and mismatch under Gaussian mode; they have not been overwritten. The full
+  decoration target passes under legacy, as do its shadow, button and card tests.
+  This change was compiled for the board but not uploaded; the previous
+  retained side-cache firmware is still installed. Historical benchmark data
+  and reference branches have not been modified.

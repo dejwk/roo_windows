@@ -1,0 +1,26 @@
+{
+  "75": {
+    "side_bytes": 4743,
+    "corner_pixel_bytes": 192573,
+    "corner_descriptors": 372,
+    "corner_descriptor_bytes": 2976
+  },
+  "100": {
+    "side_bytes": 6231,
+    "corner_pixel_bytes": 341786,
+    "corner_descriptors": 372,
+    "corner_descriptor_bytes": 2976
+  },
+  "150": {
+    "side_bytes": 9207,
+    "corner_pixel_bytes": 769740,
+    "corner_descriptors": 372,
+    "corner_descriptor_bytes": 2976
+  },
+  "200": {
+    "side_bytes": 12183,
+    "corner_pixel_bytes": 1368536,
+    "corner_descriptors": 372,
+    "corner_descriptor_bytes": 2976
+  }
+}

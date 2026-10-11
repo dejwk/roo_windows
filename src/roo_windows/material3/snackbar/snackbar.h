@@ -5,6 +5,7 @@
 
 #include "roo_scheduler.h"
 #include "roo_windows/material3/button/button.h"
+#include "roo_windows/material3/internal/elevation.h"
 #include "roo_windows/material3/layout_scaffold/layout_scaffold.h"
 #include "roo_windows/widgets/text_block.h"
 
@@ -115,9 +116,10 @@ class SnackbarWidget : public Container {
   /// Advertises the Material snackbar corner shape.
   BorderStyle getBorderStyle() const override;
 
-  /// Returns the current renderer shadow parameter.
-  /// The Material level-3 mapping is tracked by the FAB design elevation audit.
-  uint8_t getElevation() const override { return 3; }
+  /// Returns the renderer index for Material level 3 (6 dp).
+  uint8_t getElevation() const override {
+    return internal::RendererElevation(3);
+  }
 
  protected:
   /// Receives an action after the standard button click lifecycle settles.

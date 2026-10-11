@@ -4,6 +4,7 @@
 #include "roo_scheduler.h"
 #include "roo_windows/core/application_context.h"
 #include "roo_windows/core/environment.h"
+#include "roo_windows/material3/internal/elevation.h"
 
 namespace roo_windows {
 namespace material3 {
@@ -25,7 +26,7 @@ TEST(FlexCard, ConstructorSeedsStyleDefaults) {
   FlexCard elevated(context, FlexCard::Style::kElevated);
   EXPECT_EQ(::roo_windows::material3::ColorToken::kSurfaceContainerLow,
             elevated.containerRole());
-  EXPECT_EQ(3, elevated.getElevation());
+  EXPECT_EQ(material3::internal::RendererElevation(3), elevated.getElevation());
   EXPECT_EQ((uint8_t)Scaled(12),
             elevated.getBorderStyle().corner_radii().max());
   EXPECT_EQ(SmallNumber(0), elevated.getBorderStyle().outline_width());

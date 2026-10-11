@@ -9,6 +9,7 @@
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/measure_spec.h"
 #include "roo_windows/material3/button/button.h"
+#include "roo_windows/material3/internal/elevation.h"
 
 namespace roo_windows {
 namespace material3 {
@@ -291,7 +292,7 @@ TEST(Material3Button, ElevatedVariantHasNonzeroRestingElevation) {
   ApplicationContext context = MakeContext(env);
 
   Button elevated(context, "E", ButtonVariant::kElevated);
-  EXPECT_EQ(3, elevated.getElevation());
+  EXPECT_EQ(internal::RendererElevation(3), elevated.getElevation());
 
   Button filled(context, "F", ButtonVariant::kFilled);
   EXPECT_EQ(0, filled.getElevation());

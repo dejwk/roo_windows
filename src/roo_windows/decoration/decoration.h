@@ -19,24 +19,6 @@ uint8_t RoundedFillCoverage(roo_display::Box bounds,
 
 }  // namespace internal
 
-struct ShadowSpec {
-  // Extents of the shadow.
-  int16_t x, y, w, h;
-
-  // External radius of the shadow at full extents.
-  BorderStyle::CornerRadii radius;
-
-  // 'Internal' shadow radius, within which the shadow is not diffused.
-  // Generally the same as the corner radius of the widget casting the shadow.
-  BorderStyle::CornerRadii border;
-
-  // The alpha at a point where the shadow is not diffused.
-  uint8_t alpha_start;
-
-  // 256 * how much the alpha decreases per each pixel of distance.
-  uint16_t alpha_step;
-};
-
 // Decoration combines the border with possibly round borders and possibly a
 // colored outline, with the shadow.
 class Decoration : public roo_display::Rasterizable {
@@ -45,7 +27,8 @@ class Decoration : public roo_display::Rasterizable {
 
   /// Creates a decorated surface over @p extents with the supplied fill,
   /// outline and shadow. Extents describe the original area casting the shadow;
-  /// elevation is 0 for none or 1 to 31, and corner radii round that area.
+  /// elevation is a half-dp index (0..31 = 0..15.5 logical dp). Zero disables
+  /// shadows, and corner radii round the original area.
   /// The outline width may be zero. Set @p preserve_fill_boundary when
   /// readWithContent will substitute subtree colors, so an outline matching
   /// bgcolor is not folded away.
@@ -94,14 +77,8 @@ class Decoration : public roo_display::Rasterizable {
   roo_display::Color outline_color_;
   // const uint8_t* corner_alpha_raster_;
 
-#if ROO_WINDOWS_EXPERIMENTAL_SHADOW_LUT_COUNT == 0 && \
-    !ROO_WINDOWS_EXPERIMENTAL_SHADOW_ANALYTIC
-  ShadowSpec key_shadow_;
-  ShadowSpec ambient_shadow_;
-#else
   internal::LookupShadowSpec key_shadow_;
   internal::LookupShadowSpec ambient_shadow_;
-#endif
 
   const PressOverlay* press_overlay_;
 };

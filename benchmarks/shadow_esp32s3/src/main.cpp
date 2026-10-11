@@ -21,6 +21,7 @@
 #include "roo_windows.h"
 #include "roo_windows/decoration/decoration.h"
 #include "roo_windows/decoration/shadow_lookup.h"
+#include "roo_windows/material3/internal/elevation.h"
 
 namespace {
 using namespace roo_windows;
@@ -90,13 +91,8 @@ const char* Variant() {
   return "double_sides";
 #elif ROO_WINDOWS_SHADOW_FAST_LUT
   return "double_optimized";
-#elif ROO_WINDOWS_EXPERIMENTAL_SHADOW_LEGACY_TUNED
-  return "legacy_tuned";
 #elif ROO_WINDOWS_EXPERIMENTAL_SHADOW_ANALYTIC
   return "analytic";
-#elif ROO_WINDOWS_EXPERIMENTAL_SHADOW_LUT_COUNT == 0 && \
-    !ROO_WINDOWS_EXPERIMENTAL_SHADOW_ANALYTIC
-  return "legacy";
 #elif ROO_WINDOWS_EXPERIMENTAL_SHADOW_LUT_COUNT == 1
   return ROO_WINDOWS_EXPERIMENTAL_SHADOW_LUT_RAM ? "single_ram"
                                                  : "single_flash";
@@ -106,16 +102,9 @@ const char* Variant() {
 #endif
 }
 
-// Compare the commit's calibrated legacy values with true Material presets.
+// Keep benchmark scene labels in Material levels while renderer units vary.
 uint8_t RendererLevel(int level) {
-#if ROO_WINDOWS_EXPERIMENTAL_SHADOW_LUT_COUNT == 0 && \
-    !ROO_WINDOWS_EXPERIMENTAL_SHADOW_ANALYTIC &&      \
-    !ROO_WINDOWS_EXPERIMENTAL_SHADOW_LEGACY_TUNED
-  constexpr uint8_t kMapping[] = {0, 1, 2, 3, 4, 7};
-  return kMapping[level];
-#else
-  return level;
-#endif
+  return roo_windows::material3::internal::RendererElevation(level);
 }
 
 class BenchSurface : public SurfaceWidget {

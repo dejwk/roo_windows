@@ -51,11 +51,11 @@
 
 #endif
 
-/// Opt-in shadow benchmark prototype: 0 keeps the production legacy renderer;
-/// 1 uses a shared Gaussian edge table, 2 uses opacity-baked key/ambient
-/// tables. Nonzero modes interpret elevation as Material Web level 0..5
-/// (clamped). Define globally for the whole build; this is not a stable public
-/// API.
+/// Gaussian renderer: 1 uses a shared edge table; 2 uses opacity-baked tables.
+/// Zero requires analytical mode. Integer elevation 0..31 uses half-dp steps
+/// (0..15.5 logical dp, clamped). Authoritative fitted parameters use reference
+/// heights 0/3/5/8/10/14 dp; zero disables both layers. Define globally for the
+/// whole build; this is experimental.
 #ifndef ROO_WINDOWS_EXPERIMENTAL_SHADOW_LUT_COUNT
 #define ROO_WINDOWS_EXPERIMENTAL_SHADOW_LUT_COUNT 2
 #endif
@@ -87,22 +87,9 @@
 #error "Select analytical shadows or LUT shadows, not both"
 #endif
 
-/// Retunes only legacy linear-shadow parameters to Material Web levels 0..5.
-/// Keeps the legacy rasterizer and additive alpha. Fitted only at zoom 100%.
-#ifndef ROO_WINDOWS_EXPERIMENTAL_SHADOW_LEGACY_TUNED
-#define ROO_WINDOWS_EXPERIMENTAL_SHADOW_LEGACY_TUNED 0
-#endif
-#if ROO_WINDOWS_EXPERIMENTAL_SHADOW_LEGACY_TUNED != 0 && \
-    ROO_WINDOWS_EXPERIMENTAL_SHADOW_LEGACY_TUNED != 1
-#error "Experimental tuned legacy shadow mode must be 0 or 1"
-#endif
-#if ROO_WINDOWS_EXPERIMENTAL_SHADOW_LEGACY_TUNED &&    \
-    (ROO_WINDOWS_EXPERIMENTAL_SHADOW_LUT_COUNT != 0 || \
-     ROO_WINDOWS_EXPERIMENTAL_SHADOW_ANALYTIC)
-#error "Select tuned legacy shadows or Gaussian shadows, not both"
-#endif
-#if ROO_WINDOWS_EXPERIMENTAL_SHADOW_LEGACY_TUNED && ROO_WINDOWS_ZOOM != 100
-#error "Tuned legacy shadow parameters are calibrated only at zoom 100%"
+#if !ROO_WINDOWS_EXPERIMENTAL_SHADOW_ANALYTIC && \
+    ROO_WINDOWS_EXPERIMENTAL_SHADOW_LUT_COUNT == 0
+#error "Shadow rendering requires one/two LUTs or analytical mode"
 #endif
 
 /// Preserves two-table output while tightening support and reusing flat spans.

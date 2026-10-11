@@ -9,6 +9,8 @@ from PIL import Image, ImageDraw, ImageFont
 p = argparse.ArgumentParser(description=__doc__)
 for name in ('reference', 'legacy', 'tuned', 'lut', 'fit', 'output'):
     p.add_argument('--'+name, type=Path, required=True)
+p.add_argument('--half-dp', action='store_true',
+               help='LUT capture indices are half-dp heights')
 a = p.parse_args()
 a.output.mkdir(parents=True, exist_ok=True)
 parameters = json.loads(a.fit.read_text())['levels']
@@ -36,7 +38,8 @@ for size, radius in ((56, 16), (96, 28)):
     refs = np.stack([strip[:, i*dim:(i+1)*dim, 3] for i in range(6)])
     candidates = {}
     for name in errors:
-        levels = (0, 1, 2, 3, 4, 7) if name == 'legacy' else range(6)
+        levels = ((0, 1, 2, 3, 4, 7) if name == 'legacy' else
+                  (0, 2, 6, 12, 16, 24) if name == 'lut' and a.half_dp else range(6))
         candidates[name] = np.stack([np.array(Image.open(getattr(a, name)/f'roo_z100_s{size}_e{i}.pgm')) for i in levels])
     mask = refs[0] == 0
     for values in candidates.values():

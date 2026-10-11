@@ -1,0 +1,68 @@
+{
+  "model": "A*(h-x0)**alpha - y0; all geometry in logical dp",
+  "method": "Exploratory bounded grid search; amplitude and intercept solved analytically at each grid point",
+  "fitted_heights_dp": [
+    0.0,
+    1.0,
+    3.0,
+    6.0,
+    8.0,
+    12.0
+  ],
+  "grid": {
+    "x0": "0 and -geomspace(0.001, 1000, 151)",
+    "offset_alpha": "geomspace(1.00001, 32, 501)",
+    "blur_alpha": "geomspace(0.03, 0.99999, 501)"
+  },
+  "note": "Shift and exponent are strongly correlated; these are representative grid fits, not uniquely identified physical parameters. Key spread remains zero.",
+  "fits": [
+    {
+      "parameter": "offset",
+      "constraint": "zero_intercept",
+      "A": 2.0224431970624523e-74,
+      "x0": -275.4228703338169,
+      "alpha": 30.273849539010392,
+      "y0": 1.4930323159520074,
+      "value_at_zero_dp": 0.0,
+      "gain_to_12_dp": 3.936731353792023,
+      "anchor_rmse_dp": 0.40984091538155415,
+      "anchor_max_error_dp": 0.8268619392096657
+    },
+    {
+      "parameter": "offset",
+      "constraint": "free_intercept",
+      "A": 1.4054813607743061e-66,
+      "x0": -144.5439770745928,
+      "alpha": 30.273849539010392,
+      "y0": -0.12602193477114038,
+      "value_at_zero_dp": 0.4722323227920884,
+      "gain_to_12_dp": 3.5256183525300484,
+      "anchor_rmse_dp": 0.3120320456375585,
+      "anchor_max_error_dp": 0.4722323227920884
+    },
+    {
+      "parameter": "blur",
+      "constraint": "zero_intercept",
+      "A": 1.6414634451354004,
+      "x0": -0.0,
+      "alpha": 0.330192607535036,
+      "y0": 0.0,
+      "value_at_zero_dp": 0.0,
+      "gain_to_12_dp": 3.728798242342442,
+      "anchor_rmse_dp": 0.2584323928917567,
+      "anchor_max_error_dp": 0.35924545343276737
+    },
+    {
+      "parameter": "blur",
+      "constraint": "free_intercept",
+      "A": 1.6047111636259181,
+      "x0": -0.0,
+      "alpha": 0.33485658476537655,
+      "y0": -0.040947872167031996,
+      "value_at_zero_dp": 0.040947872167031996,
+      "gain_to_12_dp": 3.687803908883262,
+      "anchor_rmse_dp": 0.2578659290654152,
+      "anchor_max_error_dp": 0.35921815299286797
+    }
+  ]
+}
