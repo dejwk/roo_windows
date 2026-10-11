@@ -2,7 +2,7 @@
 
 ## Implementation status
 
-**Superseded proposal; implemented in the FAB family.** The authoritative contract and
+**Superseded and archived.** The standalone proposal was not implemented; its desired behavior is implemented in the FAB family. The authoritative contract and
 implementation plan now live in the
 [Material 3 FAB family design](../implemented/material3_fabs_design.md). The extended FAB is implemented as part of that family; see the [status index](../README.md).
 
@@ -43,6 +43,6 @@ Use the family design's [geometry and measurement contract](../implemented/mater
 The illustration below is the current expressive small variant and is maintained
 with that contract, rather than the former classic geometry.
 
-![Expressive small extended FAB](figures/material3_extended_fab_layout.svg)
+![Expressive small extended FAB](../implemented/figures/material3_extended_fab_layout.svg)
 
 FAB menus remain a separate future design; neither document defines a menu API.

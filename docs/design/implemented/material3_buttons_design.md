@@ -796,7 +796,7 @@ Material 3 naming and behavior.
 The following are intentionally out of scope for this first design:
 
 1. floating action buttons; see
-   [material3_extended_fab_design.md](../proposed/material3_extended_fab_design.md),
+   [material3_extended_fab_design.md](../abandoned/material3_extended_fab_design.md),
 2. trailing icons,
 3. arbitrary child-slot composition,
 4. multi-line button labels,

@@ -5,7 +5,7 @@
 **Implemented.** The icon-only and extended FAB widgets, shared surface correction, focused tests, render goldens, and runnable example are implemented. The [status index](../README.md) records the current scope.
 
 This is the authoritative design for both FAB types. It supersedes the
-[standalone extended-FAB proposal](../proposed/material3_extended_fab_design.md), whose URL
+[archived standalone extended-FAB proposal](../abandoned/material3_extended_fab_design.md), whose URL
 remains as a migration note. There is one implementation plan and one shared
 `FabColorStyle`; no separate `ExtendedFab` class or color enum was added.
 
@@ -311,7 +311,7 @@ The icon contributes exactly once. At 100% zoom, a small extended FAB with a
 60 px label measures $16 + 24 + 8 + 60 + 16 = 124$ px. With an empty label it
 measures 56 px. Collapsed width and height are $h$ for every size.
 
-![Small extended FAB geometry](../proposed/figures/material3_extended_fab_layout.svg)
+![Small extended FAB geometry](figures/material3_extended_fab_layout.svg)
 
 Suggested minimum dimensions stay cheap and non-measuring: return the token
 square. Both types use zero framework padding (`getPadding()` inherited from
