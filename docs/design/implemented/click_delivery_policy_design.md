@@ -1,5 +1,9 @@
 # Widget Click Activation Policy Design
 
+## Implementation status
+
+**Implemented.** All three phases are present: the six-way framework policy, release-time control migrations, and semantic-control adoption. The old `showClickAnimation()` hook is gone. `click_animation_test` and component tests cover delivery and settlement; the [status index](../README.md) records the design as implemented.
+
 ## Objective
 
 Let clickable widgets choose one coherent activation outcome covering both

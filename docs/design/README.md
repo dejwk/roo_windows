@@ -47,6 +47,7 @@ motion pauses. It does not restore paint interruption.
 | Click-animation customization | The shared click-animation controller and widget-local animation view are implemented. |
 | Click-animation lifecycle and settlement | Stable per-frame timing, slow-display rendering, deferred semantic delivery, held-press settlement, late-release coalescing, and transient-overlay cleanup are implemented. |
 | Click-animation lifecycle simplification | Changes 1–3 are implemented: characterization and mechanical cleanup, one-target phase ownership, atomic admission, identity-checked cancellation, reentrant delivery, and completed-refresh settlement. |
+| [Click delivery policy](implemented/click_delivery_policy_design.md) | All three phases are implemented: six click activation policies, controller lifecycle, and migrations of release-time and semantic controls. |
 | Display runtime Phase 1 characterization | The integrated runtime characterization target, size probe, and ESP32-S3 baseline report are implemented. |
 | Display runtime Phase 2 `DisplayWindow` extraction | One `DisplayWindow` owns display-local pointer, paint, and teardown state for each application. |
 | Display runtime Phase 3 task extraction | Task-local focus, editing, key routing, and structural task ownership are implemented. |
@@ -112,7 +113,6 @@ motion pauses. It does not restore paint interruption.
 | Design | Dependency status |
 | --- | --- |
 | Button groups | Buttons and icon buttons are implemented; no group implementation exists. |
-| Click delivery policy | Click-animation lifecycle and settlement are implemented; widget-selected semantic delivery timing is not. |
 | Display runtime Phase 7 task-bounded transient coverage | Phase 6 input is implemented. Phase 7 is reconciled as task-bounded attachment of the one shared window host layer, retaining one active-presentation authority and explicit interaction owner; the extension remains unimplemented. |
 | Display runtime Phase 8 migration and cost audit | Phases 2–6 are implemented and Phase 7 is architecturally reconciled; the shared host, task-coverage extension, final migration documentation, resource audit, and hardware validation remain proposed. |
 | [Extended FAB](proposed/material3_extended_fab_design.md) | Superseded by the implemented FAB family design. |
