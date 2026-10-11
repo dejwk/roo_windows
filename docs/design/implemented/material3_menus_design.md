@@ -71,7 +71,7 @@ The structural host and synchronous source-capture contract are owned by
 Active focus behavior is already specified by
 [Non-touch input](../implemented/non_touch_input_design.md#focus-scope-storage-and-resolution),
 and rect-anchored painting by
-[Transient presentation pins](../in_progress/transient_presentation_pins_design.md).
+[Transient presentation pins](../implemented/transient_presentation_pins_design.md).
 The roadmap completes those framework prerequisites before this design's menu
 phases. The menu does not depend on adding popup-task removal.
 

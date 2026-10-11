@@ -658,7 +658,7 @@ only need the existing `setOnInteractiveChange()` path.
 - shown according to `SliderValueIndicatorBehavior`,
 - for `RangeSlider`, only the active thumb shows a value indicator,
 - indicators paint through the shared
-  [transient_presentation_pins_design.md](../in_progress/transient_presentation_pins_design.md)
+  [transient_presentation_pins_design.md](../implemented/transient_presentation_pins_design.md)
   path, escaping clipped ancestors without requiring a full
   `ParentClipMode::kUnclipped` chain,
 - if no custom formatter is set, a compact default decimal formatter is used.

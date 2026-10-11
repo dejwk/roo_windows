@@ -84,6 +84,7 @@ motion pauses. It does not restore paint interruption.
 | Theme color tokens | Framework theme separation and Material 3 token ownership are implemented in the current tree. |
 | Toggle icon buttons | The toggle icon-button family, focused unit and rendering coverage, and compact-controls persistent-preference example adoption are implemented. |
 | Transient surface hosting | Presenter-owned focus scopes, the owner-bound composite host, policy preflight and replacement, display-wide input isolation, guarded prepared admission, and explicit-owner legacy-dialog migration are implemented. |
+| [Transient presentation pins](implemented/transient_presentation_pins_design.md) | Phases 1–3 implement the shared host, slider/range-slider indicators, and keyboard press highlighter. Task-coverage suppression remains part of display runtime Phase 7. |
 | [Widget animation registry](implemented/widget_animation_registry_design.md) | Shared frame driving, tagged playback, lifecycle handling, all planned non-click consumer migrations, and target resource acceptance are implemented. Click migration remains explicitly out of scope. |
 | Widget event dispatch | `ApplicationContext` and sparse interactive-change dispatch are implemented. |
 | Widget state compaction | Widget event dispatch is implemented, and both compaction phases are implemented. |
@@ -104,7 +105,6 @@ motion pauses. It does not restore paint interruption.
 | [Sparse rounded child clipping](in_progress/rounded_child_clipping_design.md) | P0, P1, and P4–P7 are complete. P8 generalized exclusion preparation is implemented and measured; uncovered-scene performance and the released `roo_display` dependency check remain open. P2 repair helpers are retired and P3 is cancelled. |
 | Display runtime and cross-application input | Phases 1–6 are implemented. Explicit modal coverage and the final migration/cost audit remain proposed. |
 | Text system | `TextBlock` wrapping, justification, max-lines, ellipsis, caching, and golden coverage are implemented; shared rich paragraph layout and `RichTextBlock` remain. |
-| Transient presentation pins | The shared layer-scoped host, slider/range-slider indicators, and keyboard press-highlighter adoption are implemented. Visual overflow prerequisites are in progress. |
 | Transient presenter lifetime and ownership | The shared slot, legacy-dialog and Material 3 menu lifetime, Back, and structural-host adoption are implemented; snackbar queue adoption is also implemented; modal sheets have no implementation to adopt. |
 | Visual overflow | Surface ownership, ink bounds, direct-paint exclusion, persistent/transient bound separation, and root-stage transient pins are implemented; the broader design remains in progress. |
 

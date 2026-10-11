@@ -7,7 +7,7 @@ must render above ordinary widget contents without requiring an unclipped
 ancestor chain.
 
 The immediate driver is the Material 3 slider value indicator in
-[../implemented/material3_slider_design.md](../implemented/material3_slider_design.md).
+[material3_slider_design.md](material3_slider_design.md).
 The same mechanism also serves keyboard preview or highlighter surfaces.
 
 ## Motivation
@@ -39,10 +39,10 @@ focus, or own layout.
 
 ## Background
 
-**Status: In progress.** Phases 1 and 2 are implemented: the layer-scoped pin
-host is available and both slider variants use active-only pins for value
-indicators. Phase 3 keyboard-highlighter adoption remains outstanding. The
-status of prerequisites is recorded in the
+**Status: Implemented.** Phases 1–3 provide the layer-scoped pin host,
+active-only slider and range-slider indicators, and the keyboard press
+highlighter pin. The task-coverage suppression contract below belongs to the
+separate proposed display runtime Phase 7 extension. See the
 [status index](../README.md).
 
 ### Pre-Phase-2 Slider Indicator Path
@@ -80,7 +80,7 @@ locally.
 
 ### Existing Layer Roots
 
-[non_touch_input_design.md](../implemented/non_touch_input_design.md) already treats tasks,
+[non_touch_input_design.md](non_touch_input_design.md) already treats tasks,
 popups, and modal dialogs as real routing and focus boundaries.
 [../src/roo_windows/core/main_window.cpp](../../../src/roo_windows/core/main_window.cpp)
 currently paints those same boundaries in order:
@@ -107,7 +107,7 @@ keyboard affordances, and similar widget-owned visuals.
 
 ### Earlier Hierarchy Decision
 
-[../implemented/surface_widget_refactor_design.md](../implemented/surface_widget_refactor_design.md)
+[surface_widget_refactor_design.md](surface_widget_refactor_design.md)
 explicitly deferred the choice between stretching the existing
 transient-overflow machinery farther and splitting child hosting from surface
 ownership.
@@ -543,7 +543,7 @@ escape the keyboard widget tree:
   keyboard surface.
 
 That directly matches the popup or passive-overlay split already established in
-[non_touch_input_design.md](../implemented/non_touch_input_design.md).
+[non_touch_input_design.md](non_touch_input_design.md).
 
 ## Proposed API
 
@@ -899,7 +899,7 @@ Implementation result:
 - each active concrete slider pin has the 28-byte `PresentationPin` payload
   (the concrete plans add no fields), plus allocator overhead.
 
-### Phase 3: Convert Keyboard Press Highlighter To A Popup Pin
+### Phase 3: Convert Keyboard Press Highlighter To A Popup Pin (Implemented)
 
 Scope:
 

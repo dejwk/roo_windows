@@ -160,7 +160,7 @@ The normative supporting designs are
 [Back request coordination](../implemented/back_request_coordination_design.md#future-work),
 [Gesture arbitration and ownership](../implemented/gesture_arbitration_ownership_design.md),
 and
-[Transient presentation pins](../in_progress/transient_presentation_pins_design.md).
+[Transient presentation pins](../implemented/transient_presentation_pins_design.md).
 This document specifies how the host composes those contracts. It does not
 redefine their algorithms.
 
