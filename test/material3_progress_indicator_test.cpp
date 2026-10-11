@@ -337,6 +337,9 @@ TEST_F(ProgressTest, MotionGoldens) {
   circular.setIndeterminate();
   Task& task = app_.addTaskFullScreen(pattern);
   refresh();
+  // Freeze wall-clock advancement so each seek renders the requested phase.
+  ASSERT_EQ(AnimationStatus::kOk, context().animations().pause(linear, 0));
+  ASSERT_EQ(AnimationStatus::kOk, context().animations().pause(circular, 0));
   for (int phase : {0, 333, 750, 1100, 1500, 1799, 2700, 5399}) {
     ASSERT_EQ(AnimationStatus::kOk, linear.seek(phase));
     ASSERT_EQ(AnimationStatus::kOk, circular.seek(phase));
