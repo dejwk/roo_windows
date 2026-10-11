@@ -1,765 +1,717 @@
 # Roo Windows Material 3 Split Button Design
 
-## Implementation status
-
-**Proposed.** None of the defined scope is implemented. The status of existing and outstanding prerequisites is recorded in the [status index](../README.md).
+**Status: proposed.** Reviewed against the source tree on 2026-10-11. Buttons,
+menus, non-touch input, shared button appearance helpers, and density are
+implemented. The split button and the menu amendments below are not. See the
+[design status index](../README.md).
 
 ## Objective
 
-Add Material Design 3 split button support to `roo_windows` for the common
-"run the default action, or open related actions" case.
-
-The design should provide:
-
-- a `material3::SplitButton` widget under the existing Material 3 button
-  family,
-- one primary segment that behaves like a normal button action,
-- one trailing segment that opens a related
-  [`Menu`](../implemented/material3_menus_design.md),
-- the four supported Material 3 split-button color styles: elevated, filled,
-  filled tonal, and outlined,
-- the same expressive size range as buttons: extra small, small, medium,
-  large, and extra large,
-- split-button-specific geometry and state handling rather than a loose row of
-  two ordinary buttons,
-- and a per-instance RAM cost much closer to one button than to a
-  `Button` + `IconButton` + layout container composite.
-
-This document defines the intended API and integration model. It does not
-describe an existing implementation.
+Add a compact Material 3 control that runs a primary action or opens a menu of
+related actions, with predictable touch, keyboard, rendering, and lifetime
+behavior.
 
 ## Motivation
 
-`roo_windows` now has Material 3 buttons in
-[../implemented/material3_buttons_design.md](../implemented/material3_buttons_design.md) and a designed
-Material 3 menu family in [material3_menus_design.md](../implemented/material3_menus_design.md),
-but it still lacks the specific control that Material 3 uses for a default
-action plus related alternatives.
-
-Building that ad hoc from a [`Button`](../../../src/roo_windows/material3/button/button.h),
-an icon-only trigger, a layout container, and custom menu anchoring has three
-problems:
-
-1. it costs substantially more RAM than a dedicated widget,
-2. it does not match the split-button geometry defined by Material 3,
-3. and it pushes menu-open coordination into app code instead of the widget
-   layer.
-
-That is the wrong default for an embedded-first widget library.
+A device's **Run** action often needs alternatives such as **Run once** or
+**Configure run**. Two unrelated buttons obscure that relationship, while an
+application-built composite repeats layout and menu coordination code. A
+dedicated split button can express the relationship and avoid retaining three
+widget objects for each control.
 
 ## Background
 
-### Current Status in `roo_windows`
+The [design glossary](../glossary.md) defines the framework's task, ownership,
+surface, and presentation terminology. Relevant implemented facilities are:
 
-As of 2026-05, the relevant current pieces are:
+- [`Button`](../../../src/roo_windows/material3/button/button.h) and
+  [`IconButton`](../../../src/roo_windows/material3/button/icon_button.h), with
+  shared [`ButtonSize`](../../../src/roo_windows/material3/button/button_types.h)
+  and private [appearance](../../../src/roo_windows/material3/button/internal/button_appearance.h)
+  and [geometry](../../../src/roo_windows/material3/button/internal/button_geometry.h)
+  resolvers. These helpers already exist; no extraction is a prerequisite.
+- [`Menu`](../../../src/roo_windows/material3/menu/menu.h), a reusable presenter,
+  not an `Activity`. `show(Task&, const Widget&, ...)` and
+  `showFromRect(Task&, const Rect&, ...)` return `MenuShowResult`. The root chain
+  owns a hosted transient focus scope. `onFinished()` runs after detachment;
+  `dismissChain()` can defer detachment while click feedback settles.
+- [`DropdownButton`](../../../src/roo_windows/material3/utilities/dropdown_button.h),
+  which selects a value from a borrowed string table. A split button invokes an
+  action; it does not adopt that selector's value model or allocate a new menu
+  and rows on every open.
+- [`SurfaceWidget`](../../../src/roo_windows/core/surface_widget.h), the current
+  surface-owning base. `BasicSurfaceWidget` is no longer the applicable API.
+  The [widget authoring rules](../../../.github/instructions/roo-windows-widget-authoring.instructions.md)
+  require foreground-first, final-color painting and explicit decoration
+  overflow. The ancestor must remain able to paint gaps between surfaces.
+- The shared [click controller](../../../src/roo_windows/core/click_animation.h)
+  admits one interaction at a time and settles deferred actions after a
+  completed refresh. `OVERLAY_CUSTOM` supports component-owned visuals while
+  retaining this lifecycle. `OVERLAY_NONE` bypasses its paint-time settlement.
+- [Non-touch input](../implemented/non_touch_input_design.md) provides focus,
+  Enter/Space activation, and directional traversal. The task's Enter/Space
+  fallback calls the base press hook directly, without a pointer `onDown()`.
+- [Density](../implemented/material3_density_design.md) removes eligible
+  whitespace without scaling text or icon artwork. Existing buttons read the
+  theme setting; menu density is independently controlled by `MenuPolicy`.
 
-- the shipped Material 3 [`Button`](../../../src/roo_windows/material3/button/button.h),
-  whose implementation in
-  [`button.cpp`](../../../src/roo_windows/material3/button/button.cpp) uses one
-  widget-wide area overlay and one deferred `onClicked()` dispatch path,
-- the base widget interaction model in
-  [`Widget`](../../../src/roo_windows/core/widget.h), where clicks route through
-  `onClicked()` and optional `setOnInteractiveChange(...)`,
-- the surface paint and decoration hooks in
-  [`SurfaceWidget`](../../../src/roo_windows/core/surface_widget.h),
-- and the proposed Material 3 menu API in
-  [material3_menus_design.md](../implemented/material3_menus_design.md), especially
-  `Menu`, `MenuAnchor`, and `Menu::show(Application&)`.
-
-What does not exist yet:
-
-- no `SplitButton` widget,
-- no split-button geometry tokens,
-- no segment-aware button overlay or click routing,
-- and no menu lifecycle hook that lets a composite trigger keep only part of
-  itself visually open while the menu chain is visible.
-
-Two existing facts drive this design:
-
-1. the current `Button` implementation is correct for one clickable surface,
-   but not for two independently interactive segments,
-2. and the current menu design deliberately leaves trigger open-state styling
-   to a concrete component, which lets a split button style only its trailing
-   segment.
-
-### Material 3 Signals
-
-This document is aligned against the Material 3 split-button documentation:
-
-- [Overview](https://m3.material.io/components/split-button/overview)
-- [Specs](https://m3.material.io/components/split-button/specs)
-- [Guidelines](https://m3.material.io/components/split-button/guidelines)
-
-The important signals for this design are:
-
-- a split button combines one primary action with one menu action,
-- the leading segment may contain an icon and label, label only, or icon only,
-- the trailing segment always uses a menu icon,
-- only four color styles are supported: elevated, filled, filled tonal, and
-  outlined,
-- the control uses the same five expressive sizes as the Material 3 button
-  family,
-- the two segments are separated by a fixed 2 dp gap,
-- the control uses the same color roles and state layers as buttons and icon
-  buttons,
-- the trailing icon is optically offset when closed and centered when the menu
-  is open,
-- and the trailing segment becomes the visually selected side while the menu is
-  open, without changing the base color scheme.
-
-### Local Framework Signals
-
-Three local framework constraints matter most here.
-
-First, `roo_windows` is direct-to-framebuffer. The foreground-first exclusion
-rule from
-[../.github/instructions/roo-windows-widget-authoring.instructions.md](../../../.github/instructions/roo-windows-widget-authoring.instructions.md)
-means split-button paint cannot rely on a vague "tint the whole widget and fix
-it later" model. The final pixels for each segment need to be settled in the
-right order.
-
-Second, the current `Widget` state bits such as `pressed` and `activated`
-exist at whole-widget granularity. That is useful storage, but it is not by
-itself enough to tell the paint path which split-button segment is currently
-active.
-
-Third, menus deliberately do not retain or restyle their triggering widget.
-Any open-state treatment belongs to the concrete trigger component. A split
-button needs such a treatment to be segment-local: only the trailing segment
-should stay visually selected.
+Material references are the [overview](https://m3.material.io/components/split-button/overview),
+[specifications](https://m3.material.io/components/split-button/specs), and
+[guidelines](https://m3.material.io/components/split-button/guidelines).
+The Material pages require JavaScript and did not expose their specification
+text during this review. The concrete geometry below is checked against the
+official AndroidX token files, version `18_0_18`, and its
+[split-button implementation](https://github.com/androidx/androidx/blob/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/SplitButton.kt),
+accessed 2026-10-11. AndroidX supports broader secondary-action composition;
+requiring a menu here is a Roo API scope decision, not a universal Material
+restriction. Density, focus shortcuts, and motion choices below are also
+explicit Roo adaptations.
 
 ## Requirements
 
-### Functional Requirements
-
-1. Provide exactly two invokable segments: a primary action and a trailing menu
-   action.
-2. Support the Material 3 split-button color styles: elevated, filled, filled
-   tonal, and outlined.
-3. Support the Material 3 split-button sizes: extra small, small, medium,
-   large, and extra large.
-4. Support leading-segment content as icon plus label, label only, or icon
-   only.
-5. Always paint a menu icon in the trailing segment. v1 does not expose an
-   arbitrary trailing icon setter.
-6. Require a related `Menu` for every `SplitButton`; the trailing segment is
-   not a generic second callback surface.
-7. Open the related `Menu` from the trailing segment and anchor it to the
-   trailing segment bounds, not to the full widget bounds.
-8. Keep the primary action path available through the existing widget
-   interactive-change model.
-9. Disable both segments when the widget is disabled.
-10. Clear the trailing open state when the root menu chain dismisses, regardless
-    of whether dismissal came from outside press, back or escape, or leaf-item
-    invocation.
-
-### Interaction and Rendering Requirements
-
-1. Use a fixed 2 dp gutter between the leading and trailing segments for every
-   size.
-2. Keep the outer corners fully rounded in v1. The split button does not expose
-   the standard button family's `ButtonShape` toggle.
-3. Support segment-specific pressed visuals for the primary and trailing
-   segments.
-4. Paint the trailing segment as the open or selected segment while the menu is
-   visible, including the centered menu icon.
-5. Do not reuse the stock whole-surface area overlay path for interaction
-   visuals.
-6. Keep whole-control hover and focus support compatible with the current
-   widget-state model; do not add new framework-wide per-segment hover routing
-   in v1.
-7. Lock a gesture to the segment that received the initial down event. Sliding
-   across the 2 dp gutter does not retarget the tap to the other segment.
-8. Preserve the existing click-animation timing model so `onClicked()` still
-   fires after the animation settles.
-
-### Memory and API Requirements
-
-1. Avoid building a split button from child `Button` and `IconButton`
-   instances.
-2. Avoid new per-instance `std::function` storage for a second action.
-3. Keep menu ownership non-owning and explicit.
-4. Reuse existing widget state bits where they already model the required
-   semantics.
-5. Keep split-button-specific extra storage to a packed segment-state field and
-   existing pointer-sized references.
-6. Define interim behavior explicitly for the period before menu presentation
-   lands: if `Menu::show(Application&)` still warns and performs no
-   presentation work, `SplitButton` must remain visually closed and must not
-   fake an open state.
+1. Present one primary action and one related-menu action. Support label-only,
+   icon-only, and icon-plus-label primary content and a fixed trailing chevron.
+2. Provide filled, filled tonal, outlined, and elevated styles in all five
+   expressive sizes, with rounded outer corners and a 2 dp separation.
+3. Make both actions reachable by touch and keyboard. A gesture cannot invoke
+   the other action after crossing the separation; disabled controls invoke
+   neither action. Preserve normal primary-action callback semantics.
+4. Anchor the menu to its action segment. Show the open treatment only after
+   successful presentation and remove it when the complete root chain detaches.
+   Admission failure, replacement, teardown, and deferred dismissal must be safe.
+5. Match natural sizing, constrained layout, hit regions, and rendering at all
+   supported density levels and zoom factors. Explicit parent constraints win.
+6. Paint independent state layers, outlines, and shadows without covering the
+   separation or writing an intermediate color under foreground content.
+7. Keep labels, icons, and the related menu as explicit borrows. Retain no child
+   buttons, second application callback, per-instance palette, or private timer.
+   Account for all retained state and validate embedded resource costs.
 
 ## Design Overview
 
-### Scope
+`SplitButton` is one `SurfaceWidget` with two **segments**: local rectangles for
+the primary and menu actions. They are geometry, not child widgets or separate
+focus nodes. A **gesture segment** identifies the current pointer stream; a
+separate **click segment** identifies an admitted click until semantic delivery.
+Keeping them separate prevents a later rejected down event from retargeting an
+earlier deferred click. Both fit in packed flags.
 
-In scope:
+The widget borrows one `Menu` for its lifetime. A **presentation observer** is a
+non-owning, per-presentation housekeeping hook on that menu. It clears the
+trigger's open visual after detachment without replacing the menu subclass's
+existing `onFinished()` hook. Only a successful show installs the observer;
+there is no permanent registration at construction. `Widget::activated` records
+that this trigger owns the open presentation, not menu-item selection.
 
-- a dedicated `material3::SplitButton` widget,
-- four color styles,
-- five sizes,
-- primary-action and trailing-menu dispatch,
-- menu anchoring to the trailing segment,
-- split-button-specific paint and geometry,
-- and the minimal menu lifecycle hook needed to keep the trailing segment open
-  while the menu chain is visible.
+| Requirement | Chosen mechanism |
+| --- | --- |
+| Related actions and compact storage | One childless widget, one borrowed menu, existing primary callback registry |
+| Material appearance and sizing | Shared button colors; a separate split geometry table and one rectangle resolver |
+| Touch and keyboard reachability | Locked pointer segment; Enter/Space for primary, Down for menu |
+| Safe open-state lifetime | Successful-admission result, per-presentation observer, synchronous cancellation for lifetime changes |
+| Correct repaint | Custom overlay, two decorations, explicit settled exclusions, ancestor-painted separation |
 
-Out of scope:
-
-- a text split-button variant,
-- square or alternate outer-corner families,
-- arbitrary trailing widgets or icons,
-- per-segment hover routing at the framework level,
-- toggle or selectable split buttons,
-- and shared appearance override structs in the first version.
-
-### Key Decisions
-
-1. `SplitButton` is one widget, not a container of two child buttons.
-2. `SplitButton` reuses the existing Material 3 button color and elevation
-   resolution, but owns a separate split-button geometry token table.
-3. The trailing segment always opens a `Menu`; it is not a general-purpose
-   second callback target.
-4. Menu-open visual state is driven through a narrow menu presentation observer
-   hook, not through a new field on every `Widget`.
-5. `SplitButton` disables the generic area overlay and paints segment-local
-   state layers itself.
-6. v1 keeps hover and focus at whole-control granularity because the current
-   framework does not route those states per segment.
+For example, an application constructs a persistent menu containing **Run once**
+and **Configure run**, then constructs `SplitButton(context, menu, "Run")` and
+registers `setOnInteractiveChange(...)` for the default run action. Tapping Run
+or pressing Enter invokes that handler once. Tapping the chevron or pressing
+Down opens the menu; menu items retain their own invocation behavior. Choosing
+an item does not implicitly rename the primary action.
 
 ## Design Details
 
-### Compound Surface and Measurement
+### Geometry, content, and density
 
-Although Material 3 renders the split button as two surfaces separated by a
-gutter, the control is still implemented as one widget.
+Authored lengths in this table are dp. The linked files identify each row's
+source. Inner radii describe the corners facing the separation; outer radii
+remain full. The last column is the nominal trailing width before scaling.
 
-That choice keeps three things aligned:
+| Size | Height | Primary start/end padding | Trailing icon slot | Trailing start/end padding | Inner rest / hover / press | Trailing width |
+| --- | ---: | --- | ---: | --- | --- | ---: |
+| [Extra small](https://github.com/androidx/androidx/blob/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/SplitButtonXSmallTokens.kt) | 32 | 12 / 10 | 22 | 13 / 13 | 4 / 8 / 8 | 48 |
+| [Small](https://github.com/androidx/androidx/blob/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/SplitButtonSmallTokens.kt) | 40 | 16 / 12 | 22 | 13 / 13 | 4 / 12 / 12 | 48 |
+| [Medium](https://github.com/androidx/androidx/blob/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/SplitButtonMediumTokens.kt) | 56 | 24 / 24 | 26 | 15 / 15 | 4 / 12 / 12 | 56 |
+| [Large](https://github.com/androidx/androidx/blob/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/SplitButtonLargeTokens.kt) | 96 | 48 / 48 | 38 | 29 / 29 | 8 / 20 / 20 | 96 |
+| [Extra large](https://github.com/androidx/androidx/blob/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/SplitButtonXLargeTokens.kt) | 136 | 64 / 64 | 50 | 43 / 43 | 12 / 20 / 20 | 136 |
 
-1. one measurement contract,
-2. one deferred click-animation lifecycle,
-3. and one compact RAM footprint.
+The primary uses the current button family's label-large typography, leading
+icon slots, and icon-to-label gaps. The five leading slots are 20/24/24/32/40 dp
+and the gaps are 4/8/8/12/16 dp. Keep actual borrowed artwork intact; a larger
+icon enlarges its slot. Render the built-in chevron procedurally at its authored
+slot size so asset-size rounding cannot enlarge the trailing segment. It points
+down while closed and up while open. There is no custom trailing icon setter.
 
-The widget owns two local segment rectangles:
+Measure the primary as one line. Cache label ink/advance width, line height,
+and the horizontal origin needed for negative bearings on construction,
+`setLabel()`, and `requestLayoutDescending()`. Suggested minimums use those
+cached values and cheap icon extents; they never traverse glyphs. Account for
+both advance and ink bounds, as the current dropdown helper does. Do not wrap
+or add ellipsis in v1; constrained content is clipped to its segment.
 
-- the primary segment on the leading side,
-- and the trailing menu segment on the trailing side.
-
-Let:
-
-- $W$ be the widget width,
-- $H$ be the widget height,
-- $g$ be the fixed gutter width,
-- $T$ be the measured width of the trailing segment,
-- and $L$ be the measured width of the leading segment.
-
-Then:
-
-$$
-g = \operatorname{Scaled}(2)
-$$
-
-$$
-T = p_{t,l} + s_t + p_{t,r}
-$$
-
-$$
-L = W - g - T
-$$
-
-The two segment rectangles are therefore:
+Let $S(x)$ denote `Scaled(x)`, $d$ the theme density in $[-5,0]$, $C_w$ the
+primary content width, and $C_h$ the larger of the primary and chevron content
+heights. At density zero, content height includes nominal icon slots. At
+compact densities, use the density design's centered painted-icon footprint.
+Let $h_s$, $p_s$, $p_e$, $t_s$, $t_e$, and $i_t$ denote the selected table's
+height, primary paddings, trailing paddings, and trailing icon slot.
 
 $$
-R_p = [0, 0, L - 1, H - 1]
+g=S(2),\qquad T=S(t_s)+S(i_t)+S(t_e),\qquad
+W_0=S(p_s)+C_w+S(p_e)+g+T
 $$
 
 $$
-R_t = [L + g, 0, W - 1, H - 1]
+H_0=\max\left(S(\max(24,h_s+4d)),\ C_h+2S(4)\right)
 $$
 
-The minimum width follows the same principle as the existing button:
+Only height participates in density. The content floor protects artwork at
+every level, including zero. Horizontal spacing, chevron size, outline, and
+typography do not shrink. This extends Roo's button density policy to split
+buttons; it does not change the scope of already implemented widgets. Read the
+theme directly, with no per-instance density override. The borrowed menu keeps
+its independently authored `MenuPolicy::density` and layout direction.
+
+These are the initial natural dimensions; the rounded-interior content floor
+in [painting](#segment-surfaces-and-painting) completes the sizing calculation.
+Return the resulting natural dimensions from the cached sizing path and resolve
+them through `WidthSpec` and `HeightSpec` in `onMeasure()`. Split geometry owns
+its padding internally, so `getPadding()` is zero; callers' explicit layout
+constraints and outer margins retain their usual meaning. Default outer
+margins match `Button`.
+
+For measured width $W$ and height $H$, reserve the trailing segment first:
 
 $$
-W_{min} = w_{primary\ content} + p_{p,l} + p_{p,r} + g + T
+T'=\min(T,W),\qquad L=\max(0,W-T'-g).
 $$
 
-`SplitButton` uses the same one-line label measurement path as
-[`Button`](../../../src/roo_windows/material3/button/button.cpp): the leading icon
-and label are measured as one centered content cluster. The widget always
-reports the tokenized split-button height for the selected size. It does not
-grow vertically for larger icons or wrapped text in v1.
+In left-to-right layout the primary rectangle is `(0, 0, L-1, H-1)` and the
+trailing rectangle is `(W-T', 0, W-1, H-1)`, using the actual `Rect` constructor's
+inclusive end coordinates. Empty dimensions produce empty segments. With less
+than $T+g$ width, the primary disappears and only the remaining gap space and
+clipped trailing segment remain. Expanded width goes to the primary. A local
+`LayoutDirection` setting mirrors the two rectangles, paddings, and optical
+offset for right-to-left layout; it does not rewrite the caller's menu policy.
 
-The split-button-specific geometry table stores:
+Clamp every radius to half the segment's smaller measured dimension before
+narrowing to the radius storage type. Keep scaled dimensions in signed wide
+intermediates: 136 dp at 200% is 272 px. Outlined strokes use
+`Scaled(SmallNumber(1))`, preserving fractional widths at 75% and 150% zoom.
 
-- height,
-- leading-segment paddings,
-- trailing-segment paddings,
-- trailing icon slot size,
-- closed-state trailing icon offset,
-- resting inner-corner radius,
-- pressed inner-corner radius,
-- and open-state trailing inner-corner radius.
-
-The public API does not expose those numbers. The implementation transcribes
-them from the Material 3 split-button spec.
-
-![Split-button geometry and menu anchor](figures/material3_split_button_layout.svg)
-
-### Paint and Decoration Model
-
-`SplitButton` derives from `BasicSurfaceWidget`, but it does not use the stock
-whole-surface overlay path.
-
-The chosen paint model is:
-
-1. override `getOverlayType()` to return `OVERLAY_NONE`,
-2. paint the two segment interiors explicitly,
-3. emit two persistent decorations, one per segment, through
-   `emitPersistentDecoration(...)`,
-4. and paint segment-local state layers directly rather than letting the shared
-   area overlay tint the entire widget bounds.
-
-This is necessary because a split button is not one continuous rounded surface.
-It is two rounded surfaces with a transparent or inherited-background gutter
-between them.
-
-The paint path therefore settles pixels in this order:
-
-1. clear the gutter and any unused local bounds to the inherited background,
-2. settle the primary segment fill and any primary-segment state layer,
-3. settle the trailing segment fill and any trailing-segment state layer,
-4. paint the leading icon and label cluster,
-5. paint the trailing menu icon with the correct optical offset,
-6. and emit two decorations for outline and elevation.
-
-Outlined split buttons therefore become two outlined surfaces, not one
-monolithic outline that bridges the gutter. Elevated split buttons likewise
-emit two shadows that are bounded by the same widget-level invalidation box.
-
-### Interaction and Dispatch Model
-
-The widget keeps one packed segment field that stores which segment currently
-owns the gesture and the deferred click.
-
-The event flow is:
-
-1. `onDown(x, y)` identifies the owning segment from the local x coordinate and
-   stores it.
-2. `onShowPress(...)` and the existing pressed-state machinery still run at
-   whole-widget timing, but the paint path applies the pressed visual only to
-   the stored segment.
-3. `onSingleTapUp(x, y)` lets the framework schedule the deferred click as it
-   already does today.
-4. `onClicked()` dispatches according to the stored segment.
-
-Primary dispatch calls `onPrimaryInvoked()`. The default implementation of
-`onPrimaryInvoked()` calls `triggerInteractiveChange()`, so the existing
-`setOnInteractiveChange(...)` contract continues to map to the primary action.
-
-Trailing dispatch is fixed: it configures and shows the bound `Menu`.
-
-This keeps the default-action path compatible with the current framework while
-avoiding a second callback field on every split-button instance.
-
-### Menu Integration and Open-State Lifecycle
-
-The trailing segment opens the bound `Menu`. Because generic menus do not
-retain or restyle their trigger, the chosen component-specific integration is:
-
-1. `SplitButton` computes a `MenuAnchor` from the trailing segment bounds,
-2. `SplitButton` sets that anchor on the bound `Menu`,
-3. `SplitButton` listens for root-menu presentation and dismissal
-   through a narrow `MenuPresentationObserver` hook.
-
-When the root menu is shown, the observer toggles the widget's existing
-`activated` state bit on. When the root menu chain dismisses, it toggles that
-same bit off.
-
-That is the right storage tradeoff:
-
-- no new state is added to base `Widget`,
-- no new `menu_open_` field is added to `SplitButton`,
-- and the existing `activated` bit is reused as a widget-local "trailing menu
-  open" signal.
-
-Because `SplitButton` has disabled the stock area overlay path, `activated`
-does not tint the whole widget. It only affects the custom trailing-segment
-paint logic.
-
-Only the root menu presentation toggles the split button. Submenus do not
-change the open visual independently; the trailing segment remains open for the
-entire root chain lifetime.
-
-If `Menu::show(Application&)` is still in its stub state from
-[material3_menus_design.md](../implemented/material3_menus_design.md), the existing menu
-warning is the interim behavior. `SplitButton` must not latch the activated
-state when no menu was actually presented.
-
-### State Layers and Trailing Icon Behavior
-
-Split buttons use the same color roles and state-layer opacities as standard
-buttons, but the paint application differs.
-
-The leading and trailing segments each resolve:
-
-- enabled or disabled fill and content color,
-- pressed state layer,
-- and any whole-control hover or focus state layer.
-
-The trailing segment also resolves an open-state visual driven by the reused
-`activated` bit.
-
-Closed-state trailing icon placement follows the Material 3 optical-offset
-table, i.e. the icon is slightly off center toward the leading edge. Open-state
-placement is centered:
+Optical alignment follows AndroidX's
+[horizontal centering rule](https://github.com/androidx/androidx/blob/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/HorizontalCenterOptically.kt).
+For the trailing segment, let $r_s,r_e$ be the average current radii at its
+logical start and end. Shift the centered icon by
 
 $$
-x_{icon,closed} = x_{center} + \delta(size)
+\delta=\operatorname{round}\!\left(\operatorname{clamp}
+  (0.11(r_s-r_e),-S(t_s),S(t_e))\right).
 $$
 
-$$
-x_{icon,open} = x_{center}
-$$
+Round to nearest pixel, with half ties toward positive infinity, then clamp
+again to the available horizontal slack under tight constraints. Convert the
+logical offset to physical direction. In the open state all trailing corners
+are full, so the offset is zero. The widget width and separation never change
+when opening; the trailing shape changes inside its existing rectangle.
 
-where $\delta(size)$ is the spec-defined offset table.
+![Split-button rectangles, optical alignment, and paint order](figures/material3_split_button_layout.svg)
 
-The trailing segment also changes inner-corner geometry when open. In the open
-state, the inner corners use the same fully rounded family as the outer
-corners, matching the Material 3 selected trailing-segment shape.
+The figure shows Small at 100% zoom with a 64 px primary content cluster:
+$W_0=16+64+12+2+48=142$, $L=92$, $H=40$; no further content-floor increase is
+needed. The closed offset is
+$\operatorname{round}(0.11(4-20))=-2$ px. Drawing scale is 3 SVG units per pixel;
+the 2 px separation is therefore exactly 6 SVG units in both states.
 
-### Hover and Focus Scope
+### Segment surfaces and painting
 
-v1 does not add per-segment hover or keyboard-focus routing to the framework.
+Derive from `SurfaceWidget` because the component owns fills, outlines, and
+elevation. Keep its whole-widget background transparent and border empty; those
+single-surface hooks cannot describe the separation. Override
+`fullyCoversBoundsWithOpaqueColors()` to false and
+`getDirectPaintExclusionBounds()` to empty. Otherwise the generic final
+exclusion would suppress ancestor repaint through the gap.
 
-Instead:
+Use `OVERLAY_CUSTOM` and `ClickOverlayAnimation::kFade`. The framework retains
+sampled click timing and terminal settlement but does not apply its area
+overlay to the whole rectangle. Resolve per-segment layers from the theme:
+hover and focus affect both segments, press affects only the admitted click
+segment, and activated affects only the trailing segment. Suppress all layers
+when disabled, and return false from `useAutomaticDisabledStyle()` because the
+shared appearance resolver already supplies disabled colors. Do not apply the
+whole-widget `overlaySpec().base_overlay()` unchanged to both segments.
 
-- whole-control hover and focus continue to use the existing widget-state bits,
-- the resulting hover or focus state layer is painted onto both segments,
-- and only pressed and menu-open visuals are segment-specific.
+Reuse `ResolveButtonAppearance`, `ResolveButtonContainerRole`, and
+`ResolveButtonElevation` by explicitly mapping the four split variants to
+`ButtonVariant`. No new per-widget theme table or color cache is introduced.
+Inner-corner priority is press, then trailing-open, then hover, then rest.
+Focus changes the layer without changing corners. Press interpolation uses
+the existing button convention, `min(1, 3 * sampled_progress)`, and a held press
+uses the pressed endpoint. The custom fade uses the shared sampled progress
+and theme pressed opacity. Open/close and hover geometry change immediately;
+v1 has no independent menu-shape animation track.
 
-This is an explicit design choice, not an omission.
+Implement ordinary `paint(PaintContext&)` with a segment helper; no custom
+widget-tree traversal is needed:
 
-The current framework has no coordinate-rich hover routing for childless
-compound widgets, and touch is still the primary interaction model for this
-library. Adding framework-wide per-segment hover state now would cost more code
-and more state than the current requirement justifies.
+1. Resolve both rectangles, current corner radii, final layer colors, and
+   elevation from the same geometry/state snapshot.
+2. Within each segment's flat interior, draw icon and label content with its
+   final composited background using tiled/stacked drawables. Exclude each
+   settled rectangle, then fill only the remaining flat interior. Never fill
+   first and draw text over that intermediate color.
+3. In `emitPersistentDecoration()`, register one `PaintDecoration` per segment
+   for the rounded rim, outline, and shadow. Use the same layer-composited fill
+   as the corresponding interior. Register the trailing segment first as the
+   deterministic foreground order where the two shadows overlap.
+4. Leave the gap and transparent corner pixels unexcluded. Ancestor output and
+   the decoration compositor resolve the actual backdrop, including content
+   underneath a transparent parent. Do not pre-clear the widget or the gap to
+   a guessed background color.
 
-### Shared Tokens and Internal Refactoring
+Use per-segment content clipping like `Button`; text and icons must not cross
+the rounded rim or the neighboring segment. Derive natural content floors from
+that safe region so normal-sized content remains intact; explicit tight parent
+constraints alone are allowed to clip it. The height formula is a lower bound:
+raise the natural dimensions when the resolved corner/outline inset requires
+more room around oversized content. Use the same helper for minimums and paint.
 
-`SplitButton` should not copy the current button color and elevation resolver.
+`getParentDecorationBounds()` returns the union of both segment shadow extents,
+translated to parent coordinates; `hasDecorationOverflow()` agrees with it.
+Expose maximum segment elevation through `getElevation()` for conservative
+framework damage. A shape or elevation change invalidates the union of old and
+new coverage in the parent, including newly exposed rounded edges. Do not rely
+on `borderStyleChanged()` for the empty whole-widget border. Appearance setters
+and `onClickAnimationChanged(previous_progress)` recompute before/after segment
+geometry without retaining two rectangles or an appearance cache. Override
+interior invalidation to propagate rounded exposure to the parent even though
+the whole-widget border is empty. Invalidation
+must restore old shadow pixels even when elevation drops to zero.
 
-Instead, the implementation should extract the shared Material 3 button-family
-color and elevation helpers used by
-[`button.cpp`](../../../src/roo_windows/material3/button/button.cpp) into a private
-internal helper so `Button` and `SplitButton` read from the same source.
+### Touch, keys, and semantic delivery
 
-Only the geometry table remains split-button specific.
+Hit testing uses the two measured rectangles, including their rounded-corner
+bounding boxes, but excludes the gap. Override both exact and sloppy target
+path hooks so the generic minimum sloppy span cannot reclaim the gap or create
+overlapping expanded action regions. Compact density uses the same rectangles
+for paint and input; there is no hidden 48 dp hit expansion.
 
-That keeps Material 3 button-family color behavior consistent and avoids two
-separate places silently drifting apart on disabled, outlined, or elevated
-variants.
+`onDown()` records the gesture segment. `onShowPress()` and `onSingleTapUp()`
+must use the shared controller's admission result before assigning the click
+segment. A down/up stream received while that controller is busy is rejected
+without modifying or canceling the previous admitted action. Preserve this
+distinction even when both streams target this same widget.
 
-### Per-Instance Footprint Budget
+For an admitted pointer stream, release must still be inside its original
+segment. Release in the other segment, gap, or outside the widget cancels; it
+never retargets. Scroll takeover and `onCancel()` clear that stream's state and
+cancel its controller ownership. Hiding, disabling, and detaching cancel pending
+actions through the existing framework lifecycle. The split-specific state
+must also reset on those transitions.
 
-Using the same 32-bit embedded assumptions as
-[../implemented/material3_buttons_design.md](../implemented/material3_buttons_design.md), the intended
-baseline budgets are:
+Both actions use `ClickActivationPolicy::kAfterNaturalAnimation`, preserving
+ordinary button delivery timing. `onClicked()` snapshots and clears the pending
+segment before dispatch. Primary calls `onPrimaryInvoked()`, whose default calls
+`triggerInteractiveChange()`. Menu calls `showMenu()`. A direct programmatic
+`onClicked()` with no pending segment means primary activation, never the last
+touched segment. Guard against disabled/unpresented invocation. Do not access
+widget members after a primary callback, which can destroy the widget.
 
-| Type | Approx. RAM | Notes |
-|------|------------:|-------|
-| `SplitButton` | ~60-72 B | `BasicSurfaceWidget` base, non-owning label, icon pointer, `Menu*`, packed variant/size/segment state |
-| menu observer storage on `SplitButton` | 0 B beyond the widget vtable | open state reuses `Widget::activated`; observer pointer lives on `Menu` |
-| `Button` + `IconButton` + layout container composite | ~160-210 B | excludes extra coordination glue and duplicates per-widget interaction and surface storage |
+The control is one focus stop. Enter/Space invoke primary; Down opens the menu,
+matching the existing dropdown convention. On Enter/Space key down, prepare the
+primary click segment only when the controller can admit it, then let the task
+fallback own physical-key pairing, press, release, and cancellation. Its
+synthetic center coordinate is not used to choose a segment. Clear the key flag
+on release, focus loss, or cancellation. Down uses the trailing segment and
+the same controller admission/confirmation path, consumes its down/up events,
+and ignores repeat. Tab, Shift-Tab, Left, Right, and Up retain normal traversal.
 
-The important comparison is not the exact byte count. It is the shape of the
-cost curve.
+While a menu is hosted, the menu focus scope and outside-input barrier handle
+keys and pointer events. An outside tap on either segment dismisses the menu
+without click-through or immediate reopening. Back/Escape closes a submenu
+first; the trailing open visual stays until the root chain is detached.
 
-The single-widget design pays one pointer to the related `Menu` and one packed
-segment-state field. The composite design pays for three widget objects,
-duplicated surface semantics, duplicated click lifecycle, and additional
-coordination code. That is far too expensive for the common path.
+### Menu admission and lifetime
+
+`showMenu()` first checks enabled/presented state, nonempty primary content, and
+obtains `getTask()`.
+Use [`CaptureTransientSourceGeometry`](../../../src/roo_windows/core/transient_surface_host.h)
+to validate widget provenance and obtain its full window-coordinate bounds.
+Translate the local trailing rectangle by that origin, then pass it to
+`Menu::showFromRect(..., MenuPlacement::kBelowStart, observer)`. Do not add local
+offsets to an already clipped origin. The menu keeps its existing viewport
+clamping and flip behavior. Missing owner returns
+`kInteractionOwnerUnavailable`; unusable source/segment returns
+`kAnchorUnavailable`; other results pass through unchanged.
+
+Set `activated` and observe effective presentation only for `kShown`. Failure
+to register presentation observation immediately cancels the just-admitted
+menu and returns `kInteractionOwnerUnavailable`. Every
+other result leaves the trigger closed, except that a repeated request from
+the already-open owner returns `kAlreadyPresented` and keeps it open. A second
+trigger sharing the same `Menu` cannot replace that presentation's observer or
+claim its open state. The normal shared transient admission policy remains
+responsible for replacing other replaceable menus.
+
+Add a nullable observer parameter to `Menu::show()` and `showFromRect()`, stored
+as one pointer in the existing `Menu::Impl`. Failed admission retains no new
+observer. On normal terminal delivery, first complete host detachment and focus
+restoration, clear the stored pointer and menu interaction-owner state, notify
+the observer once, then invoke the existing `Menu::onFinished(reason)` as the
+last operation. Submenu transitions do not notify it.
+
+The observer is restricted housekeeping: it clears activated state, cancels
+presentation observation, and invalidates the trigger. It must not invoke
+application callbacks, mutate menu structure, admit another presentation, or
+destroy either object. This restriction makes ordering before the unrestricted
+`onFinished()` safe; the latter retains its existing reentrant/destructive
+callback semantics. No access to the menu follows that callback.
+
+Lifetime changes cannot wait for `dismissChain()`'s final feedback frame. Add
+`Menu::cancelPresentation()` to synchronously disable input, cancel hosted click
+feedback, detach/unbind the chain, release transient submenu state, clear its
+observer, and notify that observer with `kCancel`. Suppress the application
+`onFinished()` hook and preserve persistent root groups for reuse. It is
+idempotent. Implement it using the existing registration cancellation path,
+with explicit menu-state cleanup; do not call `prepareForDerivedDestruction()`,
+which also clears root groups. Menu destruction additionally clears any active
+observer through the same housekeeping path before releasing persistent state.
+
+`SplitButton::dismissMenu()` uses synchronous cancellation only for its own
+activated presentation. Its destructor, disable transition, hidden/detached
+presentation notification, geometry setters, and theme/layout refresh call
+this path. It is safe after context shutdown: clear local state without calling
+dead services, using `tryContext()` and the existing menu shutdown contract.
+The borrowed menu must outlive the widget; label bytes and icon objects must
+outlive their use. All mutation takes place on the UI task.
+
+Anchor geometry is a snapshot, as in current menu presentation. A local bounds
+change closes the menu; an unchanged `onLayout()` is inert. Ancestor movement
+without a child bounds change is not tracked; an
+application moving/scrolling that subtree programmatically must call
+`dismissMenu()` first. The outside-input barrier already prevents an underlying
+user scroll while the menu is open. Live anchor following is outside v1.
+
+### RAM, work, and code-size budget
+
+Do not count a polymorphic observer base as free: on the usual 32-bit ABI it
+adds a secondary vptr. The private-state sketch below makes the estimate
+inspectable. Using the [target baseline](../../material3_target_baseline.md),
+budget approximately:
+
+| Retained payload | 32-bit estimate |
+| --- | ---: |
+| `SurfaceWidget` / `Widget` base | 24 B |
+| Observer subobject vptr | 4 B |
+| Borrowed string view, icon pointer, menu pointer | 16 B |
+| Three compact cached label metrics | 6 B |
+| Packed variant, size, direction, gesture/click/key flags | 2 B |
+| `SplitButton` total | about 52 B; acceptance ceiling 56 B |
+| Observer pointer in every existing `Menu::Impl` | +4 B payload, including idle menus |
+
+These are estimates, not measured results. The menu's persistent root tree,
+rows, optional submenu allocation, callback registry entries, and active
+presentation-registry storage are additional. Binding an already-built menu
+does not allocate a second menu. Observation can allocate on open, as it does
+for other observed widgets; segment layout, animation sampling, and painting
+add no heap allocation. Existing glyph renderer allocation is measured
+separately, not disguised as zero total paint allocation.
+
+For comparison, a 40 B `Button`, an approximately 32 B `IconButton`, and at
+least a 44 B container already total about 116 B, before a concrete layout's
+fields, child collection, and coordination state. Both approaches still need
+the same menu. The single widget roughly halves retained control storage,
+at the cost of a dedicated two-segment painter and input routing.
+
+Geometry, hit testing, and state updates do constant work over two segments.
+Label-metric refresh is linear in label length; ordinary paint still visits its
+glyphs. Shared const tokens contain five rows, tens of bytes in flash, rather
+than copies in every widget. Reuse existing palette, decoration, and click
+machinery to limit compiled code. Phase 4 records target ABI, linked section,
+allocation, and stack deltas; no unmeasured speed or firmware-size claim is an
+acceptance substitute.
 
 ## Proposed API
 
-### Split-Button Types
-
-`ButtonSize` is the shared expressive size selector from
-`material3/button/button_types.h`. A split button has its own size-token table;
-sharing the selector lets a surrounding control policy align it with standard,
-icon, and grouped buttons without coupling their layouts.
+Add `material3/button/split_button.h` and its matching `.cpp`. This sketch shows
+the new consumer contract and retained state, omitting routine getters and
+rendering-hook declarations already specified above.
 
 ```cpp
 namespace roo_windows::material3 {
 
+/// Visual emphasis for a primary action and its related menu.
 enum class SplitButtonVariant : uint8_t {
-  kFilled,
-  kFilledTonal,
-  kOutlined,
-  kElevated,
+  kFilled, kFilledTonal, kOutlined, kElevated,
 };
 
-class SplitButton : public BasicSurfaceWidget {
- public:
-  explicit SplitButton(ApplicationContext& context, Menu& menu,
-                       roo::string_view label = {},
-                       SplitButtonVariant variant =
-                           SplitButtonVariant::kFilled);
-
-  SplitButtonVariant variant() const;
-  void setVariant(SplitButtonVariant variant);
-
-  ButtonSize size() const;
-  void setSize(ButtonSize size);
-
-  roo::string_view label() const;
-  void setLabel(roo::string_view label);
-
-  bool hasIcon() const;
-  const MonoIcon* icon() const;
-  void setIcon(const MonoIcon* icon);
-
-  Menu& menu() const;
-
-  Dimensions getSuggestedMinimumDimensions() const override;
-  void paint(PaintContext& ctx) const override;
-
-  OverlayType getOverlayType() const override { return OVERLAY_NONE; }
-
- protected:
-  virtual void onPrimaryInvoked();
-
-  bool onDown(XDim x, YDim y) override;
-  bool onSingleTapUp(XDim x, YDim y) override;
-  void onClicked() override;
-  void notifyStateChanged(uint16_t state_diff) override;
-};
-
-}  // namespace roo_windows::material3
-```
-
-### Companion Menu Amendment
-
-`SplitButton` needs one narrow addition to the menu API proposed in
-[material3_menus_design.md](../implemented/material3_menus_design.md): an optional lifecycle
-observer that reports root-menu presentation and dismissal.
-
-```cpp
-namespace roo_windows::material3 {
-
+/// Housekeeping recipient for one admitted root-menu presentation.
+/// The menu borrows it until detachment. The callback cannot reenter or destroy
+/// menu/observer state, or invoke application code.
 class MenuPresentationObserver {
  public:
-  virtual void onMenuPresented(Menu& menu) {}
-  virtual void onMenuDismissed(Menu& menu) {}
+  /// Clears trigger state after detachment and before application completion.
+  virtual void onMenuClosed(Menu& menu, PresentationFinishReason reason) = 0;
 
  protected:
   ~MenuPresentationObserver() = default;
 };
 
-class Menu : public Activity {
+/// Primary action and borrowed menu rendered as two coordinated segments.
+class SplitButton : public SurfaceWidget, private MenuPresentationObserver {
  public:
-  void setPresentationObserver(MenuPresentationObserver* observer);
+  /// Borrows @p menu and @p label; defaults to Small and left-to-right layout.
+  /// Menu and context must match. The menu must outlive this widget.
+  explicit SplitButton(ApplicationContext& context, Menu& menu,
+                       roo::string_view label = {},
+                       SplitButtonVariant variant = SplitButtonVariant::kFilled);
+
+  /// Cancels this trigger's presentation before its observer subobject dies.
+  ~SplitButton() override;
+
+  /// Changes emphasis and repaints both segments.
+  void setVariant(SplitButtonVariant variant);
+
+  /// Changes size, canceling an open menu and requesting layout.
+  void setSize(ButtonSize size);
+
+  /// Replaces borrowed primary text and refreshes cached label metrics.
+  void setLabel(roo::string_view label);
+
+  /// Borrows primary artwork; nullptr clears it.
+  void setIcon(const MonoIcon* icon);
+
+  /// Mirrors segment geometry; menu placement policy remains caller-owned.
+  void setLayoutDirection(LayoutDirection direction);
+
+  /// Presents the related menu and returns its admission result.
+  MenuShowResult showMenu();
+
+  /// Synchronously cancels this trigger's menu without application callbacks.
+  void dismissMenu();
+
+  /// True from successful admission until the root chain detaches.
+  bool isMenuOpen() const;
+
+ protected:
+  /// Delivers the default action through triggerInteractiveChange().
+  virtual void onPrimaryInvoked();
+
+ private:
+  void onMenuClosed(Menu& menu, PresentationFinishReason reason) override;
+
+  roo::string_view label_;
+  const MonoIcon* icon_ = nullptr;
+  Menu* menu_;
+  int16_t label_width_;
+  int16_t label_height_;
+  int16_t label_origin_;
+  uint16_t flags_;  // Variant, size, direction, gesture/click segment, key state.
 };
 
 }  // namespace roo_windows::material3
 ```
 
-### API Notes
+Provide the corresponding `variant()`, `size()`, `label()`, `icon()`,
+`layoutDirection()`, and `menu()` accessors. Empty primary content is allowed
+during construction; `isClickable()` requires nonempty text or an icon so an
+unlabeled blank action cannot be activated. Both segments share enabled state.
+No menu rebinding, text variant, square shape, arbitrary secondary callback,
+appearance override object, or value-selection API is introduced.
 
-`SplitButton` deliberately does not expose:
+The companion additions to the existing `Menu` declaration are:
 
-- a text variant,
-- a shape setter,
-- a trailing icon setter,
-- a generic secondary callback,
-- or appearance override structs in v1.
+```cpp
+/// Presents relative to an attached widget; borrows observer only on success.
+MenuShowResult show(Task& interaction_owner, const Widget& placement_source,
+                    MenuPlacement placement = MenuPlacement::kBelowStart,
+                    MenuPresentationObserver* observer = nullptr);
 
-Those omissions are intentional.
+/// Presents at captured window coordinates with the same observer contract.
+MenuShowResult showFromRect(Task& interaction_owner, const Rect& bounds_in_window,
+                            MenuPlacement placement = MenuPlacement::kBelowStart,
+                            MenuPresentationObserver* observer = nullptr);
 
-The component is specifically "default action plus menu of related actions",
-not a new button-composition DSL.
+/// Synchronously detaches without application completion, retaining root groups.
+void cancelPresentation();
+```
 
-The bound `Menu` is non-owning and mandatory. The caller must keep it alive for
-at least as long as the `SplitButton` that references it.
+Default null arguments preserve existing call sites and behavior. The existing
+`Menu::onFinished()` remains protected and virtual. There is no persistent
+`setPresentationObserver()` that can overwrite another trigger's registration.
 
-`onPrimaryInvoked()` defaults to `triggerInteractiveChange()`. That means code
-already written against widget-level interactive-change handlers continues to
-map naturally to the split button's primary action.
+Representative consumer setup, with the menu populated before this code:
 
-If this API lands before menu presentation itself is implemented,
-`SplitButton` inherits the menu system's interim behavior. The trailing segment
-calls `Menu::show(...)`; if `Menu::show(...)` only logs a warning and performs
-no presentation work, `SplitButton` remains visually closed and does not fake a
-selection state.
+```cpp
+// run_menu, its borrowed rows, and label/icon storage outlive run_button.
+material3::SplitButton run_button(context, run_menu, "Run");
+run_button.setOnInteractiveChange([&controller]() { controller.runDefault(); });
+// Attach run_button through the application's usual layout ownership API.
+```
 
 ## Implementation Plan
 
-Authoring reference:
-[../.github/instructions/roo-windows-widget-authoring.instructions.md](../../../.github/instructions/roo-windows-widget-authoring.instructions.md)
+Follow the [shared C++ instructions](../../../.github/instructions/general-cpp-code-authoring-instructions.md),
+[widget instructions](../../../.github/instructions/roo-windows-widget-authoring.instructions.md),
+and [example instructions](../../../.github/instructions/embedded-example-authoring.instructions.md).
+Run validation from the canonical `roo_windows` repository. Each phase is one
+commit; the target names marked new are created by that phase. No partial
+public split-button API is exposed: internal geometry/paint work precedes the
+complete interactive widget, so no warning-only menu stub is needed.
 
-Prerequisite: the baseline `Menu` declarations from
-[material3_menus_design.md](../implemented/material3_menus_design.md) have landed.
+### Phase 1: Safe menu observation and synchronous cancellation
 
-### Phase 1: Add the Menu Lifecycle Hook and Shared Button Helpers
+Add the per-presentation observer and `cancelPresentation()`, preserving null
+observer behavior. Update [menu usage documentation](../../material3_menus.md)
+and its implemented design with the observer lifetime and distinction between
+ordinary dismissal and callback-free synchronous cancellation.
 
-Code slice:
-
-1. Extend `Menu` with the optional `MenuPresentationObserver*` hook.
-2. Notify that observer on root-menu presentation and root-chain dismissal.
-3. Extract shared Material 3 button-family color and elevation resolution from
-   `material3/button/button.cpp` into a private helper reused by both
-   `Button` and the future `SplitButton`.
-
-Proposed commit message:
-
-> Material 3 menus/buttons Phase 1: add split-button prerequisites.
->
-> Add the narrow menu lifecycle observer needed by split buttons and factor the
-> shared button-family token resolver into a private helper.
-
-Validation: run `bazel test //:material3_menu_smoke_test` and
-`bazel test //:material3_button_test`.
-
-### Phase 2: Add Closed-State SplitButton Layout and Paint
-
-Code slice:
-
-1. Add `SplitButton` declarations and build wiring under
-   `src/roo_windows/material3/button/`.
-2. Implement measurement, size tokens, content layout, gutter paint, and the
-   resting or disabled rendering path.
-3. Implement the packed segment-selection field and primary-segment press
-   visuals.
-4. Add closed-state golden coverage for all four variants and representative
-   content combinations.
+Extend `//:material3_menu_test` to cover successful/failed admission, shared-menu
+observer contention, replacement, root versus submenu dismissal, deferred final
+feedback, owner/window destruction, and cancellation preserving root groups.
+Verify that housekeeping runs before an `onFinished()` that destroys/reopens the
+menu, and that cancellation runs no application completion. Run that target and
+`//:material3_dropdown_button_test` to protect the existing derived-menu user.
 
 Proposed commit message:
 
-> Material 3 split buttons Phase 2: add base widget and closed-state paint.
+> Material 3 split-button design Phase 1: add safe menu presentation observation.
 >
-> Introduce the split-button widget, measure and paint its two-segment resting
-> geometry, and add baseline golden coverage.
+> Add per-presentation housekeeping and synchronous cancellation that preserves
+> root groups, with lifetime tests and menu contract documentation.
 
-Validation: run `bazel test //:material3_split_button_test` and
-`bazel test //:material3_split_button_golden_test`.
+### Phase 2: Internal geometry and two-surface rendering
 
-### Phase 3: Wire Primary Dispatch and Trailing Menu Presentation
+Add private split tokens, the common geometry resolver, and the segment painter
+under `material3/button/internal/`. Include this document's numeric example and
+source links next to token tests. Expose no incomplete public widget.
 
-Code slice:
-
-1. Route primary taps through `onPrimaryInvoked()` and the existing
-   interactive-change path.
-2. Route trailing taps through `MenuAnchor` computed from the trailing segment
-   bounds.
-3. Register `SplitButton` with the new menu presentation observer so
-   `activated` tracks root-menu visibility.
-4. Add behavior coverage for segment routing, menu anchoring, and clearing the
-   trailing open state on dismissal.
+Create `//:material3_split_button_geometry_test` and
+`//:material3_split_button_golden_test` (new), using a minimal test widget for
+the internal painter. Cover five sizes, six densities, constrained/empty bounds,
+RTL, negative text bearings, oversized icons, all variants, and fractional
+outlines. Check open bounds, optical offsets, backdrop-visible gaps, overlapping
+shadows, and shrinking shape/elevation restoration. Instrument framebuffer writes
+to detect intermediate colors; final screenshots alone do not prove that rule.
+Run both new targets and `//:material3_button_test`.
 
 Proposed commit message:
 
-> Material 3 split buttons Phase 3: add menu integration.
+> Material 3 split-button design Phase 2: add segment geometry and painting.
 >
-> Connect the trailing segment to Material 3 menu presentation, reuse the
-> widget activated bit for the open state, and verify dismissal cleanup.
+> Define sourced size tokens, density-aware geometry, optical centering, and
+> two-surface rendering with focused geometry and framebuffer coverage.
 
-Validation: run `bazel test //:material3_split_button_test` and
-`bazel test //:material3_menu_test`.
+### Phase 3: Complete interactive widget and usage example
 
-### Phase 4: Example and Documentation Integration
+Add the public widget, cached metrics, borrowing contract, touch routing,
+Enter/Space and Down integration, menu ownership observation, and cleanup.
+Add a self-contained **Run / Run once / Configure run** example at
+`examples/material3/split_buttons/run_actions/run_actions.ino` (new), including
+the hardware and `ROO_TESTING` setup required by the example instructions.
+Document pointer and keyboard behavior with the example in the same commit.
 
-Code slice:
-
-1. Add a split-button example to the Material 3 button example surface.
-2. Update [../implemented/material3_buttons_design.md](../implemented/material3_buttons_design.md) to point
-   at this follow-on design.
-3. Add golden coverage for the trailing open state and the centered open icon.
+Create `//:material3_split_button_test` (new), using actual task input routing
+and completed refreshes. Test slow/quick presses, gutter and cross-segment
+release, scroll takeover, a second tap during pending settlement, stale pointer
+state followed by keyboard activation, key repeat/focus loss, primary-handler
+self-destruction, and all admission/dismissal/teardown paths. Replace the golden
+fixture's test widget with the public widget and capture held/terminal/open
+states. Build `//examples/material3/split_buttons/run_actions:run_actions` (new)
+and run the split, menu, and existing dropdown behavior tests.
 
 Proposed commit message:
 
-> Material 3 split buttons Phase 4: add example and open-state goldens.
+> Material 3 split-button design Phase 3: add the complete interactive control.
 >
-> Demonstrate split-button usage in the Material 3 example surface and lock the
-> open-state visuals with dedicated golden coverage.
+> Connect touch and keyboard actions to primary callbacks and borrowed menus,
+> with lifecycle regressions, open-state goldens, and a runnable device example.
 
-Validation: run `bazel test //:material3_split_button_golden_test` and build
-the Material 3 button example target under emulation.
+### Phase 4: Embedded resource and visual acceptance
+
+Add `//:material3_split_button_resource_test` (new) and a target size probe.
+Record an acceptance report alongside this design with compiler/flags, object
+sizes, shared menu implementation delta, linked `.text`/`.rodata`/`.data`/`.bss`,
+and static stack usage for measurement and paint. Compare equivalent controls
+with the same already-populated menu and primary callback registration.
+
+The target gate is at most 56 B for `SplitButton`, no fields added to `Widget`
+or ordinary `Button`, and one observer pointer of additional menu payload
+rounded only by ABI alignment. Fail the gate and revise the implementation
+before acceptance if these limits are exceeded. Resource fixtures must report
+zero split-specific allocations in repeated measure/paint/feedback paths;
+report open/close allocations and existing renderer allocations separately.
+
+Run split geometry and golden targets at `ROO_WINDOWS_ZOOM=75/100/150/200`,
+review light/dark captures, and compile the example for the supported embedded
+target without requiring firmware upload. Record manual touchscreen/emulator
+checks separately from automated evidence. Update the status index, roadmap,
+and links only when the defined scope and acceptance pass.
+
+Proposed commit message:
+
+> Material 3 split-button design Phase 4: record embedded acceptance evidence.
+>
+> Add allocation and ABI gates, zoom/palette evidence, target build and section
+> reports, and update design status for the completed split-button scope.
 
 ## Testing Plan
 
-### Unit and Behavior Tests
-
-Add `material3_split_button_test` coverage for:
-
-- minimum-width calculation for icon-plus-label, label-only, and icon-only
-  leading content,
-- segment selection from tap coordinates,
-- primary-action dispatch through `onPrimaryInvoked()`,
-- disabled non-invocation,
-- trailing-anchor calculation,
-- and clearing the open state after root-menu dismissal.
-
-### Golden and Rendering Tests
-
-Add `material3_split_button_golden_test` coverage for:
-
-- filled, filled tonal, outlined, and elevated closed states,
-- icon-plus-label, label-only, and icon-only primary content,
-- trailing pressed state,
-- trailing open state with centered menu icon,
-- and elevated split-button shadow bounds.
-
-### Integration Tests
-
-Integration coverage should exercise:
-
-- opening a Material 3 menu from the trailing segment,
-- invoking the primary action without opening the menu,
-- dismissing the menu by outside press,
-- and example compilation or execution under the emulation harness.
+Validation combines geometry units, real task/menu behavior, deterministic
+framebuffer goldens and write instrumentation, example compile coverage, and
+host/target resource probes. The phase sections own the detailed cases and
+commands; existing menu, button, and dropdown targets provide regression
+coverage for shared paths. Physical touch usability is a separate manual check,
+especially for compact density. The current documentation-only review requires
+valid relative links, SVG structure and bounds, and a whitespace-clean diff;
+it does not establish implementation or device acceptance.
 
 ## Caveats
 
-The design depends on the menu family exposing a narrow presentation observer.
-That is a real dependency, but it is intentionally smaller than broadening the
-generic menu contract or adding general callback plumbing to widgets.
-
-The first implementation also keeps hover and focus whole-control rather than
-segment-local. That is a deliberate touch-first compromise tied to the current
-framework event model.
+This is a bounded Roo interpretation of Material's split-button family. It has
+one keyboard focus stop, whole-control hover/focus layers, menu-only secondary
+behavior, and immediate open/close geometry. It does not claim platform
+accessibility semantics for two independently exposed controls. The snapshot
+anchor and application responsibility for ancestor movement are specified in
+[Menu admission and lifetime](#menu-admission-and-lifetime).
 
 ### Rejected Alternatives
 
-#### Compose Existing Button and IconButton Instances
+#### Compose a Button, IconButton, and layout
 
-This was rejected because it multiplies RAM cost, duplicates surface and
-overlay state, and still does not solve the elevated trailing-segment variant
-or the split-button-specific open-state geometry cleanly.
+Composition reuses independent focus and interaction machinery and is a valid
+application solution. It retains at least roughly twice the control payload,
+and still needs split-specific corners, gap handling, and menu-open styling.
+The [resource analysis](#ram-work-and-code-size-budget) selects one widget for
+this narrowly defined family; it does not justify a generic compound-widget
+framework.
 
-It is the simplest app-level workaround, but it is not the right library-level
-primitive.
+#### Use a whole-widget area overlay or no overlay
 
-#### Reuse the Stock Whole-Surface Area Overlay
+An area overlay incorrectly shares the press/open visual and bridges the gap.
+No overlay bypasses click settlement. The custom overlay and explicit segment
+composition in [painting](#segment-surfaces-and-painting) retain the common
+controller and its scheduling without either failure.
 
-This was rejected because split buttons need segment-local pressed and open
-visuals.
+#### Require a special Menu subclass or a permanent observer setter
 
-Tinting the entire widget bounds would incorrectly make the primary segment
-look open when only the trailing menu segment is active. The stock area-overlay
-path therefore remains correct for ordinary buttons but not for split buttons.
+A subclass uses the existing terminal hook but excludes callers' existing menu
+subclasses. A permanent setter allows two triggers to overwrite one another
+and complicates destruction. The [per-presentation contract](#menu-admission-and-lifetime)
+costs one pointer per menu implementation and a measured observer subobject on
+the trigger while preserving existing menu ownership and completion behavior.
 
-#### Expose a Generic Secondary Callback Instead of a Menu
+#### Poll menu state or keep only the gesture segment
 
-This was rejected because it would turn `SplitButton` into a general two-action
-button group with split-button styling.
-
-Material 3 split buttons are specifically "default action plus menu of related
-actions". When the secondary surface is not a menu trigger, ordinary button
-composition is the better fit.
+Polling introduces wakeups and misses teardown boundaries; a gesture-only field
+can be overwritten before a deferred click dispatches. One terminal observer
+and separate packed gesture/click identities cover those cases without a
+private timer or additional application callback storage.
 
 ## Future Work
 
-- Add segment-local hover and focus routing if the framework gains coordinate-
-  aware pointer or keyboard focus support for compound widgets.
-- Add square or alternate outer-corner families only if Material adds them for
-  split buttons or if a concrete product requirement appears.
-- Add shared appearance override structs only after there is a demonstrated
-  need beyond the four standard color styles and size tokens.
+- Independent segment hover and accessibility/focus nodes when a concrete
+  consumer requires them.
+- Animated open/close shape transitions using the shared animation registry.
+- Live anchor following for programmatically moving control trees.
+- Additional appearance policies or generic secondary actions as separately
+  reviewed extensions with their own resource and behavior contracts.

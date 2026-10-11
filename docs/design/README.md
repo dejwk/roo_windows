@@ -122,7 +122,7 @@ motion pauses. It does not restore paint interruption.
 | Sheets | Paint/overflow foundations, icon buttons, and shared back behavior are implemented; the sheet family is not. Before implementation, modal sheets must be reconciled to use the P1.6b shared host with explicit task ownership, host-owned barrier paint, presenter-owned focus, and presenter-handled outside dismissal. |
 | Split button | Buttons, icon buttons, non-touch input, and menus are implemented; split buttons remain proposed. |
 | Time pickers | Buttons, icon buttons, basic dialogs, and shared back behavior are implemented; single-line text fields are implemented; picker-specific integration remains proposed. |
-| Toolbars | Buttons, icon buttons, and menus are implemented; FABs are implemented; toolbars are proposed. |
+| [Toolbars](proposed/material3_toolbars_design.md) | Docked and floating toolbars remain proposed. Buttons, icon buttons, menus, FABs, density, surface theming, and scaffold prerequisites are implemented; the proposal specifies current ownership, layout, clipping, and resource contracts. |
 | [Wi-Fi configuration UI](proposed/material3_wifi_configuration_design.md) | The `roo_wifi` 2.0 backend, including allocation-free saved-profile enumeration, has landed locally and `roo_windows_wifi` already declares it; publication still awaits its documented hardware gates. Material 3 fields, dialogs and navigation are implemented. UI presentation, legacy-consumer integration, forms and application-policy integration remain proposed. |
 
 ## Abandoned

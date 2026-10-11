@@ -1,60 +1,84 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="920" height="360" viewBox="0 0 920 360">
-  <rect width="920" height="360" fill="#ffffff"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="700" viewBox="0 0 960 700" role="img" aria-labelledby="title desc">
+  <title id="title">Split-button geometry, menu anchor, and foreground-first paint</title>
+  <desc id="desc">Small size at 100 percent zoom, enlarged three times. Both states have a 92 pixel primary segment, a 2 pixel gap, and a 48 pixel trailing segment, at height 40 pixels. Opening changes the trailing corners and icon, never its rectangle. Paint settles foreground before the remaining fill, with decorations and backdrop resolved last.</desc>
+  <rect width="960" height="700" fill="white"/>
   <style>
-    .title { font: 600 16px sans-serif; fill: #111827; }
-    .label { font: 14px sans-serif; fill: #1f2937; }
-    .small { font: 12px sans-serif; fill: #4b5563; }
-    .segment { fill: #f2e7d8; stroke: #7c5c2f; stroke-width: 2; }
-    .segment-open { fill: #e8f1ff; stroke: #2b5d8a; stroke-width: 2; }
-    .anchor { fill: none; stroke: #2b5d8a; stroke-width: 2; stroke-dasharray: 6 5; }
-    .menu { fill: #f7f1e7; stroke: #8a6c44; stroke-width: 2; }
-    .guide { stroke: #6b7280; stroke-width: 1.8; stroke-dasharray: 5 4; }
-    .arrow { stroke: #64748b; stroke-width: 1.8; marker-end: url(#arrow); }
-    .icon { stroke: #374151; stroke-width: 3; fill: none; stroke-linecap: round; stroke-linejoin: round; }
-    .content { fill: #374151; }
+    text { font-family: sans-serif; fill: #202633; }
+    .title { font-size: 21px; font-weight: 600; }
+    .heading { font-size: 16px; font-weight: 600; }
+    .body { font-size: 14px; }
+    .note { font-size: 13px; fill: #4d5667; }
+    .surface { fill: #e8def8; }
+    .open { fill: #d9cbed; }
+    .guide { stroke: #677486; stroke-width: 1; fill: none; }
+    .anchor { stroke: #196f9b; stroke-width: 1.5; stroke-dasharray: 5 4; fill: none; }
+    .chevron { stroke: #302b3e; stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .arrow { stroke: #677486; stroke-width: 1.5; fill: none; marker-end: url(#arrow); }
   </style>
   <defs>
-    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-      <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b"/>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#677486"/>
     </marker>
   </defs>
 
-  <text x="28" y="30" class="title">Material 3 split-button geometry and trailing menu anchor</text>
-  <text x="28" y="52" class="small">The control is one widget, but it paints two coordinated surface islands separated by a fixed 2 dp gutter.</text>
+  <text x="32" y="34" class="title">One widget, two independent segment surfaces</text>
+  <text x="32" y="58" class="note">Small · LTR · density 0 · zoom 100% · drawing scale 3:1 · label/artwork schematic</text>
+  <text x="60" y="92" class="heading">Closed</text>
 
-  <g transform="translate(42,88)">
-    <text x="0" y="0" class="label">1. Resting state</text>
-    <path class="segment" d="M 28 22 L 228 22 A 8 8 0 0 1 236 30 L 236 70 A 8 8 0 0 1 228 78 L 28 78 A 28 28 0 0 1 0 50 A 28 28 0 0 1 28 22 Z"/>
-    <path class="segment" d="M 248 30 A 8 8 0 0 1 256 22 L 292 22 A 28 28 0 0 1 320 50 A 28 28 0 0 1 292 78 L 256 78 A 8 8 0 0 1 248 70 Z"/>
-    <text x="124" y="57" text-anchor="middle" class="label">Run</text>
-    <circle cx="58" cy="50" r="8" class="content"/>
-    <path class="icon" d="M 276 44 L 286 56 L 296 44"/>
-    <line x1="240" y1="12" x2="240" y2="88" class="guide"/>
-    <text x="206" y="110" class="small">2 dp gutter</text>
-    <line x1="222" y1="98" x2="248" y2="98" class="arrow"/>
-    <text x="330" y="44" class="small">Closed menu icon uses</text>
-    <text x="330" y="60" class="small">a slight leading offset</text>
-    <line x1="322" y1="52" x2="300" y2="52" class="arrow"/>
+  <!-- L=92, gap=2, T=48, H=40. At 3:1: 276 + 6 + 144, height 120. -->
+  <g transform="translate(60 110)">
+    <!-- Outer radius 20*3=60, inner radius 4*3=12. -->
+    <path class="surface" d="M60 0 H264 A12 12 0 0 1 276 12 V108 A12 12 0 0 1 264 120 H60 A60 60 0 0 1 0 60 A60 60 0 0 1 60 0 Z"/>
+    <path class="surface" d="M294 0 H366 A60 60 0 0 1 426 60 A60 60 0 0 1 366 120 H294 A12 12 0 0 1 282 108 V12 A12 12 0 0 1 294 0 Z"/>
+    <rect x="48" y="24" width="192" height="72" rx="2" class="anchor"/>
+    <text x="144" y="72" font-size="32" text-anchor="middle">Run</text>
+    <!-- Geometric center 354; closed correction -2 px = -6 SVG units. -->
+    <path class="chevron" d="M330 51 L348 69 L366 51"/>
+    <path class="guide" d="M0 132 V150 M276 132 V150 M282 132 V150 M426 132 V150 M0 145 H276 M282 145 H426"/>
+    <text x="138" y="168" class="body" text-anchor="middle">primary L = 92 px</text>
+    <text x="354" y="168" class="body" text-anchor="middle">T = 48 px</text>
   </g>
+  <path class="arrow" d="M534 132 H507 L407 154"/>
+  <text x="546" y="132" class="body">Chevron center shifts 2 px toward primary.</text>
+  <text x="546" y="155" class="note">round(0.11 × (4 − 20)) = −2</text>
+  <text x="546" y="185" class="body">Primary content cluster: 64 × 24 px.</text>
+  <text x="546" y="208" class="note">Start/end padding: 16 / 12 px.</text>
+  <text x="546" y="241" class="body">Total width: 92 + 2 + 48 = 142 px.</text>
+  <text x="546" y="264" class="note">Both segment heights: 40 px.</text>
+  <path class="arrow" d="M340 301 V235"/>
+  <text x="60" y="310" class="note">2 px gap = 6 SVG units</text>
 
-  <g transform="translate(42,212)">
-    <text x="0" y="0" class="label">2. Menu open state</text>
-    <path class="segment" d="M 28 22 L 228 22 A 8 8 0 0 1 236 30 L 236 70 A 8 8 0 0 1 228 78 L 28 78 A 28 28 0 0 1 0 50 A 28 28 0 0 1 28 22 Z"/>
-    <path class="segment-open" d="M 276 22 A 28 28 0 0 1 304 50 A 28 28 0 0 1 276 78 L 248 78 A 28 28 0 0 1 220 50 A 28 28 0 0 1 248 22 Z"/>
-    <text x="124" y="57" text-anchor="middle" class="label">Run</text>
-    <circle cx="58" cy="50" r="8" class="content"/>
-    <path class="icon" d="M 254 46 L 262 54 L 270 46"/>
-    <rect x="220" y="22" width="84" height="56" rx="28" class="anchor"/>
-    <text x="336" y="38" class="small">The trailing segment becomes the</text>
-    <text x="336" y="54" class="small">menu anchor and the open surface.</text>
-    <line x1="328" y1="50" x2="306" y2="50" class="arrow"/>
-    <rect x="420" y="12" width="170" height="116" rx="18" class="menu"/>
-    <text x="442" y="42" class="small">Anchored menu panel</text>
-    <text x="442" y="66" class="small">- related action 1</text>
-    <text x="442" y="88" class="small">- related action 2</text>
-    <text x="442" y="110" class="small">- related action 3</text>
-    <line x1="304" y1="50" x2="418" y2="50" class="arrow"/>
+  <text x="60" y="350" class="heading">Menu open</text>
+  <g transform="translate(60 366)">
+    <path class="surface" d="M60 0 H264 A12 12 0 0 1 276 12 V108 A12 12 0 0 1 264 120 H60 A60 60 0 0 1 0 60 A60 60 0 0 1 60 0 Z"/>
+    <!-- Same x=282..426, now full radius 60 on all four corners. -->
+    <rect x="282" y="0" width="144" height="120" rx="60" class="open"/>
+    <text x="144" y="72" font-size="32" text-anchor="middle">Run</text>
+    <path class="chevron" d="M336 69 L354 51 L372 69"/>
+    <rect x="282" y="0" width="144" height="120" class="anchor"/>
   </g>
+  <path class="arrow" d="M535 404 H495 L467 409"/>
+  <text x="546" y="399" class="body">Full trailing corners; centered up chevron.</text>
+  <text x="546" y="422" class="note">Rectangle and gap remain unchanged.</text>
+  <text x="546" y="455" class="body">Dashed rectangle is the menu anchor.</text>
+  <text x="546" y="478" class="note">Translate its local bounds to window space.</text>
+  <path class="guide" d="M342 489 V504"/>
+  <rect x="342" y="504" width="190" height="58" rx="10" fill="#f6f1fa" stroke="#91869e"/>
+  <text x="358" y="527" class="body">Run once</text>
+  <text x="358" y="548" class="body">Configure run</text>
+  <text x="60" y="543" class="note">Below-start placement</text>
+  <path class="arrow" d="M240 538 H330"/>
 
-  <text x="42" y="340" class="small">Resting segments use a smaller inner corner toward the gutter. The trailing segment expands to a fully rounded inner edge while its menu is visible.</text>
+  <text x="32" y="601" class="heading">Paint front to back; exclude only settled pixels</text>
+  <rect x="32" y="620" width="260" height="55" rx="6" fill="#edf3fa"/>
+  <text x="47" y="643" class="body">1. Foreground + final background</text>
+  <text x="47" y="663" class="note">Settle and exclude content tiles.</text>
+  <path class="arrow" d="M300 647 H323"/>
+  <rect x="332" y="620" width="260" height="55" rx="6" fill="#edf3fa"/>
+  <text x="347" y="643" class="body">2. Remaining segment interior</text>
+  <text x="347" y="663" class="note">Fill only pixels not yet settled.</text>
+  <path class="arrow" d="M600 647 H623"/>
+  <rect x="632" y="620" width="296" height="55" rx="6" fill="#edf3fa"/>
+  <text x="647" y="643" class="body">3. Rounded rims + ancestor backdrop</text>
+  <text x="647" y="663" class="note">Leave gap and corner backdrop available.</text>
 </svg>

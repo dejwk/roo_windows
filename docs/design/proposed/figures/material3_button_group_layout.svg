@@ -1,70 +1,96 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="980" height="320" viewBox="0 0 980 320">
-  <rect width="980" height="320" fill="#ffffff"/>
-
-  <style>
-    .title { font-family: Arial, Helvetica, sans-serif; font-size: 20px; font-weight: 600; fill: #111827; }
-    .label { font-family: Arial, Helvetica, sans-serif; font-size: 15px; fill: #1f2937; }
-    .small { font-family: Arial, Helvetica, sans-serif; font-size: 13px; fill: #4b5563; }
-    .stroke { stroke: #5f6368; stroke-width: 2; fill: none; }
-    .band { fill: #eceff1; stroke: #c7ced4; stroke-width: 1; }
-    .filled { fill: #d7e3ff; stroke: #0b57d0; stroke-width: 2; }
-    .outlined { fill: #ffffff; stroke: #5f6368; stroke-width: 2; }
-    .tonal { fill: #d9eadd; stroke: #3c6e47; stroke-width: 2; }
-    .callout { stroke: #374151; stroke-width: 1.5; fill: none; }
-    .guide { stroke: #9ca3af; stroke-width: 1.5; stroke-dasharray: 6 5; fill: none; }
-    .content { font-family: Arial, Helvetica, sans-serif; font-size: 16px; fill: #111827; }
-    .selected { font-family: Arial, Helvetica, sans-serif; font-size: 16px; fill: #0b57d0; font-weight: 600; }
-  </style>
-
-  <text x="490" y="28" text-anchor="middle" class="title">Button groups keep the child surfaces independent and let the group own layout policy</text>
-
-  <text x="245" y="58" text-anchor="middle" class="label">Standard group</text>
-  <text x="245" y="78" text-anchor="middle" class="small">The group reserves separator bands so the active entry can expand without changing outer width.</text>
-
-  <rect x="48" y="108" width="394" height="86" rx="18" ry="18" class="guide"/>
-
-  <rect x="78" y="126" width="92" height="50" rx="25" ry="25" class="outlined"/>
-  <rect x="170" y="126" width="22" height="50" class="band"/>
-  <rect x="192" y="120" width="136" height="62" rx="18" ry="18" class="filled"/>
-  <rect x="328" y="126" width="22" height="50" class="band"/>
-  <rect x="350" y="126" width="62" height="50" rx="25" ry="25" class="tonal"/>
-
-  <text x="124" y="157" text-anchor="middle" class="content">Back</text>
-  <text x="260" y="157" text-anchor="middle" class="selected">Start</text>
-  <text x="381" y="157" text-anchor="middle" class="content">+</text>
-
-  <path d="M 260 182 V 214 H 176" class="callout"/>
-  <text x="70" y="218" class="small">Active entry consumes both reserved separator bands.</text>
-
-  <path d="M 181 126 V 92 H 118" class="callout"/>
-  <text x="52" y="88" class="small">Reserved motion band</text>
-
-  <path d="M 444 151 H 510" class="callout"/>
-  <text x="516" y="155" class="small">Outer width remains fixed.</text>
-
-  <text x="735" y="58" text-anchor="middle" class="label">Connected group</text>
-  <text x="735" y="78" text-anchor="middle" class="small">Selection changes only the touched entry; first, middle, and last positions resolve different corner radii.</text>
-
-  <rect x="548" y="108" width="374" height="86" rx="18" ry="18" class="guide"/>
-
-  <path d="M 580 126 h 88 a 24 24 0 0 1 24 24 a 24 24 0 0 1 -24 24 h -88 a 24 24 0 0 1 -24 -24 a 24 24 0 0 1 24 -24 z" class="outlined"/>
-  <rect x="694" y="126" width="12" height="50" fill="#ffffff"/>
-  <rect x="708" y="126" width="96" height="50" rx="10" ry="10" class="filled"/>
-  <rect x="816" y="126" width="12" height="50" fill="#ffffff"/>
-  <path d="M 840 126 h 56 a 24 24 0 0 1 24 24 a 24 24 0 0 1 -24 24 h -56 z" class="outlined"/>
-
-  <text x="634" y="157" text-anchor="middle" class="content">Day</text>
-  <text x="756" y="157" text-anchor="middle" class="selected">Week</text>
-  <text x="870" y="157" text-anchor="middle" class="content">Month</text>
-
-  <path d="M 700 126 V 96 H 760" class="callout"/>
-  <text x="766" y="100" class="small">Fixed 2dp inner gap</text>
-
-  <path d="M 820 151 H 896" class="callout"/>
-  <text x="902" y="155" class="small">Selected entry keeps its own width.</text>
-
-  <path d="M 756 176 V 214 H 684" class="callout"/>
-  <text x="552" y="218" class="small">Outer corners use the group shape family; inner shared corners use the connected radius table.</text>
-
-  <text x="490" y="290" text-anchor="middle" class="small">Both variants keep each button as its own surface widget. The group owns layout policy, connected selection, and standard-group motion bands.</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720">
+  <title>Button group geometry: fixed gaps and conserved widths</title>
+  <desc>Small round groups at density zero and 100% zoom, drawn at 1.5 SVG units per pixel. Standard gaps stay 12 pixels while the middle entry grows by 18 and its neighbours shrink by 9 each. Connected gaps stay 2 pixels; selection rounds the middle entry and pressing changes its inner radii to 4.</desc>
+  <rect x="0" y="0" width="1200" height="720" fill="white" />
+  <style>text { font-family: Arial, Helvetica, sans-serif; fill: #243047; }
+.title { font-size: 23px; font-weight: 700; }
+.heading { font-size: 20px; font-weight: 700; }
+.label { font-size: 16px; }
+.note { font-size: 14px; fill: #536174; }
+.content { font-size: 18px; font-weight: 600; }
+.dimension { stroke: #536174; stroke-width: 1; fill: none; }
+.guide { stroke: #94a3b8; stroke-width: 1; stroke-dasharray: 4 5; }
+</style>
+  <text x="40" y="38" text-anchor="start" class="title" id="element-4">Button groups: fixed gaps and conserved widths</text>
+  <text x="40" y="63" text-anchor="start" class="note" id="element-5">Small size · round shape · density 0 · dimensions in pixels at 100% zoom</text>
+  <line x1="610" y1="88" x2="610" y2="675" class="guide" id="element-6" />
+  <text x="40" y="101" text-anchor="start" class="heading" id="element-7">Standard group</text>
+  <text x="660" y="101" text-anchor="start" class="heading" id="element-8">Connected group</text>
+  <text x="40" y="137" text-anchor="start" class="label" id="element-9">Rest: widths 80 + 120 + 80; two 12 px gaps</text>
+  <text x="660" y="137" text-anchor="start" class="label" id="element-10">Rest: outer radius 20; inner radius 8</text>
+  <path d="M 70.0 190 H 130.0 A 30.0 30.0 0 0 1 160.0 220.0 V 220.0 A 30.0 30.0 0 0 1 130.0 250.0 H 70.0 A 30.0 30.0 0 0 1 40 220.0 V 220.0 A 30.0 30.0 0 0 1 70.0 190 Z" fill="#f0f3f7" stroke="#798697" stroke-width="1" data-row="standard-rest" data-index="0" data-x-px="0.0" data-width-px="80" id="element-11" />
+  <text x="100.0" y="227" text-anchor="middle" class="content" id="element-12">Back</text>
+  <text x="100.0" y="274" text-anchor="middle" class="note" id="element-13">80 px</text>
+  <path d="M 208.0 190 H 328.0 A 30.0 30.0 0 0 1 358.0 220.0 V 220.0 A 30.0 30.0 0 0 1 328.0 250.0 H 208.0 A 30.0 30.0 0 0 1 178.0 220.0 V 220.0 A 30.0 30.0 0 0 1 208.0 190 Z" fill="#f0f3f7" stroke="#798697" stroke-width="1" data-row="standard-rest" data-index="1" data-x-px="92.0" data-width-px="120" id="element-14" />
+  <text x="268.0" y="227" text-anchor="middle" class="content" id="element-15">Capture</text>
+  <text x="268.0" y="274" text-anchor="middle" class="note" id="element-16">120 px</text>
+  <path d="M 406.0 190 H 466.0 A 30.0 30.0 0 0 1 496.0 220.0 V 220.0 A 30.0 30.0 0 0 1 466.0 250.0 H 406.0 A 30.0 30.0 0 0 1 376.0 220.0 V 220.0 A 30.0 30.0 0 0 1 406.0 190 Z" fill="#f0f3f7" stroke="#798697" stroke-width="1" data-row="standard-rest" data-index="2" data-x-px="224.0" data-width-px="80" id="element-17" />
+  <text x="436.0" y="227" text-anchor="middle" class="content" id="element-18">More</text>
+  <text x="436.0" y="274" text-anchor="middle" class="note" id="element-19">80 px</text>
+  <line x1="40" y1="172" x2="496.0" y2="172" class="dimension" id="element-20" />
+  <line x1="40" y1="167" x2="40" y2="177" class="dimension" id="element-21" />
+  <line x1="496.0" y1="167" x2="496.0" y2="177" class="dimension" id="element-22" />
+  <text x="268.0" y="162" text-anchor="middle" class="note" id="element-23">304 px outside width</text>
+  <path d="M 690.0 190 H 768.0 A 12.0 12.0 0 0 1 780.0 202.0 V 238.0 A 12.0 12.0 0 0 1 768.0 250.0 H 690.0 A 30.0 30.0 0 0 1 660 220.0 V 220.0 A 30.0 30.0 0 0 1 690.0 190 Z" fill="#f0f3f7" stroke="#798697" stroke-width="1" data-row="connected-rest" data-index="0" data-x-px="0.0" data-width-px="80" id="element-24" />
+  <text x="720.0" y="227" text-anchor="middle" class="content" id="element-25">Day</text>
+  <text x="720.0" y="274" text-anchor="middle" class="note" id="element-26">80 px</text>
+  <path d="M 795.0 190 H 951.0 A 12.0 12.0 0 0 1 963.0 202.0 V 238.0 A 12.0 12.0 0 0 1 951.0 250.0 H 795.0 A 12.0 12.0 0 0 1 783.0 238.0 V 202.0 A 12.0 12.0 0 0 1 795.0 190 Z" fill="#f0f3f7" stroke="#798697" stroke-width="1" data-row="connected-rest" data-index="1" data-x-px="82.0" data-width-px="120" id="element-27" />
+  <text x="873.0" y="227" text-anchor="middle" class="content" id="element-28">Week</text>
+  <text x="873.0" y="274" text-anchor="middle" class="note" id="element-29">120 px</text>
+  <path d="M 978.0 190 H 1056.0 A 30.0 30.0 0 0 1 1086.0 220.0 V 220.0 A 30.0 30.0 0 0 1 1056.0 250.0 H 978.0 A 12.0 12.0 0 0 1 966.0 238.0 V 202.0 A 12.0 12.0 0 0 1 978.0 190 Z" fill="#f0f3f7" stroke="#798697" stroke-width="1" data-row="connected-rest" data-index="2" data-x-px="204.0" data-width-px="80" id="element-30" />
+  <text x="1026.0" y="227" text-anchor="middle" class="content" id="element-31">Month</text>
+  <text x="1026.0" y="274" text-anchor="middle" class="note" id="element-32">80 px</text>
+  <line x1="660" y1="172" x2="1086.0" y2="172" class="dimension" id="element-33" />
+  <line x1="660" y1="167" x2="660" y2="177" class="dimension" id="element-34" />
+  <line x1="1086.0" y1="167" x2="1086.0" y2="177" class="dimension" id="element-35" />
+  <text x="873.0" y="162" text-anchor="middle" class="note" id="element-36">284 px outside width</text>
+  <text x="40" y="301" text-anchor="start" class="label" id="element-37">Press: 15% × 120 = 18 px, supplied by neighbours</text>
+  <text x="660" y="301" text-anchor="start" class="label" id="element-38">Week selected: all its corners round to radius 20</text>
+  <path d="M 70.0 354 H 116.5 A 30.0 30.0 0 0 1 146.5 384.0 V 384.0 A 30.0 30.0 0 0 1 116.5 414.0 H 70.0 A 30.0 30.0 0 0 1 40 384.0 V 384.0 A 30.0 30.0 0 0 1 70.0 354 Z" fill="#f0f3f7" stroke="#798697" stroke-width="1" data-row="standard-pressed" data-index="0" data-x-px="0.0" data-width-px="71" id="element-39" />
+  <text x="93.25" y="391" text-anchor="middle" class="content" id="element-40">Back</text>
+  <text x="93.25" y="438" text-anchor="middle" class="note" id="element-41">71 px</text>
+  <path d="M 176.5 354 H 359.5 A 12.0 12.0 0 0 1 371.5 366.0 V 402.0 A 12.0 12.0 0 0 1 359.5 414.0 H 176.5 A 12.0 12.0 0 0 1 164.5 402.0 V 366.0 A 12.0 12.0 0 0 1 176.5 354 Z" fill="#d5e3ff" stroke="#3261a8" stroke-width="1" data-row="standard-pressed" data-index="1" data-x-px="83.0" data-width-px="138" id="element-42" />
+  <text x="268.0" y="391" text-anchor="middle" class="content" id="element-43">Capture</text>
+  <text x="268.0" y="438" text-anchor="middle" class="note" id="element-44">138 px</text>
+  <path d="M 419.5 354 H 466.0 A 30.0 30.0 0 0 1 496.0 384.0 V 384.0 A 30.0 30.0 0 0 1 466.0 414.0 H 419.5 A 30.0 30.0 0 0 1 389.5 384.0 V 384.0 A 30.0 30.0 0 0 1 419.5 354 Z" fill="#f0f3f7" stroke="#798697" stroke-width="1" data-row="standard-pressed" data-index="2" data-x-px="233.0" data-width-px="71" id="element-45" />
+  <text x="442.75" y="391" text-anchor="middle" class="content" id="element-46">More</text>
+  <text x="442.75" y="438" text-anchor="middle" class="note" id="element-47">71 px</text>
+  <line x1="40" y1="336" x2="496.0" y2="336" class="dimension" id="element-48" />
+  <line x1="40" y1="331" x2="40" y2="341" class="dimension" id="element-49" />
+  <line x1="496.0" y1="331" x2="496.0" y2="341" class="dimension" id="element-50" />
+  <text x="268.0" y="326" text-anchor="middle" class="note" id="element-51">304 px outside width</text>
+  <path d="M 690.0 354 H 768.0 A 12.0 12.0 0 0 1 780.0 366.0 V 402.0 A 12.0 12.0 0 0 1 768.0 414.0 H 690.0 A 30.0 30.0 0 0 1 660 384.0 V 384.0 A 30.0 30.0 0 0 1 690.0 354 Z" fill="#f0f3f7" stroke="#798697" stroke-width="1" data-row="connected-selected" data-index="0" data-x-px="0.0" data-width-px="80" id="element-52" />
+  <text x="720.0" y="391" text-anchor="middle" class="content" id="element-53">Day</text>
+  <text x="720.0" y="438" text-anchor="middle" class="note" id="element-54">80 px</text>
+  <path d="M 813.0 354 H 933.0 A 30.0 30.0 0 0 1 963.0 384.0 V 384.0 A 30.0 30.0 0 0 1 933.0 414.0 H 813.0 A 30.0 30.0 0 0 1 783.0 384.0 V 384.0 A 30.0 30.0 0 0 1 813.0 354 Z" fill="#d5e3ff" stroke="#3261a8" stroke-width="1" data-row="connected-selected" data-index="1" data-x-px="82.0" data-width-px="120" id="element-55" />
+  <text x="873.0" y="391" text-anchor="middle" class="content" id="element-56">Week</text>
+  <text x="873.0" y="438" text-anchor="middle" class="note" id="element-57">120 px</text>
+  <path d="M 978.0 354 H 1056.0 A 30.0 30.0 0 0 1 1086.0 384.0 V 384.0 A 30.0 30.0 0 0 1 1056.0 414.0 H 978.0 A 12.0 12.0 0 0 1 966.0 402.0 V 366.0 A 12.0 12.0 0 0 1 978.0 354 Z" fill="#f0f3f7" stroke="#798697" stroke-width="1" data-row="connected-selected" data-index="2" data-x-px="204.0" data-width-px="80" id="element-58" />
+  <text x="1026.0" y="391" text-anchor="middle" class="content" id="element-59">Month</text>
+  <text x="1026.0" y="438" text-anchor="middle" class="note" id="element-60">80 px</text>
+  <line x1="660" y1="336" x2="1086.0" y2="336" class="dimension" id="element-61" />
+  <line x1="660" y1="331" x2="660" y2="341" class="dimension" id="element-62" />
+  <line x1="1086.0" y1="331" x2="1086.0" y2="341" class="dimension" id="element-63" />
+  <text x="873.0" y="326" text-anchor="middle" class="note" id="element-64">284 px outside width</text>
+  <text x="40" y="472" text-anchor="start" class="note" id="element-65">Each neighbour donates 9 px of horizontal padding.</text>
+  <text x="40" y="497" text-anchor="start" class="note" id="element-66">12 px gaps remain open; content stays centred.</text>
+  <text x="40" y="522" text-anchor="start" class="note" id="element-67">A content floor caps expansion when padding is scarce.</text>
+  <text x="40" y="567" text-anchor="start" class="label" id="element-68">Conservation:</text>
+  <text x="40" y="596" text-anchor="start" class="label" id="element-69">71 + 138 + 71 + 12 + 12 = 304 px</text>
+  <text x="660" y="472" text-anchor="start" class="label" id="element-70">Selected Week pressed: inner corners move to radius 4</text>
+  <path d="M 690.0 525 H 768.0 A 12.0 12.0 0 0 1 780.0 537.0 V 573.0 A 12.0 12.0 0 0 1 768.0 585.0 H 690.0 A 30.0 30.0 0 0 1 660 555.0 V 555.0 A 30.0 30.0 0 0 1 690.0 525 Z" fill="#f0f3f7" stroke="#798697" stroke-width="1" data-row="connected-pressed" data-index="0" data-x-px="0.0" data-width-px="80" id="element-71" />
+  <text x="720.0" y="562" text-anchor="middle" class="content" id="element-72">Day</text>
+  <text x="720.0" y="609" text-anchor="middle" class="note" id="element-73">80 px</text>
+  <path d="M 789.0 525 H 957.0 A 6.0 6.0 0 0 1 963.0 531.0 V 579.0 A 6.0 6.0 0 0 1 957.0 585.0 H 789.0 A 6.0 6.0 0 0 1 783.0 579.0 V 531.0 A 6.0 6.0 0 0 1 789.0 525 Z" fill="#d5e3ff" stroke="#3261a8" stroke-width="1" data-row="connected-pressed" data-index="1" data-x-px="82.0" data-width-px="120" id="element-74" />
+  <text x="873.0" y="562" text-anchor="middle" class="content" id="element-75">Week</text>
+  <text x="873.0" y="609" text-anchor="middle" class="note" id="element-76">120 px</text>
+  <path d="M 978.0 525 H 1056.0 A 30.0 30.0 0 0 1 1086.0 555.0 V 555.0 A 30.0 30.0 0 0 1 1056.0 585.0 H 978.0 A 12.0 12.0 0 0 1 966.0 573.0 V 537.0 A 12.0 12.0 0 0 1 978.0 525 Z" fill="#f0f3f7" stroke="#798697" stroke-width="1" data-row="connected-pressed" data-index="2" data-x-px="204.0" data-width-px="80" id="element-77" />
+  <text x="1026.0" y="562" text-anchor="middle" class="content" id="element-78">Month</text>
+  <text x="1026.0" y="609" text-anchor="middle" class="note" id="element-79">80 px</text>
+  <line x1="660" y1="507" x2="1086.0" y2="507" class="dimension" id="element-80" />
+  <line x1="660" y1="502" x2="660" y2="512" class="dimension" id="element-81" />
+  <line x1="1086.0" y1="502" x2="1086.0" y2="512" class="dimension" id="element-82" />
+  <text x="873.0" y="497" text-anchor="middle" class="note" id="element-83">284 px outside width</text>
+  <text x="660" y="643" text-anchor="start" class="note" id="element-84">Only corner geometry changes; widths and 2 px gaps stay fixed.</text>
+  <text x="40" y="694" text-anchor="start" class="note" id="element-85">Geometry illustration; colors are schematic. The transparent group adds no fill over the gaps.</text>
 </svg>
