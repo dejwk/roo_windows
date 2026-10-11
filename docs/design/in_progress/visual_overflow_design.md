@@ -2,7 +2,7 @@
 
 ## Implementation status
 
-**In progress.** A usable subset is present, but part of the defined scope remains. Implemented and outstanding dependencies are recorded in the [status index](../README.md).
+**In progress.** Surface ownership, signed ink bounds, visual bounds, and the decoration/transient bound split are implemented. Complete interaction-overlay overflow and its rendering/invalidation coverage remain. See the [status index](../README.md).
 
 ## Status
 
@@ -25,7 +25,7 @@
   content bounds. Transient overlay overflow remains future design work
   described here.
 - The completed surface-ownership split is described separately in
-  `lib/roo_windows/docs/surface_widget_refactor_design.md`; this document now
+  [surface-widget refactor](../implemented/surface_widget_refactor_design.md); this document now
   treats that hierarchy and exclusion model as baseline rather than as future
   design work.
 
@@ -320,7 +320,7 @@ The design is decisive on this point.
 
 The ownership distinction described in this section is part of the rendering
 model. It is now implemented through the `SurfaceWidget` hierarchy described in
-`lib/roo_windows/docs/surface_widget_refactor_design.md`.
+[surface-widget refactor](../implemented/surface_widget_refactor_design.md).
 
 ### Supported policy
 
@@ -894,7 +894,7 @@ Acceptance criteria:
 Completed baseline:
 
 - the explicit `SurfaceWidget` hierarchy described in
-  `lib/roo_windows/docs/surface_widget_refactor_design.md`,
+  [surface-widget refactor](../implemented/surface_widget_refactor_design.md),
 - migrated standard surface-owning widgets onto that branch,
 - a settled generic direct-paint exclusion contract on `Widget`,
 - and surface-owned decoration/exclusion refinements on `SurfaceWidget`.
@@ -925,8 +925,8 @@ Add targeted tests for geometry calculations:
 
 - decoration and transient overflow helpers report their respective bounds
   correctly,
-- a future `getVisualBounds()` helper unions contents, decoration, and overlay
-  correctly,
+- `getVisualBounds()` unions content and decoration correctly; the future
+  overlay extension joins that union,
 - parent-space conversions are correct,
 - widgets with zero overflow behave exactly as before,
 - text widgets report non-zero ink insets only when expected,
