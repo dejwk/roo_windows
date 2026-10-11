@@ -1,14 +1,20 @@
 // Hardware benchmark for Makerfabs MaTouch ESP32-S3 Parallel TFT 5", 800x480.
 // Send 'b' over native USB serial to run. All timed work excludes serial I/O.
+// The host target //:shadow_gallery displays the same gallery without timings.
 #include <Arduino.h>
 
 #include <algorithm>
 #include <memory>
 
+#include "roo_display.h"
+#ifdef ROO_TESTING
+#include "roo_display/fake/reference_device.h"
+#include "roo_testing/transducers/ui/viewport/fltk/fltk_viewport.h"
+#else
 #include "esp_memory_utils.h"
 #include "esp_timer.h"
-#include "roo_display.h"
 #include "roo_display/driver/esp32s3_dma_parallel_rgb565.h"
+#endif
 #include "roo_display/font/font_adafruit_fixed_5x7.h"
 #include "roo_display/ui/text_label.h"
 #include "roo_scheduler.h"
@@ -21,6 +27,13 @@ using namespace roo_windows;
 using roo_display::Box;
 using roo_display::Color;
 
+#ifdef ROO_TESTING
+// Preserve the hardware display's RGB565 quantization and framebuffer blending.
+roo_testing_transducers::FltkViewport viewport;
+roo_display::ReferenceDisplayDevice panel(
+    800, 480, roo_display::ReferenceDisplayDevice::ColorMode::kRgb565,
+    /*blendable=*/true, viewport);
+#else
 // Manufacturer's display_and_touch_test: 16MHz, 8/4/8 porches, RGB565 wiring.
 constexpr roo_display::esp32s3_dma::Config kPanelConfig = {
     .width = 800,
@@ -59,13 +72,16 @@ constexpr roo_display::esp32s3_dma::Config kPanelConfig = {
 roo_display::esp32s3_dma::ParallelRgb565<
     roo_display::esp32s3_dma::FLUSH_MODE_LAZY>
     panel(kPanelConfig);
+#endif
 roo_display::Display display(panel);
 roo_scheduler::SchedulingService scheduler;
 Environment environment(scheduler);
+#ifndef ROO_TESTING
 volatile uint32_t checksum_sink;
 Color colors[512];
 int16_t xs[512];
 int16_t ys[512];
+#endif
 
 const char* Variant() {
 #if ROO_WINDOWS_EXPERIMENTAL_SHADOW_GRADIENTS == 2
@@ -127,6 +143,7 @@ class BenchSurface : public SurfaceWidget {
   Color color_;
 };
 
+#ifndef ROO_TESTING
 struct SceneCase {
   const char* name;
   int width;
@@ -269,6 +286,8 @@ void RunRefresh(const SceneCase& item, int count) {
   }
 }
 
+#endif  // !ROO_TESTING
+
 void ShowGallery() {
   Application app(&environment, display);
   for (int row = 0; row < 3; ++row) {
@@ -291,6 +310,7 @@ void ShowGallery() {
   app.refresh();
 }
 
+#ifndef ROO_TESTING
 // Reports the actual library's blend and RGB565 conversion on the target.
 void EmitRgb565Profile() {
   Decoration decoration(Box(64, 64, 119, 119), RendererLevel(3), OverlaySpec(),
@@ -339,19 +359,29 @@ void RunAll() {
   EmitRgb565Profile();
   Serial.printf("BENCHMARK_DONE %s\n", Variant());
 }
+#endif  // !ROO_TESTING
 }  // namespace
 
 void setup() {
   Serial.begin(115200);
+#ifndef ROO_TESTING
   setCpuFrequencyMhz(240);
   pinMode(10, OUTPUT);
   digitalWrite(10, LOW);  // Manufacturer backlight is active low.
+#endif
   display.init();
   ShowGallery();
+#ifdef ROO_TESTING
+  Serial.printf("SHADOW_GALLERY_READY %s (800x480 RGB565; levels 1..5)\n",
+                Variant());
+#else
   Serial.printf("BENCHMARK_READY %s\n", Variant());
+#endif
 }
 
 void loop() {
+#ifndef ROO_TESTING
   if (Serial.available() > 0 && Serial.read() == 'b') RunAll();
+#endif
   delay(10);
 }

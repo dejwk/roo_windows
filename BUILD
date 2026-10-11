@@ -1010,6 +1010,19 @@ cc_test(
     ],
 )
 
+# Visual counterpart of the ESP32-S3 benchmark; uses its unchanged gallery.
+cc_binary(
+    name = "shadow_gallery",
+    srcs = ["benchmarks/shadow_esp32s3/src/main.cpp"],
+    linkstatic = 1,
+    deps = [
+        ":roo_windows",
+        "@roo_display//fake:reference_device",
+        "@roo_testing//:arduino_main",
+        "@roo_testing//roo_testing/transducers/ui/viewport/fltk",
+    ],
+)
+
 cc_binary(
     name = "shadow_benchmark",
     srcs = [

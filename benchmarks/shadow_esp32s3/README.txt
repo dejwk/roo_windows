@@ -8,6 +8,21 @@ as the six Material Web levels. Historical seven-variant comparisons live in
 results/. New optimization and gradient-cache comparisons live in
 optimization_results/; see its findings.txt and summary.csv.
 
+Run the same 3-row by 5-column gallery in the desktop emulator:
+  bazel run //:shadow_gallery
+Run this from the canonical roo_windows repository root. The window uses
+800x480 RGB565 with framebuffer blending, matching the hardware gallery.
+Rows are white, gray 224, and gray 32; columns are shadow levels 1 through 5.
+It opens immediately and stays visible until closed (or interrupted with Ctrl+C).
+This host target previews appearance; CPU timings still require the ESP32-S3.
+The gallery keeps the benchmark's fixed pixel dimensions at zoom 100 by default.
+
+To preview the optional side-gradient cache:
+  bazel run //:shadow_gallery --copt=-DROO_WINDOWS_EXPERIMENTAL_SHADOW_GRADIENTS=1
+To preview the original legacy renderer with the benchmark's calibrated mapping:
+  bazel run //:shadow_gallery --copt=-DROO_WINDOWS_EXPERIMENTAL_SHADOW_LUT_COUNT=0
+The --copt options apply consistently to the library and gallery sources.
+
 Global build defines (all roo_windows translation units must agree):
   ROO_WINDOWS_EXPERIMENTAL_SHADOW_LUT_COUNT=0: legacy, no table
   ROO_WINDOWS_EXPERIMENTAL_SHADOW_LUT_COUNT=1: shared 256-byte Gaussian integral
