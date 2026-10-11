@@ -61,6 +61,7 @@ motion pauses. It does not restore paint interruption.
 | Layout scaffold | Shared adaptive primitives, the fixed-slot `LayoutScaffold` shell, fixed-slot `PaneLayout`, row-major `GridLayout`, and a build-covered catalog with app-bar, navigation-bar, and navigation-rail composition are implemented. Navigation drawer remains separate component work. |
 | Material 3 dialogs | The shared pinned-chrome scaffold, fixed action model, persistent body ownership, presenter focus, public basic/alert and full-screen families, veto hooks, unit/golden coverage, and dialog catalog are implemented. |
 | [Material 3 component surface theme](implemented/material3_component_surface_theme_design.md) | All six phases are implemented: 27 compact shared surface-role slots, component migrations, default reconciliation, focused rendering coverage, RGB565 integration acceptance, and target-ABI cost evidence. |
+| [FAB family](implemented/material3_fabs_design.md) | Icon-only and extended Material 3 FABs, color styles, elevation, collapsed presentation, unit and rendering coverage, and a fixed-overlay/rail-header example are implemented. |
 | [Material 3 DropdownButton utility](implemented/material3_dropdown_button_design.md) | Borrowed choice replacement, stable widest-label sizing, button appearance and density options, transient single-select menu, example, goldens, and resource checks are implemented. |
 | [Material 3 dynamic list composition](implemented/material3_dynamic_lists_design.md) | All five phases implement typed recycled sections, mixed sequencing, enum-based selection notifications, independent selection models, action participation, safe reset/input, and bounded focus navigation. Host/ASan tests, goldens, emulator build, and ESP32-C3 size audit pass; physical interaction checks remain manual. |
 | Material 3 lists | All twelve phases are implemented, including text policy, convenience and control rows, navigation/selection behavior, expandable content, and Material 3 menu row reuse. |
@@ -114,8 +115,7 @@ motion pauses. It does not restore paint interruption.
 | Click delivery policy | Click-animation lifecycle and settlement are implemented; widget-selected semantic delivery timing is not. |
 | Display runtime Phase 7 task-bounded transient coverage | Phase 6 input is implemented. Phase 7 is reconciled as task-bounded attachment of the one shared window host layer, retaining one active-presentation authority and explicit interaction owner; the extension remains unimplemented. |
 | Display runtime Phase 8 migration and cost audit | Phases 2–6 are implemented and Phase 7 is architecturally reconciled; the shared host, task-coverage extension, final migration documentation, resource audit, and hardware validation remain proposed. |
-| [Extended FAB](proposed/material3_extended_fab_design.md) | Standalone proposal superseded by the authoritative FAB family design below; extended widgets remain unimplemented. |
-| [FAB family](proposed/material3_fabs_design.md) | Authoritative proposal for icon-only and extended FABs. Buttons, icon buttons, typography, theme support, and the shared elevation facade exist; FAB widgets remain unimplemented. |
+| [Extended FAB](proposed/material3_extended_fab_design.md) | Superseded by the implemented FAB family design. |
 | Interaction overlay reveal | Point and area ripples, widget-local click animation, paint context, and the navigation bar's component-local fade are implemented; shared fade reveal and paint-owned overlay policy are not. |
 | Navigation drawer | List support and basic dialogs are implemented and back routing exists; no drawer implementation exists. |
 | [Presentation registry](implemented/presentation_registry_design.md) | Effective presentation queries and targeted deferred widget notifications are implemented; consumers choose their lifecycle policies. |
@@ -123,7 +123,7 @@ motion pauses. It does not restore paint interruption.
 | Sheets | Paint/overflow foundations, icon buttons, and shared back behavior are implemented; the sheet family is not. Before implementation, modal sheets must be reconciled to use the P1.6b shared host with explicit task ownership, host-owned barrier paint, presenter-owned focus, and presenter-handled outside dismissal. |
 | Split button | Buttons, icon buttons, non-touch input, and menus are implemented; split buttons remain proposed. |
 | Time pickers | Buttons, icon buttons, basic dialogs, and shared back behavior are implemented; single-line text fields are implemented; picker-specific integration remains proposed. |
-| Toolbars | Buttons, icon buttons, and menus are implemented; FABs and toolbars are proposed. |
+| Toolbars | Buttons, icon buttons, and menus are implemented; FABs are implemented; toolbars are proposed. |
 | [Wi-Fi configuration UI](proposed/material3_wifi_configuration_design.md) | The `roo_wifi` 2.0 backend, including allocation-free saved-profile enumeration, has landed locally and `roo_windows_wifi` already declares it; publication still awaits its documented hardware gates. Material 3 fields, dialogs and navigation are implemented. UI presentation, legacy-consumer integration, forms and application-policy integration remain proposed. |
 
 ## Abandoned

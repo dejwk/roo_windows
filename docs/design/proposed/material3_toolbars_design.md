@@ -61,7 +61,7 @@ What exists today:
   including the legacy `ROO_WINDOWS_TOOLBAR_ICON_SIZE` macro,
 - the checked-in design docs for [Material 3 buttons](../implemented/material3_buttons_design.md),
   [menus](../implemented/material3_menus_design.md), and
-  [FABs](material3_fabs_design.md).
+  [FABs](../implemented/material3_fabs_design.md).
 
 What does not exist yet:
 
@@ -132,7 +132,7 @@ Those belong in a separate app-bar design.
 The most relevant local references are:
 
 - [../implemented/material3_buttons_design.md](../implemented/material3_buttons_design.md)
-- [material3_fabs_design.md](material3_fabs_design.md)
+- [material3_fabs_design.md](../implemented/material3_fabs_design.md)
 - [material3_menus_design.md](../implemented/material3_menus_design.md)
 - [material3_navigation_rail_design.md](../implemented/material3_navigation_rail_design.md)
 - [../implemented/material3_badge_design.md](../implemented/material3_badge_design.md)
@@ -508,8 +508,8 @@ Badges stay on child widgets as well. A future badged toolbar action should be
 a badge-aware child widget, not a field on every toolbar.
 
 FAB pairing also stays external. The toolbar family does not store a FAB slot,
-a cradle cutout, or a docking policy. When the FAB family from
-[material3_fabs_design.md](material3_fabs_design.md) lands in code, hosts can
+a cradle cutout, or a docking policy. With the implemented FAB family described in
+[material3_fabs_design.md](../implemented/material3_fabs_design.md), hosts can
 compose a floating toolbar beside a `FloatingActionButton` or
 `ExtendedFloatingActionButton` as siblings in a larger placement host.
 

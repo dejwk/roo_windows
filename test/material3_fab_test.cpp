@@ -1,9 +1,11 @@
 #include <memory>
 #include <type_traits>
+#include <vector>
 
 #include "gtest/gtest.h"
 #include "roo_display/core/offscreen.h"
 #include "roo_icons/outlined/24/action.h"
+#include "roo_icons/outlined/48/action.h"
 #include "roo_scheduler.h"
 #include "roo_windows/core/application.h"
 #include "roo_windows/core/environment.h"
@@ -80,6 +82,8 @@ TEST(Material3Fab, IconSizesAndStableCorners) {
         fab.getNaturalDimensions().width(),
         fab.measure(WidthSpec::AtMost(200), HeightSpec::AtMost(200)).width());
   }
+  fab.setIcon(ic_outlined_48_action_done());
+  EXPECT_EQ(Scaled(96), fab.getNaturalDimensions().width());
 }
 
 TEST(Material3Fab, ColorsAndElevationFollowThemeAndState) {
@@ -141,16 +145,92 @@ TEST(Material3Fab, ExtendedWidthAndCollapseFollowSizeTokens) {
     EXPECT_EQ(std::max(Scaled(item.height), expected),
               fab.getNaturalDimensions().width());
     EXPECT_EQ(Scaled(item.height), fab.getNaturalDimensions().height());
+    fab.setHover(true);
+    EXPECT_EQ(internal::RendererElevation(4), fab.getElevation());
+    fab.setFocused(true);
+    EXPECT_EQ(internal::RendererElevation(3), fab.getElevation());
+    fab.setFocused(false);
     fab.setExpanded(false);
+    EXPECT_EQ(internal::RendererElevation(4), fab.getElevation());
     EXPECT_EQ(Scaled(item.height), fab.getNaturalDimensions().width());
     EXPECT_EQ(Scaled(item.height), fab.getNaturalDimensions().height());
     fab.setExpanded(true);
+    fab.setHover(false);
   }
   fab.setLabel("");
   EXPECT_EQ(Scaled(96), fab.getNaturalDimensions().width());
   fab.setExpanded(false);
-  fab.setIcon(ic_outlined_24_action_done());
+  fab.setIcon(ic_outlined_48_action_done());
   EXPECT_EQ(Scaled(96), fab.getNaturalDimensions().width());
+  fab.setExpanded(true);
+  fab.setLabel("Compose");
+  EXPECT_EQ(Scaled(90), fab.measure(WidthSpec::AtMost(Scaled(90)),
+                                    HeightSpec::AtMost(Scaled(90)))
+                            .width());
+}
+
+TEST(Material3Fab, HoverShadowDamageClearsOnReturnToRest) {
+  constexpr int kSide = Scaled(160);
+  std::vector<roo::byte> pixels(kSide * kSide * 2);
+  roo_display::OffscreenDevice<roo_display::Argb4444> offscreen(
+      kSide, kSide, pixels.data(), roo_display::Argb4444());
+  roo_display::Display display(offscreen);
+  roo_scheduler::SchedulingService scheduler;
+  Environment env(scheduler);
+  Application app(&env, display);
+  auto fab = std::make_unique<FloatingActionButton>(
+      app.context(), ic_outlined_24_action_done());
+  FloatingActionButton* fab_ptr = fab.get();
+  int inset = Scaled(52);
+  int side = Scaled(56);
+  app.add(std::move(fab),
+          roo_display::Box(inset, inset, inset + side - 1, inset + side - 1));
+  app.refresh();
+  std::vector<roo::byte> resting = pixels;
+  fab_ptr->setHover(true);
+  app.refresh();
+  EXPECT_NE(resting, pixels);
+  fab_ptr->setHover(false);
+  app.refresh();
+  EXPECT_EQ(resting, pixels);
+}
+
+TEST(Material3Fab, DisabledFabRendersPrecompositedColors) {
+  roo::byte pixels[96 * 80 * 2];
+  roo_display::OffscreenDevice<roo_display::Argb4444> offscreen(
+      96, 80, pixels, roo_display::Argb4444());
+  roo_display::Display display(offscreen);
+  roo_scheduler::SchedulingService scheduler;
+  Environment env(scheduler);
+  Application app(&env, display);
+  auto fab = std::make_unique<FloatingActionButton>(
+      app.context(), ic_outlined_24_action_done());
+  fab->setEnabled(false);
+  app.add(std::move(fab), roo_display::Box(20, 12, 75, 67));
+  app.refresh();
+
+  const ColorScheme& scheme = env.theme().material3Theme().color;
+  roo_display::Argb4444 mode;
+  Color container =
+      roo_display::AlphaBlend(scheme.surface, scheme.onSurface.withA(0x1F));
+  Color content =
+      roo_display::AlphaBlend(scheme.surface, scheme.onSurface.withA(0x61));
+  container = mode.toArgbColor(mode.fromArgbColor(container));
+  content = mode.toArgbColor(mode.fromArgbColor(content));
+  int background_pixels = 0;
+  int content_pixels = 0;
+  for (int y = 12; y < 68; ++y) {
+    for (int x = 20; x < 76; ++x) {
+      int16_t px[] = {static_cast<int16_t>(x)};
+      int16_t py[] = {static_cast<int16_t>(y)};
+      Color pixel[1];
+      offscreen.raster().readColors(px, py, 1, pixel);
+      if (pixel[0] == container) ++background_pixels;
+      if (pixel[0] == content) ++content_pixels;
+    }
+  }
+  EXPECT_GT(background_pixels, 0);
+  EXPECT_GT(content_pixels, 0);
 }
 
 TEST(Material3Fab, ExplicitDisabledSurfaceKeepsItsResolvedFill) {

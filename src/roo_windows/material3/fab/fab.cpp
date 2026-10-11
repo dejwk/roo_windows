@@ -4,7 +4,6 @@
 
 #include "roo_display/ui/alignment.h"
 #include "roo_display/ui/text_label.h"
-#include "roo_logging.h"
 #include "roo_windows/material3/internal/elevation.h"
 #include "roo_windows/material3/typography.h"
 

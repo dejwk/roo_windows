@@ -35,6 +35,11 @@ alias(
 )
 
 alias(
+    name = "material3_fabs_example_build",
+    actual = "//examples/material3/fabs",
+)
+
+alias(
     name = "material3_buttons_pool_actions_example_build",
     actual = "//examples/material3/buttons/pool_actions",
 )

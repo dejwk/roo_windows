@@ -2,10 +2,9 @@
 
 ## Implementation status
 
-**Superseded proposal; not implemented.** The authoritative contract and
+**Superseded proposal; implemented in the FAB family.** The authoritative contract and
 implementation plan now live in the
-[Material 3 FAB family design](material3_fabs_design.md). Extended FAB remains
-proposed as part of that family; see the [status index](../README.md).
+[Material 3 FAB family design](../implemented/material3_fabs_design.md). The extended FAB is implemented as part of that family; see the [status index](../README.md).
 
 ## Alignment with the FAB Family
 
@@ -37,10 +36,10 @@ host-controlled immediate collapse, direct surface painting, and packed state.
 It also keeps screen placement, scroll policy, and future width animation outside
 the base widget. A required icon prevents collapse from creating a blank action.
 
-Use the family design's [geometry and measurement contract](material3_fabs_design.md#geometry-and-size-model),
-[elevation contract](material3_fabs_design.md#elevation-model),
-[API](material3_fabs_design.md#proposed-api), and
-[implementation plan](material3_fabs_design.md#implementation-plan) when coding.
+Use the family design's [geometry and measurement contract](../implemented/material3_fabs_design.md#geometry-and-size-model),
+[elevation contract](../implemented/material3_fabs_design.md#elevation-model),
+[API](../implemented/material3_fabs_design.md#proposed-api), and
+[implementation plan](../implemented/material3_fabs_design.md#implementation-plan) when coding.
 The illustration below is the current expressive small variant and is maintained
 with that contract, rather than the former classic geometry.
 

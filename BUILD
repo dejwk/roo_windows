@@ -653,6 +653,18 @@ cc_test(
 )
 
 cc_test(
+    name = "material3_fab_golden_test",
+    srcs = ["test/material3_fab_golden_test.cpp"],
+    data = glob(["test/goldens/material3_fab/*.ppm"], allow_empty = True),
+    linkstatic = 1,
+    deps = [
+        ":roo_windows",
+        ":test_golden_utils",
+        "@roo_testing//:arduino_gtest_main",
+    ],
+)
+
+cc_test(
     name = "material3_fab_test",
     srcs = ["test/material3_fab_test.cpp"],
     linkstatic = 1,

@@ -2,12 +2,12 @@
 
 ## Implementation status
 
-**Proposed.** None of the defined scope is implemented. The status of existing and outstanding prerequisites is recorded in the [status index](../README.md).
+**Implemented.** The icon-only and extended FAB widgets, shared surface correction, focused tests, render goldens, and runnable example are implemented. The [status index](../README.md) records the current scope.
 
-This is the authoritative proposal for both FAB types. It supersedes the
-[standalone extended-FAB proposal](material3_extended_fab_design.md), whose URL
+This is the authoritative design for both FAB types. It supersedes the
+[standalone extended-FAB proposal](../proposed/material3_extended_fab_design.md), whose URL
 remains as a migration note. There is one implementation plan and one shared
-`FabColorStyle`; no separate `ExtendedFab` class or color enum will land.
+`FabColorStyle`; no separate `ExtendedFab` class or color enum was added.
 
 ## Objective
 
@@ -29,8 +29,8 @@ The design should provide:
 - and a narrow widget-only API that stays separate from screen placement
   and future FAB-menu work.
 
-This document defines the intended API family. It does not describe an
-existing implementation.
+This document records the API and implementation contract for the landed FAB
+family.
 
 ## Motivation
 
@@ -52,7 +52,7 @@ The right shape for `roo_windows` is a dedicated Material 3 FAB family.
 
 ## Background
 
-### Current Status in `roo_windows`
+### Baseline Before Implementation
 
 As of this 2026-10 review, the relevant current pieces are:
 
@@ -70,10 +70,10 @@ As of this 2026-10 review, the relevant current pieces are:
   and
   [src/roo_windows/core/overlay_spec.cpp](../../../src/roo_windows/core/overlay_spec.cpp),
 - and the Material 3 navigation rail design in
-  [material3_navigation_rail_design.md](../implemented/material3_navigation_rail_design.md),
+  [material3_navigation_rail_design.md](material3_navigation_rail_design.md),
   which already reserves a generic header slot that can host a FAB.
 
-What does not exist yet:
+Before this implementation, the following was missing:
 
 - no `material3::FloatingActionButton`,
 - no `material3::ExtendedFloatingActionButton`,
@@ -223,7 +223,7 @@ The core design decisions are:
   container plus the overlay/highlighter path for the primary-colored icon and
   state layer.
 
-![Material 3 FAB size families and extended-height mapping](figures/material3_fab_layout.svg)
+![Material 3 FAB size families and extended-height mapping](../proposed/figures/material3_fab_layout.svg)
 
 ## Design Details
 
@@ -311,7 +311,7 @@ The icon contributes exactly once. At 100% zoom, a small extended FAB with a
 60 px label measures $16 + 24 + 8 + 60 + 16 = 124$ px. With an empty label it
 measures 56 px. Collapsed width and height are $h$ for every size.
 
-![Small extended FAB geometry](figures/material3_extended_fab_layout.svg)
+![Small extended FAB geometry](../proposed/figures/material3_extended_fab_layout.svg)
 
 Suggested minimum dimensions stay cheap and non-measuring: return the token
 square. Both types use zero framework padding (`getPadding()` inherited from
@@ -517,6 +517,18 @@ Define `AlignUp(n, a) = ((n + a - 1) / a) * a` and assert:
 The final byte holds packed enums and the extended flag. Account for ABI tail
 padding explicitly; record sizes in the host build and an ESP32 build. No
 absolute 32-bit base-size estimate is assumed.
+
+The compile-only [size probe](../../../benchmarks/material3_fab_size_probe.cpp)
+reports the following sizes (bytes):
+
+| ABI | `SurfaceWidget` | `FloatingActionButton` | `ExtendedFloatingActionButton` |
+| --- | ---: | ---: | ---: |
+| Host x86-64 | 40 | 56 | 72 |
+| ESP32-C3 RISC-V | 24 | 32 | 40 |
+| ESP32 Xtensa | 24 | 32 | 40 |
+
+These are the alignment-aware bounds above on each measured ABI. Run
+`benchmarks/material3_fab_size_probe.sh <compiler> <nm>` to repeat the check.
 
 The important accounting rule is the shape, not the exact host-build byte
 count:
