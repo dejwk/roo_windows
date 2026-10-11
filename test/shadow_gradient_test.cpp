@@ -1,6 +1,7 @@
 #include <cmath>
 
 #include "gtest/gtest.h"
+#include "roo_display/color/color_modes.h"
 #include "roo_windows/core/theme.h"
 #include "roo_windows/decoration/shadow_lookup.h"
 #include "roo_windows/material3/internal/elevation.h"
@@ -8,6 +9,44 @@
 
 namespace roo_windows {
 namespace {
+// Verifies the claimed RGB565 cutoff using the actual conversion/blending
+// implementation, exhaustively over every destination and both omitted alphas.
+TEST(ShadowGradientTest, Rgb565CutoffPreservesExistingPixels) {
+  roo_display::Rgb565 mode;
+  for (int raw = 0; raw < 65536; ++raw) {
+    roo_display::Color bg = mode.toArgbColor(raw);
+    for (int alpha = 1; alpha <= 2; ++alpha) {
+      EXPECT_EQ(raw, mode.fromArgbColor(roo_display::AlphaBlendOverOpaque(
+                         bg, roo_display::Color(uint32_t(alpha) << 24))));
+    }
+  }
+}
+
+#if ROO_WINDOWS_SHADOW_ALPHA_CUTOFF
+// Verifies that each generated bound is tight for a straight edge and leaves
+// only invisible combined alpha outside, with no per-layer cutoff assumption.
+TEST(ShadowGradientTest, CutoffBoundsMatchStraightEdgeSupport) {
+  const roo_display::Box box(0, 0, 511, 511);
+  for (int level = 0; level < 32; ++level) {
+    auto key = internal::MakeLookupShadow(box, {}, level, false);
+    auto ambient = internal::MakeLookupShadow(box, {}, level, true);
+    int margins[3] = {};
+    for (int d = 1; d < 150; ++d) {
+      const int xs[] = {-d, 256, 256};
+      const int ys[] = {256, -d, 511 + d};
+      for (int side = 0; side < 3; ++side) {
+        int k = test::ReferenceLayer(key, false, xs[side], ys[side]);
+        int a = test::ReferenceLayer(ambient, true, xs[side], ys[side]);
+        if (k + a - (k * a + 127) / 255 > 2) margins[side] = d;
+      }
+    }
+    EXPECT_EQ(
+        Rect(-margins[0], -margins[1], 511 + margins[0], 511 + margins[2]),
+        internal::LookupShadowExtents(Rect(box), level));
+  }
+}
+#endif
+
 // Independent continuous-dp equations for the selected fitted profile.
 // These deliberately do not share the renderer's constexpr table builder.
 struct ReferenceParameters {
@@ -107,7 +146,7 @@ TEST(ShadowGradientTest, EveryPresetMatchesReferenceAndDamage) {
               << level << " pixel " << x << ',' << y;
           if (x < bounds.xMin() || x > bounds.xMax() || y < bounds.yMin() ||
               y > bounds.yMax()) {
-            ASSERT_EQ(0, expected);
+            ASSERT_LE(expected, ROO_WINDOWS_SHADOW_ALPHA_CUTOFF);
           }
         }
       }

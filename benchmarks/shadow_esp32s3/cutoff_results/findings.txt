@@ -1,0 +1,104 @@
+ESP32-S3 RGB565 combined alpha <= 2 cutoff benchmark
+
+Both firmware builds use the current authoritative fitted parameters and
+Material mapping 0/3/5/8/10/14 dp. The control is the compact optimized
+flash two-LUT renderer, not a historical firmware with different geometry.
+Cutoff tightens bounds only; sampled alphas are unchanged.
+No side or corner gradient caches in either benchmark build.
+Two complete captures per variant, seven batches per scene/metric per capture.
+CPU/display settings are recorded in each capture metadata.
+
+Normalized metrics: fixed512 uses identical exterior coordinates; native and
+tiles8 divide by their own actual bounding-box pixel count. Refresh numbers
+are total times, not normalized by widget area. Different native bounding-box
+areas also change the proportion of interior/exterior samples.
+
+variant scene metric pixels median_us ns/pixel total_ratio normalized_ratio
+double_optimized fab56_l0 fixed512 512 122.587 239.4271484375 1.0000 1.0
+double_optimized_cutoff2 fab56_l0 fixed512 512 122.637 239.52470703125002 1.0004 1.0004074667153942
+double_optimized fab56_l0 native 3136 2022.167 644.8235491071429 1.0000 1.0
+double_optimized_cutoff2 fab56_l0 native 3136 2022.250 644.8501275510205 1.0000 1.000041218165674
+double_optimized fab56_l0 tiles8 3136 855.917 272.93260522959184 1.0000 1.0
+double_optimized_cutoff2 fab56_l0 tiles8 3136 855.917 272.9326211734694 1.0000 1.000000058416903
+double_optimized fab56_l0 refresh1 3136 4651.540 - 1.0000 -
+double_optimized_cutoff2 fab56_l0 refresh1 3136 4904.840 - 1.0545 -
+double_optimized fab56_l1 fixed512 512 369.713 722.09638671875 1.0000 1.0
+double_optimized_cutoff2 fab56_l1 fixed512 512 370.880 724.375 1.0032 1.0031555528086828
+double_optimized fab56_l1 native 4356 3485.875 800.2467860422406 1.0000 1.0
+double_optimized_cutoff2 fab56_l1 native 4096 3289.458 803.0904052734375 0.9437 1.0035534278684959
+double_optimized fab56_l1 tiles8 4356 2371.917 544.5171487603307 1.0000 1.0
+double_optimized_cutoff2 fab56_l1 tiles8 4096 2187.458 534.0474365234375 0.9222 0.9807724839139981
+double_optimized fab56_l1 refresh1 3136 8294.000 - 1.0000 -
+double_optimized_cutoff2 fab56_l1 refresh1 3136 8987.080 - 1.0836 -
+double_optimized fab56_l3 fixed512 512 473.090 924.0039062500001 1.0000 1.0
+double_optimized_cutoff2 fab56_l3 fixed512 512 474.363 926.49091796875 1.0027 1.0026915597455028
+double_optimized fab56_l3 native 6400 5394.917 842.9557265625001 1.0000 1.0
+double_optimized_cutoff2 fab56_l3 native 5476 4677.417 854.1666636230826 0.8670 1.0132995562012488
+double_optimized fab56_l3 tiles8 6400 3937.875 615.29296875 1.0000 1.0
+double_optimized_cutoff2 fab56_l3 tiles8 5476 3455.000 630.9349890430972 0.8774 1.0254220689777664
+double_optimized fab56_l3 refresh1 3136 13324.440 - 1.0000 -
+double_optimized_cutoff2 fab56_l3 refresh1 3136 13218.640 - 0.9921 -
+double_optimized fab56_l3 refresh12 37632 183070.080 - 1.0000 -
+double_optimized_cutoff2 fab56_l3 refresh12 37632 176956.200 - 0.9666 -
+double_optimized fab56_l5 fixed512 512 510.110 996.30859375 1.0000 1.0
+double_optimized_cutoff2 fab56_l5 fixed512 512 511.323 998.6783203125001 1.0024 1.0023785065966164
+double_optimized fab56_l5 native 9120 7905.042 866.7808826754386 1.0000 1.0
+double_optimized_cutoff2 fab56_l5 native 7482 6632.083 886.4051456829725 0.8390 1.0226403966674493
+double_optimized fab56_l5 tiles8 9120 6495.500 712.2258771929825 1.0000 1.0
+double_optimized_cutoff2 fab56_l5 tiles8 7482 5238.750 700.1804330392944 0.8065 0.9830876066997712
+double_optimized fab56_l5 refresh1 3136 20305.860 - 1.0000 -
+double_optimized_cutoff2 fab56_l5 refresh1 3136 20259.900 - 0.9977 -
+double_optimized menu240_l2 fixed512 512 387.847 757.5130859375 1.0000 1.0
+double_optimized_cutoff2 menu240_l2 fixed512 512 388.550 758.88671875 1.0018 1.0018133453243254
+double_optimized menu240_l2 native 45056 28238.625 626.7450506036932 1.0000 1.0
+double_optimized_cutoff2 menu240_l2 native 43344 26915.875 620.9827196382429 0.9532 0.9908059410123783
+double_optimized menu240_l2 tiles8 45056 3886.083 86.25007324218748 1.0000 1.0
+double_optimized_cutoff2 menu240_l2 tiles8 43344 3548.667 81.87215416205241 0.9132 0.9492415610147714
+double_optimized menu240_l2 refresh1 38400 25522.480 - 1.0000 -
+double_optimized_cutoff2 menu240_l2 refresh1 38400 26530.240 - 1.0395 -
+double_optimized mixed_l3 fixed512 512 429.690 839.23828125 1.0000 1.0
+double_optimized_cutoff2 mixed_l3 fixed512 512 430.480 840.78125 1.0018 1.001838534757616
+double_optimized mixed_l3 native 13824 11904.625 861.1563223379629 1.0000 1.0
+double_optimized_cutoff2 mixed_l3 native 12420 10818.917 871.0882971014491 0.9088 1.0115333006399139
+double_optimized mixed_l3 tiles8 13824 5595.542 404.7700846354167 1.0000 1.0
+double_optimized_cutoff2 mixed_l3 tiles8 12420 4724.958 380.431425120773 0.8444 0.9398704093051591
+double_optimized mixed_l3 refresh1 8640 21419.000 - 1.0000 -
+double_optimized_cutoff2 mixed_l3 refresh1 8640 22014.400 - 1.0278 -
+
+Geometric mean time ratios across scenes (each scene weighted equally):
+fixed512: 1.0023 (+0.23% time), 14 scenes
+  normalized: 1.0023 (+0.23% ns/pixel)
+native: 0.8887 (-11.13% time), 14 scenes
+  normalized: 1.0074 (+0.74% ns/pixel)
+tiles8: 0.8770 (-12.30% time), 14 scenes
+  normalized: 0.9942 (-0.58% ns/pixel)
+refresh1: 1.0054 (+0.54% time), 14 scenes
+refresh12: 0.9666 (-3.34% time), 1 scenes
+
+This option is exact for black shadows blended over already-quantized RGB565
+pixels using roo_display decoding/blending/encoding; composition over RGB888
+colors can differ. It is opt-in and disabled by default. Unit tests cover all
+65536 RGB565 destinations and all 32 elevations, four zooms, three cache modes.
+
+Interpretation and limits:
+Identical-coordinate sampling is +0.23% across scenes, consistent with no
+material shader overhead. Native and tiled sampling save 11.13% and 12.30%
+in total, respectively; their normalized costs change +0.74% and -0.58%.
+The full-bounds denominator changes the mix of interior/exterior pixels.
+Single-widget refresh results are mixed: -4.04% to +8.36%, +0.54% geometric
+mean. The no-shadow control also regresses 5.45%, so these refresh differences
+cannot all be attributed to the shadow bounds. This run does not establish a
+general refresh speedup. Twelve level-3 widgets improve 3.34%.
+
+Firmware sizes (PlatformIO reported, bytes):
+                         static RAM       flash
+compact baseline              30776     1052119
+compact cutoff2               30776     1052127
+The new bounds table is 96 flash bytes; total linked flash rises only 8 bytes
+because bounds-calculation code is also removed and layout/string sizes differ.
+Decoration size remains 84 bytes; both captures report 300596 free heap bytes.
+
+Validation: 24/24 host configurations passed with final bounds-only code;
+two complete hardware captures per variant, 399 measurements per capture.
+The final incremental build reported the cutoff2 firmware up to date before
+upload. SHA256 values in manifest.json identify the measured firmware.

@@ -51,6 +51,11 @@
 
 #endif
 
+#ifndef ROO_WINDOWS_DISPLAY_MAX_BITS_PER_CHANNEL
+// For RGB565, leave '6'. If you use RGB888 display, change to 8.
+#define ROO_WINDOWS_DISPLAY_MAX_BITS_PER_CHANNEL 6
+#endif
+
 /// Gaussian renderer: 1 uses a shared edge table; 2 uses opacity-baked tables.
 /// Zero requires analytical mode. Integer elevation 0..31 uses half-dp steps
 /// (0..15.5 logical dp, clamped). Authoritative fitted parameters use reference
@@ -117,4 +122,24 @@
 #endif
 #if ROO_WINDOWS_EXPERIMENTAL_SHADOW_GRADIENTS && !ROO_WINDOWS_SHADOW_FAST_LUT
 #error "Precomputed gradients require optimized two-table shadows"
+#endif
+
+/// Optional shadow-bounds cutoff: 0 preserves full bounds (default),
+/// 2 trims bounds where combined alpha <= 2/255. Sampled alphas are unchanged.
+/// Requires optimized
+/// two-LUT rendering. This is an approximation when composing over RGB888;
+/// it is exact for black source-over shadows on existing RGB565 pixels using
+/// roo_display's RGB565 decode/blend/encode path. Define for the whole build.
+#ifndef ROO_WINDOWS_SHADOW_ALPHA_CUTOFF
+#if ROO_WINDOWS_MAX_BITS_PER_CHANNEL <= 6
+#define ROO_WINDOWS_SHADOW_ALPHA_CUTOFF 2
+#else
+#define ROO_WINDOWS_SHADOW_ALPHA_CUTOFF 0
+#endif
+#endif
+#if ROO_WINDOWS_SHADOW_ALPHA_CUTOFF != 0 && ROO_WINDOWS_SHADOW_ALPHA_CUTOFF != 2
+#error "Shadow alpha cutoff must be 0 or 2"
+#endif
+#if ROO_WINDOWS_SHADOW_ALPHA_CUTOFF && !ROO_WINDOWS_SHADOW_FAST_LUT
+#error "Shadow alpha cutoff requires optimized two-LUT rendering"
 #endif

@@ -9,7 +9,7 @@ import serial
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('variant', choices=[
-    'legacy', 'single_flash', 'single_ram', 'double_flash', 'double_ram', 'analytic', 'legacy_tuned', 'double_optimized', 'double_sides', 'double_corners'])
+    'legacy', 'single_flash', 'single_ram', 'double_flash', 'double_ram', 'analytic', 'legacy_tuned', 'double_optimized', 'double_optimized_cutoff2', 'double_sides', 'double_corners'])
 parser.add_argument('--run', type=int, default=1)
 parser.add_argument('--port', default='/dev/ttyACM0')
 parser.add_argument('--output', type=Path, default=Path(__file__).with_name('results'))

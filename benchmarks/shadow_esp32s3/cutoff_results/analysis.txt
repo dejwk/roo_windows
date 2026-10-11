@@ -1,0 +1,24 @@
+fixed512 fab56_l3
+  double_optimized     473.09 us  x1.000  range 472.77..474.02
+  double_optimized_cutoff2     474.36 us  x1.003  range 473.99..475.11
+native fab56_l3
+  double_optimized    5394.92 us  x1.000  range 5388.50..5401.08
+  double_optimized_cutoff2    4677.42 us  x0.867  range 4668.67..4682.33
+tiles8 fab56_l3
+  double_optimized    3937.88 us  x1.000  range 3936.25..3945.08
+  double_optimized_cutoff2    3455.00 us  x0.877  range 3451.08..3467.00
+refresh1 fab56_l3
+  double_optimized   13324.44 us  x1.000  range 13301.96..13330.48
+  double_optimized_cutoff2   13218.64 us  x0.992  range 13139.32..13264.04
+refresh12 fab56_l3
+  double_optimized  183070.08 us  x1.000  range 183006.92..183129.08
+  double_optimized_cutoff2  176956.20 us  x0.967  range 176192.24..177552.64
+refresh1 menu240_l2
+  double_optimized   25522.48 us  x1.000  range 25499.56..25625.20
+  double_optimized_cutoff2   26530.24 us  x1.039  range 26451.00..26558.28
+refresh1 fab56_l0
+  double_optimized    4651.54 us  x1.000  range 4631.68..4665.96
+  double_optimized_cutoff2    4904.84 us  x1.054  range 4846.68..4931.52
+Level-3 56px surface: normalized rendering, ns per logical output pixel
+double_optimized extent 6400 {'fixed512': 924.0, 'native': 842.96, 'tiles8': 615.29}
+double_optimized_cutoff2 extent 5476 {'fixed512': 926.49, 'native': 854.17, 'tiles8': 630.93}

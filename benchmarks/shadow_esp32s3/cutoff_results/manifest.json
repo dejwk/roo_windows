@@ -1,0 +1,15 @@
+{
+  "git_head": "b220286028df5d323a1bc83ff032f2e95ee7e3de",
+  "firmware": {
+    "double_optimized": {
+      "bin": "11ef1edff0beb67bf422f33d9c11888386870480883492a166839c8593a901f5",
+      "elf": "7f7db87feb5a83c07dbd77f30ba97e805a4be77bb3ee8429948ea81cebab8d7f"
+    },
+    "double_optimized_cutoff2": {
+      "bin": "661240b38f45912b7dcaa99411a299df5eef390835b0e1d2dc71bbe8f75a3b4e",
+      "elf": "6d189506980e4b8202dac31d11490fca2911a25811d55461d7331367c74dc392"
+    }
+  },
+  "parameters_sha256": "2d2d786fcf452d5aa4e6772c183d7a8f7066dba363778ede2dbe1ab561481016",
+  "working_diff_sha256": "d1bdcc0908021784bce3a520529d34adfa4b1aa319a595e3db07b13f34df3414"
+}

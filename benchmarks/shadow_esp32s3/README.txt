@@ -180,3 +180,27 @@ a global optimum. The comparison then requires exact agreement between fitted
 model and compiled tuned output over the common exterior mask. See
 results/tuned-fit.json, tuned-visual-results.json, tuned-findings.txt, and
 tuned-rgb565-comparison.png. The comparison image uses native 1:1 raster scale.
+
+Optional RGB565 alpha-cutoff experiment:
+  ROO_WINDOWS_SHADOW_ALPHA_CUTOFF=0: full bounds (default).
+  ROO_WINDOWS_SHADOW_ALPHA_CUTOFF=2: trim bounds using combined alpha <= 2/255
+    (96 flash bytes per selected zoom); sampled alphas stay unchanged.
+  Requires optimized two-LUT rendering; works with either gradient cache too.
+  Layer reaches, shader alphas, and cached gradients remain exact. The bounds
+  generator considers the COMBINED key/ambient alpha, not each layer alone. The RGB565
+  guarantee requires a black shadow over an already-quantized opaque RGB565
+  pixel using roo_display's decode/blend/encode path; RGB888 composition may
+  change final pixels, so this remains an opt-in approximation for UI rendering.
+  The bounds regenerate automatically with generate_shadow_parameters.py, or:
+    python3 benchmarks/generate_shadow_cutoff_bounds.py
+
+Fresh compact benchmark pair (same current parameters and Material mapping):
+  pio run -d benchmarks/shadow_esp32s3 -e double_optimized -t upload
+  python3 benchmarks/shadow_esp32s3/capture_serial.py double_optimized --run 1 --output benchmarks/shadow_esp32s3/cutoff_results
+  pio run -d benchmarks/shadow_esp32s3 -e double_optimized_cutoff2 -t upload
+  python3 benchmarks/shadow_esp32s3/capture_serial.py double_optimized_cutoff2 --run 1 --output benchmarks/shadow_esp32s3/cutoff_results
+  Repeat each capture with --run 2, then:
+  python3 benchmarks/shadow_esp32s3/analyze_hardware.py --input benchmarks/shadow_esp32s3/cutoff_results --baseline double_optimized
+  fixed512 compares identical sample coordinates. native/tiles8 report time
+  per actual bounding-box pixel as well as total time; refresh timings remain
+  per refresh and are not divided by the widget area to imply shadow throughput.

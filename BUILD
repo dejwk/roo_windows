@@ -1481,7 +1481,7 @@ cc_test(
 # configured roo_windows objects or rebuilding unrelated widget/font sources.
 [
     cc_test(
-        name = "shadow_gradient_%s_z%s_test" % (mode, zoom),
+        name = "shadow_gradient_%s_z%s%s_test" % (mode, zoom, "_cutoff2" if cutoff else ""),
         srcs = [
             "src/roo_windows/decoration/shadow_lookup.cpp",
             "test/shadow_gradient_test.cpp",
@@ -1493,9 +1493,11 @@ cc_test(
             "ROO_WINDOWS_EXPERIMENTAL_SHADOW_LUT_COUNT=2",
             "ROO_WINDOWS_EXPERIMENTAL_SHADOW_OPTIMIZED=1",
             "ROO_WINDOWS_EXPERIMENTAL_SHADOW_GRADIENTS=%s" % mode,
+            "ROO_WINDOWS_SHADOW_ALPHA_CUTOFF=%s" % cutoff,
         ],
         deps = ["@roo_display", "@roo_fonts_basic", "@roo_fonts_material", "@roo_locale", "@roo_logging", "@roo_testing//:arduino_gtest_main"],
     )
+    for cutoff in [0, 2]
     for mode in [0, 1, 2]
     for zoom in [75, 100, 150, 200]
 ]

@@ -83,7 +83,7 @@ for scene, metric in [
                   f"range {row['min_us']:.2f}..{row['max_us']:.2f}")
 
 print('Level-3 56px surface: normalized rendering, ns per logical output pixel')
-for variant in ['legacy', 'single_flash', 'single_ram', 'double_flash', 'double_ram', 'analytic', 'legacy_tuned', 'double_optimized', 'double_sides', 'double_corners']:
+for variant in ['legacy', 'single_flash', 'single_ram', 'double_flash', 'double_ram', 'analytic', 'legacy_tuned', 'double_optimized', 'double_optimized_cutoff2', 'double_sides', 'double_corners']:
     values = {r['metric']: r for r in measurements
               if r['variant'] == variant and r['scene'] == 'fab56_l3'}
     if 'native' in values:

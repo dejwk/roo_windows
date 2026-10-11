@@ -62,7 +62,8 @@ TEST(ShadowLookupTest, NoShadowAtZeroAndNoPixelsOutsideBounds) {
       for (int x = bounds.xMin() - 2; x <= bounds.xMax() + 2; ++x) {
         if (level == 0 || x < bounds.xMin() || x > bounds.xMax() ||
             y < bounds.yMin() || y > bounds.yMax()) {
-          EXPECT_EQ(0, internal::ReadLookupShadow(key, ambient, x, y));
+          EXPECT_LE(internal::ReadLookupShadow(key, ambient, x, y),
+                    level == 0 ? 0 : ROO_WINDOWS_SHADOW_ALPHA_CUTOFF);
         }
       }
     }

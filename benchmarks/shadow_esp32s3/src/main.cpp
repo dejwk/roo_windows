@@ -90,7 +90,11 @@ const char* Variant() {
 #elif ROO_WINDOWS_EXPERIMENTAL_SHADOW_GRADIENTS == 1
   return "double_sides";
 #elif ROO_WINDOWS_SHADOW_FAST_LUT
+#if ROO_WINDOWS_SHADOW_ALPHA_CUTOFF
+  return "double_optimized_cutoff2";
+#else
   return "double_optimized";
+#endif
 #elif ROO_WINDOWS_EXPERIMENTAL_SHADOW_ANALYTIC
   return "analytic";
 #elif ROO_WINDOWS_EXPERIMENTAL_SHADOW_LUT_COUNT == 1

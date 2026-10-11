@@ -46,3 +46,5 @@ lines.append('}  // namespace roo_windows::internal')
 p = root / 'src/roo_windows/decoration/shadow_parameters.h'
 p.write_text('\n'.join(lines)+'\n')
 subprocess.run(['clang-format','-i',str(p)],check=True)
+
+subprocess.run(["python3", str(root / "benchmarks/generate_shadow_cutoff_bounds.py")], check=True)

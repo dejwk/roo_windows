@@ -1,0 +1,91 @@
+INFO: roo_testing: no frontend selected; defaulting to --config=roo_testing_arduino_esp32.
+INFO: Invocation ID: 8113018e-a673-470e-959f-09ebea2b329c
+Computing main repo mapping: 
+Loading: 
+Loading: 0 packages loaded
+Analyzing: 24 targets (0 packages loaded, 0 targets configured)
+Analyzing: 24 targets (0 packages loaded, 0 targets configured)
+
+INFO: Analyzed 24 targets (0 packages loaded, 0 targets configured).
+[1 / 57] Compiling src/roo_windows/decoration/shadow_lookup.cpp; 1s disk-cache, linux-sandbox ... (14 actions running)
+[2 / 57] Compiling src/roo_windows/decoration/shadow_lookup.cpp; 6s disk-cache, linux-sandbox ... (14 actions, 13 running)
+[4 / 57] Compiling src/roo_windows/decoration/shadow_lookup.cpp; 7s disk-cache, linux-sandbox ... (14 actions, 13 running)
+[4 / 57] Compiling src/roo_windows/decoration/shadow_lookup.cpp; 9s disk-cache, linux-sandbox ... (14 actions running)
+[7 / 57] Compiling src/roo_windows/decoration/shadow_lookup.cpp; 10s disk-cache, linux-sandbox ... (14 actions, 13 running)
+[8 / 57] Compiling src/roo_windows/decoration/shadow_lookup.cpp; 11s disk-cache, linux-sandbox ... (14 actions, 13 running)
+[10 / 57] Compiling test/shadow_gradient_test.cpp; 12s disk-cache, linux-sandbox ... (14 actions, 13 running)
+[15 / 62] Compiling test/shadow_gradient_test.cpp; 13s disk-cache, linux-sandbox ... (14 actions, 13 running)
+[16 / 62] Compiling src/roo_windows/decoration/shadow_lookup.cpp; 14s disk-cache, linux-sandbox ... (14 actions, 13 running)
+[16 / 62] Compiling src/roo_windows/decoration/shadow_lookup.cpp; 15s disk-cache, linux-sandbox ... (14 actions running)
+[22 / 64] Compiling src/roo_windows/decoration/shadow_lookup.cpp; 16s disk-cache, linux-sandbox ... (14 actions running)
+[24 / 69] Compiling src/roo_windows/decoration/shadow_lookup.cpp; 17s disk-cache, linux-sandbox ... (14 actions running)
+[25 / 69] Compiling src/roo_windows/decoration/shadow_lookup.cpp; 19s disk-cache, linux-sandbox ... (14 actions, 13 running)
+[27 / 69] Compiling test/shadow_gradient_test.cpp; 20s disk-cache, linux-sandbox ... (14 actions, 13 running)
+[28 / 74] Compiling test/shadow_gradient_test.cpp; 21s disk-cache, linux-sandbox ... (14 actions running)
+[29 / 78] Compiling test/shadow_gradient_test.cpp; 23s disk-cache, linux-sandbox ... (14 actions, 13 running)
+[31 / 78] Compiling test/shadow_gradient_test.cpp; 24s disk-cache, linux-sandbox ... (14 actions, 13 running)
+[35 / 78] Compiling test/shadow_gradient_test.cpp; 14s disk-cache, linux-sandbox ... (14 actions, 13 running)
+[40 / 84] Compiling test/shadow_gradient_test.cpp; 15s disk-cache, linux-sandbox ... (14 actions, 13 running)
+[43 / 90] Compiling test/shadow_gradient_test.cpp; 16s disk-cache, linux-sandbox ... (14 actions running)
+[44 / 90] Compiling test/shadow_gradient_test.cpp; 17s disk-cache, linux-sandbox ... (14 actions, 13 running)
+[46 / 90] Compiling test/shadow_gradient_test.cpp; 18s disk-cache, linux-sandbox ... (14 actions, 13 running)
+[51 / 95] Compiling test/shadow_gradient_test.cpp; 18s disk-cache, linux-sandbox ... (14 actions, 13 running)
+[54 / 96] Compiling test/shadow_gradient_test.cpp; 19s disk-cache, linux-sandbox ... (14 actions, 13 running)
+[58 / 102] Compiling test/shadow_gradient_test.cpp; 15s disk-cache, linux-sandbox ... (14 actions, 13 running)
+[63 / 107] 1 / 24 tests; Compiling test/shadow_gradient_test.cpp; 17s disk-cache, linux-sandbox ... (14 actions running)
+[69 / 113] 1 / 24 tests; Compiling test/shadow_gradient_test.cpp; 18s disk-cache, linux-sandbox ... (14 actions, 13 running)
+[69 / 113] 1 / 24 tests; Compiling test/shadow_gradient_test.cpp; 20s disk-cache, linux-sandbox ... (14 actions running)
+[70 / 113] 1 / 24 tests; Compiling test/shadow_gradient_test.cpp; 21s disk-cache, linux-sandbox ... (14 actions running)
+[74 / 113] 2 / 24 tests; Compiling test/shadow_gradient_test.cpp; 22s disk-cache, linux-sandbox ... (14 actions, 13 running)
+[75 / 113] 2 / 24 tests; Compiling test/shadow_gradient_test.cpp; 24s disk-cache, linux-sandbox ... (14 actions running)
+[80 / 114] 3 / 24 tests; Compiling src/roo_windows/decoration/shadow_lookup.cpp; 12s disk-cache, linux-sandbox ... (14 actions running)
+[85 / 116] 4 / 24 tests; Compiling src/roo_windows/decoration/shadow_lookup.cpp; 13s disk-cache, linux-sandbox ... (14 actions running)
+[89 / 116] 5 / 24 tests; Compiling test/shadow_gradient_test.cpp; 9s disk-cache, linux-sandbox ... (14 actions, 13 running)
+[90 / 116] 5 / 24 tests; Compiling test/shadow_gradient_test.cpp; 10s disk-cache, linux-sandbox ... (14 actions, 13 running)
+[96 / 119] 6 / 24 tests; Compiling test/shadow_gradient_test.cpp; 11s disk-cache, linux-sandbox ... (14 actions, 13 running)
+[98 / 119] 7 / 24 tests; Compiling test/shadow_gradient_test.cpp; 12s disk-cache, linux-sandbox ... (14 actions, 13 running)
+[98 / 119] 7 / 24 tests; Compiling test/shadow_gradient_test.cpp; 14s disk-cache, linux-sandbox ... (14 actions running)
+[101 / 119] 8 / 24 tests; Compiling test/shadow_gradient_test.cpp; 15s disk-cache, linux-sandbox ... (14 actions, 13 running)
+[103 / 120] 10 / 24 tests; Compiling test/shadow_gradient_test.cpp; 17s disk-cache, linux-sandbox ... (14 actions running)
+[107 / 120] 13 / 24 tests; Testing //:shadow_gradient_1_z150_test; 14s disk-cache, linux-sandbox ... (12 actions running)
+[109 / 120] 14 / 24 tests; Testing //:shadow_gradient_2_z200_test; 12s disk-cache, linux-sandbox ... (10 actions running)
+[112 / 121] 16 / 24 tests; Testing //:shadow_gradient_2_z200_test; 14s disk-cache, linux-sandbox ... (9 actions running)
+[113 / 121] 17 / 24 tests; Testing //:shadow_gradient_2_z200_test; 15s disk-cache, linux-sandbox ... (8 actions running)
+[115 / 121] 18 / 24 tests; Testing //:shadow_gradient_2_z200_test; 16s disk-cache, linux-sandbox ... (6 actions running)
+[117 / 121] 20 / 24 tests; Testing //:shadow_gradient_0_z200_cutoff2_test; 16s disk-cache, linux-sandbox ... (4 actions running)
+[117 / 121] 21 / 24 tests; Testing //:shadow_gradient_0_z200_cutoff2_test; 18s disk-cache, linux-sandbox ... (4 actions running)
+[118 / 121] 21 / 24 tests; Testing //:shadow_gradient_0_z200_test; 14s disk-cache, linux-sandbox ... (3 actions running)
+[119 / 121] 22 / 24 tests; Testing //:shadow_gradient_2_z200_cutoff2_test; 12s disk-cache, linux-sandbox ... (2 actions running)
+[119 / 121] 23 / 24 tests; Testing //:shadow_gradient_2_z200_cutoff2_test; 13s disk-cache, linux-sandbox ... (2 actions running)
+[120 / 121] 24 / 24 tests; Testing //:shadow_gradient_2_z150_cutoff2_test; 11s disk-cache, linux-sandbox
+INFO: Found 24 test targets...
+INFO: Elapsed time: 68.841s, Critical Path: 43.69s
+INFO: 121 processes: 25 internal, 96 linux-sandbox.
+INFO: Build completed successfully, 121 total actions
+//:shadow_gradient_0_z100_cutoff2_test                                   PASSED in 5.8s
+//:shadow_gradient_0_z100_test                                           PASSED in 6.9s
+//:shadow_gradient_0_z150_cutoff2_test                                   PASSED in 11.0s
+//:shadow_gradient_0_z150_test                                           PASSED in 5.4s
+//:shadow_gradient_0_z200_cutoff2_test                                   PASSED in 18.3s
+//:shadow_gradient_0_z200_test                                           PASSED in 14.5s
+//:shadow_gradient_0_z75_cutoff2_test                                    PASSED in 2.5s
+//:shadow_gradient_0_z75_test                                            PASSED in 2.7s
+//:shadow_gradient_1_z100_cutoff2_test                                   PASSED in 7.8s
+//:shadow_gradient_1_z100_test                                           PASSED in 5.3s
+//:shadow_gradient_1_z150_cutoff2_test                                   PASSED in 12.1s
+//:shadow_gradient_1_z150_test                                           PASSED in 14.3s
+//:shadow_gradient_1_z200_cutoff2_test                                   PASSED in 11.0s
+//:shadow_gradient_1_z200_test                                           PASSED in 14.6s
+//:shadow_gradient_1_z75_cutoff2_test                                    PASSED in 5.6s
+//:shadow_gradient_1_z75_test                                            PASSED in 9.4s
+//:shadow_gradient_2_z100_cutoff2_test                                   PASSED in 4.1s
+//:shadow_gradient_2_z100_test                                           PASSED in 3.9s
+//:shadow_gradient_2_z150_cutoff2_test                                   PASSED in 11.5s
+//:shadow_gradient_2_z150_test                                           PASSED in 10.1s
+//:shadow_gradient_2_z200_cutoff2_test                                   PASSED in 13.8s
+//:shadow_gradient_2_z200_test                                           PASSED in 17.6s
+//:shadow_gradient_2_z75_cutoff2_test                                    PASSED in 4.2s
+//:shadow_gradient_2_z75_test                                            PASSED in 5.7s
+
+Executed 24 out of 24 tests: 24 tests pass.
+There were tests whose specified size is too big. Use the --test_verbose_timeout_warnings command line option to see which ones these are.

@@ -20,6 +20,9 @@ namespace roo_windows::internal {
 namespace {
 
 #include "roo_windows/decoration/shadow_lookup_tables.h"
+#if ROO_WINDOWS_SHADOW_ALPHA_CUTOFF
+#include "roo_windows/decoration/shadow_cutoff_bounds.h"
+#endif
 
 #if ROO_WINDOWS_SHADOW_FAST_LUT
 #if ROO_WINDOWS_EXPERIMENTAL_SHADOW_GRADIENTS
@@ -253,6 +256,11 @@ LookupShadowSpec MakeLookupShadow(roo_display::Box bounds,
 }
 
 Rect LookupShadowExtents(const Rect& bounds, int level) {
+#if ROO_WINDOWS_SHADOW_ALPHA_CUTOFF
+  const uint8_t* margin = kShadowCutoffBounds[ClampLevel(level)];
+  return Rect(bounds.xMin() - margin[0], bounds.yMin() - margin[1],
+              bounds.xMax() + margin[0], bounds.yMax() + margin[2]);
+#else
   int horizontal = 0;
   int top = 0;
   int bottom = 0;
@@ -272,6 +280,7 @@ Rect LookupShadowExtents(const Rect& bounds, int level) {
   }
   return Rect(bounds.xMin() - horizontal, bounds.yMin() - top,
               bounds.xMax() + horizontal, bounds.yMax() + bottom);
+#endif
 }
 
 uint8_t ReadLookupShadow(const LookupShadowSpec& key,

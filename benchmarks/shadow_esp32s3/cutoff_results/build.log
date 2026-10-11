@@ -1,0 +1,1299 @@
+Processing double_optimized (platform: /home/dawidk/.platformio/platforms/espressif32; board: lolin_s3; framework: arduino)
+--------------------------------------------------------------------------------
+Warning: No internet connection detected, Python dependency check will be skipped.
+Warning: No internet connection detected, Python dependency check will be skipped.
+Verbose mode can be enabled via `-v, --verbose` option
+Warning: No internet connection detected, Python dependency check will be skipped.
+CONFIGURATION: https://docs.platformio.org/page/boards/espressif32/lolin_s3.html
+PLATFORM: Espressif 32 (55.3.35) > WEMOS LOLIN S3
+HARDWARE: ESP32S3 240MHz, 320KB RAM, 16MB Flash
+DEBUG: Current (cmsis-dap) External (cmsis-dap, esp-bridge, esp-builtin, esp-prog, iot-bus-jtag, jlink, minimodule, olimex-arm-usb-ocd, olimex-arm-usb-ocd-h, olimex-arm-usb-tiny-h, olimex-jtag-tiny, tumpa)
+PACKAGES: 
+ - contrib-piohome @ 3.4.4 
+ - framework-arduinoespressif32 @ 3.3.5 
+ - framework-arduinoespressif32-libs @ 5.5.0+sha.9bb7aa84fe 
+ - tool-esptoolpy @ 5.1.0 
+ - tool-mklittlefs @ 3.2.0 
+ - toolchain-xtensa-esp-elf @ 14.2.0+20251107
+LDF: Library Dependency Finder -> https://bit.ly/configure-pio-ldf
+LDF Modes: Finder ~ chain, Compatibility ~ soft
+Found 68 compatible libraries
+Scanning dependencies...
+Dependency Graph
+|-- roo_display @ 3.4.0
+|-- roo_scheduler @ 2.3.0
+|-- roo_windows @ 1.9.0
+Building in release mode
+Compiling .pio/build/double_optimized/lib03b/roo_collections/roo_collections/hash.cpp.o
+Compiling .pio/build/double_optimized/lib334/roo_time/roo_time/civil_day.cpp.o
+Compiling .pio/build/double_optimized/lib334/roo_time/roo_time/duration.cpp.o
+Compiling .pio/build/double_optimized/lib334/roo_time/roo_time/format.cpp.o
+Compiling .pio/build/double_optimized/lib334/roo_time/roo_time/internal/calendar.cpp.o
+Compiling .pio/build/double_optimized/lib334/roo_time/roo_time/timezone.cpp.o
+Compiling .pio/build/double_optimized/lib334/roo_time/roo_time/wall_time.cpp.o
+Compiling .pio/build/double_optimized/lib334/roo_time/uptime_now.cpp.o
+Compiling .pio/build/double_optimized/libf25/roo_threads/roo_threads/impl/freertos/condition_variable_classic.cpp.o
+Compiling .pio/build/double_optimized/libf25/roo_threads/roo_threads/impl/freertos/condition_variable_opt.cpp.o
+Compiling .pio/build/double_optimized/libf25/roo_threads/roo_threads/impl/freertos/mutex.cpp.o
+Compiling .pio/build/double_optimized/libf25/roo_threads/roo_threads/impl/freertos/thread.cpp.o
+Compiling .pio/build/double_optimized/libe59/roo_logging/roo_logging/check.cpp.o
+Compiling .pio/build/double_optimized/libe59/roo_logging/roo_logging/config.cpp.o
+Compiling .pio/build/double_optimized/libe59/roo_logging/roo_logging/demangle.cpp.o
+Compiling .pio/build/double_optimized/libe59/roo_logging/roo_logging/exit.cpp.o
+Compiling .pio/build/double_optimized/libe59/roo_logging/roo_logging/log_message.cpp.o
+Compiling .pio/build/double_optimized/libe59/roo_logging/roo_logging/logfile.cpp.o
+Compiling .pio/build/double_optimized/libe59/roo_logging/roo_logging/sink.cpp.o
+Compiling .pio/build/double_optimized/libe59/roo_logging/roo_logging/stacktrace.cpp.o
+Compiling .pio/build/double_optimized/libe59/roo_logging/roo_logging/stderr.cpp.o
+Compiling .pio/build/double_optimized/libe59/roo_logging/roo_logging/stream.cpp.o
+Compiling .pio/build/double_optimized/libe59/roo_logging/roo_logging/stream_arduino.cpp.o
+Compiling .pio/build/double_optimized/libe59/roo_logging/roo_logging/stream_espidf.cpp.o
+Compiling .pio/build/double_optimized/libe59/roo_logging/roo_logging/symbolize.cpp.o
+Compiling .pio/build/double_optimized/lib2c4/FS/FS.cpp.o
+Compiling .pio/build/double_optimized/lib2c4/FS/vfs_api.cpp.o
+Compiling .pio/build/double_optimized/lib080/SD_MMC/SD_MMC.cpp.o
+Compiling .pio/build/double_optimized/lib3e0/Wire/Wire.cpp.o
+Compiling .pio/build/double_optimized/lib7eb/SPI/SPI.cpp.o
+Compiling .pio/build/double_optimized/lib171/SD/SD.cpp.o
+Compiling .pio/build/double_optimized/lib171/SD/sd_diskio.cpp.o
+Compiling .pio/build/double_optimized/lib171/SD/sd_diskio_crc.c.o
+Compiling .pio/build/double_optimized/lib28b/roo_io/roo_io/fs/arduino/directory.cpp.o
+Compiling .pio/build/double_optimized/lib28b/roo_io/roo_io/fs/arduino/file_input_stream.cpp.o
+Compiling .pio/build/double_optimized/lib28b/roo_io/roo_io/fs/arduino/file_output_stream.cpp.o
+Compiling .pio/build/double_optimized/lib28b/roo_io/roo_io/fs/arduino/mount.cpp.o
+Compiling .pio/build/double_optimized/lib28b/roo_io/roo_io/fs/arduino/sdfs.cpp.o
+Compiling .pio/build/double_optimized/lib28b/roo_io/roo_io/fs/directory.cpp.o
+Compiling .pio/build/double_optimized/lib28b/roo_io/roo_io/fs/esp32/arduino/internal/sd_spi_probe.cpp.o
+Compiling .pio/build/double_optimized/lib28b/roo_io/roo_io/fs/esp32/arduino/sdmmc.cpp.o
+Compiling .pio/build/double_optimized/lib28b/roo_io/roo_io/fs/esp32/arduino/sdspi.cpp.o
+Compiling .pio/build/double_optimized/lib28b/roo_io/roo_io/fs/esp32/esp-idf/internal/sd_spi_probe.cpp.o
+Compiling .pio/build/double_optimized/lib28b/roo_io/roo_io/fs/esp32/esp-idf/sdmmc.cpp.o
+Compiling .pio/build/double_optimized/lib28b/roo_io/roo_io/fs/esp32/esp-idf/sdspi.cpp.o
+Compiling .pio/build/double_optimized/lib28b/roo_io/roo_io/fs/esp32/internal/sd_mmc_probe.cpp.o
+Compiling .pio/build/double_optimized/lib28b/roo_io/roo_io/fs/esp32/littlefs.cpp.o
+Compiling .pio/build/double_optimized/lib28b/roo_io/roo_io/fs/esp32/spiffs.cpp.o
+Compiling .pio/build/double_optimized/lib28b/roo_io/roo_io/fs/filesystem.cpp.o
+Compiling .pio/build/double_optimized/lib28b/roo_io/roo_io/fs/fsutil.cpp.o
+Compiling .pio/build/double_optimized/lib28b/roo_io/roo_io/fs/mount_impl.cpp.o
+Compiling .pio/build/double_optimized/lib28b/roo_io/roo_io/fs/posix/posix_directory.cpp.o
+Compiling .pio/build/double_optimized/lib28b/roo_io/roo_io/fs/posix/posix_file_input_stream.cpp.o
+Compiling .pio/build/double_optimized/lib28b/roo_io/roo_io/fs/posix/posix_file_output_stream.cpp.o
+Compiling .pio/build/double_optimized/lib28b/roo_io/roo_io/fs/posix/posix_mount.cpp.o
+Compiling .pio/build/double_optimized/lib28b/roo_io/roo_io/i2c/arduino/i2c.cpp.o
+Compiling .pio/build/double_optimized/lib28b/roo_io/roo_io/i2c/esp32/i2c.cpp.o
+Compiling .pio/build/double_optimized/lib28b/roo_io/roo_io/net/mac_address.cpp.o
+Compiling .pio/build/double_optimized/lib28b/roo_io/roo_io/ringpipe/ringpipe.cpp.o
+Compiling .pio/build/double_optimized/lib28b/roo_io/roo_io/status.cpp.o
+Compiling .pio/build/double_optimized/lib28b/roo_io/roo_io/stream/arduino/stream_input_stream.cpp.o
+Compiling .pio/build/double_optimized/lib28b/roo_io/roo_io/stream/arduino/stream_output_stream.cpp.o
+Compiling .pio/build/double_optimized/lib28b/roo_io/roo_io/text/base64.cpp.o
+Compiling .pio/build/double_optimized/lib28b/roo_io/roo_io/text/string_printf.cpp.o
+Compiling .pio/build/double_optimized/lib28b/roo_io/roo_io/text/unicode.cpp.o
+Compiling .pio/build/double_optimized/lib28b/roo_io/roo_io/third_party/base64/base64.cpp.o
+Compiling .pio/build/double_optimized/lib28b/roo_io/roo_io/third_party/nanocobs/cobs.c.o
+Compiling .pio/build/double_optimized/lib28b/roo_io/roo_io/third_party/u8c.cpp.o
+Compiling .pio/build/double_optimized/lib28b/roo_io/roo_io/uart/esp32/uart_input_stream.cpp.o
+Compiling .pio/build/double_optimized/lib28b/roo_io/roo_io/uart/esp32/uart_output_stream.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_display.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_display/color/blending.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_display/color/color_mode_indexed.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_display/color/gradient.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_display/color/hsv.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_display/color/interpolation.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_display/color/pixel_order.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_display/composition/rasterizable_stack.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_display/composition/streamable_stack.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_display/core/box.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_display/core/device.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_display/core/drawable.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_display/core/offscreen.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_display/core/rasterizable.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_display/driver/common/rgb_panel.c.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_display/driver/esp32s3_dma_parallel_rgb565.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_display/driver/touch_ft6x36.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_display/driver/touch_gt911.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_display/filter/background_fill_optimizer.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_display/filter/transformation.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_display/font/font.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_display/font/font_adafruit_fixed_5x7.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_display/font/smooth_font.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_display/font/smooth_font_v2.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_display/hal/default/async_blit.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_display/hal/default/blit.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_display/hal/esp32/async_blit.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_display/hal/esp32/blit.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_display/hal/esp32/dma_buffer_pool.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_display/hal/esp32/memory.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_display/hal/esp32/spi_async.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_display/hal/esp32/spi_config.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_display/hal/esp32/spi_dma.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_display/hal/esp32/spi_irq.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_display/image/jpeg/jpeg.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_display/image/jpeg/lib/tjpgd.c.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_display/image/png/lib/adler32.c.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_display/image/png/lib/crc32.c.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_display/image/png/lib/infback.c.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_display/image/png/lib/inffast.c.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_display/image/png/lib/inflate.c.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_display/image/png/lib/inftrees.c.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_display/image/png/lib/zutil.c.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_display/image/png/png.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_display/products/makerfabs/esp32s3_parallel_ips_capacitive.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_display/products/waveshare/waveshare-esp32-s3-touch-lcd-43/waveshare_esp32s3_touch_lcd_43.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_display/shape/basic.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_display/shape/impl/smooth_arc.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_display/shape/impl/smooth_pixel.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_display/shape/impl/smooth_round_rect.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_display/shape/impl/smooth_triangle.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_display/shape/impl/smooth_wedge.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_display/shape/shadow.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_display/shape/smooth.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_display/shape/smooth_transformation.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_display/touch/calibration.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_display/ui/string_printer.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_display/ui/tile.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_fonts/NotoSansMono_Regular/10.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_fonts/NotoSansMono_Regular/12.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_fonts/NotoSansMono_Regular/15.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_fonts/NotoSansMono_Regular/18.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_fonts/NotoSansMono_Regular/27.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_fonts/NotoSansMono_Regular/40.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_fonts/NotoSansMono_Regular/60.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_fonts/NotoSansMono_Regular/8.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_fonts/NotoSansMono_Regular/90.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_fonts/NotoSans_Bold/10.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_fonts/NotoSans_Bold/12.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_fonts/NotoSans_Bold/15.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_fonts/NotoSans_Bold/18.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_fonts/NotoSans_Bold/27.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_fonts/NotoSans_Bold/40.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_fonts/NotoSans_Bold/60.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_fonts/NotoSans_Bold/8.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_fonts/NotoSans_Bold/90.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_fonts/NotoSans_Regular/10.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_fonts/NotoSans_Regular/12.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_fonts/NotoSans_Regular/15.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_fonts/NotoSans_Regular/18.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_fonts/NotoSans_Regular/27.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_fonts/NotoSans_Regular/40.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_fonts/NotoSans_Regular/60.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_fonts/NotoSans_Regular/8.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_fonts/NotoSans_Regular/90.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_fonts/NotoSerif_Italic/10.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_fonts/NotoSerif_Italic/12.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_fonts/NotoSerif_Italic/15.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_fonts/NotoSerif_Italic/18.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_fonts/NotoSerif_Italic/27.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_fonts/NotoSerif_Italic/40.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_fonts/NotoSerif_Italic/60.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_fonts/NotoSerif_Italic/8.cpp.o
+Compiling .pio/build/double_optimized/lib429/roo_display/roo_fonts/NotoSerif_Italic/90.cpp.o
+Compiling .pio/build/double_optimized/lib158/roo_scheduler/roo_scheduler.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSansMono_Bold/10.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSansMono_Bold/12.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSansMono_Bold/15.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSansMono_Bold/18.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSansMono_Bold/27.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSansMono_Bold/40.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSansMono_Bold/60.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSansMono_Bold/8.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSansMono_Bold/90.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSans_BoldItalic/10.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSans_BoldItalic/12.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSans_BoldItalic/15.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSans_BoldItalic/18.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSans_BoldItalic/27.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSans_BoldItalic/40.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSans_BoldItalic/60.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSans_BoldItalic/8.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSans_BoldItalic/90.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSans_Condensed/10.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSans_Condensed/12.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSans_Condensed/15.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSans_Condensed/18.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSans_Condensed/27.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSans_Condensed/40.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSans_Condensed/60.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSans_Condensed/8.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSans_Condensed/90.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSans_CondensedBold/10.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSans_CondensedBold/12.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSans_CondensedBold/15.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSans_CondensedBold/18.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSans_CondensedBold/27.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSans_CondensedBold/40.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSans_CondensedBold/60.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSans_CondensedBold/8.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSans_CondensedBold/90.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSans_CondensedItalic/10.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSans_CondensedItalic/12.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSans_CondensedItalic/15.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSans_CondensedItalic/18.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSans_CondensedItalic/27.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSans_CondensedItalic/40.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSans_CondensedItalic/60.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSans_CondensedItalic/8.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSans_CondensedItalic/90.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSans_Italic/10.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSans_Italic/12.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSans_Italic/15.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSans_Italic/18.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSans_Italic/27.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSans_Italic/40.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSans_Italic/60.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSans_Italic/8.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSans_Italic/90.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSerif_Bold/10.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSerif_Bold/12.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSerif_Bold/15.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSerif_Bold/18.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSerif_Bold/27.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSerif_Bold/40.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSerif_Bold/60.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSerif_Bold/8.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSerif_Bold/90.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSerif_BoldItalic/10.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSerif_BoldItalic/12.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSerif_BoldItalic/15.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSerif_BoldItalic/18.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSerif_BoldItalic/27.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSerif_BoldItalic/40.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSerif_BoldItalic/60.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSerif_BoldItalic/8.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSerif_BoldItalic/90.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSerif_Condensed/10.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSerif_Condensed/12.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSerif_Condensed/15.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSerif_Condensed/18.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSerif_Condensed/27.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSerif_Condensed/40.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSerif_Condensed/60.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSerif_Condensed/8.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSerif_Condensed/90.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSerif_CondensedItalic/10.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSerif_CondensedItalic/12.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSerif_CondensedItalic/15.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSerif_CondensedItalic/18.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSerif_CondensedItalic/27.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSerif_CondensedItalic/40.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSerif_CondensedItalic/60.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSerif_CondensedItalic/8.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSerif_CondensedItalic/90.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSerif_Regular/10.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSerif_Regular/12.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSerif_Regular/15.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSerif_Regular/18.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSerif_Regular/27.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSerif_Regular/40.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSerif_Regular/60.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSerif_Regular/8.cpp.o
+Compiling .pio/build/double_optimized/lib743/roo_fonts_basic/roo_fonts/NotoSerif_Regular/90.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Condensed/11.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Condensed/14.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Condensed/16.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Condensed/20.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Condensed/21.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Condensed/24.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Condensed/26.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Condensed/28.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Condensed/32.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Condensed/34.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Condensed/36.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Condensed/48.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Condensed/51.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Condensed/68.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Condensed/72.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Condensed/9.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Condensed/96.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_CondensedLight/120.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_CondensedLight/144.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_CondensedLight/192.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_CondensedLight/45.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_CondensedLight/60.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_CondensedLight/72.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_CondensedLight/90.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_CondensedLight/96.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_CondensedMedium/11.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_CondensedMedium/14.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_CondensedMedium/15.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_CondensedMedium/20.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_CondensedMedium/21.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_CondensedMedium/28.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_CondensedMedium/30.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_CondensedMedium/40.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Light/120.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Light/144.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Light/192.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Light/45.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Light/60.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Light/72.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Light/90.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Light/96.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Medium/10_5.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Medium/11.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Medium/12.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Medium/14.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Medium/15.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Medium/16.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Medium/16_5.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Medium/18.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Medium/20.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Medium/21.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Medium/22.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Medium/24.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Medium/28.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Medium/30.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Medium/32.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Medium/40.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Medium/8_25.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Medium/9.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Regular/10_5.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Regular/11.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Regular/114.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Regular/14.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Regular/16.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Regular/16_5.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Regular/20.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Regular/21.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Regular/22.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Regular/24.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Regular/26.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Regular/28.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Regular/32.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Regular/33.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Regular/34.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Regular/36.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Regular/42.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Regular/44.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Regular/48.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Regular/51.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Regular/54.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Regular/56.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Regular/64.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Regular/68.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Regular/72.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Regular/86.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Regular/9.cpp.o
+Compiling .pio/build/double_optimized/libc5f/roo_fonts_material/roo_fonts/NotoSans_Regular/96.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/composites/log/log.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/composites/menu/basic_navigation_item.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/composites/menu/slider_with_caption.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/composites/menu/title.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/containers/accelerated_scrollable_panel.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/containers/aligned_layout.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/containers/blit_cache_container.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/containers/flex_layout.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/containers/holder.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/containers/horizontal_layout.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/containers/horizontal_page_host.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/containers/navigation_panel.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/containers/navigation_rail.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/containers/scroll_motion_controller.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/containers/scrollable_panel.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/containers/vertical_layout.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/core/animation_evaluator.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/core/animation_registry.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/core/animation_types.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/core/application.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/core/application_context.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/core/background_deferral.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/core/blit_plan.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/core/canvas.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/core/child_layout.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/core/click_animation.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/core/clipper.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/core/container.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/core/destination.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/core/display_window.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/core/exclusion.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/core/focus_manager.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/core/gesture_detector.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/core/key_source.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/core/main_window.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/core/measure_spec.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/core/navigation_host.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/core/overlay_spec.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/core/paint_context.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/core/paint_effect.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/core/panel.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/core/presentation_registry.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/core/rounded_clip.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/core/scroll_connection.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/core/surface_widget.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/core/task.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/core/task_panel.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/core/text_input.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/core/theme.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/core/touch_sensor.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/core/transient_presentation.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/core/transient_surface_host.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/core/widget.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/core/widget_event_dispatcher.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/decoration/decoration.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/decoration/quarter_circle.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/decoration/shadow_lookup.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/dialogs/alert_dialog.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/dialogs/dialog.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/dialogs/string_constants.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/indicators/impl/battery.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/indicators/impl/walltime.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/indicators/impl/wifi.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/keyboard/editor_destination.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/keyboard/keyboard.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/keyboard/layout/accent_demo.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/keyboard/layout/en_us.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/keyboard/layout/keyboard_layout.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/keyboard/layout/pl_pl.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/material3/app_bar/app_bar.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/material3/app_bar/app_bar_scroll_behavior.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/material3/badge/badge.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/material3/button/button.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/material3/button/icon_button.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/material3/button/internal/button_appearance.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/material3/button/internal/button_geometry.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/material3/button/navigation.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/material3/button/toggle_icon_button.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/material3/card/flex_card.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/material3/checkbox/checkbox.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/material3/checkbox/resources/generated/check_13.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/material3/checkbox/resources/generated/check_18.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/material3/checkbox/resources/generated/check_27.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/material3/checkbox/resources/generated/check_36.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/material3/checkbox/resources/generated/indeterminate_13.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/material3/checkbox/resources/generated/indeterminate_18.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/material3/checkbox/resources/generated/indeterminate_27.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/material3/checkbox/resources/generated/indeterminate_36.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/material3/date_picker/date_picker.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/material3/date_picker/date_picker_panel.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/material3/date_picker/date_picker_types.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/material3/date_picker/docked_date_picker_field.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/material3/dialog/basic_dialog.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/material3/dialog/dialog_scaffold.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/material3/dialog/full_screen_dialog.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/material3/layout_scaffold/layout_scaffold.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/material3/list/dynamic_list.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/material3/list/internal/list_row_geometry.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/material3/list/list.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/material3/menu/menu.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/material3/menu/menu_geometry.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/material3/menu/menu_surface.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/material3/navigation_bar/navigation_bar.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/material3/navigation_destination/navigation_destination.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/material3/navigation_rail/navigation_rail.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/material3/progress_indicator/progress_geometry.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/material3/progress_indicator/progress_indicator.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/material3/radio_button/radio_button.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/material3/slider/range_slider.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/material3/slider/slider.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/material3/slider/slider_paint_internal.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/material3/slider/value_indicator.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/material3/snackbar/snackbar.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/material3/switch/switch.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/material3/tabs/tabs.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/material3/text_field/internal/text_field_geometry.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/material3/text_field/secure_text_field.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/material3/text_field/text_field.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/material3/theme.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/material3/utilities/dropdown_button.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/widgets/button.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/widgets/checkbox.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/widgets/divider.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/widgets/icon.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/widgets/icon_with_caption.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/widgets/image.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/widgets/progress_bar.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/widgets/radio_button.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/widgets/resources/circle.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/widgets/resources/circular_shadow.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/widgets/slider.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/widgets/switch.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/widgets/text_block.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/widgets/text_field.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/widgets/text_label.cpp.o
+Compiling .pio/build/double_optimized/lib548/roo_windows/roo_windows/widgets/toggle_buttons.cpp.o
+Compiling .pio/build/double_optimized/src/main.cpp.o
+Building .pio/build/double_optimized/bootloader.bin
+Generating partitions .pio/build/double_optimized/partitions.bin
+Compiling .pio/build/double_optimized/FrameworkArduino/ColorFormat.c.o
+esptool v5.1.0
+Creating ESP32S3 image...
+Merged 2 ELF sections.
+Successfully created ESP32S3 image.
+Compiling .pio/build/double_optimized/FrameworkArduino/Esp.cpp.o
+Compiling .pio/build/double_optimized/FrameworkArduino/FirmwareMSC.cpp.o
+Compiling .pio/build/double_optimized/FrameworkArduino/FunctionalInterrupt.cpp.o
+Compiling .pio/build/double_optimized/FrameworkArduino/HEXBuilder.cpp.o
+Compiling .pio/build/double_optimized/FrameworkArduino/HWCDC.cpp.o
+Compiling .pio/build/double_optimized/FrameworkArduino/HardwareSerial.cpp.o
+Compiling .pio/build/double_optimized/FrameworkArduino/HashBuilder.cpp.o
+Compiling .pio/build/double_optimized/FrameworkArduino/IPAddress.cpp.o
+Compiling .pio/build/double_optimized/FrameworkArduino/MD5Builder.cpp.o
+Compiling .pio/build/double_optimized/FrameworkArduino/MacAddress.cpp.o
+Compiling .pio/build/double_optimized/FrameworkArduino/Print.cpp.o
+Compiling .pio/build/double_optimized/FrameworkArduino/Stream.cpp.o
+Compiling .pio/build/double_optimized/FrameworkArduino/StreamString.cpp.o
+Compiling .pio/build/double_optimized/FrameworkArduino/Tone.cpp.o
+Compiling .pio/build/double_optimized/FrameworkArduino/USB.cpp.o
+Compiling .pio/build/double_optimized/FrameworkArduino/USBCDC.cpp.o
+Compiling .pio/build/double_optimized/FrameworkArduino/USBMSC.cpp.o
+Compiling .pio/build/double_optimized/FrameworkArduino/WMath.cpp.o
+Compiling .pio/build/double_optimized/FrameworkArduino/WString.cpp.o
+Compiling .pio/build/double_optimized/FrameworkArduino/base64.cpp.o
+Compiling .pio/build/double_optimized/FrameworkArduino/cbuf.cpp.o
+Compiling .pio/build/double_optimized/FrameworkArduino/chip-debug-report.cpp.o
+Compiling .pio/build/double_optimized/FrameworkArduino/esp32-hal-adc.c.o
+Compiling .pio/build/double_optimized/FrameworkArduino/esp32-hal-bt.c.o
+Compiling .pio/build/double_optimized/FrameworkArduino/esp32-hal-cpu.c.o
+Compiling .pio/build/double_optimized/FrameworkArduino/esp32-hal-dac.c.o
+Compiling .pio/build/double_optimized/FrameworkArduino/esp32-hal-gpio.c.o
+Compiling .pio/build/double_optimized/FrameworkArduino/esp32-hal-hosted.c.o
+Compiling .pio/build/double_optimized/FrameworkArduino/esp32-hal-i2c-ng.c.o
+Compiling .pio/build/double_optimized/FrameworkArduino/esp32-hal-i2c-slave.c.o
+Compiling .pio/build/double_optimized/FrameworkArduino/esp32-hal-i2c.c.o
+Compiling .pio/build/double_optimized/FrameworkArduino/esp32-hal-ledc.c.o
+Compiling .pio/build/double_optimized/FrameworkArduino/esp32-hal-matrix.c.o
+Compiling .pio/build/double_optimized/FrameworkArduino/esp32-hal-misc.c.o
+Compiling .pio/build/double_optimized/FrameworkArduino/esp32-hal-periman.c.o
+Compiling .pio/build/double_optimized/FrameworkArduino/esp32-hal-psram.c.o
+Compiling .pio/build/double_optimized/FrameworkArduino/esp32-hal-rgb-led.c.o
+Compiling .pio/build/double_optimized/FrameworkArduino/esp32-hal-rmt.c.o
+Compiling .pio/build/double_optimized/FrameworkArduino/esp32-hal-sigmadelta.c.o
+Compiling .pio/build/double_optimized/FrameworkArduino/esp32-hal-spi.c.o
+Compiling .pio/build/double_optimized/FrameworkArduino/esp32-hal-time.c.o
+Compiling .pio/build/double_optimized/FrameworkArduino/esp32-hal-timer.c.o
+Compiling .pio/build/double_optimized/FrameworkArduino/esp32-hal-tinyusb.c.o
+Compiling .pio/build/double_optimized/FrameworkArduino/esp32-hal-touch-ng.c.o
+Compiling .pio/build/double_optimized/FrameworkArduino/esp32-hal-touch.c.o
+Compiling .pio/build/double_optimized/FrameworkArduino/esp32-hal-uart.c.o
+Compiling .pio/build/double_optimized/FrameworkArduino/firmware_msc_fat.c.o
+Compiling .pio/build/double_optimized/FrameworkArduino/freertos_stats.cpp.o
+Compiling .pio/build/double_optimized/FrameworkArduino/libb64/cdecode.c.o
+Compiling .pio/build/double_optimized/FrameworkArduino/libb64/cencode.c.o
+Compiling .pio/build/double_optimized/FrameworkArduino/main.cpp.o
+Compiling .pio/build/double_optimized/FrameworkArduino/stdlib_noniso.c.o
+Compiling .pio/build/double_optimized/FrameworkArduino/wiring_pulse.c.o
+Compiling .pio/build/double_optimized/FrameworkArduino/wiring_shift.c.o
+Archiving .pio/build/double_optimized/libFrameworkArduino.a
+Indexing .pio/build/double_optimized/libFrameworkArduino.a
+Linking .pio/build/double_optimized/firmware.elf
+                            Memory Type Usage Summary                             
+┏━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━┓
+┃ Memory Type/Section ┃ Used [bytes] ┃ Used [%] ┃ Remain [bytes] ┃ Total [bytes] ┃
+┡━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━┩
+│ Flash Code          │       589164 │          │                │               │
+│    .text            │       589164 │          │                │               │
+│ Flash Data          │       373976 │          │                │               │
+│    .rodata          │       373720 │          │                │               │
+│    .appdesc         │          256 │          │                │               │
+│ DIRAM               │        89051 │    26.06 │         252709 │        341760 │
+│    .text            │        58275 │    17.05 │                │               │
+│    .bss             │        16200 │     4.74 │                │               │
+│    .data            │        14576 │     4.26 │                │               │
+│ IRAM                │        16384 │    100.0 │              0 │         16384 │
+│    .text            │        15356 │    93.73 │                │               │
+│    .vectors         │         1028 │     6.27 │                │               │
+└─────────────────────┴──────────────┴──────────┴────────────────┴───────────────┘
+Total image size: 1052375 bytes (.bin may be padded larger)
+Note: The reported total sizes may be smaller than those in the technical reference manual due to reserved memory and application configuration. The total flash size available for the application is not included by default, as it cannot be reliably determined due to the presence of other data like the bootloader, partition table, and application partition size.
+Retrieving maximum program size .pio/build/double_optimized/firmware.elf
+Checking size .pio/build/double_optimized/firmware.elf
+Advanced Memory Usage is available via "PlatformIO Home > Project Inspect"
+RAM:   [=         ]   9.4% (used 30776 bytes from 327680 bytes)
+Flash: [==        ]  16.1% (used 1052119 bytes from 6553600 bytes)
+Building .pio/build/double_optimized/firmware.bin
+esptool v5.1.0
+Creating ESP32S3 image...
+Merged 2 ELF sections.
+Successfully created ESP32S3 image.
+======================== [SUCCESS] Took 178.26 seconds ========================
+
+Processing double_optimized_cutoff2 (platform: /home/dawidk/.platformio/platforms/espressif32; board: lolin_s3; framework: arduino)
+--------------------------------------------------------------------------------
+Warning: No internet connection detected, Python dependency check will be skipped.
+Library Manager: Installing dejwk/roo_backport @ >=1.2.4
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: roo_backport@1.2.4 has been installed!
+Library Manager: Installing dejwk/roo_collections @ >=1.4.8
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: roo_collections@1.4.8 has been installed!
+Library Manager: Installing dejwk/roo_io @ >=2.4.1
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: roo_io@2.4.1 has been installed!
+Library Manager: Installing dejwk/roo_logging @ >=1.5.11
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: roo_logging@1.5.11 has been installed!
+Library Manager: Installing dejwk/roo_flags @ >=1.2.5
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: roo_flags@1.2.5 has been installed!
+Library Manager: Installing dejwk/roo_time @ >=2.0.1
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: roo_time@2.0.1 has been installed!
+Library Manager: Installing dejwk/roo_threads @ >=1.2.9
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: roo_threads@1.2.9 has been installed!
+Library Manager: Installing dejwk/roo_display @ >=3.3.2
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: roo_display@3.4.0 has been installed!
+Library Manager: Installing dejwk/roo_fonts_basic @ >=1.0.6
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: roo_fonts_basic@1.0.6 has been installed!
+Library Manager: Installing dejwk/roo_fonts_material @ >=1.1.2
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: roo_fonts_material@1.1.2 has been installed!
+Library Manager: Installing dejwk/roo_locale @ >=1.1.4
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: roo_locale@1.1.4 has been installed!
+Library Manager: Installing dejwk/roo_icons @ >=1.2.5
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: roo_icons@1.2.5 has been installed!
+Library Manager: Installing dejwk/roo_scheduler @ >=2.3.0
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: roo_scheduler@2.3.0 has been installed!
+Warning: No internet connection detected, Python dependency check will be skipped.
+Verbose mode can be enabled via `-v, --verbose` option
+Warning: No internet connection detected, Python dependency check will be skipped.
+CONFIGURATION: https://docs.platformio.org/page/boards/espressif32/lolin_s3.html
+PLATFORM: Espressif 32 (55.3.35) > WEMOS LOLIN S3
+HARDWARE: ESP32S3 240MHz, 320KB RAM, 16MB Flash
+DEBUG: Current (cmsis-dap) External (cmsis-dap, esp-bridge, esp-builtin, esp-prog, iot-bus-jtag, jlink, minimodule, olimex-arm-usb-ocd, olimex-arm-usb-ocd-h, olimex-arm-usb-tiny-h, olimex-jtag-tiny, tumpa)
+PACKAGES: 
+ - contrib-piohome @ 3.4.4 
+ - framework-arduinoespressif32 @ 3.3.5 
+ - framework-arduinoespressif32-libs @ 5.5.0+sha.9bb7aa84fe 
+ - tool-esptoolpy @ 5.1.0 
+ - tool-mklittlefs @ 3.2.0 
+ - toolchain-xtensa-esp-elf @ 14.2.0+20251107
+LDF: Library Dependency Finder -> https://bit.ly/configure-pio-ldf
+LDF Modes: Finder ~ chain, Compatibility ~ soft
+Found 68 compatible libraries
+Scanning dependencies...
+Dependency Graph
+|-- roo_display @ 3.4.0
+|-- roo_scheduler @ 2.3.0
+|-- roo_windows @ 1.9.0
+Building in release mode
+Compiling .pio/build/double_optimized_cutoff2/lib03b/roo_collections/roo_collections/hash.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib334/roo_time/roo_time/civil_day.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib334/roo_time/roo_time/duration.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib334/roo_time/roo_time/format.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib334/roo_time/roo_time/internal/calendar.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib334/roo_time/roo_time/timezone.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib334/roo_time/roo_time/wall_time.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib334/roo_time/uptime_now.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc28/roo_threads/roo_threads/impl/freertos/condition_variable_classic.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc28/roo_threads/roo_threads/impl/freertos/condition_variable_opt.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc28/roo_threads/roo_threads/impl/freertos/mutex.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc28/roo_threads/roo_threads/impl/freertos/thread.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libe59/roo_logging/roo_logging/check.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libe59/roo_logging/roo_logging/config.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libe59/roo_logging/roo_logging/demangle.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libe59/roo_logging/roo_logging/exit.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libe59/roo_logging/roo_logging/log_message.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libe59/roo_logging/roo_logging/logfile.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libe59/roo_logging/roo_logging/sink.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libe59/roo_logging/roo_logging/stacktrace.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libe59/roo_logging/roo_logging/stderr.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libe59/roo_logging/roo_logging/stream.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libe59/roo_logging/roo_logging/stream_arduino.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libe59/roo_logging/roo_logging/stream_espidf.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libe59/roo_logging/roo_logging/symbolize.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib2c4/FS/FS.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib2c4/FS/vfs_api.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib080/SD_MMC/SD_MMC.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib3e0/Wire/Wire.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib7eb/SPI/SPI.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib171/SD/SD.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib171/SD/sd_diskio.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib171/SD/sd_diskio_crc.c.o
+Compiling .pio/build/double_optimized_cutoff2/lib28b/roo_io/roo_io/fs/arduino/directory.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib28b/roo_io/roo_io/fs/arduino/file_input_stream.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib28b/roo_io/roo_io/fs/arduino/file_output_stream.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib28b/roo_io/roo_io/fs/arduino/mount.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib28b/roo_io/roo_io/fs/arduino/sdfs.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib28b/roo_io/roo_io/fs/directory.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib28b/roo_io/roo_io/fs/esp32/arduino/internal/sd_spi_probe.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib28b/roo_io/roo_io/fs/esp32/arduino/sdmmc.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib28b/roo_io/roo_io/fs/esp32/arduino/sdspi.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib28b/roo_io/roo_io/fs/esp32/esp-idf/internal/sd_spi_probe.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib28b/roo_io/roo_io/fs/esp32/esp-idf/sdmmc.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib28b/roo_io/roo_io/fs/esp32/esp-idf/sdspi.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib28b/roo_io/roo_io/fs/esp32/internal/sd_mmc_probe.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib28b/roo_io/roo_io/fs/esp32/littlefs.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib28b/roo_io/roo_io/fs/esp32/spiffs.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib28b/roo_io/roo_io/fs/filesystem.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib28b/roo_io/roo_io/fs/fsutil.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib28b/roo_io/roo_io/fs/mount_impl.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib28b/roo_io/roo_io/fs/posix/posix_directory.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib28b/roo_io/roo_io/fs/posix/posix_file_input_stream.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib28b/roo_io/roo_io/fs/posix/posix_file_output_stream.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib28b/roo_io/roo_io/fs/posix/posix_mount.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib28b/roo_io/roo_io/i2c/arduino/i2c.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib28b/roo_io/roo_io/i2c/esp32/i2c.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib28b/roo_io/roo_io/net/mac_address.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib28b/roo_io/roo_io/ringpipe/ringpipe.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib28b/roo_io/roo_io/status.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib28b/roo_io/roo_io/stream/arduino/stream_input_stream.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib28b/roo_io/roo_io/stream/arduino/stream_output_stream.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib28b/roo_io/roo_io/text/base64.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib28b/roo_io/roo_io/text/string_printf.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib28b/roo_io/roo_io/text/unicode.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib28b/roo_io/roo_io/third_party/base64/base64.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib28b/roo_io/roo_io/third_party/nanocobs/cobs.c.o
+Compiling .pio/build/double_optimized_cutoff2/lib28b/roo_io/roo_io/third_party/u8c.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib28b/roo_io/roo_io/uart/esp32/uart_input_stream.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib28b/roo_io/roo_io/uart/esp32/uart_output_stream.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_display.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_display/color/blending.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_display/color/color_mode_indexed.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_display/color/gradient.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_display/color/hsv.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_display/color/interpolation.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_display/color/pixel_order.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_display/composition/rasterizable_stack.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_display/composition/streamable_stack.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_display/core/box.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_display/core/device.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_display/core/drawable.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_display/core/offscreen.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_display/core/rasterizable.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_display/driver/common/rgb_panel.c.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_display/driver/esp32s3_dma_parallel_rgb565.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_display/driver/touch_ft6x36.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_display/driver/touch_gt911.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_display/filter/background_fill_optimizer.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_display/filter/transformation.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_display/font/font.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_display/font/font_adafruit_fixed_5x7.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_display/font/smooth_font.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_display/font/smooth_font_v2.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_display/hal/default/async_blit.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_display/hal/default/blit.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_display/hal/esp32/async_blit.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_display/hal/esp32/blit.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_display/hal/esp32/dma_buffer_pool.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_display/hal/esp32/memory.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_display/hal/esp32/spi_async.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_display/hal/esp32/spi_config.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_display/hal/esp32/spi_dma.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_display/hal/esp32/spi_irq.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_display/image/jpeg/jpeg.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_display/image/jpeg/lib/tjpgd.c.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_display/image/png/lib/adler32.c.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_display/image/png/lib/crc32.c.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_display/image/png/lib/infback.c.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_display/image/png/lib/inffast.c.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_display/image/png/lib/inflate.c.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_display/image/png/lib/inftrees.c.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_display/image/png/lib/zutil.c.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_display/image/png/png.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_display/products/makerfabs/esp32s3_parallel_ips_capacitive.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_display/products/waveshare/waveshare-esp32-s3-touch-lcd-43/waveshare_esp32s3_touch_lcd_43.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_display/shape/basic.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_display/shape/impl/smooth_arc.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_display/shape/impl/smooth_pixel.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_display/shape/impl/smooth_round_rect.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_display/shape/impl/smooth_triangle.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_display/shape/impl/smooth_wedge.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_display/shape/shadow.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_display/shape/smooth.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_display/shape/smooth_transformation.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_display/touch/calibration.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_display/ui/string_printer.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_display/ui/tile.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_fonts/NotoSansMono_Regular/10.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_fonts/NotoSansMono_Regular/12.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_fonts/NotoSansMono_Regular/15.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_fonts/NotoSansMono_Regular/18.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_fonts/NotoSansMono_Regular/27.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_fonts/NotoSansMono_Regular/40.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_fonts/NotoSansMono_Regular/60.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_fonts/NotoSansMono_Regular/8.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_fonts/NotoSansMono_Regular/90.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_fonts/NotoSans_Bold/10.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_fonts/NotoSans_Bold/12.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_fonts/NotoSans_Bold/15.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_fonts/NotoSans_Bold/18.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_fonts/NotoSans_Bold/27.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_fonts/NotoSans_Bold/40.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_fonts/NotoSans_Bold/60.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_fonts/NotoSans_Bold/8.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_fonts/NotoSans_Bold/90.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_fonts/NotoSans_Regular/10.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_fonts/NotoSans_Regular/12.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_fonts/NotoSans_Regular/15.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_fonts/NotoSans_Regular/18.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_fonts/NotoSans_Regular/27.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_fonts/NotoSans_Regular/40.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_fonts/NotoSans_Regular/60.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_fonts/NotoSans_Regular/8.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_fonts/NotoSans_Regular/90.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_fonts/NotoSerif_Italic/10.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_fonts/NotoSerif_Italic/12.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_fonts/NotoSerif_Italic/15.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_fonts/NotoSerif_Italic/18.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_fonts/NotoSerif_Italic/27.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_fonts/NotoSerif_Italic/40.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_fonts/NotoSerif_Italic/60.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_fonts/NotoSerif_Italic/8.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib429/roo_display/roo_fonts/NotoSerif_Italic/90.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib158/roo_scheduler/roo_scheduler.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSansMono_Bold/10.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSansMono_Bold/12.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSansMono_Bold/15.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSansMono_Bold/18.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSansMono_Bold/27.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSansMono_Bold/40.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSansMono_Bold/60.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSansMono_Bold/8.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSansMono_Bold/90.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSans_BoldItalic/10.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSans_BoldItalic/12.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSans_BoldItalic/15.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSans_BoldItalic/18.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSans_BoldItalic/27.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSans_BoldItalic/40.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSans_BoldItalic/60.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSans_BoldItalic/8.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSans_BoldItalic/90.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSans_Condensed/10.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSans_Condensed/12.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSans_Condensed/15.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSans_Condensed/18.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSans_Condensed/27.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSans_Condensed/40.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSans_Condensed/60.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSans_Condensed/8.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSans_Condensed/90.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSans_CondensedBold/10.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSans_CondensedBold/12.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSans_CondensedBold/15.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSans_CondensedBold/18.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSans_CondensedBold/27.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSans_CondensedBold/40.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSans_CondensedBold/60.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSans_CondensedBold/8.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSans_CondensedBold/90.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSans_CondensedItalic/10.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSans_CondensedItalic/12.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSans_CondensedItalic/15.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSans_CondensedItalic/18.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSans_CondensedItalic/27.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSans_CondensedItalic/40.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSans_CondensedItalic/60.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSans_CondensedItalic/8.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSans_CondensedItalic/90.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSans_Italic/10.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSans_Italic/12.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSans_Italic/15.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSans_Italic/18.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSans_Italic/27.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSans_Italic/40.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSans_Italic/60.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSans_Italic/8.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSans_Italic/90.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSerif_Bold/10.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSerif_Bold/12.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSerif_Bold/15.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSerif_Bold/18.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSerif_Bold/27.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSerif_Bold/40.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSerif_Bold/60.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSerif_Bold/8.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSerif_Bold/90.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSerif_BoldItalic/10.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSerif_BoldItalic/12.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSerif_BoldItalic/15.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSerif_BoldItalic/18.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSerif_BoldItalic/27.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSerif_BoldItalic/40.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSerif_BoldItalic/60.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSerif_BoldItalic/8.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSerif_BoldItalic/90.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSerif_Condensed/10.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSerif_Condensed/12.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSerif_Condensed/15.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSerif_Condensed/18.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSerif_Condensed/27.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSerif_Condensed/40.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSerif_Condensed/60.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSerif_Condensed/8.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSerif_Condensed/90.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSerif_CondensedItalic/10.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSerif_CondensedItalic/12.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSerif_CondensedItalic/15.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSerif_CondensedItalic/18.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSerif_CondensedItalic/27.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSerif_CondensedItalic/40.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSerif_CondensedItalic/60.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSerif_CondensedItalic/8.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSerif_CondensedItalic/90.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSerif_Regular/10.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSerif_Regular/12.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSerif_Regular/15.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSerif_Regular/18.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSerif_Regular/27.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSerif_Regular/40.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSerif_Regular/60.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSerif_Regular/8.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib743/roo_fonts_basic/roo_fonts/NotoSerif_Regular/90.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Condensed/11.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Condensed/14.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Condensed/16.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Condensed/20.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Condensed/21.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Condensed/24.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Condensed/26.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Condensed/28.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Condensed/32.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Condensed/34.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Condensed/36.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Condensed/48.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Condensed/51.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Condensed/68.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Condensed/72.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Condensed/9.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Condensed/96.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_CondensedLight/120.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_CondensedLight/144.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_CondensedLight/192.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_CondensedLight/45.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_CondensedLight/60.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_CondensedLight/72.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_CondensedLight/90.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_CondensedLight/96.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_CondensedMedium/11.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_CondensedMedium/14.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_CondensedMedium/15.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_CondensedMedium/20.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_CondensedMedium/21.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_CondensedMedium/28.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_CondensedMedium/30.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_CondensedMedium/40.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Light/120.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Light/144.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Light/192.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Light/45.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Light/60.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Light/72.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Light/90.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Light/96.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Medium/10_5.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Medium/11.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Medium/12.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Medium/14.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Medium/15.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Medium/16.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Medium/16_5.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Medium/18.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Medium/20.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Medium/21.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Medium/22.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Medium/24.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Medium/28.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Medium/30.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Medium/32.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Medium/40.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Medium/8_25.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Medium/9.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Regular/10_5.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Regular/11.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Regular/114.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Regular/14.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Regular/16.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Regular/16_5.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Regular/20.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Regular/21.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Regular/22.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Regular/24.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Regular/26.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Regular/28.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Regular/32.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Regular/33.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Regular/34.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Regular/36.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Regular/42.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Regular/44.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Regular/48.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Regular/51.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Regular/54.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Regular/56.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Regular/64.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Regular/68.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Regular/72.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Regular/86.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Regular/9.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/libc5f/roo_fonts_material/roo_fonts/NotoSans_Regular/96.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/composites/log/log.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/composites/menu/basic_navigation_item.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/composites/menu/slider_with_caption.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/composites/menu/title.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/containers/accelerated_scrollable_panel.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/containers/aligned_layout.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/containers/blit_cache_container.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/containers/flex_layout.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/containers/holder.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/containers/horizontal_layout.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/containers/horizontal_page_host.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/containers/navigation_panel.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/containers/navigation_rail.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/containers/scroll_motion_controller.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/containers/scrollable_panel.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/containers/vertical_layout.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/core/animation_evaluator.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/core/animation_registry.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/core/animation_types.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/core/application.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/core/application_context.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/core/background_deferral.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/core/blit_plan.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/core/canvas.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/core/child_layout.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/core/click_animation.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/core/clipper.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/core/container.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/core/destination.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/core/display_window.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/core/exclusion.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/core/focus_manager.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/core/gesture_detector.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/core/key_source.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/core/main_window.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/core/measure_spec.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/core/navigation_host.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/core/overlay_spec.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/core/paint_context.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/core/paint_effect.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/core/panel.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/core/presentation_registry.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/core/rounded_clip.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/core/scroll_connection.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/core/surface_widget.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/core/task.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/core/task_panel.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/core/text_input.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/core/theme.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/core/touch_sensor.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/core/transient_presentation.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/core/transient_surface_host.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/core/widget.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/core/widget_event_dispatcher.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/decoration/decoration.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/decoration/quarter_circle.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/decoration/shadow_lookup.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/dialogs/alert_dialog.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/dialogs/dialog.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/dialogs/string_constants.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/indicators/impl/battery.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/indicators/impl/walltime.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/indicators/impl/wifi.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/keyboard/editor_destination.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/keyboard/keyboard.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/keyboard/layout/accent_demo.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/keyboard/layout/en_us.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/keyboard/layout/keyboard_layout.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/keyboard/layout/pl_pl.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/material3/app_bar/app_bar.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/material3/app_bar/app_bar_scroll_behavior.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/material3/badge/badge.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/material3/button/button.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/material3/button/icon_button.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/material3/button/internal/button_appearance.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/material3/button/internal/button_geometry.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/material3/button/navigation.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/material3/button/toggle_icon_button.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/material3/card/flex_card.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/material3/checkbox/checkbox.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/material3/checkbox/resources/generated/check_13.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/material3/checkbox/resources/generated/check_18.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/material3/checkbox/resources/generated/check_27.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/material3/checkbox/resources/generated/check_36.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/material3/checkbox/resources/generated/indeterminate_13.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/material3/checkbox/resources/generated/indeterminate_18.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/material3/checkbox/resources/generated/indeterminate_27.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/material3/checkbox/resources/generated/indeterminate_36.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/material3/date_picker/date_picker.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/material3/date_picker/date_picker_panel.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/material3/date_picker/date_picker_types.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/material3/date_picker/docked_date_picker_field.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/material3/dialog/basic_dialog.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/material3/dialog/dialog_scaffold.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/material3/dialog/full_screen_dialog.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/material3/layout_scaffold/layout_scaffold.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/material3/list/dynamic_list.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/material3/list/internal/list_row_geometry.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/material3/list/list.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/material3/menu/menu.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/material3/menu/menu_geometry.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/material3/menu/menu_surface.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/material3/navigation_bar/navigation_bar.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/material3/navigation_destination/navigation_destination.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/material3/navigation_rail/navigation_rail.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/material3/progress_indicator/progress_geometry.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/material3/progress_indicator/progress_indicator.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/material3/radio_button/radio_button.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/material3/slider/range_slider.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/material3/slider/slider.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/material3/slider/slider_paint_internal.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/material3/slider/value_indicator.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/material3/snackbar/snackbar.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/material3/switch/switch.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/material3/tabs/tabs.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/material3/text_field/internal/text_field_geometry.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/material3/text_field/secure_text_field.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/material3/text_field/text_field.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/material3/theme.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/material3/utilities/dropdown_button.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/widgets/button.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/widgets/checkbox.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/widgets/divider.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/widgets/icon.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/widgets/icon_with_caption.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/widgets/image.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/widgets/progress_bar.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/widgets/radio_button.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/widgets/resources/circle.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/widgets/resources/circular_shadow.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/widgets/slider.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/widgets/switch.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/widgets/text_block.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/widgets/text_field.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/widgets/text_label.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/lib548/roo_windows/roo_windows/widgets/toggle_buttons.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/src/main.cpp.o
+Building .pio/build/double_optimized_cutoff2/bootloader.bin
+Generating partitions .pio/build/double_optimized_cutoff2/partitions.bin
+Compiling .pio/build/double_optimized_cutoff2/FrameworkArduino/ColorFormat.c.o
+esptool v5.1.0
+Creating ESP32S3 image...
+Merged 2 ELF sections.
+Successfully created ESP32S3 image.
+Compiling .pio/build/double_optimized_cutoff2/FrameworkArduino/Esp.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/FrameworkArduino/FirmwareMSC.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/FrameworkArduino/FunctionalInterrupt.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/FrameworkArduino/HEXBuilder.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/FrameworkArduino/HWCDC.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/FrameworkArduino/HardwareSerial.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/FrameworkArduino/HashBuilder.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/FrameworkArduino/IPAddress.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/FrameworkArduino/MD5Builder.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/FrameworkArduino/MacAddress.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/FrameworkArduino/Print.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/FrameworkArduino/Stream.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/FrameworkArduino/StreamString.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/FrameworkArduino/Tone.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/FrameworkArduino/USB.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/FrameworkArduino/USBCDC.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/FrameworkArduino/USBMSC.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/FrameworkArduino/WMath.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/FrameworkArduino/WString.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/FrameworkArduino/base64.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/FrameworkArduino/cbuf.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/FrameworkArduino/chip-debug-report.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/FrameworkArduino/esp32-hal-adc.c.o
+Compiling .pio/build/double_optimized_cutoff2/FrameworkArduino/esp32-hal-bt.c.o
+Compiling .pio/build/double_optimized_cutoff2/FrameworkArduino/esp32-hal-cpu.c.o
+Compiling .pio/build/double_optimized_cutoff2/FrameworkArduino/esp32-hal-dac.c.o
+Compiling .pio/build/double_optimized_cutoff2/FrameworkArduino/esp32-hal-gpio.c.o
+Compiling .pio/build/double_optimized_cutoff2/FrameworkArduino/esp32-hal-hosted.c.o
+Compiling .pio/build/double_optimized_cutoff2/FrameworkArduino/esp32-hal-i2c-ng.c.o
+Compiling .pio/build/double_optimized_cutoff2/FrameworkArduino/esp32-hal-i2c-slave.c.o
+Compiling .pio/build/double_optimized_cutoff2/FrameworkArduino/esp32-hal-i2c.c.o
+Compiling .pio/build/double_optimized_cutoff2/FrameworkArduino/esp32-hal-ledc.c.o
+Compiling .pio/build/double_optimized_cutoff2/FrameworkArduino/esp32-hal-matrix.c.o
+Compiling .pio/build/double_optimized_cutoff2/FrameworkArduino/esp32-hal-misc.c.o
+Compiling .pio/build/double_optimized_cutoff2/FrameworkArduino/esp32-hal-periman.c.o
+Compiling .pio/build/double_optimized_cutoff2/FrameworkArduino/esp32-hal-psram.c.o
+Compiling .pio/build/double_optimized_cutoff2/FrameworkArduino/esp32-hal-rgb-led.c.o
+Compiling .pio/build/double_optimized_cutoff2/FrameworkArduino/esp32-hal-rmt.c.o
+Compiling .pio/build/double_optimized_cutoff2/FrameworkArduino/esp32-hal-sigmadelta.c.o
+Compiling .pio/build/double_optimized_cutoff2/FrameworkArduino/esp32-hal-spi.c.o
+Compiling .pio/build/double_optimized_cutoff2/FrameworkArduino/esp32-hal-time.c.o
+Compiling .pio/build/double_optimized_cutoff2/FrameworkArduino/esp32-hal-timer.c.o
+Compiling .pio/build/double_optimized_cutoff2/FrameworkArduino/esp32-hal-tinyusb.c.o
+Compiling .pio/build/double_optimized_cutoff2/FrameworkArduino/esp32-hal-touch-ng.c.o
+Compiling .pio/build/double_optimized_cutoff2/FrameworkArduino/esp32-hal-touch.c.o
+Compiling .pio/build/double_optimized_cutoff2/FrameworkArduino/esp32-hal-uart.c.o
+Compiling .pio/build/double_optimized_cutoff2/FrameworkArduino/firmware_msc_fat.c.o
+Compiling .pio/build/double_optimized_cutoff2/FrameworkArduino/freertos_stats.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/FrameworkArduino/libb64/cdecode.c.o
+Compiling .pio/build/double_optimized_cutoff2/FrameworkArduino/libb64/cencode.c.o
+Compiling .pio/build/double_optimized_cutoff2/FrameworkArduino/main.cpp.o
+Compiling .pio/build/double_optimized_cutoff2/FrameworkArduino/stdlib_noniso.c.o
+Compiling .pio/build/double_optimized_cutoff2/FrameworkArduino/wiring_pulse.c.o
+Compiling .pio/build/double_optimized_cutoff2/FrameworkArduino/wiring_shift.c.o
+Archiving .pio/build/double_optimized_cutoff2/libFrameworkArduino.a
+Indexing .pio/build/double_optimized_cutoff2/libFrameworkArduino.a
+Linking .pio/build/double_optimized_cutoff2/firmware.elf
+                            Memory Type Usage Summary                             
+┏━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━┓
+┃ Memory Type/Section ┃ Used [bytes] ┃ Used [%] ┃ Remain [bytes] ┃ Total [bytes] ┃
+┡━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━┩
+│ Flash Code          │       589044 │          │                │               │
+│    .text            │       589044 │          │                │               │
+│ Flash Data          │       374104 │          │                │               │
+│    .rodata          │       373848 │          │                │               │
+│    .appdesc         │          256 │          │                │               │
+│ DIRAM               │        89051 │    26.06 │         252709 │        341760 │
+│    .text            │        58275 │    17.05 │                │               │
+│    .bss             │        16200 │     4.74 │                │               │
+│    .data            │        14576 │     4.26 │                │               │
+│ IRAM                │        16384 │    100.0 │              0 │         16384 │
+│    .text            │        15356 │    93.73 │                │               │
+│    .vectors         │         1028 │     6.27 │                │               │
+└─────────────────────┴──────────────┴──────────┴────────────────┴───────────────┘
+Total image size: 1052383 bytes (.bin may be padded larger)
+Note: The reported total sizes may be smaller than those in the technical reference manual due to reserved memory and application configuration. The total flash size available for the application is not included by default, as it cannot be reliably determined due to the presence of other data like the bootloader, partition table, and application partition size.
+Retrieving maximum program size .pio/build/double_optimized_cutoff2/firmware.elf
+Checking size .pio/build/double_optimized_cutoff2/firmware.elf
+Advanced Memory Usage is available via "PlatformIO Home > Project Inspect"
+RAM:   [=         ]   9.4% (used 30776 bytes from 327680 bytes)
+Flash: [==        ]  16.1% (used 1052127 bytes from 6553600 bytes)
+Building .pio/build/double_optimized_cutoff2/firmware.bin
+esptool v5.1.0
+Creating ESP32S3 image...
+Merged 2 ELF sections.
+Successfully created ESP32S3 image.
+======================== [SUCCESS] Took 237.52 seconds ========================
+
+Environment               Status    Duration
+------------------------  --------  ------------
+double_optimized          SUCCESS   00:02:58.262
+double_optimized_cutoff2  SUCCESS   00:03:57.521
+========================= 2 succeeded in 00:06:55.784 =========================
+Processing double_optimized_cutoff2 (platform: /home/dawidk/.platformio/platforms/espressif32; board: lolin_s3; framework: arduino)
+--------------------------------------------------------------------------------
+Warning: No internet connection detected, Python dependency check will be skipped.
+Warning: No internet connection detected, Python dependency check will be skipped.
+Verbose mode can be enabled via `-v, --verbose` option
+Warning: No internet connection detected, Python dependency check will be skipped.
+CONFIGURATION: https://docs.platformio.org/page/boards/espressif32/lolin_s3.html
+PLATFORM: Espressif 32 (55.3.35) > WEMOS LOLIN S3
+HARDWARE: ESP32S3 240MHz, 320KB RAM, 16MB Flash
+DEBUG: Current (cmsis-dap) External (cmsis-dap, esp-bridge, esp-builtin, esp-prog, iot-bus-jtag, jlink, minimodule, olimex-arm-usb-ocd, olimex-arm-usb-ocd-h, olimex-arm-usb-tiny-h, olimex-jtag-tiny, tumpa)
+PACKAGES: 
+ - contrib-piohome @ 3.4.4 
+ - framework-arduinoespressif32 @ 3.3.5 
+ - framework-arduinoespressif32-libs @ 5.5.0+sha.9bb7aa84fe 
+ - tool-esptoolpy @ 5.1.0 
+ - tool-mklittlefs @ 3.2.0 
+ - toolchain-xtensa-esp-elf @ 14.2.0+20251107
+LDF: Library Dependency Finder -> https://bit.ly/configure-pio-ldf
+LDF Modes: Finder ~ chain, Compatibility ~ soft
+Found 68 compatible libraries
+Scanning dependencies...
+Dependency Graph
+|-- roo_display @ 3.4.0
+|-- roo_scheduler @ 2.3.0
+|-- roo_windows @ 1.9.0
+Building in release mode
+Retrieving maximum program size .pio/build/double_optimized_cutoff2/firmware.elf
+Checking size .pio/build/double_optimized_cutoff2/firmware.elf
+Advanced Memory Usage is available via "PlatformIO Home > Project Inspect"
+RAM:   [=         ]   9.4% (used 30776 bytes from 327680 bytes)
+Flash: [==        ]  16.1% (used 1052127 bytes from 6553600 bytes)
+========================= [SUCCESS] Took 8.39 seconds =========================
+
+Environment               Status    Duration
+------------------------  --------  ------------
+double_optimized_cutoff2  SUCCESS   00:00:08.390
+========================= 1 succeeded in 00:00:08.390 =========================
