@@ -704,6 +704,11 @@ class Widget {
   // it does nothing interesting in its layout pass.
   void layout(const Rect& rect);
 
+  /// Reports whether both widgets belong to the same live application context.
+  bool sharesContextWith(const Widget& other) const {
+    return tryContext() != nullptr && tryContext() == other.tryContext();
+  }
+
  protected:
   /// Returns the context while it is alive. Runtime-dependent widget APIs
   /// require their originating context to outlive the call.

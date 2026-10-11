@@ -14,10 +14,11 @@ namespace {
 template <typename Components>
 auto ComponentSurfaceSlots(Components& components) {
   using SlotPointer = decltype(&components.layoutScaffold.container);
-  return std::array<SlotPointer, 27>{
+  return std::array<SlotPointer, 28>{
       &components.layoutScaffold.container,
       &components.appBar.flatContainer,
       &components.appBar.scrolledContainer,
+      &components.toolbar.standardContainer,
       &components.searchBar.container,
       &components.searchAppBar.flatContainer,
       &components.searchAppBar.scrolledContainer,
@@ -67,7 +68,7 @@ roo_display::Color Rgb565Output(const ColorScheme& colors, ColorToken role) {
 }
 
 void ExpectRgb565SurfaceOutput(const Material3Theme& material,
-                               const std::array<ColorToken, 27>& expected) {
+                               const std::array<ColorToken, 28>& expected) {
   const auto slots = ComponentSurfaceSlots(material.components);
   for (size_t i = 0; i < slots.size(); ++i) {
     const ColorToken* slot = slots[i];
@@ -86,9 +87,10 @@ TEST(Material3ComponentSurfaceThemeTest,
   Material3Theme dark = DefaultTheme().material3Theme();
   SetDistinctNeutralSurfacePalette(light, 10);
   SetDistinctNeutralSurfacePalette(dark, 80);
-  constexpr std::array<ColorToken, 27> kDefaultRoles = {
+  constexpr std::array<ColorToken, 28> kDefaultRoles = {
       ColorToken::kSurface,
       ColorToken::kSurface,
+      ColorToken::kSurfaceContainer,
       ColorToken::kSurfaceContainer,
       ColorToken::kSurfaceContainerHigh,
       ColorToken::kSurface,
@@ -129,8 +131,8 @@ TEST(Material3ComponentSurfaceThemeTest,
       ColorToken::kSurfaceContainerHigh,
       ColorToken::kSurfaceContainerHighest,
   };
-  std::array<ColorToken, 27> light_roles;
-  std::array<ColorToken, 27> dark_roles;
+  std::array<ColorToken, 28> light_roles;
+  std::array<ColorToken, 28> dark_roles;
   size_t index = 0;
   for (ColorToken* slot : ComponentSurfaceSlots(light.components)) {
     *slot = light_roles[index] = kNeutralRoles[index % kNeutralRoles.size()];

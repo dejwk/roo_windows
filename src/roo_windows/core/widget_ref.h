@@ -1,5 +1,9 @@
 #pragma once
 
+#include <memory>
+
+#include "roo_windows/core/widget.h"
+
 namespace roo_windows {
 
 /// Move-only smart pointer to a `Widget`, with optional ownership.

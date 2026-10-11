@@ -22,6 +22,11 @@ struct AppBarTheme {
   ColorToken scrolledContainer = ColorToken::kSurfaceContainer;
 };
 
+/// Selects the neutral surface shared by docked and floating toolbars.
+struct ToolbarTheme {
+  ColorToken standardContainer = ColorToken::kSurfaceContainer;
+};
+
 /// Selects the standalone search-entry surface.
 struct SearchBarTheme {
   ColorToken container = ColorToken::kSurfaceContainerHigh;
@@ -109,12 +114,13 @@ struct SwitchTheme {
 /// live, so applications that later change a slot must invalidate affected
 /// subtrees between completed frames.
 ///
-/// The 27 compact token slots below cover the implemented component-surface
+/// The 28 compact token slots below cover the implemented component-surface
 /// contract. Adding a slot changes the application-owned Material3Theme ABI;
 /// rebuild the library and application together.
 struct ComponentTheme {
   LayoutScaffoldTheme layoutScaffold;
   AppBarTheme appBar;
+  ToolbarTheme toolbar;
   SearchBarTheme searchBar;
   SearchAppBarTheme searchAppBar;
   CardTheme card;
@@ -135,7 +141,7 @@ static_assert(sizeof(CardTheme) == 3,
               "Card surface defaults must occupy three compact tokens.");
 static_assert(alignof(CardTheme) == 1,
               "Card surface defaults must not introduce padding.");
-static_assert(sizeof(ComponentTheme) == 27,
+static_assert(sizeof(ComponentTheme) == 28,
               "Component theme must contain only implemented surface slots.");
 static_assert(alignof(ComponentTheme) == 1,
               "Component theme must not introduce padding.");
