@@ -1,8 +1,9 @@
 # Roo Windows Material 3 Toolbars Design
 
-**Status: Proposed.** No toolbar implementation exists as of 2026-10-11.
-Buttons, icon buttons, menus, FABs, app bars, density, and layout scaffolds are
-implemented prerequisites. See the [design status index](../README.md).
+**Status: Implemented (2026-10-12).** Docked and floating toolbar containers,
+examples, tests, and target resource measurements have landed in three commits.
+See the [design status index](../README.md) and
+[acceptance measurements](../../material3_target_baseline.md#material-3-toolbar-acceptance-2026-10-12).
 
 ## Objective
 
@@ -27,7 +28,7 @@ Material distinguishes docked toolbars from floating toolbars. Docked toolbars
 replace the recommended use of bottom app bars. Floating toolbars support
 horizontal and vertical orientation and standard or vibrant color treatments.
 These are page action surfaces, separate from the library's implemented
-[top app bars](../implemented/material3_app_bars_design.md).
+[top app bars](material3_app_bars_design.md).
 See the official [docked toolbar guide](https://github.com/material-components/material-components-android/blob/master/docs/components/DockedToolbar.md)
 and [floating toolbar guide](https://github.com/material-components/material-components-android/blob/master/docs/components/FloatingToolbar.md).
 
@@ -50,25 +51,25 @@ implementation differs: docked grouping, bounded overflow, elevation, and densit
   [ToggleIconButton](../../../src/roo_windows/material3/button/toggle_icon_button.h),
   and [text fields](../../../src/roo_windows/material3/text_field/text_field.h)
   already implement their own actions, state, measurement, and appearance.
-- [Menus](../implemented/material3_menus_design.md) provide explicit overflow
-  presentation; [FABs](../implemented/material3_fabs_design.md) provide primary
+- [Menus](material3_menus_design.md) provide explicit overflow
+  presentation; [FABs](material3_fabs_design.md) provide primary
   action widgets. Neither needs a second implementation inside a toolbar.
 - [LayoutScaffold](../../../src/roo_windows/material3/layout_scaffold/layout_scaffold.h)
   already has `setBottomBar(WidgetRef)`, safety insets, and breakpoint visibility.
   It does not provide a floating-toolbar overlay slot.
-- [Density](../implemented/material3_density_design.md) reduces eligible
+- [Density](material3_density_design.md) reduces eligible
   component whitespace independently of `Scaled()` zoom. Eligible children
   follow their existing density contracts; icon buttons retain their geometry.
 - [Borrowed objects, adopted objects, and WidgetRef](../glossary.md#ownership-and-lifetime)
   have established lifetime rules. `WidgetRef` is a transfer parameter, never
-  retained child storage. [Non-touch input](../implemented/non_touch_input_design.md)
+  retained child storage. [Non-touch input](non_touch_input_design.md)
   supplies focus traversal and activation.
 
 The [widget authoring rules](../../../.github/instructions/roo-windows-widget-authoring.instructions.md)
 require explicit surface ownership, compact state, child attachment through the
 framework, and final-color painting. The existing
-[button](../implemented/material3_buttons_design.md) and
-[list](../implemented/material3_lists_design.md) designs provide adjacent
+[button](material3_buttons_design.md) and
+[list](material3_lists_design.md) designs provide adjacent
 component context; current headers govern implemented API names.
 
 ## Requirements
@@ -153,7 +154,7 @@ stored on the toolbar.
 
 ### Geometry tokens and density
 
-These values are shared constants in the proposed `toolbar_tokens.h`:
+These values are shared constants in `toolbar_tokens.h`:
 
 | Geometry | Default in dp | Source or decision |
 | --- | ---: | --- |
@@ -288,8 +289,9 @@ does not move children. Invisible children still count toward group occupancy.
 Floating controls use the same measurement rules and fixed 4 dp gaps. When
 exact constraints make the main axis longer than its natural size, center the
 packed strip. Under overfull constraints, pack from logical start. Rounded
-corners have radius `min(actual_width, actual_height) / 2`, using
-`SmallNumber` to preserve half-pixel precision, with no outline.
+corners use the integer-pixel `BorderStyle` radius
+`floor(min(actual_width, actual_height) / 2)`, with no outline. The underlying
+border API cannot represent the half-pixel ideal for odd dimensions.
 
 Host placement margins are excluded from `getPadding()` and child measurement.
 Examples use at least 16 dp around horizontal toolbars, matching the
@@ -329,7 +331,7 @@ Add one shared `ToolbarTheme::standardContainer` token to `ComponentTheme`,
 defaulting to `ColorToken::kSurfaceContainer`. Both toolbar types consult this
 live theme slot for `kStandard`; `kVibrant` resolves
 `ColorToken::kPrimaryContainer`. Follow the existing
-[component surface theme contract](../implemented/material3_component_surface_theme_design.md):
+[component surface theme contract](material3_component_surface_theme_design.md):
 the shared slot accepts neutral surface roles, and changing it requires
 application invalidation. Vibrant remains an explicit instance choice.
 
@@ -558,7 +560,7 @@ use `LOG(FATAL) << "Unimplemented: ..."` because it has no safe usable layout.
 
 ### Representative composition
 
-This function uses proposed toolbar calls with existing button and scaffold
+This function uses implemented toolbar calls with existing button and scaffold
 APIs. The scaffold adopts the toolbar, which adopts its buttons. Static label
 storage and application-owned actions outlive the widgets.
 
@@ -700,8 +702,10 @@ Proposed commit message:
 Use explicit 240x320 or larger render fixtures; the default tiny fixture is
 smaller than a normal toolbar. Include reduced-width and zero-sized cases in
 behavior tests rather than treating their clipped output as a recommended UI.
-This proposal changes documentation only; the implementation targets and
-acceptance measurements above are future work within its defined phases.
+The implementation and acceptance measurements are recorded in the
+[target baseline](../../material3_target_baseline.md#material-3-toolbar-acceptance-2026-10-12).
+Physical-device touch and shadow checks require device access and are not
+claimed by the host emulator or target build.
 
 ## Caveats
 

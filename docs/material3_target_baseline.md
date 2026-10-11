@@ -240,3 +240,68 @@ Both ESP32-C3 profiles compile and link, and host tests establish layout, raster
 and input-routing behavior. No firmware was uploaded and no physical touchscreen
 usability test was performed. Compact touch usability still needs device testing
 for an application's input mode; host acceptance does not certify it.
+
+## Material 3 toolbar acceptance (2026-10-12)
+
+This capture covers the [implemented docked and floating toolbars](design/implemented/material3_toolbars_design.md).
+The target probe uses the installed 32-bit RISC-V ESP32-C3 compiler. Run it with:
+
+```sh
+benchmarks/material3_toolbar_size_probe.sh \
+  ~/.platformio/packages/toolchain-riscv32-esp/bin/riscv32-esp-elf-g++ \
+  ~/.platformio/packages/toolchain-riscv32-esp/bin/riscv32-esp-elf-nm
+```
+
+| Target ABI type | Bytes |
+| --- | ---: |
+| `material3::ComponentTheme` | 28 |
+| `material3::Material3Theme` | 960 |
+| `material3::Material3Container` | 44 |
+| `material3::DockedToolbar` | 60 |
+| `material3::FloatingToolbar` | 60 |
+
+The toolbar adds 16 bytes per empty instance over `Material3Container`, one
+vector. Its entry is at most 12 bytes on the 32-bit target and 16 bytes on a
+64-bit host, enforced by compile-time assertions. Four 32-bit entries account
+for 48 bytes of vector payload before allocator overhead. The host resource
+fixture measured 88-byte toolbar instances over a 56-byte base, 64 bytes of
+payload after four insertions, and 128 bytes after eight. Both classes retain
+that vector capacity after `clear()`; they release it on destruction. The
+shared toolbar surface role adds one byte to `ComponentTheme`, which raises
+`Material3Theme` by four bytes through alignment from the historical 956-byte
+capture above.
+
+`material3_toolbar_resource_test` uses allocation-free child probes. After
+warm-up, 40 repeated measure/layout and no-op setter cycles allocate zero;
+20 warmed docked divider paints also allocate zero. Real controls and the
+rounded renderer have their own allocation behavior and are outside that
+toolbar bookkeeping count. In host frame fixtures, four invalidated
+rounded-toolbar frames with a paint-free probe child allocated zero times at
+both 100% and 200% zoom. The same four frames with a filled-tonal `Button`
+allocated 12 times (three per frame) at 100% and 24 times (six per frame) at
+200%.
+
+This separates the renderer path from the real-child cost for that fixture; it
+does not claim a universal bound for arbitrary children. The light/dark goldens
+exercise full rendering and shadow restoration. The resource target passed at
+75%, 100%, 150%, and 200% zoom, checking that the 64 dp minimum and 8 dp
+padding scale once around child measurements.
+
+Both toolbar examples compiled and linked with PlatformIO 6.1.19, Espressif32
+55.3.35, Arduino-ESP32 3.3.5, and `riscv32-esp-elf-g++` 14.2.0 on the Seeed
+Studio XIAO ESP32-C3 profile. The scratch build used local `roo_*` sources,
+`ROO_WINDOWS_ZOOM=75`, release optimization, and `-fstack-usage`. The table
+reports whole-application costs, including framework, display, fonts, icons,
+and other dependencies; it is not the incremental cost of a toolbar.
+
+| Example | Program flash | Static RAM (`.data` + `.bss`) | `.flash.text` | `.flash.rodata` | `.dram0.data` | `.dram0.bss` |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Chart actions | 1,004,448 B | 18,692 B | 730,354 B | 212,080 B | 6,364 B | 12,328 B |
+| Drawing tools | 910,730 B | 17,724 B | 676,836 B | 171,880 B | 6,364 B | 11,360 B |
+
+Program flash and static RAM are PlatformIO's firmware-size values; section
+values come from `riscv32-esp-elf-size -A firmware.elf`. Both builds fit the
+profile's 3,145,728-byte application partition and 327,680-byte RAM budget.
+No firmware was uploaded. Physical touch-target and shadow-restoration checks
+remain for a connected device; host goldens and target linking do not imply
+those hardware results.

@@ -15,6 +15,12 @@ or newer, a plain command defaults to that profile and prints a notice:
 The files under .roo_testing/bazelrc/esp32 are vendored from roo_testing;
 follow their canonical-source headers when refreshing them.
 
+## Material 3 toolbars
+
+[Material 3 toolbars](docs/material3_toolbars.md) provide docked page actions
+and floating horizontal or vertical action strips. The chart and drawing
+examples show explicit overflow and sibling FAB placement.
+
 ## Material 3 date pickers
 
 [Date picker API and behavior](docs/design/implemented/material3_date_pickers_design.md)

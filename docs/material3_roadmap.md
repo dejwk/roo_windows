@@ -100,9 +100,9 @@ buttons, icon and toggle icon buttons, FABs, badge, sliders, single-line text
 fields, progress indicators, date pickers, and DropdownButton utility have
 implementations. The app-bar/search-entry family has focused unit tests,
 goldens, an example, and scaffold integration. Lists are implemented through
-Phase 12, including Material 3 menu reuse. Navigation drawer, sheets,
-toolbars, time pickers, split buttons, and button groups remain design or
-integration work; the backlog below records their current scope.
+Phase 12, including Material 3 menu reuse. Docked and floating toolbars are
+implemented. Navigation drawer, sheets, time pickers, split buttons, and button
+groups remain design or integration work; the backlog below records their scope.
 
 Several source families still lack matching design documents:
 
@@ -263,7 +263,8 @@ dependencies, and completion check when scheduling it.
 | Toggle icon buttons | [Implemented design](design/implemented/material3_toggle_icon_buttons_design.md) | The family has focused unit and rendering coverage plus compact-controls persistent-preference adoption. Independent selection semantics remain until button-group policy is scheduled. |
 | FABs and extended FABs | [Implemented design](design/implemented/material3_fabs_design.md) | Icon-only and extended widgets, color styles, elevation, explicit collapse, unit and golden tests, and a fixed-overlay/rail-header example have landed. FAB menus and automatic screen-level docking remain separate work. |
 | DropdownButton utility | [Implemented design](design/implemented/material3_dropdown_button_design.md) | A compact single-select button reuses the menu host; the example, goldens, and resource checks have landed. |
-| Toolbars, split buttons, and button groups | [Proposed designs](design/proposed/material3_toolbars_design.md), [split buttons](design/proposed/material3_split_button_design.md), and [button groups](design/proposed/material3_button_groups_design.md) | Select a concrete consuming flow and schedule only the families it requires. Buttons, icon buttons, menus, and FABs are available. |
+| Toolbars | [Implemented design](design/implemented/material3_toolbars_design.md) | Docked and floating surfaces, chart and drawing examples, tests, and target resource acceptance are complete. Device touch and shadow checks remain. |
+| Split buttons and button groups | [Split buttons](design/proposed/material3_split_button_design.md) and [button groups](design/proposed/material3_button_groups_design.md) | Select a concrete consuming flow and schedule only the family it requires. Buttons, icon buttons, menus, FABs, and toolbars are available. |
 | Chips | No local design | Name a concrete filter/selection consumer, then add a chips design covering only its required variants and shared selection semantics. |
 | Focused/expanded search | No complete local design | Add an explicit search-workflow design covering query ownership, suggestions/results, focus, Back, and presentation lifetime. |
 | Tooltips and pointer-specific affordances | No complete local design | Define pointer/hover routing and tooltip lifetime before component APIs. |

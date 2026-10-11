@@ -100,6 +100,8 @@ class DockedToolbar : public Material3Container {
     XDim measured_width;
     ToolbarSlot slot;
   };
+  static_assert(sizeof(Entry) <= (sizeof(void*) == 4 ? 12 : 16),
+                "Docked toolbar entries exceed the target RAM budget");
 
   struct GroupGeometry {
     int64_t width = 0;
@@ -199,6 +201,8 @@ class FloatingToolbar : public Material3Container {
     YDim measured_height;
     XDim measured_width;
   };
+  static_assert(sizeof(Entry) <= (sizeof(void*) == 4 ? 12 : 16),
+                "Floating toolbar entries exceed the target RAM budget");
 
   std::vector<Entry> children_;
   uint8_t color_style_ : 1;

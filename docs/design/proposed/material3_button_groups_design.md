@@ -53,9 +53,9 @@ and the temporary ownership-transfer role of `WidgetRef`.
 
 There is no Material 3 group implementation. The
 [segmented-button proposal](material3_segmented_buttons_design.md) describes
-the older component; [split buttons](material3_split_button_design.md) and
-[toolbars](material3_toolbars_design.md) remain separate proposals and are not
-dependencies of this one.
+the older component; [split buttons](material3_split_button_design.md) remain a
+separate proposal, while [toolbars](../implemented/material3_toolbars_design.md)
+are implemented and are not a dependency of this one.
 
 ### Material references and local decisions
 

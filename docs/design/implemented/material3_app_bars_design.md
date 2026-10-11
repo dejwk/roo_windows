@@ -74,7 +74,7 @@ What exists today:
   family,
 - [material3_layout_scaffold_design.md](material3_layout_scaffold_design.md)
   already defines one top-bar slot on the scaffold,
-- [material3_toolbars_design.md](../proposed/material3_toolbars_design.md) already closes
+- [material3_toolbars_design.md](material3_toolbars_design.md) already closes
   on bottom and floating toolbars and explicitly excludes top app bars,
 - [material3_text_fields_design.md](../implemented/material3_text_fields_design.md) already
   defines the shared editor direction for real text editing,
@@ -178,7 +178,7 @@ already called out separately in
 The most relevant local references are:
 
 - [material3_layout_scaffold_design.md](material3_layout_scaffold_design.md)
-- [material3_toolbars_design.md](../proposed/material3_toolbars_design.md)
+- [material3_toolbars_design.md](material3_toolbars_design.md)
 - [material3_text_fields_design.md](../implemented/material3_text_fields_design.md)
 - [non_touch_input_design.md](non_touch_input_design.md)
 - [material3_icon_buttons_design.md](material3_icon_buttons_design.md)

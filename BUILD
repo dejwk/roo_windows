@@ -991,6 +991,16 @@ cc_test(
 )
 
 cc_test(
+    name = "material3_toolbar_resource_test",
+    srcs = ["test/material3_toolbar_resource_test.cpp"],
+    linkstatic = 1,
+    deps = [
+        ":roo_windows",
+        "@roo_testing//:arduino_gtest_main",
+    ],
+)
+
+cc_test(
     name = "material3_app_bar_golden_test",
     srcs = ["test/material3_app_bar_golden_test.cpp"],
     data = glob([

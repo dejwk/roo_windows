@@ -123,7 +123,7 @@ The most relevant local references are:
 - [material3_navigation_bar_design.md](../implemented/material3_navigation_bar_design.md)
 - [material3_navigation_rail_design.md](../implemented/material3_navigation_rail_design.md)
 - [material3_navigation_drawer_design.md](../proposed/material3_navigation_drawer_design.md)
-- [material3_toolbars_design.md](../proposed/material3_toolbars_design.md)
+- [material3_toolbars_design.md](material3_toolbars_design.md)
 - [material3_extended_fab_design.md](../abandoned/material3_extended_fab_design.md)
 - [widget_authoring.md](../../widget_authoring.md)
 
@@ -274,7 +274,7 @@ container. The scaffold and grid each publish the last resolved breakpoint,
 margin, gutter, column count, and column-width data, and callers can ask for
 column-start and span bounds when they need aligned overlays or custom paint.
 
-![Compact scaffold and expanded scaffold showing safe bounds, bars, rails, pane regions, margins, gutters, and a local grid](figures/material3_layout_scaffold_layout.svg)
+![Compact scaffold and expanded scaffold showing safe bounds, bars, rails, pane regions, margins, gutters, and a local grid](../proposed/figures/material3_layout_scaffold_layout.svg)
 
 The core decisions are:
 
