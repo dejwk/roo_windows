@@ -96,7 +96,6 @@ motion pauses. It does not restore paint interruption.
 | Design | Status |
 | --- | --- |
 | [Interrupted paint continuation](implemented/interrupted_paint_continuation_design.md) | Removed on 2026-10-05. Refresh now paints to completion; the design remains as historical rationale. |
-| [Standalone extended FAB](abandoned/material3_extended_fab_design.md) | Superseded before implementation by the completed FAB family design. |
 
 ## In progress
 
@@ -131,3 +130,4 @@ motion pauses. It does not restore paint interruption.
 | Design | Status |
 | --- | --- |
 | [Rounded container child clipping: corner capture alternative](abandoned/rounded_child_clipping_design.md) | Unimplemented. Set aside in favor of the [sparse rounded child clipping prototype](prototypes/rounded_child_clipping.md), which intercepts child output during a single traversal. |
+| [Standalone extended FAB](abandoned/material3_extended_fab_design.md) | Superseded before implementation by the completed FAB family design. |
