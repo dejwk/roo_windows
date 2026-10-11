@@ -77,6 +77,7 @@ motion pauses. It does not restore paint interruption.
 | Application-owned physical input routing | Producer-owned `KeySource` connections, readiness-handler quiescence, bounded application-owned draining, and FLTK's `HostEventEndpoint`/SPSC handoff are implemented. |
 | Emulator native-host event injection | `roo_testing`'s fixed endpoint table, tick handoff, and shared FreeRTOS delivery task are implemented, and Roo Windows uses them for FLTK key input. The published `roo_testing` 1.3.7 and `roo_io` 2.2.5 modules require no local overrides. |
 | Paint context | Clipper/overlay integration and the widget paint-hook migration are implemented. |
+| [Sparse rounded child clipping](implemented/rounded_child_clipping_design.md) | P0, P1, and P4–P8 are complete. ESP32-S3 scrolling acceptance and released `roo_display` 3.4.0 validation pass; P2 and P3 are retired. |
 | [Unclipped children above clipped siblings](implemented/rounded_unclipped_children_design.md) | Global unclipped-over-clipped grouping, rounded-mask bypass, matching touch and invalidation order, synchronous painting, capability fast paths, examples, and target/host resource acceptance are implemented. |
 | Semantic software text input | Application-scoped active-editor selection, producer-owned emitter connections, semantic keyboard operations, teardown, and cross-application integration are implemented. |
 | Slider | Paint context, Material 3 theme support, declarative drag ownership, lifecycle-safe terminal delivery, and transient-pin value indicators are implemented. |
@@ -102,7 +103,6 @@ motion pauses. It does not restore paint interruption.
 | Design | Dependency status |
 | --- | --- |
 | [Selective accelerated redraw](in_progress/selective_accelerated_redraw_design.md) | P1 advisory budget and query are implemented. Background deferral with temporary composition lag (P2a), opt-in scrolling, guaranteed cleanup, and resource acceptance remain under development. |
-| [Sparse rounded child clipping](in_progress/rounded_child_clipping_design.md) | P0, P1, and P4–P7 are complete. P8 generalized exclusion preparation is implemented and measured; uncovered-scene performance and the released `roo_display` dependency check remain open. P2 repair helpers are retired and P3 is cancelled. |
 | Display runtime and cross-application input | Phases 1–6 are implemented. Explicit modal coverage and the final migration/cost audit remain proposed. |
 | Text system | `TextBlock` wrapping, justification, max-lines, ellipsis, caching, and golden coverage are implemented; shared rich paragraph layout and `RichTextBlock` remain. |
 | Transient presenter lifetime and ownership | The shared slot, legacy-dialog and Material 3 menu lifetime, Back, and structural-host adoption are implemented; snackbar queue adoption is also implemented; modal sheets have no implementation to adopt. |

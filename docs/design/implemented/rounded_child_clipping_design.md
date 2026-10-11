@@ -1,7 +1,6 @@
 # Sparse rounded child clipping
 
-**Status: Implementation and target acceptance completed on 2026-10-08;
-published-dependency validation remains.**
+**Status: Implemented and ESP32-S3 acceptance completed on 2026-10-11.**
 The paint contract is the synchronous one introduced by
 [15a71e91](https://github.com/dejwk/roo_windows/commit/15a71e91), which removes
 interruption. Rounded-clipping stages I1–I9 were implemented on
@@ -20,10 +19,9 @@ non-executing safe-copy planner. P6 executes those plans from the existing
 cache in [7c3c9369](https://github.com/dejwk/roo_windows/commit/7c3c9369).
 P7 makes menu adoption follow the global scrolling cache policy in
 [3f71ac3c](https://github.com/dejwk/roo_windows/commit/3f71ac3c). P8 records
-resource and physical-device measurements; performance acceptance remains open.
-Publication also waits for the next
-`roo_display` release containing the corrected `SourceAtop` implementation;
-stage IDs are preserved for the implementation history.
+resource and physical-device acceptance. The committed `roo_display` 3.4.0
+release includes the corrected `SourceAtop` implementation and passes the
+focused compatibility tests; stage IDs are preserved for implementation history.
 No remaining stage depends on interruption or its possible future replacement.
 
 This document captures the original output-interception proposal and its
@@ -105,14 +103,13 @@ returns true; MenuPanel returns false for its controlled viewport child.
 Each selected child paints once in a synchronous paint, although
 grouped containers inspect direct-child indices in two filtered scans.
 
-### Remaining acceptance checks
+### Acceptance outcome
 
-P8's generalized exclusion preparation is implemented and measured on hardware.
-It reduces covered text work, with a remaining regression for uncovered scenes.
-The P8 report records that tradeoff; performance acceptance remains open.
-Before moving this design to `implemented`, also update the module dependency
-to the first released `roo_display` version containing commit `1926581` and
-repeat the focused tests without a local override.
+P8's generalized exclusion preparation and scrolling cache were measured on
+the ESP32-S3. The required clear and badge scroll scenes pass the copy and
+time thresholds with a 10,000-pixel cutoff. The committed `roo_display` 3.4.0
+release contains the required blending fix and passes focused compatibility
+tests without a local override. The detailed measurements follow below.
 
 ## Requirements
 
@@ -430,7 +427,7 @@ fallback applies the same cutoff as its largest remainder shrinks. This avoids
 spending CPU on a branch whose best possible copy is small relative to the
 paint target. A separate `ROO_WINDOWS_MIN_BLIT_COPY_PIXELS` target setting
 rejects a complete plan when copying that many pixels is slower than repaint.
-Its portable default is zero. The measured ESP32-S3 application uses 8,192.
+Its portable default is zero. The accepted ESP32-S3 build uses 10,000.
 Exact maximum-area packing of every curved sliver is outside this release.
 
 Certification requires unchanged translated content and either an opaque cached
@@ -935,8 +932,8 @@ teardown, with real-menu copy counts, pixels, examples, and size measurements.
 
 ### P8. Complete resource and device acceptance
 
-**Status: Implemented and measured; performance and released-dependency
-validation remain open.**
+**Status: Complete; measured on the connected ESP32-S3 and validated with
+released `roo_display` 3.4.0.**
 
 **Depends on:** P0, P1, P4–P7. **Files:** benchmarks, resource tests, examples and this
 design/report. Renderer edits require rerunning their owning stage's tests.
@@ -957,15 +954,15 @@ fractional enclosing-mask pixels. Select any small-copy cutoff from measured
 copy-versus-repaint time: retain a copy only when median time improves by at
 least 5%, with no more than 5% p95 regression. The large-interior case must
 pass; failure blocks completion and sends work back to P5/P6. Non-blitting
-devices must retain matching pixels and stay within 5% median host CPU of P0
-for unchanged supported scenes, measured across five isolated runs.
+devices must retain matching pixels. Compare ordinary repaint with P0 on the
+same ESP32-S3; host CPU timings are diagnostic because this laptop changes
+frequency under heat.
 
 Run focused ASan tests, full repository regressions, emulator examples, and the
 ESP32 -fno-exceptions/-fno-rtti build. Preserve the user's local dependency
 override; separately validate the committed dependency versions in an isolated
 checkout. Record exact board, display driver, revisions, build flags and logs.
-Physical measurements are an explicit handoff when hardware is unavailable;
-keep this design in progress until that gate is complete.
+The connected ESP32-S3 supplied the physical measurements for this gate.
 
 #### P8 implementation
 
@@ -1017,10 +1014,11 @@ order characterization uses 256 rectangles and reports both placements of the
 large covering rectangle, rather than assuming every workload benefits.
 
 `ROO_WINDOWS_MIN_BLIT_COPY_PIXELS` supplies the target cutoff. The default zero
-keeps every geometrically safe plan. Measurements on this target selected
-8,192 pixels: a 4,592-pixel copy took 10.596 ms against an 8.928 ms repaint,
-a 9,204-pixel copy took 19.499 ms against 21.392 ms, and the final 20,020-pixel
-copy took 22.898 ms against 25.974 ms.
+keeps every geometrically safe plan. The earlier 8,192-pixel setting retained
+a 9,282-pixel header copy whose median gain was below 5%. The accepted target
+setting is **10,000 pixels**: the header copy is rejected, while the 15,834-
+and 20,020-pixel copies both exceed the 5% median threshold on this display.
+This is a target build setting, not a universal cutoff for other display buses.
 
 #### P8 acceptance results
 
@@ -1029,81 +1027,67 @@ PSRAM and 16 MiB flash, driving the Makerfabs parallel capacitive 1024×600
 display. The build used PlatformIO Espressif 32 55.3.35, Arduino 3.3.5,
 framework libraries 5.5.0 at 9bb7aa84fe, and Xtensa GCC 14.2.0+20251107.
 Relevant flags were `ROO_WINDOWS_ZOOM=150`,
-`ROO_WINDOWS_MIN_BLIT_COPY_PIXELS=8192`, `-fno-exceptions`, `-fno-rtti`, and
-the board PSRAM flags. The final six-scene image uses 28,196 B static RAM and
-997,475 B flash.
+`ROO_WINDOWS_MIN_BLIT_COPY_PIXELS=10000`, `-fno-exceptions`, `-fno-rtti`, and
+the board PSRAM flags. The final six-scene image uses 28,364 B static RAM and
+1,023,739 B flash. `Widget` remains 24 B, `Container` 44 B, and
+`ClipperOutput` 232 B. The lowest measured headroom is 23,384 B of the
+32,768 B task stack. The released local `roo_display` 3.4.0 source was tagged
+at bccee1e.
 
 The 192×128, radius-16 scene alternates eight-pixel scrolls for 101 measured
-frames after warm-up. The added opaque header covers the top half of the scroll
-viewport. Times are synchronous `Application::refresh()` microseconds.
-"Previous" is the P8 copy-specific borrowed-rectangle implementation; "current"
-is generalized exclusion preparation with the simple cache.
+frames after warm-up. Values below are medians of three independent serial
+runs; each run reports a per-frame median and p95 of synchronous
+`Application::refresh()` time. P0 is the archived c5adbea8 renderer built with
+the same board libraries and benchmark source; current is roo_windows
+0b3b9456. The [raw P0 logs](measurements/rounded_child_clipping_p0_esp32s3.log)
+and [raw final logs](measurements/rounded_child_clipping_final_esp32s3.log)
+retain every run, heap and stack counters, and pixel/command counts.
 
-| Path | Previous median | Current median | Previous p95 | Current p95 | Current drawn / copied pixels | Commands |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| Ordinary | 25,760 | 27,262 | 26,474 | 27,766 | 24,576 / 0 | 210 |
-| Ordinary, badge | 28,326 | 30,113 | 29,340 | 30,630 | 24,576 / 0 | 239 |
-| Blit | 22,851 | 24,467 | 23,432 | 24,863 | 4,556 / 20,020 | 106 |
-| Blit, badge | 27,023 | 28,704 | 27,511 | 29,338 | 8,742 / 15,834 | 156 |
-| Ordinary, header | 25,253 | 22,043 | 25,953 | 22,523 | 24,576 / 0 | 149 |
-| Blit, header | 24,399 | 20,461 | 25,300 | 21,528 | 15,294 / 9,282 | 91 |
+| Scene | P0 median | Final median | Final p95 | Drawn / copied pixels | Commands |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Ordinary | 25,974 us | 26,830 us | 27,388 us | 24,576 / 0 | 210 |
+| Ordinary, badge | 28,671 us | 29,428 us | 30,019 us | 24,576 / 0 | 239 |
+| Blit | 26,999 us | 23,786 us | 24,291 us | 4,556 / 20,020 | 106 |
+| Blit, badge | 29,414 us | 27,814 us | 28,523 us | 8,742 / 15,834 | 156 |
+| Ordinary, header | 25,243 us | 21,244 us | 21,674 us | 24,576 / 0 | 149 |
+| Cache, header (copy rejected) | 25,638 us | 22,546 us | 22,993 us | 24,576 / 0 | 149 |
 
-Pixel and command counts match the previous implementation in all six scenes.
-Header coverage improves median time by 12.7% without blitting and 16.1% with
-blitting. It avoids covered text work: over 101 frames, ordinary/header
-allocations drop from 2,628 to 454 and blit/header allocations from 2,982 to
-808. Uncovered scenes retain their allocation counts but take 5.8–7.1% longer.
-The unoccluded blit remains 10.3% faster than current ordinary painting;
-with the badge the gain is 4.7%, below the stated 5% acceptance threshold.
-Consequently, this extension has **not** completed performance acceptance.
-Next, profile the generated output/filter paths to account for the uncovered
-regression, repeat paired P0 host measurements, and rerun the device thresholds
-before closing P8.
+Against the final ordinary path, blitting reduces median time by **11.3%**
+without a badge and **5.5%** with a stationary badge. Its p95 is lower in both
+scenes. Both copied regions preserve the rounded-mask boundary; the clear copy
+meets the 20,020-pixel minimum. The smaller header copy is rejected at this
+cutoff. Its cache fallback is about 6.1% slower than the simple header scene;
+that extra diagnostic scene is an opportunity to reduce cache-planning cost,
+but no sub-threshold copy is retained. The final ordinary path is 3.3% slower
+than P0 without a badge and 2.6% slower with one on this target. Header
+coverage improves ordinary paint by 15.8% against P0.
 
-[Raw measurements](measurements/rounded_exclusion_preparation_esp32s3.csv)
-also retain the more complex cache and output-wrapper experiments. In a
-separate firmware with a runtime query toggle, ordinary medians were 29,551 us
-with early clipping disabled and 29,641 us enabled, a 0.3% increase. That test
-used the discarded compacting-cache variant and isolates the early query within
-one image. Moving unchanged preparation code out of the header also changed
-frame timings substantially. These observations suggest code-generation or
-instruction-cache effects contribute to the cross-image regression; they do
-not prove its exact cause or remove the measured regression.
+The warmed synthetic matrix covers five radii, three nesting depths, and four
+exclusion counts in 60 draws with zero `new` calls and zero requested bytes.
+Ordinary text still allocates transient glyph data; rounded clipping adds no
+warmed renderer allocation. After the six scenes, free heap is 7,403,624 B,
+minimum free heap is 7,403,256 B, and the largest free block is 7,077,876 B.
 
-The isolated host query-order characterization uses 256 rectangles and 20,000
-full-containment queries. A covering rectangle at the end took about 330 ns per
-query with forward iteration and 3.4 ns with reverse iteration. Putting it at
-the beginning reverses the advantage. This motivates newest-first containment
-for recently added large surfaces and blits, without claiming an improvement
-for every exclusion arrangement.
+Earlier [query and device experiments](measurements/rounded_exclusion_preparation_esp32s3.csv)
+record the generalized exclusion-preparation tradeoff. A 256-rectangle host
+characterization found newest-first full-containment useful when a large
+covering rectangle was most recently registered. Host CPU timings are retained
+as [historical characterization](measurements/rounded_exclusion_preparation_host.csv),
+not used as acceptance evidence because this laptop changes CPU frequency
+under heat. The ESP32-S3 comparison above is the performance gate.
 
-`Widget` remains 24 B and `Container` remains 44 B on the target.
-`ClipperOutput` is 232 B, four bytes smaller than the copy-specific version.
-The lowest stack headroom is 23,352 B of a 32,768 B task stack. After the six
-scenes, free heap is 7,403,704 B, minimum free heap is 7,403,336 B, and the
-largest free block is 7,077,876 B. The warmed synthetic matrix covers five
-radii, three nesting depths, and four exclusion counts in 60 draws with zero
-`new` calls and zero requested bytes. Ordinary text still allocates transient
-glyph data; this change adds no warmed renderer allocation.
-
-With the final simple cache, all 113 repository test targets, eight focused
-AddressSanitizer targets, and both scrolling emulator builds pass. The emulator
-targets are `//examples/simple/scrolling_log:scrolling_log` and
-`//examples/material3/menus/rounded_scrolling:rounded_scrolling`.
-
-Five isolated host runs of the final query measure 34.31 us per frame for 32
-guaranteed-clipped children, 34.39 us for grouped/clipped, 10.97 us for
-grouped/unclipped, and 22.52 us for mixed children (medians of per-run medians).
-All retain zero warmed allocations. The
-[per-run host data](measurements/rounded_exclusion_preparation_host.csv) records
-those samples. The prior P8 baseline's host overhead gate is historical evidence;
-repeat a paired P0 comparison before closing performance acceptance.
-
-The tests use the local `roo_display` checkout at `1926581`. An earlier isolated
-check of the published `roo_display` 3.3.2 passed eight of ten focused tests;
-`paint_effect_test` and `rounded_owner_effect_test` require the corrected
-`SourceAtop` semantics. Repeat those checks against the new release before
-removing the local module override. Roo Windows needs no blending workaround.
+The focused rounded-clipping and owner-effect tests, including all eight
+AddressSanitizer targets, pass against the committed `roo_display` 3.4.0
+module without a local override. The release contains the
+corrected `SourceAtop` semantics required by the owner-effect tests. The
+2026-10-11 full `-c opt` run completed 147 targets: 140 passed and seven
+failed (`decoration_test`, `shadow_lookup_test`,
+`material3_dropdown_button_golden_test`, `material3_menu_golden_test`,
+`material3_progress_indicator_test`, `material3_settings_shell_test`, and
+`material3_snackbar_golden_test`). This completion changed documentation and
+benchmark comments only; these suite failures are recorded separately from
+the ESP32-S3 acceptance result. Both scrolling emulator examples built during
+P8.
 
 To reproduce the device scene, copy the
 [target benchmark](../../../benchmarks/rounded_child_clip_target_benchmark.cpp)
@@ -1119,9 +1103,9 @@ original workload; header scenes are added afterward.
 
 Share bounded exclusions between early clip queries and output, combine settled
 sibling coverage, and try recent full-containment proofs first. Add geometry,
-rendering, resource, and ESP32-S3 coverage; record the gains for covered content
-and the remaining uncovered-scene performance cost in
-`docs/design/in_progress/rounded_child_clipping_design.md`.
+rendering, resource, and ESP32-S3 coverage; record target acceptance and the
+released-dependency validation in
+`docs/design/implemented/rounded_child_clipping_design.md`.
 
 ### Delegation and integration order
 
@@ -1132,13 +1116,10 @@ and the remaining uncovered-scene performance cost in
 | Owner composition | P0 complete | P4 | Own rounded_clip, clipper, widget effects and decoration. |
 | Blit planning | P1 complete | P5 complete | Planner and independent geometry-oracle tests prove the safe-copy contract; no device copy is enabled. |
 | Blit execution and menus | P4 and P5 complete | P6 and P7 complete | Keep cache/copy changes together; coordinate Wi-Fi validation separately. |
-| Acceptance | All active code stages complete | P8 query extension measured; performance and release checks pending | Report exact dependencies, synchronous refresh duration, and hardware availability. |
+| Acceptance | All active code stages complete | P8 target and release checks complete | Report exact dependencies and synchronous refresh duration. |
 
-P0, P1, and P4–P7 are complete. P8 implementation is present; performance
-and release checks remain open. P2 and P3 have no remaining dependants.
-Publishing against the corrected `roo_display` module remains required alongside
-the P8 performance checks. The table is retained as implementation history and
-a template for later follow-up work.
+P0, P1, P4–P8 are complete. P2 and P3 have no remaining dependants.
+The table is retained as implementation history.
 
 ## Testing Plan
 

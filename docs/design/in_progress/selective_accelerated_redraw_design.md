@@ -9,7 +9,7 @@ helper; it supersedes the previously proposed per-decoration owner tags.
 
 The design builds on synchronous painting and the landed rounded-mask and
 owner-effect composition. The remaining blit/resource work in the
-[rounded clipping design](../in_progress/rounded_child_clipping_design.md)
+[rounded clipping design](../implemented/rounded_child_clipping_design.md)
 is independent; this proposal does not require rounded interior blit reuse.
 
 ## Objective

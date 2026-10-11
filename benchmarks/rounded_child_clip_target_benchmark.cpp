@@ -1,7 +1,7 @@
 // ESP32-S3 runtime benchmark for rounded child clipping P8.
 //
 // Copy this source into the PlatformIO target fixture described in
-// docs/design/in_progress/rounded_child_clipping_design.md. It is not part of
+// docs/design/implemented/rounded_child_clipping_design.md. It is not part of
 // the library.
 #include <Arduino.h>
 

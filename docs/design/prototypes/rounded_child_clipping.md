@@ -1,6 +1,6 @@
 # Sparse rounded child clipping prototype
 
-The [production plan](../in_progress/rounded_child_clipping_design.md) tracks
+The [production plan](../implemented/rounded_child_clipping_design.md) tracks
 remaining work. P0 integrates this prototype with synchronous refreshes on
 2026-10-05: traversal checkpoints and interruption repair are removed. Historical
 measurements below identify the earlier implementation; current costs are in
@@ -490,9 +490,9 @@ Implemented on 2026-10-05, based on P1 commit `baf5c3ab`, in five commits:
 5. P4e adds the resource checks, scrolling example, and this report.
 
 The existing local `roo_display` override at `d1000f9` is preserved and remains
-uncommitted. The [production design](../in_progress/rounded_child_clipping_design.md#owner-interaction-effects)
+uncommitted. The [production design](../implemented/rounded_child_clipping_design.md#owner-interaction-effects)
 describes effect ordering and retained snapshot lifetime, and its
-[P4 implementation steps](../in_progress/rounded_child_clipping_design.md#p4-complete-owner-effect-composition)
+[P4 implementation steps](../implemented/rounded_child_clipping_design.md#p4-complete-owner-effect-composition)
 record each commit's scope and validation. The five existing focused targets
 pass at each preparation step, alongside the new tests introduced there.
 The history split preserves the completed runtime source exactly.

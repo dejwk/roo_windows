@@ -1,0 +1,60 @@
+===== run 1 =====
+P8_BEGIN board=ESP32-S3 display=Makerfabs_1024x600 scene=192x128 radius=16 min_blit_pixels=10000 widget_size=24 container_size=44 clipper_output_size=232
+ESP-ROM:esp32s3-20210327
+Build:Mar 27 2021
+rst:0x15 (USB_UART_CHIP_RESET),boot:0x8 (SPI_FAST_FLASH_BOOT)
+Saved PC:0x4037875e
+SPIWP:0xee
+mode:DIO, clock div:1
+load:0x3fce2820,len:0x116c
+load:0x403c8700,len:0xc2c
+load:0x403cb700,len:0x3108
+entry 0x403c88b8
+P8_BEGIN board=ESP32-S3 display=Makerfabs_1024x600 scene=192x128 radius=16 min_blit_pixels=10000 widget_size=24 container_size=44 clipper_output_size=232
+P8_RESULT name=ordinary samples=101 median_us=26902 p95_us=27388 max_us=27512 mean_pixels=24576 mean_drawn=24576 mean_commands=210 min_copied=0 max_copied=0 new_calls=2628 new_bytes=62240 free_heap=7410088 min_free_heap=7409164 largest_free=7077876 stack_headroom=23976
+P8_RESULT name=ordinary_badge samples=101 median_us=29457 p95_us=30019 max_us=30170 mean_pixels=24576 mean_drawn=24576 mean_commands=239 min_copied=0 max_copied=0 new_calls=2628 new_bytes=62240 free_heap=7410088 min_free_heap=7409164 largest_free=7077876 stack_headroom=23880
+P8_RESULT name=blit samples=101 median_us=23745 p95_us=24306 max_us=24443 mean_pixels=24576 mean_drawn=4556 mean_commands=106 min_copied=20020 max_copied=20020 new_calls=2424 new_bytes=48480 free_heap=7410088 min_free_heap=7409164 largest_free=7077876 stack_headroom=23480
+P8_RESULT name=blit_badge samples=101 median_us=27847 p95_us=28563 max_us=28671 mean_pixels=24576 mean_drawn=8742 mean_commands=156 min_copied=15834 max_copied=15834 new_calls=2376 new_bytes=49520 free_heap=7410088 min_free_heap=7409164 largest_free=7077876 stack_headroom=23384
+P8_RESULT name=ordinary_header samples=101 median_us=21261 p95_us=21698 max_us=21732 mean_pixels=24576 mean_drawn=24576 mean_commands=149 min_copied=0 max_copied=0 new_calls=454 new_bytes=11912 free_heap=7403624 min_free_heap=7403512 largest_free=7077876 stack_headroom=23384
+P8_RESULT name=blit_header samples=101 median_us=22574 p95_us=22993 max_us=23143 mean_pixels=24576 mean_drawn=24576 mean_commands=149 min_copied=0 max_copied=0 new_calls=454 new_bytes=11912 free_heap=7403624 min_free_heap=7403256 largest_free=7077876 stack_headroom=23384
+P8_DONE
+
+===== run 2 =====
+ESP-ROM:esp32s3-20210327
+Build:Mar 27 2021
+rst:0x15 (USB_UART_CHIP_RESET),boot:0x8 (SPI_FAST_FLASH_BOOT)
+Saved PC:0x4037875e
+SPIWP:0xee
+mode:DIO, clock div:1
+load:0x3fce2820,len:0x116c
+load:0x403c8700,len:0xc2c
+load:0x403cb700,len:0x3108
+entry 0x403c88b8
+P8_BEGIN board=ESP32-S3 display=Makerfabs_1024x600 scene=192x128 radius=16 min_blit_pixels=10000 widget_size=24 container_size=44 clipper_output_size=232
+P8_RESULT name=ordinary samples=101 median_us=26830 p95_us=27394 max_us=27428 mean_pixels=24576 mean_drawn=24576 mean_commands=210 min_copied=0 max_copied=0 new_calls=2628 new_bytes=62240 free_heap=7410088 min_free_heap=7409164 largest_free=7077876 stack_headroom=23976
+P8_RESULT name=ordinary_badge samples=101 median_us=29428 p95_us=29973 max_us=30107 mean_pixels=24576 mean_drawn=24576 mean_commands=239 min_copied=0 max_copied=0 new_calls=2628 new_bytes=62240 free_heap=7410088 min_free_heap=7409164 largest_free=7077876 stack_headroom=23880
+P8_RESULT name=blit samples=101 median_us=23793 p95_us=24291 max_us=24448 mean_pixels=24576 mean_drawn=4556 mean_commands=106 min_copied=20020 max_copied=20020 new_calls=2424 new_bytes=48480 free_heap=7410088 min_free_heap=7409164 largest_free=7077876 stack_headroom=23480
+P8_RESULT name=blit_badge samples=101 median_us=27814 p95_us=28437 max_us=28625 mean_pixels=24576 mean_drawn=8742 mean_commands=156 min_copied=15834 max_copied=15834 new_calls=2376 new_bytes=49520 free_heap=7410088 min_free_heap=7409164 largest_free=7077876 stack_headroom=23384
+P8_RESULT name=ordinary_header samples=101 median_us=21244 p95_us=21674 max_us=21723 mean_pixels=24576 mean_drawn=24576 mean_commands=149 min_copied=0 max_copied=0 new_calls=454 new_bytes=11912 free_heap=7403624 min_free_heap=7403512 largest_free=7077876 stack_headroom=23384
+P8_RESULT name=blit_header samples=101 median_us=22546 p95_us=22977 max_us=23098 mean_pixels=24576 mean_drawn=24576 mean_commands=149 min_copied=0 max_copied=0 new_calls=454 new_bytes=11912 free_heap=7403624 min_free_heap=7403256 largest_free=7077876 stack_headroom=23384
+P8_DONE
+
+===== run 3 =====
+ESP-ROM:esp32s3-20210327
+Build:Mar 27 2021
+rst:0x15 (USB_UART_CHIP_RESET),boot:0x8 (SPI_FAST_FLASH_BOOT)
+Saved PC:0x4037875e
+SPIWP:0xee
+mode:DIO, clock div:1
+load:0x3fce2820,len:0x116c
+load:0x403c8700,len:0xc2c
+load:0x403cb700,len:0x3108
+entry 0x403c88b8
+P8_BEGIN board=ESP32-S3 display=Makerfabs_1024x600 scene=192x128 radius=16 min_blit_pixels=10000 widget_size=24 container_size=44 clipper_output_size=232
+P8_RESULT name=ordinary samples=101 median_us=26800 p95_us=27378 max_us=27420 mean_pixels=24576 mean_drawn=24576 mean_commands=210 min_copied=0 max_copied=0 new_calls=2628 new_bytes=62240 free_heap=7410088 min_free_heap=7409164 largest_free=7077876 stack_headroom=23976
+P8_RESULT name=ordinary_badge samples=101 median_us=29425 p95_us=30022 max_us=30133 mean_pixels=24576 mean_drawn=24576 mean_commands=239 min_copied=0 max_copied=0 new_calls=2628 new_bytes=62240 free_heap=7410088 min_free_heap=7409164 largest_free=7077876 stack_headroom=23880
+P8_RESULT name=blit samples=101 median_us=23786 p95_us=24282 max_us=24367 mean_pixels=24576 mean_drawn=4556 mean_commands=106 min_copied=20020 max_copied=20020 new_calls=2424 new_bytes=48480 free_heap=7410088 min_free_heap=7409164 largest_free=7077876 stack_headroom=23480
+P8_RESULT name=blit_badge samples=101 median_us=27810 p95_us=28523 max_us=28621 mean_pixels=24576 mean_drawn=8742 mean_commands=156 min_copied=15834 max_copied=15834 new_calls=2376 new_bytes=49520 free_heap=7410088 min_free_heap=7409164 largest_free=7077876 stack_headroom=23384
+P8_RESULT name=ordinary_header samples=101 median_us=21241 p95_us=21662 max_us=21745 mean_pixels=24576 mean_drawn=24576 mean_commands=149 min_copied=0 max_copied=0 new_calls=454 new_bytes=11912 free_heap=7403624 min_free_heap=7403512 largest_free=7077876 stack_headroom=23384
+P8_RESULT name=blit_header samples=101 median_us=22533 p95_us=23024 max_us=23116 mean_pixels=24576 mean_drawn=24576 mean_commands=149 min_copied=0 max_copied=0 new_calls=454 new_bytes=11912 free_heap=7403624 min_free_heap=7403256 largest_free=7077876 stack_headroom=23384
+P8_DONE

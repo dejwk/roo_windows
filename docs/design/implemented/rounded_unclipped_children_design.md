@@ -1,7 +1,7 @@
 # Unclipped children above clipped siblings
 
 **Status: Implemented; all three original phases are complete.**
-Updated on 2026-10-05 for the [synchronous production baseline](../in_progress/rounded_child_clipping_design.md#p0-align-rounded-state-with-synchronous-painting).
+Updated on 2026-10-05 for the [synchronous production baseline](../implemented/rounded_child_clipping_design.md#p0-align-rounded-state-with-synchronous-painting).
 Grouping and mask bypass remain; saved traversal progress and interruption
 support have been removed. The Implementation Plan records the original stages.
 This extends the
