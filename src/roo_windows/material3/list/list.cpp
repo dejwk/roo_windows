@@ -1857,7 +1857,13 @@ bool List::invokeChild(Widget& child) {
 
 List::Invocation::Invocation(List& list, ListEntry* entry, Widget* section)
     : owner(&list), row(entry), section(section), previous(list.invocation_) {
-  list.invocation_ = this;
+  list.registerInvocation(this);
+}
+
+// The scoped invocation is removed on destruction. GCC cannot see that
+// lifetime when it inlines registration into a caller with a local record.
+void List::registerInvocation(Invocation* invocation) {
+  invocation_ = invocation;
 }
 
 List::Invocation::~Invocation() {

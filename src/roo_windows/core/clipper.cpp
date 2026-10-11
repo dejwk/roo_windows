@@ -229,7 +229,7 @@ void ClipperOutput::activateRoundedClip(RoundedClip& clip) {
 
 void ClipperOutput::deactivateRoundedClip() {
   RoundedClip* clip = activeRoundedClip();
-  DCHECK_NOTNULL(clip);
+  DCHECK(clip != nullptr);
   // Restore the exact enclosing chain captured at preparation. The record
   // itself remains retained for exclusions and final decoration reads.
   state_.rounded_->active = clip->parent;

@@ -1120,6 +1120,7 @@ class List : public Container {
     Invocation(List& list, ListEntry* entry, Widget* section);
     ~Invocation();
   };
+  [[gnu::noinline]] void registerInvocation(Invocation* invocation);
   // Reject reentrant mutations from a model unbind() cleanup hook.
   void checkNotCleaningBindings() const;
   void invalidateInvocations(Widget* section);

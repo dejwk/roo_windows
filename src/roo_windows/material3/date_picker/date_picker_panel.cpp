@@ -238,7 +238,7 @@ void DatePickerBody::paint(PaintContext& ctx) const {
         (painted_focused_ && painted_cursor_ == i) ==
             (isFocused() && cursor_ == i))
       continue;
-    char number[8];
+    char number[12];
     roo::string_view text;
     bool enabled = true, selected = false, today = false;
     if (days) {
