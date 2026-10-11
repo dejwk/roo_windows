@@ -6,3 +6,4 @@ emulation/bazel-bin
 emulation/bazel-out
 emulation/bazel-testlogs
 emulation/bazel-emulation
+benchmarks/shadow_esp32s3
