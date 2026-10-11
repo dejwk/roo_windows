@@ -72,8 +72,10 @@ void initDisplay() {
 #include <memory>
 
 #include "roo_icons/outlined/24/action.h"
+#include "roo_icons/outlined/24/content.h"
+#include "roo_icons/outlined/24/editor.h"
 #include "roo_windows/containers/static_layout.h"
-#include "roo_windows/material3/button/button.h"
+#include "roo_windows/material3/button/toggle_icon_button.h"
 #include "roo_windows/material3/fab/fab.h"
 #include "roo_windows/material3/toolbar/toolbar.h"
 
@@ -100,7 +102,6 @@ class DrawingCanvas : public SurfaceWidget {
 
   void onSingleTapUp(XDim x, YDim y) override {
     SurfaceWidget::onSingleTapUp(x, y);
-    if (y < Scaled(96) || x > width() - Scaled(80)) return;
     if (erase_) {
       for (int i = count_ - 1; i >= 0; --i) {
         if (abs(points_[i].x - x) > Scaled(12) ||
@@ -153,13 +154,28 @@ void setup() {
   drawing_page.add(std::move(canvas), Rect(0, 0, 319, 239));
 
   auto tools = std::make_unique<material3::FloatingToolbar>(app.context());
-  auto pen = std::make_unique<material3::Button>(
-      app.context(), "Pen", material3::ButtonVariant::kFilledTonal);
-  pen->setOnInteractiveChange([drawing] { drawing->setErase(false); });
+  auto pen = std::make_unique<material3::ToggleIconButton>(
+      app.context(), ic_outlined_24_editor_mode_edit(), nullptr,
+      material3::IconButtonStyle::kFilledTonal, true);
+  material3::ToggleIconButton* pen_button = pen.get();
+  auto erase = std::make_unique<material3::ToggleIconButton>(
+      app.context(), ic_outlined_24_content_backspace(), nullptr,
+      material3::IconButtonStyle::kFilledTonal);
+  material3::ToggleIconButton* erase_button = erase.get();
+
+  // Each toggle owns its appearance; the application keeps exactly one tool
+  // selected and updates the canvas only after the button's own click.
+  pen->setOnInteractiveChange([drawing, pen_button, erase_button] {
+    pen_button->setSelected(true);
+    erase_button->setSelected(false);
+    drawing->setErase(false);
+  });
+  erase->setOnInteractiveChange([drawing, pen_button, erase_button] {
+    erase_button->setSelected(true);
+    pen_button->setSelected(false);
+    drawing->setErase(true);
+  });
   tools->add(std::move(pen));
-  auto erase = std::make_unique<material3::Button>(
-      app.context(), "Erase", material3::ButtonVariant::kFilledTonal);
-  erase->setOnInteractiveChange([drawing] { drawing->setErase(true); });
   tools->add(std::move(erase));
   // The application owns placement and reserves sixteen pixels around the
   // toolbar, leaving the drawing region below its shadow unobstructed.
