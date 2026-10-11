@@ -62,7 +62,7 @@ void SurfaceWidget::elevationChanged(int higherElevation) {
 Canvas SurfaceWidget::prepareCanvas(const Canvas& in) {
   Canvas canvas = Widget::prepareCanvas(in);
   Color bg = background();
-  if (!isEnabled()) {
+  if (!isEnabled() && useAutomaticDisabledStyle()) {
     bg.set_a(bg.a() / 2);
   }
   canvas.set_bgcolor(roo_display::AlphaBlend(canvas.bgcolor(), bg));
