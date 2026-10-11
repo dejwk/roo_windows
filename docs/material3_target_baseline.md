@@ -118,7 +118,7 @@ change that updates this report.
 
 ## Material 3 density acceptance (2026-10-08)
 
-This capture covers [the density design](design/proposed/material3_density_design.md),
+This capture covers [the density design](design/implemented/material3_density_design.md),
 including list/row and menu-chain overrides. It is separate from the historical
 theme-split capture above and uses the installed toolchain below.
 

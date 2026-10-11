@@ -20,7 +20,7 @@ Material components together while retaining the chosen typography and icons.
 ## Background
 
 [The design glossary](../glossary.md) defines shared ownership, task, and transient
-presentation terminology. The existing [component surface theme design](../implemented/material3_component_surface_theme_design.md)
+presentation terminology. The existing [component surface theme design](material3_component_surface_theme_design.md)
 places application-owned defaults in `Material3Theme`, borrowed through `Theme`.
 The [theme declarations](../../../src/roo_windows/material3/theme.h) currently
 contain colors, interaction layers, and component surface roles.
@@ -33,7 +33,7 @@ not change display DPI, fonts, or icon asset selection.
 Angular Material's [current M3 theming guidance](https://github.com/angular/components/blob/main/guides/theming.md#density)
 (accessed 2026-10-06) documents levels 0 through -5, reducing eligible dimensions
 by four units per step until component minimums apply. It excludes certain task
-and popup components. This proposal adopts that scale as a reference and defines
+and popup components. This design adopts that scale as a reference and defines
 Roo-specific mappings below; it does not claim identical geometry across Material
 implementations or copy Angular's contextual behavior.
 

@@ -41,7 +41,7 @@ termination; `Menu::onFinished()` runs after presentation detaches.
 live application inheritance from an explicit level, including explicit zero.
 Standard buttons currently read application density directly; menus carry a
 policy that defaults to explicit zero. The
-[density design](../proposed/material3_density_design.md) describes runtime geometry refresh.
+[density design](material3_density_design.md) describes runtime geometry refresh.
 `getSuggestedMinimumDimensions()` is a cheap content-size query, while natural
 size adds padding and `onMeasure()` resolves parent constraints.
 

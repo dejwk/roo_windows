@@ -94,15 +94,15 @@ vocabulary or adding per-widget RAM.
 
 ### Component coverage
 
-Designs already cover the shell and many major families, including the
-implemented adaptive scaffold,
-app bars, navigation bar/rail/drawer, toolbars, tabs, lists, menus, sheets,
-dialogs, snackbar, buttons, FABs, badge, sliders, text fields, and date/time
-pickers. The app-bar/search-entry component family is implemented and covered
-by focused unit tests, goldens, an example, and scaffold integration. The list
-family is implemented through Phase 12, including Material 3 menu reuse. The
-remaining shell families are largely
-design work or integration work.
+Designs cover the shell and many major families. The adaptive scaffold,
+app bars, navigation bar and rail, tabs, lists, menus, dialogs, snackbar,
+buttons, icon and toggle icon buttons, FABs, badge, sliders, single-line text
+fields, progress indicators, date pickers, and DropdownButton utility have
+implementations. The app-bar/search-entry family has focused unit tests,
+goldens, an example, and scaffold integration. Lists are implemented through
+Phase 12, including Material 3 menu reuse. Navigation drawer, sheets,
+toolbars, time pickers, split buttons, and button groups remain design or
+integration work; the backlog below records their current scope.
 
 Several source families still lack matching design documents:
 
@@ -250,17 +250,20 @@ bar, rail, and drawer without changing route state.
 
 ## Phase 4: Demand-Driven Backlog
 
-Phase 4 is not a committed sequence and has no aggregate exit condition. Move
-one candidate into a numbered delivery phase only when a concrete application
-needs it; at that point, add explicit design, dependency, and completion rows
-before implementation starts.
+Phase 4 has no committed sequence or aggregate exit condition. Completed
+candidates stay here as a record of demand-driven work outside Phases 0–3.
+For remaining work, select a concrete application need and record its design,
+dependencies, and completion check when scheduling it.
 
-| Candidate | Existing design status | Known prerequisite before scheduling |
+| Candidate | Current status | Remaining work or scheduling condition |
 | --- | --- | --- |
-| Date and time pickers | Proposed designs exist | P2.1 text fields and P1.8 dialogs; confirm localization and target-size requirements. |
+| Date pickers | [Implemented design](design/implemented/material3_date_pickers_design.md) | Modal calendar and numeric input, month/year selection, and a docked field with compact promotion have an example and focused behavior, golden, and resource tests. Range selection and simultaneous source editing remain future work. |
+| Time pickers | [Proposed design](design/proposed/material3_time_pickers_design.md) | Select a consuming flow and confirm localization and target-size requirements before scheduling picker-specific integration. P2.1 text fields and P1.8 dialogs are available. |
 | Icon buttons | [Implemented design](design/implemented/material3_icon_buttons_design.md) | The non-toggle family has unit, golden, size-budget, and compact-controls toolbar coverage. Future work can adopt it in an app bar, menu anchor, or badge-aware host. |
 | Toggle icon buttons | [Implemented design](design/implemented/material3_toggle_icon_buttons_design.md) | The family has focused unit and rendering coverage plus compact-controls persistent-preference adoption. Independent selection semantics remain until button-group policy is scheduled. |
-| Toolbars, FABs, extended FABs, split buttons, and button groups | Proposed designs exist | Icon buttons are available; select a concrete consuming flow and schedule only the component families it requires. |
+| FABs and extended FABs | [Implemented design](design/implemented/material3_fabs_design.md) | Icon-only and extended widgets, color styles, elevation, explicit collapse, unit and golden tests, and a fixed-overlay/rail-header example have landed. FAB menus and automatic screen-level docking remain separate work. |
+| DropdownButton utility | [Implemented design](design/implemented/material3_dropdown_button_design.md) | A compact single-select button reuses the menu host; the example, goldens, and resource checks have landed. |
+| Toolbars, split buttons, and button groups | [Proposed designs](design/proposed/material3_toolbars_design.md), [split buttons](design/proposed/material3_split_button_design.md), and [button groups](design/proposed/material3_button_groups_design.md) | Select a concrete consuming flow and schedule only the families it requires. Buttons, icon buttons, menus, and FABs are available. |
 | Chips | No local design | Name a concrete filter/selection consumer, then add a chips design covering only its required variants and shared selection semantics. |
 | Focused/expanded search | No complete local design | Add an explicit search-workflow design covering query ownership, suggestions/results, focus, Back, and presentation lifetime. |
 | Tooltips and pointer-specific affordances | No complete local design | Define pointer/hover routing and tooltip lifetime before component APIs. |

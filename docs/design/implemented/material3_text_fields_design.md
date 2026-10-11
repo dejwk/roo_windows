@@ -409,7 +409,7 @@ wrapped-text child widget on every field before multiline editing exists.
 
 ### Layout and Geometry
 
-The [Material 3 density proposal](../proposed/material3_density_design.md#geometry-rules)
+The [Material 3 density design](material3_density_design.md#geometry-rules)
 defines the compact-height and content-floor contract. Production geometry
 reads `Material3Theme::density` live. After changing the owned value, request
 recursive layout and invalidation on each affected root; default density

@@ -61,6 +61,7 @@ motion pauses. It does not restore paint interruption.
 | Layout scaffold | Shared adaptive primitives, the fixed-slot `LayoutScaffold` shell, fixed-slot `PaneLayout`, row-major `GridLayout`, and a build-covered catalog with app-bar, navigation-bar, and navigation-rail composition are implemented. Navigation drawer remains separate component work. |
 | Material 3 dialogs | The shared pinned-chrome scaffold, fixed action model, persistent body ownership, presenter focus, public basic/alert and full-screen families, veto hooks, unit/golden coverage, and dialog catalog are implemented. |
 | [Material 3 component surface theme](implemented/material3_component_surface_theme_design.md) | All six phases are implemented: 27 compact shared surface-role slots, component migrations, default reconciliation, focused rendering coverage, RGB565 integration acceptance, and target-ABI cost evidence. |
+| [Material 3 density](implemented/material3_density_design.md) | All seven phases are implemented: shared density, recursive runtime relayout, button/field/list geometry, explicit list and menu overrides, rendering review, and ESP32-C3 resource acceptance. Physical touchscreen usability remains unassessed. |
 | [FAB family](implemented/material3_fabs_design.md) | Icon-only and extended Material 3 FABs, color styles, elevation, collapsed presentation, unit and rendering coverage, and a fixed-overlay/rail-header example are implemented. |
 | [Material 3 DropdownButton utility](implemented/material3_dropdown_button_design.md) | Borrowed choice replacement, stable widest-label sizing, button appearance and density options, transient single-select menu, example, goldens, and resource checks are implemented. |
 | [Material 3 dynamic list composition](implemented/material3_dynamic_lists_design.md) | All five phases implement typed recycled sections, mixed sequencing, enum-based selection notifications, independent selection models, action participation, safe reset/input, and bounded focus navigation. Host/ASan tests, goldens, emulator build, and ESP32-C3 size audit pass; physical interaction checks remain manual. |
@@ -110,7 +111,6 @@ motion pauses. It does not restore paint interruption.
 
 | Design | Dependency status |
 | --- | --- |
-| [Material 3 density](proposed/material3_density_design.md) | Theme storage, component geometry, and virtual-list prerequisites are implemented. Shared density, component mappings, and recursive runtime geometry refresh remain proposed. |
 | Button groups | Buttons and icon buttons are implemented; no group implementation exists. |
 | Click delivery policy | Click-animation lifecycle and settlement are implemented; widget-selected semantic delivery timing is not. |
 | Display runtime Phase 7 task-bounded transient coverage | Phase 6 input is implemented. Phase 7 is reconciled as task-bounded attachment of the one shared window host layer, retaining one active-presentation authority and explicit interaction owner; the extension remains unimplemented. |

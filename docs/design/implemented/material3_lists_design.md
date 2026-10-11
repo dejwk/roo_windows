@@ -756,7 +756,7 @@ Proposed implementation defaults:
 
 ### Token-Backed Visual Defaults
 
-The [Material 3 density proposal](../proposed/material3_density_design.md#geometry-rules)
+The [Material 3 density design](material3_density_design.md#geometry-rules)
 defines band reduction and measured-content floors. Production rows read
 `Material3Theme::density` live, retain appended-body spacing, and preserve live
 bindings when a smaller stride grows the pool. After shared mutation, request
