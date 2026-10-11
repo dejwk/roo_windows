@@ -115,7 +115,7 @@ motion pauses. It does not restore paint interruption.
 | --- | --- |
 | Button groups | Buttons and icon buttons are implemented; no group implementation exists. |
 | Display runtime Phase 7 task-bounded transient coverage | Phase 6 input is implemented. Phase 7 is reconciled as task-bounded attachment of the one shared window host layer, retaining one active-presentation authority and explicit interaction owner; the extension remains unimplemented. |
-| Display runtime Phase 8 migration and cost audit | Phases 2–6 are implemented and Phase 7 is architecturally reconciled; the shared host, task-coverage extension, final migration documentation, resource audit, and hardware validation remain proposed. |
+| Display runtime Phase 8 migration and cost audit | Phases 2–6 and the shared display-wide host are implemented. Task-bounded coverage in Phase 7 remains proposed; final migration documentation, resource audit, and hardware validation belong to Phase 8. |
 | Interaction overlay reveal | Point and area ripples, widget-local click animation, paint context, and the navigation bar's component-local fade are implemented; shared fade reveal and paint-owned overlay policy are not. |
 | Navigation drawer | List support and basic dialogs are implemented and back routing exists; no drawer implementation exists. |
 | [Presentation registry](implemented/presentation_registry_design.md) | Effective presentation queries and targeted deferred widget notifications are implemented; consumers choose their lifecycle policies. |

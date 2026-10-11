@@ -2,9 +2,9 @@
 
 ## Status
 
-Proposed. Display runtime Phases 1–6 are implemented. The Phase 7 design is now
-reconciled as a task-bounded extension of shared transient hosting. Phase 8
-starts after the shared host and that coverage extension are implemented.
+Proposed. Display runtime Phases 1–6 and the shared display-wide transient host
+are implemented. Phase 7 task-bounded coverage remains proposed; Phase 8 starts
+after that extension is implemented.
 
 ## Objective
 
@@ -14,9 +14,8 @@ recording final behavior, size, allocation, and timing results.
 
 This is Phase 8 of the
 [display runtime and cross-application input design](../in_progress/display_surface_generalization_design.md).
-It starts only after the shared transient host and the reconciled Phase 7
-task-bounded coverage extension are implemented. Phases 2–6 are already
-complete.
+The shared transient host and Phases 2–6 are complete. It starts after
+the reconciled Phase 7 task-bounded coverage extension is implemented.
 
 ## Motivation
 
