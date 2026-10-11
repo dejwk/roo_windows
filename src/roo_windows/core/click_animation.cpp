@@ -82,7 +82,7 @@ void ClickAnimation::notifyRefreshCompleted() {
     target->invalidateInterior();
   } else if (target_->isPressed()) {
     target_->invalidateInterior();
-    phase_ = Phase::kAwaitingRelease;
+    setPhase(Phase::kAwaitingRelease);
     resetTransientFootprint();
   } else {
     Widget* target = target_;
@@ -93,8 +93,12 @@ void ClickAnimation::notifyRefreshCompleted() {
 
 void ClickAnimation::sampleFrameTime() {
   if (!isAnimationPending()) return;
+  float previous_progress = progress();
   sampled_elapsed_millis_ = static_cast<uint32_t>(millis()) -
                             static_cast<uint32_t>(click_anim_start_millis_);
+  if (previous_progress != progress()) {
+    target_->onClickAnimationChanged(previous_progress);
+  }
 }
 
 void ClickAnimation::invalidateTransientFootprint() {
@@ -112,7 +116,20 @@ void ClickAnimation::resetTransientFootprint() {
   previous_transient_footprint_ = Rect(0, 0, -1, -1);
 }
 
-void ClickAnimation::reset() {
+float ClickAnimation::exposedProgress() const {
+  return isAnimationPending() ? progress() : -1.0f;
+}
+
+void ClickAnimation::setPhase(Phase phase) {
+  float previous_progress = exposedProgress();
+  phase_ = phase;
+  if (target_ != nullptr && previous_progress != exposedProgress()) {
+    target_->onClickAnimationChanged(previous_progress);
+  }
+}
+
+void ClickAnimation::reset(bool notify_target) {
+  if (notify_target) setPhase(Phase::kIdle);
   target_ = nullptr;
   phase_ = Phase::kIdle;
   resetTransientFootprint();
@@ -149,12 +166,12 @@ const Widget* ClickAnimation::target() const {
 bool ClickAnimation::tryStart(Widget& widget, int16_t x, int16_t y) {
   if (isBusy()) return false;
   target_ = &widget;
-  phase_ = Phase::kAnimatingUnconfirmed;
   click_anim_start_millis_ = millis();
   click_anim_x_ = x;
   click_anim_y_ = y;
   resetTransientFootprint();
   sampled_elapsed_millis_ = 0;
+  setPhase(Phase::kAnimatingUnconfirmed);
   RequestFrame(widget);
   return true;
 }
@@ -188,15 +205,15 @@ bool ClickAnimation::forceFinalFrame(const Widget& widget) {
   // or discard an interaction that was never confirmed.
   switch (phase_) {
     case Phase::kAnimatingUnconfirmed:
-      phase_ = Phase::kFinishingUnconfirmed;
+      setPhase(Phase::kFinishingUnconfirmed);
       break;
     case Phase::kAnimatingConfirmed:
     case Phase::kFinishingConfirmed:
-      phase_ = Phase::kFinishingConfirmed;
+      setPhase(Phase::kFinishingConfirmed);
       break;
     case Phase::kAnimatingDelivered:
     case Phase::kFinishingDelivered:
-      phase_ = Phase::kFinishingDelivered;
+      setPhase(Phase::kFinishingDelivered);
       break;
     case Phase::kFinishingUnconfirmed:
       break;
@@ -214,7 +231,7 @@ bool ClickAnimation::tryConfirm(Widget& widget, ClickActivationPolicy policy) {
   if (phase_ == Phase::kIdle) {
     if (policy == ClickActivationPolicy::kAfterRefreshNoAnimation) {
       target_ = &widget;
-      phase_ = Phase::kAwaitingRefresh;
+      setPhase(Phase::kAwaitingRefresh);
       RequestFrame(widget);
       return true;
     }
@@ -235,10 +252,10 @@ bool ClickAnimation::tryConfirm(Widget& widget, ClickActivationPolicy policy) {
     RequestFrame(widget);
     switch (policy) {
       case ClickActivationPolicy::kAfterNaturalAnimation:
-        phase_ = Phase::kAnimatingConfirmed;
+        setPhase(Phase::kAnimatingConfirmed);
         return true;
       case ClickActivationPolicy::kAfterForcedFinalFrame:
-        phase_ = Phase::kAnimatingConfirmed;
+        setPhase(Phase::kAnimatingConfirmed);
         return forceFinalFrame(widget);
       case ClickActivationPolicy::kImmediateCancelAnimation:
         invalidateTransientFootprint();
@@ -248,7 +265,7 @@ bool ClickAnimation::tryConfirm(Widget& widget, ClickActivationPolicy policy) {
         widget.onClicked();
         return true;
       case ClickActivationPolicy::kImmediateContinueAnimation:
-        phase_ = Phase::kAnimatingDelivered;
+        setPhase(Phase::kAnimatingDelivered);
         widget.onClicked();
         return true;
       case ClickActivationPolicy::kAfterRefreshNoAnimation:

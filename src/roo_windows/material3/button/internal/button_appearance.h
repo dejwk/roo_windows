@@ -1,7 +1,6 @@
 #pragma once
 
 #include "roo_windows/core/border_style.h"
-#include "roo_windows/core/click_animation.h"
 #include "roo_windows/core/theme.h"
 #include "roo_windows/material3/button/button.h"
 
@@ -29,10 +28,10 @@ uint8_t ResolveButtonElevation(ButtonVariant variant, bool enabled,
                                bool pressed);
 
 /// Resolves resting or animated border geometry with nominal fallback size.
+/// Negative animation_progress selects the non-animated pressed/resting state.
 BorderStyle ResolveButtonBorderStyle(ButtonSize size, ButtonShape shape,
                                      ButtonVariant variant, bool morph_enabled,
-                                     bool pressed,
-                                     const ClickAnimation* animation,
+                                     bool pressed, float animation_progress,
                                      Dimensions dimensions);
 
 }  // namespace roo_windows::material3::internal

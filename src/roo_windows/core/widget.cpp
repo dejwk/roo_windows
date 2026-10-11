@@ -299,6 +299,11 @@ Rect UnionRects(const Rect& a, const Rect& b) {
 
 }  // namespace
 
+Rect Widget::getInteriorBounds() const {
+  return UnionRects(UnionRects(bounds(), getContentBounds()),
+                    getTransientPaintBounds());
+}
+
 Rect Widget::getVisualBounds() const {
   return UnionRects(UnionRects(getContentBounds(), getDecorationBounds()),
                     getTransientPaintBounds());
@@ -340,10 +345,7 @@ void Widget::setDirty(const Rect& bounds) {
   }
 }
 
-void Widget::invalidateInterior() {
-  invalidateDescending();
-  setDirty();
-}
+void Widget::invalidateInterior() { invalidateInterior(getInteriorBounds()); }
 
 void Widget::invalidateInterior(const Rect& rect) {
   invalidateDescending(rect);
@@ -559,13 +561,16 @@ void Widget::setActivated(bool activated) {
 
 void Widget::setPressed(bool pressed) {
   if (pressed == isPressed()) return;
-  Rect invalidated_bounds = maxParentBounds();
+  Rect invalidated_bounds =
+      getInteriorBounds().translate(offsetLeft(), offsetTop());
   state_ ^= kWidgetPressed;
   if (isVisible() && useOverlayOnPress()) {
     if (getOverlayType() != OVERLAY_NONE) {
       invalidateInterior();
     }
-    invalidated_bounds = Rect::Extent(invalidated_bounds, maxParentBounds());
+    invalidated_bounds =
+        Rect::Extent(invalidated_bounds,
+                     getInteriorBounds().translate(offsetLeft(), offsetTop()));
     notifyParentInvalidatedRegion(invalidated_bounds);
   }
   notifyStateChanged(kWidgetPressed);
@@ -873,7 +878,7 @@ void Widget::onSingleTapUp(XDim x, YDim y) {
     if (animated) {
       if (!anim->tryStart(*this, x, y)) return;
       setClicking();
-      setDirty();
+      invalidateInterior();
     }
   }
   if (anim == nullptr) return;

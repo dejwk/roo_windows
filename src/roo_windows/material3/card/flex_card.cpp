@@ -61,9 +61,8 @@ void FlexCard::setStyle(Style style) {
   if (before.elevation != after.elevation) {
     elevationChanged(before.elevation > after.elevation ? before.elevation
                                                         : after.elevation);
-  } else if (before.corner_radius != after.corner_radius) {
-    elevationChanged(after.elevation);
   }
+  borderStyleChanged(BorderStyle(before.corner_radius, before.outline_width));
 }
 
 void FlexCard::setContainerRole(::roo_windows::material3::ColorToken role) {
@@ -166,26 +165,18 @@ void FlexCard::setCornerRadius(uint8_t radius) {
       corner_radius_override_ == radius) {
     return;
   }
-  uint8_t old_radius = corner_radius_override_;
+  BorderStyle previous_style = getBorderStyle();
   override_flags_ |= kOverrideCornerRadius;
   corner_radius_override_ = radius;
-  uint8_t new_radius = corner_radius_override_;
-  if (old_radius != new_radius) {
-    invalidateInterior();
-    elevationChanged(elevation_override_);
-  }
+  borderStyleChanged(previous_style);
 }
 
 void FlexCard::clearCornerRadiusOverride() {
   if ((override_flags_ & kOverrideCornerRadius) == 0) return;
-  uint8_t old_radius = corner_radius_override_;
+  BorderStyle previous_style = getBorderStyle();
   override_flags_ &= ~kOverrideCornerRadius;
   corner_radius_override_ = styleDefaults(style_).corner_radius;
-  uint8_t new_radius = corner_radius_override_;
-  if (old_radius != new_radius) {
-    invalidateInterior();
-    elevationChanged(elevation_override_);
-  }
+  borderStyleChanged(previous_style);
 }
 
 ::roo_windows::material3::ColorToken FlexCard::containerRole() const {

@@ -454,6 +454,9 @@ void Container::childShown(const Widget* child) {
   // remains a separate case because underlying content may still be visible
   // without any rectangle expansion.
   Rect visual_bounds = child->maxParentBounds();
+  // Showing or moving a child must schedule its full new footprint, even when
+  // its own content invalidation excludes unchanged decoration.
+  propagateDirty(child, visual_bounds);
   if (visual_bounds != child->parent_bounds() ||
       !child->fullyCoversBoundsWithOpaqueColors()) {
     invalidateBeneath(visual_bounds, child,
@@ -602,7 +605,7 @@ void Container::moveTo(const Rect& parent_bounds) {
   Widget::moveTo(parent_bounds);
 }
 
-Rect Container::maxBounds() const {
+Rect Container::getInteriorBounds() const {
   if (cached_max_bounds_.empty()) {
     // The cache is stale; need to recompute.
     cached_max_bounds_ = bounds();
@@ -616,9 +619,12 @@ Rect Container::maxBounds() const {
           child.maxBounds().translate(child.offsetLeft(), child.offsetTop()));
     }
   }
-  // The cached subtree bounds do not include this container's own decoration.
-  // Resolve it here so movement, hiding, and elevation changes include shadows.
-  return Rect::Extent(cached_max_bounds_, getVisualBounds());
+  return Rect::Extent(cached_max_bounds_, Widget::getInteriorBounds());
+}
+
+Rect Container::maxBounds() const {
+  // Structural changes still include this container's own decoration.
+  return Rect::Extent(getInteriorBounds(), getDecorationBounds());
 }
 
 Rect Container::maxParentBounds() const {

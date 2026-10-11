@@ -10,6 +10,7 @@
 #include "roo_display/ui/tile.h"
 #include "roo_icons/filled/navigation.h"
 #include "roo_scheduler.h"
+#include "roo_windows/core/click_animation.h"
 #include "roo_windows/core/paint_context.h"
 #include "roo_windows/core/task.h"
 #include "roo_windows/material3/button/internal/button_appearance.h"
@@ -225,15 +226,19 @@ bool DropdownButton::setSelectedIndex(size_t index) {
 void DropdownButton::setSize(ButtonSize size) {
   if (size == this->size()) return;
   dismissMenu();
+  BorderStyle previous_style = getBorderStyle();
   size_ = static_cast<uint8_t>(size);
   requestLayout();
+  borderStyleChanged(previous_style);
   invalidateInterior();
 }
 
 void DropdownButton::setShape(ButtonShape shape) {
   if (shape == this->shape()) return;
   dismissMenu();
+  BorderStyle previous_style = getBorderStyle();
   shape_ = static_cast<uint8_t>(shape);
+  borderStyleChanged(previous_style);
   invalidateInterior();
 }
 
@@ -314,9 +319,19 @@ Color DropdownButton::getOutlineColor() const {
 }
 
 BorderStyle DropdownButton::getBorderStyle() const {
-  return internal::ResolveButtonBorderStyle(size(), shape(), variant(), true,
-                                            isPressed(), getClickAnimation(),
-                                            {width(), height()});
+  const ClickAnimation* animation = getClickAnimation();
+  return resolveBorderStyle(
+      isPressed(), animation == nullptr ? -1.0f : animation->progress());
+}
+
+BorderStyle DropdownButton::resolveBorderStyle(bool pressed,
+                                               float progress) const {
+  return internal::ResolveButtonBorderStyle(
+      size(), shape(), variant(), true, pressed, progress, {width(), height()});
+}
+
+void DropdownButton::onClickAnimationChanged(float previous_progress) {
+  borderStyleChanged(resolveBorderStyle(isPressed(), previous_progress));
 }
 
 uint8_t DropdownButton::getElevation() const {
@@ -459,7 +474,11 @@ bool DropdownButton::onKeyEvent(const KeyEvent& event) {
 
 void DropdownButton::notifyStateChanged(uint16_t state_diff) {
   if ((state_diff & kWidgetEnabled) != 0 && !isEnabled()) dismissMenu();
-  if ((state_diff & kWidgetPressed) != 0) invalidateInterior();
+  if ((state_diff & kWidgetPressed) != 0) {
+    const ClickAnimation* animation = getClickAnimation();
+    borderStyleChanged(resolveBorderStyle(
+        !isPressed(), animation == nullptr ? -1.0f : animation->progress()));
+  }
   if ((state_diff & (kWidgetEnabled | kWidgetPressed)) != 0) {
     bool old_enabled =
         (state_diff & kWidgetEnabled) != 0 ? !isEnabled() : isEnabled();

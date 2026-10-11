@@ -32,7 +32,9 @@ Button::Button(ApplicationContext& context, roo::string_view label,
 void Button::setSize(ButtonSize size) {
   uint8_t encoded = static_cast<uint8_t>(size);
   if (size_ == encoded) return;
+  BorderStyle previous_style = getBorderStyle();
   size_ = encoded;
+  borderStyleChanged(previous_style);
   invalidateInterior();
   requestLayout();
 }
@@ -40,14 +42,18 @@ void Button::setSize(ButtonSize size) {
 void Button::setShapeMorph(ButtonShapeMorph shape_morph) {
   uint8_t encoded = static_cast<uint8_t>(shape_morph);
   if (shape_morph_ == encoded) return;
+  BorderStyle previous_style = getBorderStyle();
   shape_morph_ = encoded;
+  borderStyleChanged(previous_style);
   invalidateInterior();
 }
 
 void Button::setShape(ButtonShape shape) {
   uint8_t encoded = static_cast<uint8_t>(shape);
   if (shape_ == encoded) return;
+  BorderStyle previous_style = getBorderStyle();
   shape_ = encoded;
+  borderStyleChanged(previous_style);
   invalidateInterior();
 }
 
@@ -111,9 +117,19 @@ Color Button::getOutlineColor() const {
 }
 
 BorderStyle Button::getBorderStyle() const {
+  const ClickAnimation* animation = getClickAnimation();
+  return resolveBorderStyle(
+      isPressed(), animation == nullptr ? -1.0f : animation->progress());
+}
+
+BorderStyle Button::resolveBorderStyle(bool pressed, float progress) const {
   return internal::ResolveButtonBorderStyle(
       size(), shape(), variant(), shapeMorph() != ButtonShapeMorph::kDisabled,
-      isPressed(), getClickAnimation(), {width(), height()});
+      pressed, progress, {width(), height()});
+}
+
+void Button::onClickAnimationChanged(float previous_progress) {
+  borderStyleChanged(resolveBorderStyle(isPressed(), previous_progress));
 }
 
 uint8_t Button::getElevation() const {
@@ -127,9 +143,9 @@ Color Button::resolveContentColor() const {
 
 void Button::notifyStateChanged(uint16_t state_diff) {
   if ((state_diff & kWidgetPressed) != 0) {
-    // Shape morph changes the outline, so a press transition needs a repaint
-    // even when elevation stays unchanged.
-    invalidateInterior();
+    const ClickAnimation* animation = getClickAnimation();
+    borderStyleChanged(resolveBorderStyle(
+        !isPressed(), animation == nullptr ? -1.0f : animation->progress()));
   }
   if ((state_diff & (kWidgetPressed | kWidgetEnabled)) != 0) {
     bool old_pressed =

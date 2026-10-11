@@ -3,8 +3,8 @@
 #include <stdint.h>
 
 #include "roo_backport/string_view.h"
-#include "roo_windows/core/surface_widget.h"
 #include "roo_windows/core/border_style.h"
+#include "roo_windows/core/surface_widget.h"
 #include "roo_windows/core/theme.h"
 #include "roo_windows/material3/button/button_types.h"
 
@@ -156,6 +156,9 @@ class Button : public SurfaceWidget {
   Dimensions getSuggestedMinimumDimensions() const override;
 
  protected:
+  /// Invalidates a morphing shadow only when the rendered corners change.
+  void onClickAnimationChanged(float previous_progress) override;
+
   /// Resolves the content plus Material padding against parent constraints.
   Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
 
@@ -163,6 +166,9 @@ class Button : public SurfaceWidget {
   void notifyStateChanged(uint16_t state_diff) override;
 
  private:
+  // Resolves geometry for either the current sample or a previous one.
+  BorderStyle resolveBorderStyle(bool pressed, float progress) const;
+
   void paintWithCanvas(const Canvas& canvas) const;
 
   // Content color for label and icon, resolved against the active theme.

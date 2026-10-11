@@ -156,7 +156,9 @@ void FloatingActionButton::setIcon(const MonoIcon& icon) {
 }
 void FloatingActionButton::setSize(FabSize size) {
   if (size_ == static_cast<uint8_t>(size)) return;
+  BorderStyle previous_style = getBorderStyle();
   size_ = static_cast<uint8_t>(size);
+  borderStyleChanged(previous_style);
   invalidateInterior();
   requestLayout();
 }
@@ -231,7 +233,9 @@ void ExtendedFloatingActionButton::setIcon(const MonoIcon& icon) {
 }
 void ExtendedFloatingActionButton::setSize(ExtendedFabSize size) {
   if (size_ == static_cast<uint8_t>(size)) return;
+  BorderStyle previous_style = getBorderStyle();
   size_ = static_cast<uint8_t>(size);
+  borderStyleChanged(previous_style);
   invalidateInterior();
   requestLayout();
 }

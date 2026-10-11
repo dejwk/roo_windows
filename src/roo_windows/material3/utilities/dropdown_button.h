@@ -135,10 +135,16 @@ class DropdownButton : public SurfaceWidget {
   }
 
  protected:
+  /// Invalidates a morphing shadow only when the rendered corners change.
+  void onClickAnimationChanged(float previous_progress) override;
+
   /// Resolves natural dimensions against parent constraints.
   Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
 
  private:
+  // Resolves geometry for either the current sample or a previous one.
+  BorderStyle resolveBorderStyle(bool pressed, float progress) const;
+
   class Session;
 
   static bool ValidItems(const char* const* items, size_t count);

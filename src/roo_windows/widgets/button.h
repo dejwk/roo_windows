@@ -41,7 +41,10 @@ class Button : public SurfaceWidget {
 
   /// Sets the corner radius (in pixels) used by getBorderStyle().
   void setCornerRadius(uint8_t corner_radius) {
+    if (corner_radius_ == corner_radius) return;
+    BorderStyle previous_style = getBorderStyle();
     corner_radius_ = corner_radius;
+    borderStyleChanged(previous_style);
   }
 
   Padding getPadding() const override;

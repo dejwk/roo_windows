@@ -43,6 +43,7 @@ class SurfaceWidget : public Widget {
 
   /// Returns the border style of this widget. By default, surface widgets
   /// have sharp corners and no outline. Subclasses can override.
+  /// Call borderStyleChanged() with the previous style after changing it.
   virtual BorderStyle getBorderStyle() const { return BorderStyle(); }
 
   /// Returns the current elevation of the widget. Non-zero elevation causes
@@ -75,15 +76,23 @@ class SurfaceWidget : public Widget {
 
   Rect getParentDecorationBounds() const override;
 
+  /// Repaints content and transient effects without damaging this surface's
+  /// unchanged shadow. Containers retain their visible descendants' overflow.
   void invalidateInterior() override;
 
+  /// Repaints the given local area, restoring the backdrop at rounded edges.
   void invalidateInterior(const Rect& rect) override;
 
  protected:
-  // Should be called by a child whose elevation has changed, and the child
-  // wants the shadow to be redrawn. The argument should indicate the higher of
-  // {before, after} elevations.
+  /// Repaints old and new shadow coverage after an elevation change. Pass the
+  /// higher of the previous and current elevations, including when lowering
+  /// elevation to zero. Also restores the scene beneath that coverage.
   void elevationChanged(int higherElevation);
+
+  /// Repaints changed border geometry and, when rendered corner radii change,
+  /// its shadow. Pass the style from before the change. Elevation changes must
+  /// additionally call elevationChanged(); no appearance cache is retained.
+  void borderStyleChanged(const BorderStyle& previous_style);
 
   void emitPersistentDecoration(PaintContext& ctx) const override;
 

@@ -117,8 +117,7 @@ Dimensions ButtonCornerDimensions(ButtonSize size, Dimensions measured) {
 
 BorderStyle ResolveButtonBorderStyle(ButtonSize size, ButtonShape shape,
                                      ButtonVariant variant, bool morph_enabled,
-                                     bool pressed,
-                                     const ClickAnimation* animation,
+                                     bool pressed, float animation_progress,
                                      Dimensions dimensions) {
   constexpr int kOutlineWidth = 1;
   constexpr uint8_t kFullCornerRadius = 0xFF;
@@ -128,18 +127,18 @@ BorderStyle ResolveButtonBorderStyle(ButtonSize size, ButtonShape shape,
                             : SmallNumber(0);
   Dimensions measured = ButtonCornerDimensions(size, dimensions);
   uint8_t resting = ResolveButtonCornerRadius(size, shape, false, measured);
-  if (!morph_enabled || (animation == nullptr && !pressed)) {
+  if (!morph_enabled || (animation_progress < 0.0f && !pressed)) {
     return BorderStyle(
         shape == ButtonShape::kRound ? kFullCornerRadius : resting, outline);
   }
   uint8_t pressed_radius =
       ResolveButtonCornerRadius(size, shape, true, measured);
   uint8_t radius = pressed_radius;
-  if (animation != nullptr) {
+  if (animation_progress >= 0.0f) {
     // Settle the shape early, before the longer click animation completes.
     radius = InterpolateCornerRadiusPx(
         resting, pressed_radius,
-        std::min(1.0f, animation->progress() * kShapeMorphProgressScale));
+        std::min(1.0f, animation_progress * kShapeMorphProgressScale));
   }
   // Without an active animation, pressed state uses the shared squarer shape.
   return BorderStyle(radius, outline);

@@ -145,10 +145,16 @@ class ClickAnimation {
   // Requests a frame through the owning application without entering UI work.
   static void RequestFrame(Widget& target);
 
-  void reset();
+  // Exposed progress uses -1 when getClickAnimation() would return nullptr.
+  float exposedProgress() const;
+
+  // Publishes phase changes that alter the exposed sample or remove it.
+  void setPhase(Phase phase);
+
+  void reset(bool notify_target = true);
 
   /// Releases a pending target without invalidating or calling user code.
-  void cancelForWindowTeardown() { reset(); }
+  void cancelForWindowTeardown() { reset(false); }
 
   void deliverClick();
 

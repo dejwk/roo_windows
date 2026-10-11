@@ -33,15 +33,7 @@ Color SurfaceWidget::effectiveBackground() const {
 }
 
 void SurfaceWidget::invalidateInterior() {
-  invalidateDescending();
-  if (getBorderStyle().hasRoundedCorners()) {
-    notifyParentInvalidatedRegion(maxParentBounds());
-  }
-  // A full repaint of a surface widget must dirty persistent decoration
-  // overflow as well. Parent invalidation above repaints what lies underneath
-  // the overflow; this makes the widget repaint the overflow pixels
-  // themselves.
-  setDirty(Rect::Extent(maxBounds(), getDecorationBounds()));
+  invalidateInterior(getInteriorBounds());
 }
 
 void SurfaceWidget::invalidateInterior(const Rect& rect) {
@@ -54,9 +46,24 @@ void SurfaceWidget::invalidateInterior(const Rect& rect) {
 
 void SurfaceWidget::elevationChanged(int higherElevation) {
   if (higherElevation <= 0 || parent() == nullptr) return;
-  if (getBorderStyle().hasRoundedCorners()) setDirty();
-  notifyParentInvalidatedRegion(
-      CalculateShadowExtents(parent_bounds(), higherElevation));
+  Rect damage = CalculateShadowExtents(parent_bounds(), higherElevation);
+  setDirty(damage.translate(-offsetLeft(), -offsetTop()));
+  notifyParentInvalidatedRegion(damage);
+}
+
+void SurfaceWidget::borderStyleChanged(const BorderStyle& previous_style) {
+  BorderStyle before = previous_style.trim(width(), height());
+  BorderStyle after = getBorderStyle().trim(width(), height());
+  bool corners_changed =
+      before.top_left_corner_radius() != after.top_left_corner_radius() ||
+      before.top_right_corner_radius() != after.top_right_corner_radius() ||
+      before.bottom_left_corner_radius() != after.bottom_left_corner_radius() ||
+      before.bottom_right_corner_radius() != after.bottom_right_corner_radius();
+  if (!corners_changed && before.outline_width() == after.outline_width()) {
+    return;
+  }
+  invalidateInterior();
+  if (corners_changed) elevationChanged(getElevation());
 }
 
 Canvas SurfaceWidget::prepareCanvas(const Canvas& in) {

@@ -111,6 +111,9 @@ class Container : public SurfaceWidget {
   /// descendants, equivalent to `bounds()`.
   Rect maxBounds() const override;
 
+  /// Includes visible child overflow but excludes this container's own shadow.
+  Rect getInteriorBounds() const override;
+
   /// Returns the container's maximum bounds projected into the parent's
   /// coordinate space.
   Rect maxParentBounds() const override;

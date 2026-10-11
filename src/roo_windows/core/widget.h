@@ -154,7 +154,8 @@ class Widget {
   // need to be redrawn.
   void setDirty(const Rect& bounds);
 
-  // Causes the widget to request paint(), replacing the entire rectangle area.
+  /// Repaints getInteriorBounds(), including descendant overflow but excluding
+  /// this widget's own persistent decoration.
   virtual void invalidateInterior();
 
   // Causes the widget to request paint(), replacing the specified area.
@@ -237,6 +238,10 @@ class Widget {
   Rect getParentContentBounds() const {
     return getContentBounds().translate(offsetLeft(), offsetTop());
   }
+
+  /// Returns content and transient paint bounds, excluding this widget's own
+  /// persistent decoration. Containers also include visible child overflow.
+  virtual Rect getInteriorBounds() const;
 
   Rect getVisualBounds() const;
 
@@ -734,6 +739,12 @@ class Widget {
   virtual void onTransientActivityChanged(bool active) { (void)active; }
 
   void notifyParentInvalidatedRegion(const Rect& rect);
+
+  /// Reports a change to the shared click sample after it has been applied.
+  /// A negative previous_progress means no animation was exposed. Overrides
+  /// invalidate any persistent decoration changed by the new sample, including
+  /// animation start and removal; ordinary feedback damage is controller-owned.
+  virtual void onClickAnimationChanged(float previous_progress) {}
 
   // Called after any widget-state flag mutation. Subclasses may use this to
   // react to state-driven visual changes without overriding the full setter.

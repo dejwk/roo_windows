@@ -276,7 +276,9 @@ const MenuTokens& MenuPanel::tokens() const {
 }
 
 void MenuPanel::setPolicy(const MenuPolicy& policy) {
+  BorderStyle previous_style = getBorderStyle();
   policy_ = policy;
+  borderStyleChanged(previous_style);
   groups_.setSeparatorMode(policy.separator_mode, policy.variant);
   invalidateInterior();
   requestLayout();

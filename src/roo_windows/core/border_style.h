@@ -123,7 +123,7 @@ class BorderStyle {
   }
 
   // Returns border style clamped to fit inside widget dimensions.
-  BorderStyle trim(XDim w, XDim h) {
+  BorderStyle trim(XDim w, XDim h) const {
     uint8_t max_radius = std::max<int16_t>(0, std::min<int16_t>(w, h) / 2);
     int16_t min_dim = std::max<int16_t>(0, std::min<int16_t>(w, h));
     return BorderStyle(
