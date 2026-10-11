@@ -70,7 +70,7 @@ for arbitrary overlap that these component semantics do not require.
 
 ## Background
 
-**Status: Phases 1 and dialog/menu lifetime/hosting and Phase 6 snackbar adoption implemented.** The framework
+**Status: In progress. Phases 1–2 and 5–6 are implemented; modal-sheet Phases 3–4 remain.** The framework
 provides the shared registration, single-slot, finish-order, and Back-
 participant contract, and legacy dialogs now use the composite transient host
 with explicit task ownership and guarded preparation. Material 3 menus use the
@@ -852,7 +852,7 @@ Validation: `bazel test //:modal_sheet_test
 //:transient_presentation_lifetime_test` and
 `bazel build //examples:material3_example_builds`.
 
-### Phase 5: Menu Adoption
+### Phase 5: Menu Adoption (Implemented)
 
 1. Accept an explicit interaction owner; synchronously validate live placement
    in that owner's top-level layer at show or reanchor time, then retain only
