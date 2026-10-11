@@ -24,6 +24,9 @@ void* Allocate(size_t size) {
   }
   return std::malloc(size == 0 ? 1 : size);
 }
+// GCC can mistake these matched malloc/free overrides for an allocation
+// mismatch after inlining a delete into GoogleTest.
+[[gnu::noinline]] void FreeAllocation(void* ptr) noexcept { std::free(ptr); }
 }  // namespace
 
 void* operator new(size_t size) {
@@ -38,13 +41,15 @@ void* operator new(size_t size, const std::nothrow_t&) noexcept {
 void* operator new[](size_t size, const std::nothrow_t&) noexcept {
   return Allocate(size);
 }
-void operator delete(void* p) noexcept { std::free(p); }
-void operator delete[](void* p) noexcept { std::free(p); }
-void operator delete(void* p, size_t) noexcept { std::free(p); }
-void operator delete[](void* p, size_t) noexcept { std::free(p); }
-void operator delete(void* p, const std::nothrow_t&) noexcept { std::free(p); }
+void operator delete(void* p) noexcept { FreeAllocation(p); }
+void operator delete[](void* p) noexcept { FreeAllocation(p); }
+void operator delete(void* p, size_t) noexcept { FreeAllocation(p); }
+void operator delete[](void* p, size_t) noexcept { FreeAllocation(p); }
+void operator delete(void* p, const std::nothrow_t&) noexcept {
+  FreeAllocation(p);
+}
 void operator delete[](void* p, const std::nothrow_t&) noexcept {
-  std::free(p);
+  FreeAllocation(p);
 }
 
 namespace roo_windows {
