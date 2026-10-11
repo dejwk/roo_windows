@@ -24,6 +24,43 @@ const FabGeometry& IconGeometry(FabSize size) {
   return kIconGeometry[static_cast<uint8_t>(size)];
 }
 
+struct ExtendedGeometry {
+  FabGeometry body;
+  int16_t leading;
+  int16_t trailing;
+  int16_t gap;
+};
+
+constexpr ExtendedGeometry kExtendedGeometry[] = {
+    {{56, 24, 16}, 16, 16, 8},
+    {{80, 28, 20}, 26, 26, 12},
+    {{96, 32, 28}, 28, 28, 16},
+};
+
+const ExtendedGeometry& ExtendedTokens(ExtendedFabSize size) {
+  return kExtendedGeometry[static_cast<uint8_t>(size)];
+}
+
+const TextStyle& ExtendedTextStyle(ExtendedFabSize size) {
+  switch (size) {
+    case ExtendedFabSize::kSmall:
+      return text_style_title_medium();
+    case ExtendedFabSize::kMedium:
+      return text_style_title_large();
+    case ExtendedFabSize::kLarge:
+      return text_style_headline_small();
+  }
+  return text_style_title_medium();
+}
+
+int LabelAdvance(roo::string_view label, const TextStyle& style) {
+  return label.empty()
+             ? 0
+             : style.font()
+                   .getHorizontalStringMetrics(label, style.fontOptions())
+                   .advance();
+}
+
 ColorToken ContainerRole(FabColorStyle style) {
   constexpr ColorToken kRoles[] = {
       ColorToken::kPrimaryContainer,    ColorToken::kSecondaryContainer,
@@ -68,7 +105,10 @@ uint8_t PreviousElevation(const Widget& widget, uint16_t diff) {
 }
 
 BorderStyle FabBorder(const FabGeometry& geometry, int width, int height) {
-  int limit = std::max(0, std::min(width, height) / 2);
+  int nominal = Scaled(geometry.height);
+  int limit = std::max(
+      0,
+      std::min(width > 0 ? width : nominal, height > 0 ? height : nominal) / 2);
   int radius =
       std::min({static_cast<int>(Scaled(geometry.radius)), limit, 255});
   return BorderStyle(static_cast<uint8_t>(radius), 0);
@@ -180,64 +220,110 @@ ExtendedFloatingActionButton::ExtendedFloatingActionButton(
       color_style_(static_cast<uint8_t>(color_style)),
       expanded_(true) {}
 void ExtendedFloatingActionButton::setLabel(roo::string_view label) {
+  if (label_.data() == label.data() && label_.size() == label.size()) return;
   label_ = label;
   invalidateInterior();
   requestLayout();
 }
 void ExtendedFloatingActionButton::setIcon(const MonoIcon& icon) {
+  if (icon_ == &icon) return;
   icon_ = &icon;
   invalidateInterior();
 }
 void ExtendedFloatingActionButton::setSize(ExtendedFabSize size) {
+  if (size_ == static_cast<uint8_t>(size)) return;
   size_ = static_cast<uint8_t>(size);
   invalidateInterior();
   requestLayout();
 }
 void ExtendedFloatingActionButton::setColorStyle(FabColorStyle style) {
+  if (color_style_ == static_cast<uint8_t>(style)) return;
   color_style_ = static_cast<uint8_t>(style);
   invalidateInterior();
 }
 void ExtendedFloatingActionButton::setExpanded(bool expanded) {
+  if (expanded_ == expanded) return;
   expanded_ = expanded;
   invalidateInterior();
   requestLayout();
 }
 ColorToken ExtendedFloatingActionButton::containerRole() const {
-  LOG(FATAL) << "Unimplemented: extended FAB container role";
-  return ColorToken::kNone;
+  return ContainerRole(colorStyle());
 }
 Color ExtendedFloatingActionButton::background() const {
-  LOG(FATAL) << "Unimplemented: extended FAB background";
-  return roo_display::color::Transparent;
+  return ContainerColor(theme(), colorStyle(), isEnabled());
 }
 BorderStyle ExtendedFloatingActionButton::getBorderStyle() const {
-  LOG(FATAL) << "Unimplemented: extended FAB border";
-  return BorderStyle();
+  return FabBorder(ExtendedTokens(size()).body, width(), height());
 }
 uint8_t ExtendedFloatingActionButton::getElevation() const {
-  LOG(FATAL) << "Unimplemented: extended FAB elevation";
-  return 0;
+  return Elevation(isEnabled(), isPressed(), isFocused(), isHover());
 }
 bool ExtendedFloatingActionButton::usesHighlighterColor() const {
-  LOG(FATAL) << "Unimplemented: extended FAB highlighter";
-  return false;
+  return colorStyle() == FabColorStyle::kSurface;
 }
 Dimensions ExtendedFloatingActionButton::getSuggestedMinimumDimensions() const {
-  LOG(FATAL) << "Unimplemented: extended FAB size";
-  return Dimensions(0, 0);
+  int side = Scaled(ExtendedTokens(size()).body.height);
+  return Dimensions(side, side);
 }
 Dimensions ExtendedFloatingActionButton::getNaturalDimensions() const {
-  LOG(FATAL) << "Unimplemented: extended FAB size";
-  return Dimensions(0, 0);
+  const ExtendedGeometry& tokens = ExtendedTokens(size());
+  int side = Scaled(tokens.body.height);
+  if (!expanded()) return Dimensions(side, side);
+  const TextStyle& style = ExtendedTextStyle(size());
+  int label_width = LabelAdvance(label_, style);
+  int width = Scaled(tokens.leading) + Scaled(tokens.body.icon_slot) +
+              (label_.empty() ? 0 : Scaled(tokens.gap) + label_width) +
+              Scaled(tokens.trailing);
+  return Dimensions(std::max(side, width), side);
 }
-Dimensions ExtendedFloatingActionButton::onMeasure(WidthSpec, HeightSpec) {
-  LOG(FATAL) << "Unimplemented: extended FAB measure";
-  return Dimensions(0, 0);
+Dimensions ExtendedFloatingActionButton::onMeasure(WidthSpec width,
+                                                   HeightSpec height) {
+  Dimensions natural = getNaturalDimensions();
+  return Dimensions(width.resolveSize(natural.width()),
+                    height.resolveSize(natural.height()));
 }
-void ExtendedFloatingActionButton::paint(PaintContext&) const {
-  LOG(FATAL) << "Unimplemented: extended FAB paint";
+void ExtendedFloatingActionButton::paint(PaintContext& ctx) const {
+  const ExtendedGeometry& tokens = ExtendedTokens(size());
+  const Canvas& canvas = ctx.canvas();
+  Rect area = bounds();
+  Color content = ContentColor(theme(), colorStyle(), isEnabled());
+  int slot = Scaled(tokens.body.icon_slot);
+  if (!expanded() || label_.empty()) {
+    PaintIcon(canvas, *icon_, content, area, slot);
+    return;
+  }
+  const TextStyle& style = ExtendedTextStyle(size());
+  int label_width = LabelAdvance(label_, style);
+  int gap = Scaled(tokens.gap);
+  int cluster_width = slot + gap + label_width;
+  int x = area.xMin() + (area.width() - cluster_width) / 2;
+  if (area.xMin() < x) {
+    canvas.clearRect(area.xMin(), area.yMin(), x - 1, area.yMax());
+  }
+  PaintIcon(canvas, *icon_, content,
+            Rect(x, area.yMin(), x + slot - 1, area.yMax()), slot);
+  x += slot;
+  canvas.clearRect(x, area.yMin(), x + gap - 1, area.yMax());
+  x += gap;
+  roo_display::StringViewLabel text(label_, style.font(), content,
+                                    style.fontOptions());
+  canvas.drawTiled(text, Rect(x, area.yMin(), x + label_width - 1, area.yMax()),
+                   roo_display::kCenter | roo_display::kMiddle);
+  x += label_width;
+  if (x <= area.xMax()) {
+    canvas.clearRect(x, area.yMin(), area.xMax(), area.yMax());
+  }
 }
 void ExtendedFloatingActionButton::notifyStateChanged(uint16_t state_diff) {
+  if ((state_diff & (kWidgetEnabled | kWidgetPressed | kWidgetFocused |
+                     kWidgetHover)) != 0) {
+    uint8_t before = PreviousElevation(*this, state_diff);
+    uint8_t after = getElevation();
+    if (before != after && isVisible()) {
+      elevationChanged(std::max(before, after));
+    }
+  }
   SurfaceWidget::notifyStateChanged(state_diff);
 }
 

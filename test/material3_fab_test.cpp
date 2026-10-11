@@ -9,6 +9,7 @@
 #include "roo_windows/core/environment.h"
 #include "roo_windows/material3/fab/fab.h"
 #include "roo_windows/material3/internal/elevation.h"
+#include "roo_windows/material3/typography.h"
 
 namespace roo_windows::material3 {
 namespace {
@@ -105,6 +106,51 @@ TEST(Material3Fab, ColorsAndElevationFollowThemeAndState) {
   EXPECT_EQ(
       roo_display::AlphaBlend(colors.surface, colors.onSurface.withA(0x1F)),
       fab.background());
+}
+
+TEST(Material3Fab, ExtendedWidthAndCollapseFollowSizeTokens) {
+  roo_scheduler::SchedulingService scheduler;
+  Environment env(scheduler);
+  ApplicationContext context(env.scheduler(), env.theme(),
+                             env.keyboardColorTheme());
+  ExtendedFloatingActionButton fab(context, "Compose",
+                                   ic_outlined_24_action_done());
+  struct Case {
+    ExtendedFabSize size;
+    int height;
+    int leading;
+    int icon;
+    int gap;
+    int trailing;
+    const TextStyle& style;
+  };
+  Case cases[] = {
+      {ExtendedFabSize::kSmall, 56, 16, 24, 8, 16, text_style_title_medium()},
+      {ExtendedFabSize::kMedium, 80, 26, 28, 12, 26, text_style_title_large()},
+      {ExtendedFabSize::kLarge, 96, 28, 32, 16, 28,
+       text_style_headline_small()},
+  };
+  for (const Case& item : cases) {
+    fab.setSize(item.size);
+    int advance =
+        item.style.font()
+            .getHorizontalStringMetrics("Compose", item.style.fontOptions())
+            .advance();
+    int expected = Scaled(item.leading) + Scaled(item.icon) + Scaled(item.gap) +
+                   advance + Scaled(item.trailing);
+    EXPECT_EQ(std::max(Scaled(item.height), expected),
+              fab.getNaturalDimensions().width());
+    EXPECT_EQ(Scaled(item.height), fab.getNaturalDimensions().height());
+    fab.setExpanded(false);
+    EXPECT_EQ(Scaled(item.height), fab.getNaturalDimensions().width());
+    EXPECT_EQ(Scaled(item.height), fab.getNaturalDimensions().height());
+    fab.setExpanded(true);
+  }
+  fab.setLabel("");
+  EXPECT_EQ(Scaled(96), fab.getNaturalDimensions().width());
+  fab.setExpanded(false);
+  fab.setIcon(ic_outlined_24_action_done());
+  EXPECT_EQ(Scaled(96), fab.getNaturalDimensions().width());
 }
 
 TEST(Material3Fab, ExplicitDisabledSurfaceKeepsItsResolvedFill) {
