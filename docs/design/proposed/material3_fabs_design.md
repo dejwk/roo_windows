@@ -124,100 +124,22 @@ The local widget model imposes several concrete constraints:
   provides body/chrome geometry; FAB positioning remains the consuming host's
   responsibility. The base widgets add no placement state.
 
-### Elevation Audit (2026-10)
+### Current Shadow and Elevation Support
 
-This table records current code, not a claim that renderer numbers equal
-Material reference heights. The source links establish the required semantic
-levels; the calibration below quantifies the limits of numerical visual matching.
+The shared [Material elevation facade](../../../src/roo_windows/material3/internal/elevation.h)
+is implemented. It resolves semantic Material levels to the calibrated half-dp
+indices accepted by [SurfaceWidget](../../../src/roo_windows/core/surface_widget.h).
+The [shadow renderer](../../../src/roo_windows/decoration/shadow_lookup.h)
+scales key/ambient layer geometry at the configured zoom and supplies finite
+shadow bounds for damage and clipping. FABs reuse this pipeline; their state
+contract is specified in [Elevation Model](#elevation-model).
 
-| Component | Current renderer behavior | Material contract / finding |
-| --- | --- | --- |
-| Baseline menu | Constant 3 | [Level 2](https://raw.githubusercontent.com/androidx/androidx/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/MenuTokens.kt); cannot validate renderer 3 without mapping. |
-| Expressive menus | Constant 3 for both palettes | Baseline shadow value reused locally; expressive-specific reference still needs verification. |
-| Snackbar | Constant 3, formerly described as level 3 | [Level 3](https://raw.githubusercontent.com/androidx/androidx/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/SnackbarTokens.kt); the comment conflated semantic level with raw parameter. |
-| Elevated button and dropdown | Enabled 3, disabled 0; ignores hover/focus/press in resolver | [Level 1 at rest/focus/press, level 2 hovered, level 0 disabled](https://raw.githubusercontent.com/androidx/androidx/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/ElevatedButtonTokens.kt). Hover treatment is missing independently of calibration. |
-| Filled / tonal button and dropdown | Constant 0 | [Filled](https://raw.githubusercontent.com/androidx/androidx/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/FilledButtonTokens.kt) and [tonal](https://raw.githubusercontent.com/androidx/androidx/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/FilledTonalButtonTokens.kt) rise from level 0 to level 1 on hover; missing. |
-| Elevated FlexCard | Resting default 3; explicit renderer override supported | [Resting level 1](https://raw.githubusercontent.com/androidx/androidx/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/ElevatedCardTokens.kt). Current API provides resting styling, not the clickable/dragged state elevation family. |
-| Basic / full-screen dialog | Both zero | Basic-dialog [level 3](https://raw.githubusercontent.com/androidx/androidx/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/DialogTokens.kt) is a deviation in the existing local design; full-screen stays flat. Scrim ownership does not supply the surface shadow. |
-| App bars | Zero shadow with scrolled surface fill | Intentional [Material 3 color-based separation](https://m3.material.io/components/app-bars/); do not add a shadow based only on surface-color elevation. |
-
-The shared button appearance table separately stores resting/pressed values of
-1 while the actual elevation resolver returns 3 for elevated buttons. Consolidate
-that duplicate authority when migrating to the mapping. Test button and dropdown
-hover enter/exit, pressed and focused precedence, disable/re-enable, and cleanup
-of the larger old shadow after elevation decreases.
-
-### Renderer Calibration Results
-
-The experiment used the production `Decoration::readColors()` rasterizer at
-renderer settings 0..31, 56 dp / radius 16 dp and 96 dp / radius 28 dp surfaces,
-and 100% / 200% zoom: 128 roo captures. The reference is Google's
-[Material Web elevation implementation at revision 47adb655](https://github.com/material-components/material-web/blob/47adb655bd7a88c4d62e8faac2873084eed555dc/elevation/internal/_elevation.scss),
-rendered by Chrome 155.0.8059.39. Its two pseudo-element shadows were evaluated
-at the six integer levels, retaining separate key/ambient opacity and paint
-order. Both surfaces used identical dimensions, radii, and 64 dp margins.
-
-The fit compares direct 8-bit alpha on transparent backgrounds, outside the
-union of both zero-elevation surface masks, including their antialiased fringes.
-This retains thin contact shadows without scoring different surface edges.
-The objective is the equally weighted mean squared alpha error over the four
-size/zoom cases, with level zero fixed to renderer zero and a nondecreasing
-mapping. Captures on white and RGB(32,32,32) backgrounds provide visual checks;
-inverting dark 8-bit RGB to alpha amplifies rounding and is not the fit metric.
-All captured shadow tails fit inside their margins.
-
-| Material level | Combined best renderer value | Best at 100% only | Best at 200% only | Relative shadow RMS error, combined fit |
-| --- | --- | --- | --- | --- |
-| 0 | 0 | 0 | 0 | 0% |
-| 1 | 1 | 2 | 1 | 53% |
-| 2 | 2 | 2 | 1 | 60% |
-| 3 | 3 | 3 | 2 | 59% |
-| 4 | 4 | 4 | 3 | 57% |
-| 5 | 7 | 9 | 7 | 49% |
-
-Relative RMS error is `sqrt(sum(error squared) / sum(reference alpha squared))`,
-with equal case weighting. This exposes the residual mismatch instead of
-reporting a small whole-canvas error diluted by transparent pixels. Removing
-one additional device-pixel ring gives the same combined mapping. A two-pixel
-ring was rejected because it removes nearly all of the smallest shadow at 100%.
-Level 4's candidates 3 and 4 differ by only about 1% in MSE; level 5's candidates
-7 through 9 are also close. These are approximate choices, not precise physical
-calibration constants.
-
-**Conclusion:** use `[0, 1, 2, 3, 4, 7]` as the proposed shared approximation
-when retaining the current renderer. There is no exact, zoom-independent visual
-match: low renderer settings give a narrow contact outline and the shadow
-falloff differs from Material's blur. Increasing renderer elevation also reduces
-its peak opacity. An exact Material appearance needs a separately designed
-shadow profile, not a different integer conversion. This audit does not change
-existing components' runtime shadow values; migrating them is a separate code
-slice with visual regression review. The proposed FAB therefore uses renderer
-3 at rest/focus/press and 4 on hover, explicitly via semantic mapping.
-
-![All 32 production renderer settings](figures/material3_elevation_all_levels.png)
-
-![Material reference compared with fitted renderer shadows](figures/material3_elevation_comparison.png)
-
-Reproduction uses the canonical repository as the working directory. The
-[capture benchmark](../../../benchmarks/material3_elevation_capture.cpp) exports
-PGM alpha without display RGB565/ARGB4444 quantization. The
-[analysis script](../../../benchmarks/material3_elevation_calibration.py) needs
-Python with NumPy and Pillow plus `google-chrome` (override with `--chrome`).
-The [recorded results](../../../benchmarks/material3_elevation_calibration_results.json)
-include every per-case 6-by-32 error matrix, source revision/hash, browser version,
-and sensitivity result. Production renderer source baseline: commit `a1396830`.
-
-```sh
-bazel run //:material3_elevation_capture -- /tmp/roo-shadow-calibration/raw
-bazel run //:material3_elevation_capture --copt=-DROO_WINDOWS_ZOOM=200 -- /tmp/roo-shadow-calibration/raw
-python3 benchmarks/material3_elevation_calibration.py /tmp/roo-shadow-calibration
-```
-
-The reference HTML, screenshots, raw alpha captures, and contact sheets remain
-in the selected output directory. Geometry is scaled explicitly; elevation
-inputs stay unchanged between zoom builds. Level-zero alpha masks agree after
-excluding both antialiased fringes, and the fit's shadow error is exactly zero
-for level zero.
+The earlier 32-setting experiment measured the retired renderer at commit
+`a1396830`. Its [recorded results](../../../benchmarks/material3_elevation_calibration_results.json)
+and comparison figures are historical evidence, not calibration or golden
+expectations for the current renderer. The former component audit also predates
+the facade migration. Component-specific semantic-level audits remain separate
+work; they are not prerequisites for implementing the FAB family.
 
 ## Requirements
 
@@ -477,31 +399,41 @@ coverage, which already opts out. Verify final rendered colors on an opaque
 surface host, not just resolver output.
 No outline is drawn in any style.
 
-Material semantic elevation and renderer elevation are distinct quantities.
-The [Material system tokens](https://raw.githubusercontent.com/androidx/androidx/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/ElevationTokens.kt)
-define levels 0..5 with reference heights 0, 1, 3, 6, 8, and 12 dp. These are
-**not** numeric values to pass directly to `SurfaceWidget::getElevation()`.
-Its 0..31 parameter drives the framework's custom shadow spread, shift, and
-opacity formulas in [decoration.cpp](../../../src/roo_windows/decoration/decoration.cpp).
-Zoom scales the derived geometry; callers must not pre-scale the parameter.
-Surface color roles and paint order are independent of this shadow parameter.
+### Elevation Model
+
+FABs select a semantic Material level and resolve it through
+[`material3::internal::RendererElevation()`](../../../src/roo_windows/material3/internal/elevation.h)
+from `material3/internal/elevation.h`. This facade is the sole authority for
+conversion to the renderer's half-dp index. Its current mapping is:
+
+| Material level | Calibrated logical height | Renderer index |
+| --- | --- | --- |
+| 0 | 0 dp | 0 |
+| 1 | 3 dp | 6 |
+| 2 | 5 dp | 10 |
+| 3 | 8 dp | 16 |
+| 4 | 10 dp | 20 |
+| 5 | 14 dp | 28 |
+
+The nonzero heights include the facade's +2 dp calibration shift from Material's
+reference heights. Callers neither add that shift nor duplicate this mapping.
+`SurfaceWidget::getElevation()` returns the resolved index unchanged at every
+zoom. The renderer scales shadow geometry internally; do not apply `Scaled()`
+to the level or index. Surface color roles and paint order remain independent
+of shadow elevation. Shadow profile, gradient tables, and alpha cutoff belong
+to the shared renderer, with no FAB-specific settings or per-instance storage.
 
 The [FAB state tokens](https://raw.githubusercontent.com/androidx/androidx/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/FabPrimaryContainerTokens.kt)
-require:
+select the following levels for both icon-only and extended FABs, including
+collapsed presentation:
 
-| State | Material level | Material reference height (not renderer value) |
+| State | Material level | `getElevation()` result |
 | --- | --- | --- |
-| Resting | 3 | 6 dp |
-| Hovered | 4 | 8 dp |
-| Focused | 3 | 6 dp |
-| Pressed | 3 | 6 dp |
-| Disabled (local extension) | 0 | 0 dp |
-
-No established Material-to-renderer mapping was found in the current tree or
-inspected renderer history. The [calibration below](#renderer-calibration-results)
-provides an experimentally selected approximation, not an exact Material match.
-The implementation must resolve semantic levels through the proposed shared
-mapping; neither the level ordinal nor reference dp is an implicit conversion.
+| Resting | 3 | `internal::RendererElevation(3)` |
+| Hovered | 4 | `internal::RendererElevation(4)` |
+| Focused | 3 | `internal::RendererElevation(3)` |
+| Pressed | 3 | `internal::RendererElevation(3)` |
+| Disabled (local extension) | 0 | `internal::RendererElevation(0)` |
 
 Resolve simultaneous states in this order: disabled, pressed, focused,
 hovered, resting. Selection and activation use the shared overlays without
@@ -509,8 +441,11 @@ changing elevation. `getElevation()` derives the current value without storing
 it. `notifyStateChanged()` reconstructs the previous enabled/pressed/focused/
 hovered state from `state_diff`, and calls
 `elevationChanged(std::max(old_elevation, new_elevation))` when visible and the
-value changes. Chain to `SurfaceWidget::notifyStateChanged()`. Test shadow
-cleanup when elevation decreases. The change is discrete in v1.
+value changes. Both old and new elevations are resolved renderer indices.
+Chain to `SurfaceWidget::notifyStateChanged()`. Reuse the shared surface damage
+path and renderer shadow extents so the larger previous shadow is cleared when
+elevation decreases, including at fractional zoom. Do not calculate FAB-local
+shadow margins. The change is discrete in v1.
 
 ### Paint and Invalidation Model
 
@@ -536,7 +471,8 @@ State changes have these invalidation rules:
 
 - color-style, icon, label, or expanded/collapsed changes invalidate the
   interior and request layout if size can change,
-- state changes that only affect overlays or elevation invalidate the interior,
+- overlay state changes invalidate the interior; elevation changes additionally
+  invalidate shadow bounds through the [elevation transition contract](#elevation-model),
 - and size changes invalidate the interior and request layout.
 
 ### Placement Contract
@@ -749,33 +685,9 @@ Implementation work for these phases follows the repo-local
 and [C++ authoring](../../../.github/instructions/general-cpp-code-authoring-instructions.md)
 instructions.
 
-### Phase 0: Apply the Calibrated Material-to-Renderer Mapping
-
-The calibration experiment is complete; its results and reproducible tools are
-recorded above. Runtime adoption remains to be implemented.
-
-1. Add a shared Material-level-to-renderer helper using the measured candidate
-   `[0, 1, 2, 3, 4, 7]`, documenting its approximation limits and provenance.
-2. Add unit coverage for all six entries, explicit renderer units, and unchanged
-   results across zoom configurations. Preserve raw 0..31 overrides.
-3. Migrate baseline menus, snackbar, and elevated-card resting defaults to the
-   semantic levels in the audit. Verify expressive-menu elevation against its
-   own reference before migrating that variant.
-4. Consolidate duplicate button elevation sources, add the missing hover
-   states for buttons and dropdowns, and invalidate the larger old/new shadow.
-5. Reconcile the basic-dialog zero-shadow deviation with its level-3 contract;
-   keep full-screen dialogs flat. Review affected goldens at both zoom levels.
-
-Proposed commit message:
-
-> Material 3 FAB Phase 0: apply calibrated renderer elevation mapping.
->
-> Centralize the approximate Material shadow mapping and migrate verified
-> component elevation states with unit and visual regression coverage.
-
-Validation: mapping tests, affected component tests, and reviewed golden changes.
-Use the recorded calibration to assess visual changes rather than equating
-reference dp heights with renderer values.
+The shared elevation facade and scale-sensitive shadow renderer are already
+implemented. These phases consume their existing contract; no new calibration,
+conversion helper, or migration of other components is required.
 
 ### Phase 1: Declare the Material 3 FAB Types and Size Budgets
 
@@ -806,7 +718,8 @@ Validation: add `material3_fab_test` and run
 Code slice:
 
 1. Implement icon-only measurement, paint, color-style mapping, and state-
-   dependent elevation.
+   dependent elevation through the shared facade as specified in
+   [Elevation Model](#elevation-model).
 2. Reuse the existing area-overlay and click-animation pipeline. Make the
    shared disabled-background alpha adjustment respect the automatic-style
    opt-out, with focused surface regression coverage and existing Material
@@ -814,8 +727,11 @@ Code slice:
 3. Support all four icon-only size buckets and all seven color styles.
 4. Add focused tests and goldens for sizes, color-style mapping, disabled
    rendering, and the legacy surface-style highlighter path. Verify final
-   disabled pixels, simultaneous interaction states, decreasing-elevation shadow
-   cleanup, fixed icon slots, and zoom scaling.
+   disabled pixels, simultaneous interaction states, fixed icon slots, and
+   zoom scaling. Exercise rest → hover → press/focus → hover → rest and
+   disable/re-enable transitions against facade-resolved elevations. Verify
+   cleanup of larger old shadows at 75%, 100%, 150%, and 200% zoom using current
+   renderer output; the resolved indices must remain unchanged across builds.
 5. Start `examples/material3/fabs/fabs.ino` with an icon-only primary action;
    build it in this phase.
 
@@ -843,7 +759,8 @@ Code slice:
    expanded and collapsed presentation. Cover the width equation with empty
    and nonempty labels, each text style's font options, parent width constraints,
    zoom, borrowed icon replacement while collapsed, and repeated collapse/expand
-   without stale pixels or shadows.
+   without stale pixels or shadows. Apply the same elevation-state and zoom
+   checks to expanded and collapsed presentation.
 5. Extend the same example with a label-bearing action and a host-controlled
    collapse toggle; build it in this phase.
 
@@ -886,10 +803,12 @@ Validation coverage should include:
 
 1. `material3_fab_test` for defaults, size and color-style setters,
    disabled-state color resolution, surface-style highlighter behavior,
-   expanded/collapsed measurement, and size-budget assertions.
+   expanded/collapsed measurement, facade-based elevation transitions, and
+   size-budget assertions.
 2. `material3_fab_golden_test` for icon-only FABs across the four size
    buckets, expressive color styles, surface style, hovered/pressed/focused
-   overlays, and extended FABs in expanded and collapsed presentation.
+   overlays, and extended FABs in expanded and collapsed presentation, including
+   shadow damage coverage at the zoom configurations specified in Phase 2.
 3. Example compilation for `examples/material3/fabs/fabs.ino`.
 4. Host coverage that proves the same widgets work in both a fixed overlay
    position and a navigation-rail header slot without extra per-widget

@@ -38,6 +38,7 @@ It also keeps screen placement, scroll policy, and future width animation outsid
 the base widget. A required icon prevents collapse from creating a blank action.
 
 Use the family design's [geometry and measurement contract](material3_fabs_design.md#geometry-and-size-model),
+[elevation contract](material3_fabs_design.md#elevation-model),
 [API](material3_fabs_design.md#proposed-api), and
 [implementation plan](material3_fabs_design.md#implementation-plan) when coding.
 The illustration below is the current expressive small variant and is maintained
