@@ -51,9 +51,9 @@
 
 #endif
 
-#ifndef ROO_WINDOWS_DISPLAY_MAX_BITS_PER_CHANNEL
+#ifndef ROO_WINDOWS_MAX_BITS_PER_CHANNEL
 // For RGB565, leave '6'. If you use RGB888 display, change to 8.
-#define ROO_WINDOWS_DISPLAY_MAX_BITS_PER_CHANNEL 6
+#define ROO_WINDOWS_MAX_BITS_PER_CHANNEL 6
 #endif
 
 /// Gaussian renderer: 1 uses a shared edge table; 2 uses opacity-baked tables.

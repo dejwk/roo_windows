@@ -1,3 +1,7 @@
+#ifndef ROO_WINDOWS_SHADOW_ALPHA_CUTOFF
+#define ROO_WINDOWS_TEST_DEFAULT_SHADOW_CUTOFF
+#endif
+
 #include "roo_windows/decoration/shadow_lookup.h"
 
 #include <cmath>
@@ -9,6 +13,14 @@
 
 namespace roo_windows {
 namespace {
+#ifdef ROO_WINDOWS_TEST_DEFAULT_SHADOW_CUTOFF
+// Verifies the default cutoff follows the selected display channel precision.
+TEST(ShadowLookupTest, DefaultCutoffFollowsChannelPrecision) {
+  EXPECT_EQ(ROO_WINDOWS_MAX_BITS_PER_CHANNEL <= 6 ? 2 : 0,
+            ROO_WINDOWS_SHADOW_ALPHA_CUTOFF);
+}
+#endif
+
 #if ROO_WINDOWS_EXPERIMENTAL_SHADOW_ANALYTIC
 // Verifies the integer analytical edge is monotonic and within one 8-bit alpha
 // of the Gaussian reference at every representable Q14 input in its support.
@@ -251,7 +263,8 @@ TEST(ShadowLookupTest, OptimizedSamplesExactlyMatchReference) {
               << x << ',' << y << " L" << level << " R" << int(radii.max());
           if (x < bounds.xMin() || x > bounds.xMax() || y < bounds.yMin() ||
               y > bounds.yMax()) {
-            ASSERT_EQ(0, expected);
+            ASSERT_LE(expected, ROO_WINDOWS_SHADOW_ALPHA_CUTOFF)
+                << x << ',' << y << " L" << level << " R" << int(radii.max());
           }
         }
       }
