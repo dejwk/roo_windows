@@ -1,8 +1,14 @@
+#include <algorithm>
 #include <memory>
+#include <vector>
 
 #include "gtest/gtest.h"
+#include "roo_display/core/offscreen.h"
 #include "roo_scheduler.h"
+#include "roo_windows/containers/static_layout.h"
+#include "roo_windows/core/application.h"
 #include "roo_windows/core/environment.h"
+#include "roo_windows/material3/button/button.h"
 #include "roo_windows/material3/toolbar/toolbar.h"
 
 namespace roo_windows::material3 {
@@ -33,6 +39,25 @@ class Probe : public Widget {
   YDim height_;
   Margins margins_;
   int* deleted_;
+};
+
+class Keys : public KeySource {
+ public:
+  void send(KeyPhase phase, KeyCode code, PhysicalKey physical) {
+    events_.push_back({phase, code, 0, physical, 0});
+    notifyReady();
+  }
+
+  int drain(KeyEvent* output, int capacity) override {
+    const int count = std::min<int>(capacity, events_.size());
+    std::copy_n(events_.begin(), count, output);
+    events_.erase(events_.begin(), events_.begin() + count);
+    return count;
+  }
+
+ private:
+  bool hasPendingEvents() const override { return !events_.empty(); }
+  std::vector<KeyEvent> events_;
 };
 
 ApplicationContext MakeContext(Environment& env) {
@@ -200,6 +225,187 @@ TEST(Material3Toolbar, ExactOversizeAndMargins) {
   EXPECT_EQ(
       40,
       child.measure(WidthSpec::Exactly(200), HeightSpec::AtMost(100)).height());
+  toolbar.clear();
+}
+
+// Verifies the floating strip's natural dimensions, orientation swap, exact
+// expansion, and physical mirroring against three 40 px controls.
+TEST(Material3Toolbar, FloatingGeometryOrientationAndRtl) {
+  roo_scheduler::SchedulingService scheduler;
+  Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
+  FloatingToolbar toolbar(context);
+  Probe first(context, 40, 40);
+  Probe second(context, 40, 40);
+  Probe third(context, 40, 40);
+  toolbar.add(first);
+  toolbar.add(second);
+  toolbar.add(third);
+
+  Dimensions measured =
+      toolbar.measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
+  EXPECT_EQ(144, measured.width());
+  EXPECT_EQ(64, measured.height());
+  toolbar.layout(Rect(0, 0, 143, 63));
+  EXPECT_EQ(8, first.parent_bounds().xMin());
+  EXPECT_EQ(52, second.parent_bounds().xMin());
+  EXPECT_EQ(96, third.parent_bounds().xMin());
+  EXPECT_EQ(12, first.parent_bounds().yMin());
+  EXPECT_EQ(32, toolbar.getBorderStyle().top_left_corner_radius());
+
+  measured = toolbar.measure(WidthSpec::Exactly(200), HeightSpec::Exactly(64));
+  toolbar.layout(Rect(0, 0, 199, 63));
+  EXPECT_EQ(36, first.parent_bounds().xMin());
+  toolbar.setLayoutDirection(LayoutDirection::kRightToLeft);
+  toolbar.measure(WidthSpec::Exactly(200), HeightSpec::Exactly(64));
+  toolbar.layout(Rect(0, 0, 199, 63));
+  EXPECT_EQ(124, first.parent_bounds().xMin());
+  EXPECT_EQ(36, third.parent_bounds().xMin());
+
+  toolbar.setOrientation(FloatingToolbarOrientation::kVertical);
+  measured =
+      toolbar.measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
+  EXPECT_EQ(64, measured.width());
+  EXPECT_EQ(144, measured.height());
+  toolbar.layout(Rect(0, 0, 63, 143));
+  EXPECT_EQ(12, first.parent_bounds().xMin());
+  EXPECT_EQ(8, first.parent_bounds().yMin());
+  EXPECT_EQ(52, second.parent_bounds().yMin());
+  EXPECT_EQ(96, third.parent_bounds().yMin());
+  toolbar.clear();
+}
+
+// Verifies empty strips retain the 64 dp floor and user-selected elevation
+// and surface roles leave child state untouched.
+TEST(Material3Toolbar, FloatingEmptySurfaceAndElevation) {
+  roo_scheduler::SchedulingService scheduler;
+  Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
+  FloatingToolbar toolbar(context);
+  Dimensions measured =
+      toolbar.measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
+  EXPECT_EQ(64, measured.width());
+  EXPECT_EQ(64, measured.height());
+  EXPECT_EQ(ColorToken::kSurfaceContainer, toolbar.containerRole());
+  EXPECT_GT(toolbar.getElevation(), 0);
+  toolbar.setElevated(false);
+  EXPECT_EQ(0, toolbar.getElevation());
+  toolbar.setColorStyle(ToolbarColorStyle::kVibrant);
+  EXPECT_EQ(ColorToken::kPrimaryContainer, toolbar.containerRole());
+  toolbar.setOrientation(FloatingToolbarOrientation::kVertical);
+  measured =
+      toolbar.measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
+  EXPECT_EQ(64, measured.width());
+  EXPECT_EQ(64, measured.height());
+}
+
+// Verifies a tall control grows the cross axis and constrained horizontal
+// overflow starts at logical start while retaining the minimum item gap.
+TEST(Material3Toolbar, FloatingTallChildAndBoundedOverflow) {
+  roo_scheduler::SchedulingService scheduler;
+  Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
+  FloatingToolbar toolbar(context);
+  Probe tall(context, 40, 80);
+  Probe next(context, 40, 40);
+  toolbar.add(tall);
+  toolbar.add(next);
+  Dimensions measured =
+      toolbar.measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
+  EXPECT_EQ(100, measured.width());
+  EXPECT_EQ(96, measured.height());
+  measured = toolbar.measure(WidthSpec::Exactly(70), HeightSpec::Exactly(96));
+  toolbar.layout(Rect(0, 0, 69, 95));
+  EXPECT_EQ(8, tall.parent_bounds().xMin());
+  EXPECT_EQ(52, next.parent_bounds().xMin());
+  EXPECT_EQ(61, next.parent_bounds().xMax());
+  toolbar.clear();
+}
+
+// Verifies the toolbar delegates Tab traversal and physical-key activation to
+// the existing task path, including cancellation when an armed child detaches.
+TEST(Material3Toolbar, FocusActivationAndPendingDetach) {
+  std::vector<roo::byte> raster(320 * 240 * 2);
+  roo_display::OffscreenDevice<roo_display::Rgb565> device(
+      320, 240, raster.data(), roo_display::Rgb565());
+  roo_display::Display display(device);
+  roo_scheduler::SchedulingService scheduler;
+  Environment env(scheduler);
+  Application app(&env, display);
+  StaticLayout host(app.context());
+  auto toolbar = std::make_unique<FloatingToolbar>(app.context());
+  FloatingToolbar* toolbar_ptr = toolbar.get();
+  int activations = 0;
+  auto first = std::make_unique<Button>(app.context(), "Pen");
+  Button* first_ptr = first.get();
+  first->setOnInteractiveChange([&activations] { ++activations; });
+  toolbar->add(std::move(first));
+  auto second = std::make_unique<Button>(app.context(), "Erase");
+  Button* second_ptr = second.get();
+  second->setOnInteractiveChange([&activations] { ++activations; });
+  toolbar->add(std::move(second));
+  host.add(std::move(toolbar), 16, 16);
+  Task& task = app.addTaskFullScreen(host);
+  Keys keys;
+  keys.connect(task);
+  app.refresh();
+  app.start();
+
+  ASSERT_TRUE(task.focus().requestFocus(*first_ptr));
+  keys.send(KeyPhase::kDown, KeyCode::kTab, PhysicalKey::kTab);
+  scheduler.executeEligibleTasksUpToNow(roo_scheduler::Priority::kMinimum, 4);
+  app.refresh();
+  EXPECT_EQ(second_ptr, task.focus().focused());
+  keys.send(KeyPhase::kUp, KeyCode::kTab, PhysicalKey::kTab);
+  keys.send(KeyPhase::kDown, KeyCode::kEnter, PhysicalKey::kEnter);
+  keys.send(KeyPhase::kUp, KeyCode::kEnter, PhysicalKey::kEnter);
+  scheduler.executeEligibleTasksUpToNow(roo_scheduler::Priority::kMinimum, 4);
+  app.refresh();
+  delay(500);
+  app.refresh();
+  scheduler.executeEligibleTasksUpToNow(roo_scheduler::Priority::kMinimum, 4);
+  app.refresh();
+  EXPECT_EQ(1, activations);
+
+  keys.send(KeyPhase::kDown, KeyCode::kEnter, PhysicalKey::kEnter);
+  scheduler.executeEligibleTasksUpToNow(roo_scheduler::Priority::kMinimum, 4);
+  toolbar_ptr->clear();
+  keys.send(KeyPhase::kUp, KeyCode::kEnter, PhysicalKey::kEnter);
+  scheduler.executeEligibleTasksUpToNow(roo_scheduler::Priority::kMinimum, 4);
+  app.refresh();
+  EXPECT_EQ(1, activations);
+  EXPECT_EQ(nullptr, task.focus().focused());
+  keys.disconnect();
+  task.navigation().clear();
+}
+
+// Verifies density changes remeasure eligible children while toolbar padding
+// and the 64 dp cross-axis floor remain fixed.
+TEST(Material3Toolbar, DensityChangesOnlyEligibleChildGeometry) {
+  roo_scheduler::SchedulingService scheduler;
+  Material3Theme material = DefaultTheme().material3Theme();
+  Theme theme{MakeFrameworkTheme(material), &material};
+  Environment env(scheduler, theme);
+  ApplicationContext context = MakeContext(env);
+  FloatingToolbar toolbar(context);
+  Button child(context, "Save", ButtonVariant::kFilledTonal);
+  toolbar.add(child);
+  const Dimensions regular =
+      toolbar.measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
+  toolbar.layout(Rect(0, 0, regular.width() - 1, regular.height() - 1));
+  const YDim regular_child_height = child.height();
+  EXPECT_EQ(64, regular.height());
+  EXPECT_EQ(8, toolbar.getPadding().top());
+
+  material.density = Density::kMinus5;
+  toolbar.requestLayoutDescending();
+  toolbar.invalidateDescending();
+  const Dimensions compact =
+      toolbar.measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
+  toolbar.layout(Rect(0, 0, compact.width() - 1, compact.height() - 1));
+  EXPECT_EQ(64, compact.height());
+  EXPECT_EQ(8, toolbar.getPadding().top());
+  EXPECT_LT(child.height(), regular_child_height);
   toolbar.clear();
 }
 

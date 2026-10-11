@@ -120,4 +120,91 @@ class DockedToolbar : public Material3Container {
   uint8_t direction_ : 1;
 };
 
+/// Selects whether a floating toolbar stacks controls across or down a page.
+enum class FloatingToolbarOrientation : uint8_t { kHorizontal, kVertical };
+
+/// A content-sized Material 3 action strip with a rounded surface and shadow.
+/// Its host supplies placement and keeps page content clear of the toolbar.
+class FloatingToolbar : public Material3Container {
+ public:
+  /// Creates an empty horizontal, elevated, standard-color strip in @p context.
+  explicit FloatingToolbar(ApplicationContext& context);
+
+  /// Detaches all controls, deleting those adopted by this toolbar.
+  ~FloatingToolbar() override;
+
+  /// Appends @p child. Null is ignored; a non-null child must be detached,
+  /// share this context, and have nonnegative margins. Borrowed children must
+  /// outlive their attachment; adopted children are deleted on removal.
+  void add(WidgetRef child);
+
+  /// Detaches every child and retains vector capacity for reuse.
+  void clear();
+
+  /// Counts all attached children, including invisible and gone controls.
+  int childCount() const;
+
+  /// Returns the selected surface treatment.
+  ToolbarColorStyle colorStyle() const;
+
+  /// Changes the surface treatment and invalidates descendants.
+  void setColorStyle(ToolbarColorStyle style);
+
+  /// Returns whether the controls run horizontally or vertically.
+  FloatingToolbarOrientation orientation() const;
+
+  /// Changes the strip axis and requests layout.
+  void setOrientation(FloatingToolbarOrientation orientation);
+
+  /// Returns whether the floating surface casts its level-2 shadow.
+  bool elevated() const;
+
+  /// Enables or disables the level-2 shadow and restores affected pixels.
+  void setElevated(bool elevated);
+
+  /// Returns the explicit horizontal direction.
+  LayoutDirection layoutDirection() const;
+
+  /// Mirrors horizontal placement without changing child glyphs or direction.
+  void setLayoutDirection(LayoutDirection direction);
+
+  /// Resolves the shared standard role or vibrant primary-container role.
+  ColorToken containerRole() const override;
+
+  /// Returns fixed 8 dp padding on both axes.
+  Padding getPadding() const override;
+
+  /// Rounds the actual outer bounds with no outline.
+  BorderStyle getBorderStyle() const override;
+
+  /// Resolves level 2 when elevated, zero otherwise.
+  uint8_t getElevation() const override;
+
+  /// Allows caller-supplied child decoration outside the surface.
+  bool mayHaveUnclippedChildren() const override { return true; }
+
+  /// Clips ordinary child content to the rounded surface.
+  bool clipsChildrenToRoundedBounds() const override { return true; }
+
+ protected:
+  int getChildrenCount() const override;
+  const Widget& getChild(int index) const override;
+  Widget& getChild(int index) override;
+  Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
+  void onLayout(bool changed, const Rect& rect) override;
+
+ private:
+  struct Entry {
+    Widget* widget;
+    YDim measured_height;
+    XDim measured_width;
+  };
+
+  std::vector<Entry> children_;
+  uint8_t color_style_ : 1;
+  uint8_t orientation_ : 1;
+  uint8_t elevated_ : 1;
+  uint8_t direction_ : 1;
+};
+
 }  // namespace roo_windows::material3

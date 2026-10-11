@@ -6,6 +6,7 @@
 
 #include "roo_display/color/color.h"
 #include "roo_logging.h"
+#include "roo_windows/material3/internal/elevation.h"
 #include "roo_windows/material3/theme.h"
 #include "roo_windows/material3/toolbar/toolbar_tokens.h"
 
@@ -415,6 +416,251 @@ void DockedToolbar::paint(PaintContext& ctx) const {
     }
   }
   Container::paint(ctx);
+}
+
+FloatingToolbar::FloatingToolbar(ApplicationContext& context)
+    : Material3Container(context),
+      color_style_(static_cast<uint8_t>(ToolbarColorStyle::kStandard)),
+      orientation_(
+          static_cast<uint8_t>(FloatingToolbarOrientation::kHorizontal)),
+      elevated_(true),
+      direction_(static_cast<uint8_t>(LayoutDirection::kLeftToRight)) {}
+
+FloatingToolbar::~FloatingToolbar() { clear(); }
+
+void FloatingToolbar::add(WidgetRef child) {
+  if (child.get() == nullptr) return;
+  Widget* ptr = child.get();
+  CheckChild(*this, *ptr);
+  attachChild(std::move(child));
+  children_.push_back({ptr, 0, 0});
+  requestLayout();
+}
+
+void FloatingToolbar::clear() {
+  if (children_.empty()) return;
+  while (!children_.empty()) {
+    Widget* child = children_.back().widget;
+    children_.pop_back();
+    detachChild(child);
+  }
+  requestLayout();
+}
+
+int FloatingToolbar::childCount() const { return children_.size(); }
+
+ToolbarColorStyle FloatingToolbar::colorStyle() const {
+  return static_cast<ToolbarColorStyle>(color_style_);
+}
+
+void FloatingToolbar::setColorStyle(ToolbarColorStyle style) {
+  if (colorStyle() == style) return;
+  color_style_ = static_cast<uint8_t>(style);
+  invalidateDescending();
+  invalidateInterior();
+}
+
+FloatingToolbarOrientation FloatingToolbar::orientation() const {
+  return static_cast<FloatingToolbarOrientation>(orientation_);
+}
+
+void FloatingToolbar::setOrientation(FloatingToolbarOrientation orientation) {
+  if (this->orientation() == orientation) return;
+  orientation_ = static_cast<uint8_t>(orientation);
+  requestLayout();
+}
+
+bool FloatingToolbar::elevated() const { return elevated_; }
+
+void FloatingToolbar::setElevated(bool elevated) {
+  if (elevated_ == elevated) return;
+  const uint8_t previous = getElevation();
+  elevated_ = elevated;
+  elevationChanged(std::max(previous, getElevation()));
+  invalidateInterior();
+}
+
+LayoutDirection FloatingToolbar::layoutDirection() const {
+  return static_cast<LayoutDirection>(direction_);
+}
+
+void FloatingToolbar::setLayoutDirection(LayoutDirection direction) {
+  if (layoutDirection() == direction) return;
+  direction_ = static_cast<uint8_t>(direction);
+  requestLayout();
+}
+
+ColorToken FloatingToolbar::containerRole() const {
+  return colorStyle() == ToolbarColorStyle::kVibrant
+             ? ColorToken::kPrimaryContainer
+             : theme().material3Theme().components.toolbar.standardContainer;
+}
+
+Padding FloatingToolbar::getPadding() const {
+  return Padding(Scaled(internal::kToolbarPaddingDp));
+}
+
+BorderStyle FloatingToolbar::getBorderStyle() const {
+  const int radius = std::max<int>(0, std::min<int>(width(), height()) / 2);
+  return BorderStyle(static_cast<uint8_t>(std::min(radius, 255)),
+                     SmallNumber(0));
+}
+
+uint8_t FloatingToolbar::getElevation() const {
+  return elevated() ? internal::RendererElevation(2) : 0;
+}
+
+int FloatingToolbar::getChildrenCount() const { return childCount(); }
+
+const Widget& FloatingToolbar::getChild(int index) const {
+  return *children_[index].widget;
+}
+
+Widget& FloatingToolbar::getChild(int index) {
+  return *children_[index].widget;
+}
+
+// The first pass keeps main-axis MatchParent natural. Only cross-axis fill
+// receives a second exact measure after the toolbar itself resolves its size.
+Dimensions FloatingToolbar::onMeasure(WidthSpec width, HeightSpec height) {
+  const int padding = Scaled(internal::kToolbarPaddingDp);
+  const int gap = Scaled(internal::kToolbarItemGapDp);
+  const bool horizontal =
+      orientation() == FloatingToolbarOrientation::kHorizontal;
+  int64_t packed = 0;
+  int64_t max_cross = 0;
+  int count = 0;
+  for (Entry& entry : children_) {
+    Widget& child = *entry.widget;
+    entry.measured_width = 0;
+    entry.measured_height = 0;
+    if (child.isGone()) continue;
+    const Margins margins = child.getMargins();
+    CHECK(margins.left() >= 0 && margins.top() >= 0 && margins.right() >= 0 &&
+          margins.bottom() >= 0);
+    const PreferredSize preferred = child.getPreferredSize();
+    const PreferredSize::Width preferred_width =
+        preferred.width().isMatchParent() ? PreferredSize::WrapContentWidth()
+                                          : preferred.width();
+    const PreferredSize::Height preferred_height =
+        preferred.height().isMatchParent() ? PreferredSize::WrapContentHeight()
+                                           : preferred.height();
+    const Dimensions measured = child.measure(
+        width.getChildWidthSpec(2 * padding + margins.left() + margins.right(),
+                                preferred_width),
+        height.getChildHeightSpec(
+            2 * padding + margins.top() + margins.bottom(), preferred_height));
+    entry.measured_width = measured.width();
+    entry.measured_height = measured.height();
+    const int64_t main_extent = horizontal
+                                    ? static_cast<int64_t>(measured.width()) +
+                                          margins.left() + margins.right()
+                                    : static_cast<int64_t>(measured.height()) +
+                                          margins.top() + margins.bottom();
+    const int64_t cross_extent = horizontal
+                                     ? static_cast<int64_t>(measured.height()) +
+                                           margins.top() + margins.bottom()
+                                     : static_cast<int64_t>(measured.width()) +
+                                           margins.left() + margins.right();
+    if (count++ > 0) packed += gap;
+    packed += main_extent;
+    max_cross = std::max(max_cross, cross_extent);
+  }
+  const int64_t main = std::max<int64_t>(
+      Scaled(internal::kToolbarMinimumCrossDp), 2LL * padding + packed);
+  const int64_t cross = std::max<int64_t>(
+      Scaled(internal::kToolbarMinimumCrossDp), 2LL * padding + max_cross);
+  const XDim actual_width =
+      width.resolveSize(ClampWidth(horizontal ? main : cross));
+  const YDim actual_height =
+      height.resolveSize(ClampHeight(horizontal ? cross : main));
+  const int64_t actual_cross = horizontal ? actual_height : actual_width;
+
+  for (Entry& entry : children_) {
+    Widget& child = *entry.widget;
+    if (child.isGone()) continue;
+    const PreferredSize preferred = child.getPreferredSize();
+    const bool fill_cross = horizontal ? preferred.height().isMatchParent()
+                                       : preferred.width().isMatchParent();
+    if (!fill_cross) continue;
+    const Margins margins = child.getMargins();
+    const int64_t margin_cross = horizontal ? margins.top() + margins.bottom()
+                                            : margins.left() + margins.right();
+    const int64_t available =
+        std::max<int64_t>(0, actual_cross - 2 * padding - margin_cross);
+    if (horizontal) {
+      const Dimensions measured =
+          child.measure(WidthSpec::Exactly(entry.measured_width),
+                        HeightSpec::Exactly(ClampHeight(available)));
+      entry.measured_height = measured.height();
+    } else {
+      const Dimensions measured =
+          child.measure(WidthSpec::Exactly(ClampWidth(available)),
+                        HeightSpec::Exactly(entry.measured_height));
+      entry.measured_width = measured.width();
+    }
+  }
+  return Dimensions(actual_width, actual_height);
+}
+
+void FloatingToolbar::onLayout(bool changed, const Rect& rect) {
+  const int64_t padding = Scaled(internal::kToolbarPaddingDp);
+  const int64_t gap = Scaled(internal::kToolbarItemGapDp);
+  const bool horizontal =
+      orientation() == FloatingToolbarOrientation::kHorizontal;
+  const int64_t main_size = horizontal ? width() : height();
+  const int64_t cross_size = horizontal ? height() : width();
+  const int64_t inner_main = std::max<int64_t>(0, main_size - 2 * padding);
+  const int64_t inner_cross = std::max<int64_t>(0, cross_size - 2 * padding);
+  int64_t packed = 0;
+  int count = 0;
+  for (const Entry& entry : children_) {
+    if (entry.widget->isGone()) continue;
+    const Margins margins = entry.widget->getMargins();
+    if (count++ > 0) packed += gap;
+    packed += horizontal ? static_cast<int64_t>(entry.measured_width) +
+                               margins.left() + margins.right()
+                         : static_cast<int64_t>(entry.measured_height) +
+                               margins.top() + margins.bottom();
+  }
+  int64_t cursor = padding + std::max<int64_t>(0, (inner_main - packed) / 2);
+  const Rect content = ClippedChildRect(
+      padding, padding, std::max<int64_t>(0, width() - 2 * padding),
+      std::max<int64_t>(0, height() - 2 * padding), bounds());
+  bool first = true;
+  for (Entry& entry : children_) {
+    Widget& child = *entry.widget;
+    if (child.isGone()) {
+      child.layout(Rect(0, 0, -1, -1));
+      continue;
+    }
+    if (!first) cursor += gap;
+    const Margins margins = child.getMargins();
+    const int64_t box_width = static_cast<int64_t>(entry.measured_width) +
+                              margins.left() + margins.right();
+    const int64_t box_height = static_cast<int64_t>(entry.measured_height) +
+                               margins.top() + margins.bottom();
+    int64_t box_x = 0;
+    int64_t box_y = 0;
+    if (horizontal) {
+      box_x = layoutDirection() == LayoutDirection::kRightToLeft
+                  ? width() - cursor - box_width
+                  : cursor;
+      box_y = padding + std::max<int64_t>(0, (inner_cross - box_height) / 2);
+      cursor += box_width;
+    } else {
+      box_x = padding + std::max<int64_t>(0, (inner_cross - box_width) / 2);
+      if (layoutDirection() == LayoutDirection::kRightToLeft) {
+        box_x = width() - box_x - box_width;
+      }
+      box_y = cursor;
+      cursor += box_height;
+    }
+    child.layout(ClippedChildRect(box_x + margins.left(), box_y + margins.top(),
+                                  entry.measured_width, entry.measured_height,
+                                  content));
+    first = false;
+  }
 }
 
 }  // namespace roo_windows::material3
