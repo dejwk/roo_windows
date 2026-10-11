@@ -38,6 +38,9 @@ class FloatingActionButton : public SurfaceWidget {
 
   bool isClickable() const override { return true; }
   bool useAutomaticDisabledStyle() const override { return false; }
+  uint8_t getOverlayOpacity() const override {
+    return isEnabled() ? SurfaceWidget::getOverlayOpacity() : 0;
+  }
   ColorToken containerRole() const override;
   Color background() const override;
   BorderStyle getBorderStyle() const override;
@@ -80,6 +83,9 @@ class ExtendedFloatingActionButton : public SurfaceWidget {
 
   bool isClickable() const override { return true; }
   bool useAutomaticDisabledStyle() const override { return false; }
+  uint8_t getOverlayOpacity() const override {
+    return isEnabled() ? SurfaceWidget::getOverlayOpacity() : 0;
+  }
   ColorToken containerRole() const override;
   Color background() const override;
   BorderStyle getBorderStyle() const override;

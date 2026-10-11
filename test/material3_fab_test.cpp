@@ -106,6 +106,7 @@ TEST(Material3Fab, ColorsAndElevationFollowThemeAndState) {
   EXPECT_TRUE(fab.usesHighlighterColor());
   EXPECT_EQ(colors.surfaceContainerHigh, fab.background());
   fab.setEnabled(false);
+  EXPECT_EQ(0, fab.getOverlayOpacity());
   EXPECT_EQ(internal::RendererElevation(0), fab.getElevation());
   EXPECT_EQ(
       roo_display::AlphaBlend(colors.surface, colors.onSurface.withA(0x1F)),
@@ -152,6 +153,10 @@ TEST(Material3Fab, ExtendedWidthAndCollapseFollowSizeTokens) {
     fab.setFocused(false);
     fab.setExpanded(false);
     EXPECT_EQ(internal::RendererElevation(4), fab.getElevation());
+    fab.setEnabled(false);
+    EXPECT_EQ(0, fab.getOverlayOpacity());
+    EXPECT_EQ(internal::RendererElevation(0), fab.getElevation());
+    fab.setEnabled(true);
     EXPECT_EQ(Scaled(item.height), fab.getNaturalDimensions().width());
     EXPECT_EQ(Scaled(item.height), fab.getNaturalDimensions().height());
     fab.setExpanded(true);
