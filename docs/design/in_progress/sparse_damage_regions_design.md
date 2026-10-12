@@ -58,8 +58,10 @@ presentation terminology. Relevant implementation points are:
 | [AcceleratedScrollablePanel](../../../src/roo_windows/containers/accelerated_scrollable_panel.cpp) | Uses full-viewport admission, records omitted background work, and requests a later cleanup through ordinary invalidation. |
 
 The October 4 investigation measured the 66,000 versus 200 write example on an
-earlier tree. Those observations are historical, not current performance
-acceptance. P0 establishes a reproducible baseline for this implementation.
+earlier tree. The [P0 baseline](measurements/sparse_damage_baseline.md) now
+reproduces the 66,000-write envelope on the current host fixture and records
+the scenes, build and control measurements. Neither run is target performance
+acceptance; P8 measures the ESP32-S3 device.
 
 ## Requirements
 
@@ -529,7 +531,7 @@ memory, records completed slices.
 
 | Phase | Depends on | Status | Delivered commit and evidence |
 | --- | --- | --- | --- |
-| P0 Characterization | Existing renderer | Proposed | — |
+| P0 Characterization | Existing renderer | Implemented | `damage_region_resource_test`, [baseline report](measurements/sparse_damage_baseline.md); host target and four renderer regressions pass. |
 | P1 Damage geometry | None | Implemented | `damage_region.h/.cpp`, pixel-oracle test; `//:damage_region_test` and ASan pass, 34-byte host state. |
 | P2 Direct clip queries and prepared gaps | P1 | Proposed | — |
 | P3 Copy and certificate restrictions | P2 | Proposed | — |
