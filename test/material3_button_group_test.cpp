@@ -3,7 +3,9 @@
 #include "button_group_test_support.h"
 #include "gtest/gtest.h"
 #include "roo_icons/outlined/24/action.h"
+#include "roo_icons/outlined/48/action.h"
 #include "roo_windows/core/environment.h"
+#include "roo_windows/material3/button/button_group.h"
 #include "roo_windows/material3/button/internal/button_group_appearance.h"
 #include "roo_windows/material3/button/internal/icon_geometry.h"
 #include "roo_windows/material3/internal/density.h"
@@ -207,6 +209,50 @@ TEST_F(GroupFixture, ClearAndDestruction) {
   }
   EXPECT_EQ(2, destroyed);
   EXPECT_EQ(nullptr, borrowed.parent());
+}
+// Verifies grouped icon density and oversized ink floors at all five sizes,
+// selected outline reservation and live descendant theme relayout.
+TEST_F(GroupFixture, AllGroupSizesAndDensityFloors) {
+  MonoIcon icon = ic_outlined_48_action_home();
+  ButtonGroupButton text(context, "View", ButtonGroupButtonStyle::kOutlined);
+  ButtonGroupIconButton artwork(context, icon, ButtonGroupIconStyle::kOutlined);
+  ConnectedButtonGroup group(context);
+  group.add(text);
+  group.add(artwork);
+  for (ButtonSize size :
+       {ButtonSize::kExtraSmall, ButtonSize::kSmall, ButtonSize::kMedium,
+        ButtonSize::kLarge, ButtonSize::kExtraLarge}) {
+    group.setSize(size);
+    int previous_height = INT16_MAX;
+    for (int level = 0; level >= -5; --level) {
+      material.density = static_cast<Density>(level);
+      group.requestLayoutDescending();
+      group.invalidateDescending();
+      Dimensions natural =
+          group.measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
+      EXPECT_LE(natural.height(), previous_height);
+      previous_height = natural.height();
+      group.layout(Rect(0, 0, natural.width() - 1, natural.height() - 1));
+      EXPECT_EQ(text.height(), artwork.height());
+      EXPECT_GE(artwork.width(), icon.anchorExtents().width());
+      if (level != 0) {
+        int ink_floor =
+            icon.anchorExtents().height() -
+            2 * std::min(icon.extents().yMin() - icon.anchorExtents().yMin(),
+                         icon.anchorExtents().yMax() - icon.extents().yMax());
+        EXPECT_GE(artwork.height(), ink_floor + 2 * Scaled(4));
+      }
+      Dimensions before = text.entryDimensions();
+      group.setSelectionMask(2);
+      EXPECT_EQ(before.width(), text.entryDimensions().width());
+      EXPECT_EQ(before.height(), text.entryDimensions().height());
+      EXPECT_EQ(0, artwork.getBorderStyle().outline_width().ceil());
+      group.setSelectionMask(1);
+      EXPECT_EQ(0, text.getBorderStyle().outline_width().ceil());
+      EXPECT_EQ(Scaled(SmallNumber(1)).ceil(),
+                artwork.getBorderStyle().outline_width().ceil());
+    }
+  }
 }
 static_assert(sizeof(ButtonGroupLabelEntry) - sizeof(SurfaceWidget) <=
               (sizeof(void*) == 4 ? 20 : 40));

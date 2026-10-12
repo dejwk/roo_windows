@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <climits>
+#include <cmath>
 
 #include "roo_display/ui/text_label.h"
 #include "roo_windows/core/click_animation.h"
@@ -36,7 +37,8 @@ bool ButtonGroupEntry::effectivelyEnabled() const {
   return isEnabled() && (group_ == nullptr || group_->isEnabled());
 }
 bool ButtonGroupEntry::eligible() const {
-  if (group_ == nullptr) return false;
+  if (group_ == nullptr || presentationState() != PresentationState::kPresented)
+    return false;
   for (const Widget* ancestor = this; ancestor != nullptr;
        ancestor = ancestor->parent()) {
     if (!ancestor->isEnabled() || !ancestor->isVisible()) return false;
@@ -250,7 +252,8 @@ void ButtonGroupEntry::notifyStateChanged(uint16_t diff) {
     if (!isEnabled()) Widget::onCancel();
   }
   SurfaceWidget::notifyStateChanged(diff);
-  if (group_ != nullptr) group_->entryFeedbackChanged();
+  if (group_ != nullptr && (diff & (kWidgetPressed | kWidgetEnabled)) != 0)
+    group_->entryFeedbackChanged();
 }
 void ButtonGroupEntry::onClickAnimationChanged(float previous_progress) {
   borderStyleChanged(resolveBorder(

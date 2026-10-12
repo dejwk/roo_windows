@@ -1619,8 +1619,8 @@ cc_test(
 
 cc_test(
     name = "material3_button_group_test",
-    srcs = ["test/material3_button_group_test.cpp", "test/button_group_test_support.h"],
-    deps = [":roo_windows", "@roo_testing//:arduino_gtest_main"],
+    srcs = ["test/material3_button_group_test.cpp", "test/material3_button_group_input_test.cpp", "test/button_group_test_support.h"],
+    deps = [":roo_windows", "@roo_testing//:arduino_gtest_main", "@roo_testing//roo_testing/system:manual_time_mode"],
 )
 cc_test(
     name = "material3_button_group_golden_test",

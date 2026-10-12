@@ -8,6 +8,7 @@
 #include "roo_windows/core/application.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/panel.h"
+#include "roo_windows/material3/button/button_group.h"
 #include "roo_windows/material3/button/internal/button_group_appearance.h"
 namespace roo_windows::material3 {
 namespace {
@@ -136,6 +137,74 @@ TEST(ButtonGroupGolden, InternalLayoutAndRestoration) {
       app.refresh();
       EXPECT_EQ(incremental, raster);
     }
+    panel.removeAll();
+  }
+}
+
+// Verifies selected/pressed/disabled contours and stable anchors across each
+// contained style, including mixed artwork, RTL, compact density and dark mode.
+TEST(ButtonGroupGolden, ConnectedSelectionAndRestoration) {
+  for (bool dark : {false, true}) {
+    std::vector<roo::byte> raster(320 * 240 * 2);
+    roo_display::OffscreenDevice<roo_display::Argb4444> device(
+        320, 240, raster.data(), {});
+    roo_display::Display display(device);
+    roo_scheduler::SchedulingService scheduler;
+    Material3Theme material = test_support::MakeAcceptanceTheme(dark);
+    Theme theme{MakeFrameworkTheme(material), &material};
+    Environment env(scheduler, theme);
+    Application app(&env, display);
+    StripedPanel panel(app.context());
+    app.addTaskFullScreen(panel);
+    MonoIcon icon = ic_outlined_24_action_home();
+    std::vector<std::unique_ptr<ConnectedButtonGroup>> groups;
+    for (int i = 0; i < 4; ++i) {
+      auto group = std::make_unique<ConnectedButtonGroup>(app.context());
+      group->add(std::make_unique<ButtonGroupButton>(
+          app.context(), "Day", static_cast<ButtonGroupButtonStyle>(i)));
+      auto middle = std::make_unique<ButtonGroupButton>(
+          app.context(), "Week", static_cast<ButtonGroupButtonStyle>(i));
+      middle->setIcon(&icon);
+      group->add(std::move(middle));
+      group->add(std::make_unique<ButtonGroupButton>(
+          app.context(), "Month", static_cast<ButtonGroupButtonStyle>(i)));
+      group->setSelectionMask(2);
+      panel.add(WidgetRef(*group), Rect(12, 12 + i * 52, 307, 55 + i * 52));
+      groups.push_back(std::move(group));
+    }
+    app.refresh();
+    std::string name = dark ? "connected_dark" : "connected_light";
+    EXPECT_TRUE(test::CompareOrUpdateGolden(
+        test::CaptureRgb(device.raster(), 0, 0, 320, 240),
+        "test/goldens/material3_button_group/" + name + ".ppm", name));
+    for (uint32_t mask : {1u, 4u, 2u}) {
+      for (auto& group : groups) {
+        Widget* child = static_cast<Widget&>(*group).focusChildAt(1);
+        Rect previous = child->parent_bounds();
+        group->setSelectionMask(mask);
+        EXPECT_EQ(previous, child->parent_bounds());
+        child->setPressed(mask == 4);
+      }
+      app.refresh();
+      std::vector<roo::byte> incremental = raster;
+      panel.invalidateDescending();
+      app.refresh();
+      EXPECT_EQ(incremental, raster);
+    }
+    material.density = Density::kMinus3;
+    for (auto& group : groups) {
+      group->setLayoutDirection(LayoutDirection::kRightToLeft);
+      group->setShape(ButtonShape::kSquare);
+      group->setEnabled(false);
+    }
+    panel.requestLayoutDescending();
+    panel.invalidateDescending();
+    app.refresh();
+    name =
+        dark ? "connected_disabled_rtl_dark" : "connected_disabled_rtl_light";
+    EXPECT_TRUE(test::CompareOrUpdateGolden(
+        test::CaptureRgb(device.raster(), 0, 0, 320, 240),
+        "test/goldens/material3_button_group/" + name + ".ppm", name));
     panel.removeAll();
   }
 }
