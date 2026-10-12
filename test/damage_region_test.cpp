@@ -145,6 +145,26 @@ TEST(DamageRegionTest, DirectIntersectionBoundsAndEmptyCases) {
   EXPECT_EQ(allocation_count, 0u);
 }
 
+// Verifies one-member direct queries and fully covered complement preserve
+// exact geometry, including empty and partial clips.
+TEST(DamageRegionTest, SingleMemberDirectQueries) {
+  DamageRegion region;
+  region.add(Box(10, 10, 19, 19));
+  EXPECT_EQ(region.intersectionBounds(Box(12, 12, 16, 16)),
+            Box(12, 12, 16, 16));
+  EXPECT_EQ(region.intersectionBounds(Box(0, 0, 9, 9)), Box(0, 0, -1, -1));
+  EXPECT_TRUE(region.covers(Box(10, 10, 19, 19)));
+  EXPECT_TRUE(region.covers(Box(12, 12, 16, 16)));
+  EXPECT_TRUE(region.covers(Box(0, 0, -1, -1)));
+  EXPECT_FALSE(region.covers(Box(9, 10, 19, 19)));
+  std::vector<Box> gaps;
+  region.appendComplement(Box(12, 12, 16, 16), gaps);
+  EXPECT_TRUE(gaps.empty());
+  region.appendComplement(Box(9, 10, 19, 19), gaps);
+  ASSERT_EQ(gaps.size(), 1u);
+  EXPECT_EQ(gaps[0], Box(9, 10, 9, 19));
+}
+
 // Verifies zero-area merges and deterministic overflow ties preserve all
 // pixels.
 TEST(DamageRegionTest, MergesAdjacentAndChoosesFirstEqualCostPair) {

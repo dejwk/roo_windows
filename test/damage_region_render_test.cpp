@@ -1,5 +1,6 @@
 #include <array>
 #include <cstdint>
+#include <cstdio>
 #include <memory>
 
 #include "gtest/gtest.h"
@@ -21,6 +22,10 @@ struct DamageRegionRenderTestPeer {
 
   static size_t preparedCount(const ClipperState& state) {
     return state.bounded_exclusions_.size();
+  }
+
+  static size_t preparedCapacity(const ClipperState& state) {
+    return state.bounded_exclusions_.capacity();
   }
 };
 
@@ -222,6 +227,13 @@ TEST(DamageRegionRenderTest, PreparedGapsFilterAllOutputMethods) {
     out.setBounds(full);
     DrawMethod(out, method);
     EXPECT_EQ(internal::DamageRegionRenderTestPeer::preparedCount(state), 7u);
+    const size_t capacity =
+        internal::DamageRegionRenderTestPeer::preparedCapacity(state);
+    EXPECT_GE(capacity, 7u);
+    if (method == 0) {
+      std::printf("P8_HOST_GAP_CAPACITY gaps=7 capacity=%zu bytes=%zu\n",
+                  capacity, capacity * sizeof(Box));
+    }
     for (int y = 0; y < kHeight; ++y) {
       for (int x = 0; x < kWidth; ++x) {
         const bool damaged = damage.covers(Box(x, y, x, y));

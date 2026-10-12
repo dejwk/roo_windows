@@ -115,6 +115,11 @@ bool ScanGaps(const DamageRegion& region, const Box& clip,
 
 void DamageRegion::add(Box clipped_damage) {
   if (clipped_damage.empty()) return;
+  if (count_ == 0) {
+    rects_[0] = clipped_damage;
+    count_ = 1;
+    return;
+  }
 
   for (uint8_t i = 0; i < count_; ++i) {
     if (rects_[i].contains(clipped_damage)) return;
@@ -160,6 +165,7 @@ void DamageRegion::add(Box clipped_damage) {
 }
 
 Box DamageRegion::bounds() const {
+  if (count_ == 1) return rects_[0];
   Box result = EmptyBox();
   for (uint8_t i = 0; i < count_; ++i) {
     result = result.empty() ? rects_[i] : Box::Extent(result, rects_[i]);
@@ -170,6 +176,11 @@ Box DamageRegion::bounds() const {
 Box DamageRegion::intersectionBounds(const Box& clip) const {
   Box result = EmptyBox();
   if (clip.empty()) return result;
+  if (count_ == 1) {
+    if (rects_[0].contains(clip)) return clip;
+    const Box piece = Box::Intersect(rects_[0], clip);
+    return piece.empty() ? result : piece;
+  }
   for (uint8_t i = 0; i < count_; ++i) {
     const Box piece = Box::Intersect(rects_[i], clip);
     if (piece.empty()) continue;
@@ -179,11 +190,14 @@ Box DamageRegion::intersectionBounds(const Box& clip) const {
 }
 
 bool DamageRegion::covers(const Box& candidate) const {
+  if (candidate.empty()) return true;
+  if (count_ == 1) return rects_[0].contains(candidate);
   return !ScanGaps(*this, candidate, nullptr);
 }
 
 void DamageRegion::appendComplement(const Box& clip,
                                     std::vector<Box>& output) const {
+  if (count_ == 1 && rects_[0].contains(clip)) return;
   ScanGaps(*this, clip, &output);
 }
 

@@ -63,6 +63,15 @@ cc_test(
     ],
 )
 
+cc_binary(
+    name = "sparse_damage_cpu_probe",
+    srcs = ["benchmarks/sparse_damage_cpu_probe.cpp"],
+    copts = ["-O2"],
+    linkstatic = 1,
+    tags = ["manual"],
+    deps = [":roo_windows"],
+)
+
 cc_test(
     name = "roo_windows_test",
     srcs = [

@@ -1,0 +1,6 @@
+P8_CPU name=single members=1 gaps=0 scratch_capacity=45 gap_query_ns=32 hit_query_ns=12 rejected=100000 complement_ns=7 prep_ns=80 prep_calls=1000 reject_ns=67 rejected_clips=1000 rejected_prepares=0 filter_ns=8 output_pixels=10000 output_commands=1
+P8_CPU name=corners members=2 gaps=3 scratch_capacity=45 gap_query_ns=49 hit_query_ns=55 rejected=100000 complement_ns=380 prep_ns=614 prep_calls=1000 reject_ns=84 rejected_clips=1000 rejected_prepares=0 filter_ns=40 output_pixels=200 output_commands=1
+P8_CPU name=four members=4 gaps=3 scratch_capacity=45 gap_query_ns=97 hit_query_ns=97 rejected=100000 complement_ns=649 prep_ns=1039 prep_calls=1000 reject_ns=128 rejected_clips=1000 rejected_prepares=0 filter_ns=57 output_pixels=400 output_commands=1
+P8_CPU name=overlap members=2 gaps=2 scratch_capacity=45 gap_query_ns=50 hit_query_ns=71 rejected=100000 complement_ns=445 prep_ns=916 prep_calls=1000 reject_ns=91 rejected_clips=1000 rejected_prepares=0 filter_ns=52 output_pixels=17500 output_commands=1
+P8_CPU name=fifth members=4 gaps=9 scratch_capacity=45 gap_query_ns=101 hit_query_ns=96 rejected=100000 complement_ns=1226 prep_ns=1816 prep_calls=1000 reject_ns=133 rejected_clips=1000 rejected_prepares=0 filter_ns=112 output_pixels=22300 output_commands=1
+P8_CHECKSUM 103080000

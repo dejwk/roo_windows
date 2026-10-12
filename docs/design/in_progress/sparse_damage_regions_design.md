@@ -1,11 +1,11 @@
 # Sparse damage regions
 
-Status: **in progress**. Reviewed against `roo_windows` HEAD `1914bd23` and
-the working tree on 2026-10-12. P1 damage geometry is implemented; renderer
-integration and resource acceptance remain. Synchronous painting, rounded child
-clipping, prepared exclusions, rounded scroll copying, and accelerated-scroll
-cleanup are existing prerequisites. The phase ledger below is the implementation
-handoff; update it as each phase lands.
+Status: **in progress**. P0–P8 are implemented, including device and resource
+acceptance on the Makerfabs ESP32-S3; the isolated native-filter comparison in
+P9 remains. Synchronous painting, rounded child clipping, prepared exclusions,
+rounded scroll copying, and accelerated-scroll cleanup are existing
+prerequisites. The phase ledger below is the implementation handoff; update it
+as each phase lands.
 
 Amended on 2026-10-13: use damage directly for early clip rejection and trimming,
 retain compiled gaps for initial output filtering, and compare native damage
@@ -456,7 +456,13 @@ native output filtering without weakening the cheap direct query. Algorithm
 changes require a measured design amendment, not an undocumented switch.
 
 Keep the current single-region path free of gap fragments when its canvas clip
-is already inside that region. Warmed fixed-scene allocations must not increase.
+is already inside that region. The P8 exploratory ESP32-S3 comparison found a
+repeatable 2.58 ms to 2.99 ms regression for a 100×100 single damage box, with
+about 0.31 ms of the delta in refresh. The first insertion into an empty region should avoid the multi-member merge
+pass, and one-member bounds, direct intersection/coverage and fully covered complement
+queries should avoid the general multi-member band scanner. Remeasure the paired control before accepting
+this optimization; retain the general scanner for partial clips and two or more
+members. Warmed fixed-scene allocations must not increase.
 Require unchanged `sizeof(Widget)` and `sizeof(Container)`, at most 32 bytes
 growth in `MainWindow` on the target ABI, and a complement-emission target
 function frame no larger than 256 bytes. Report vtable/flash deltas and retained
@@ -547,7 +553,7 @@ memory, records completed slices.
 | P5 Restore pending paint obligations | P0 | Implemented | Framework-only widget/container restoration after paint; both sibling orders and semantic-hook count pass in `//:roo_windows_test`, and `//:accelerated_scroll_state_test` passes. Host `Widget`/`Container` remain 40/56 bytes. |
 | P6 Activate sparse root damage | P0–P5 | Implemented | `MainWindow` snapshots four-box pending damage and passes it to the clipper; 200 exact writes for distant 10×10 boxes, rejected middle container, capacity/full/idle and paint-time gap tests pass in damage resource and core targets; 10 renderer regressions pass. |
 | P7 Preserve producer footprints | P6 | Implemented | Pin preflight, click spill, and press-state notifications submit old/new bounds separately; moving-pin regression writes 200 pixels with an untouched gap; producer and settlement suites pass. |
-| P8 Resource and device acceptance | P6, P7 | Proposed | — |
+| P8 Resource and device acceptance | P6, P7 | Implemented | [Five-pair ESP32-S3 report](measurements/sparse_damage_target_acceptance.md), [130 raw scene rows](measurements/sparse_damage_target_batches.csv), host CPU decomposition and target ABI probe; all 162 repository tests pass. Distant corners write 200 instead of 358,800 pixels and cut median cycle time 92.21%; single control +4.69%, target `MainWindow` +24 B, stack headroom ≥71.5%. |
 | P9 Native output comparison | P8 | Proposed | — |
 
 P0/P1 and, after P2, P3/P4 can be delegated independently with explicit file
