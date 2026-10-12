@@ -125,7 +125,9 @@ foreground exclusions are considered.
 
 The root stores at most four damage rectangles. Containers retain their
 existing conservative surface rectangles; the shared clipper enforces the
-precise active union. The initial implementation combines two mechanisms:
+precise active union. P6 activates this path for ordinary window painting; the
+host characterization fixture now records 200 writes per two-corner frame
+instead of the P0 baseline's 66,000. The initial implementation combines two mechanisms:
 
 1. `prepareClip()` intersects its requested clip with each damage member and
    bounds the surviving intersections. An empty result skips widget content
@@ -541,7 +543,7 @@ memory, records completed slices.
 | P3 Copy and certificate restrictions | P2 | Implemented | Destination-only damage restriction in `BlitPlanner`; `//:blit_plan_test`, `//:damage_region_render_test`, and `//:horizontal_page_host_render_test` pass. |
 | P4 Accelerated coverage guards | P2 | Implemented | Exact viewport coverage and per-band damage guards; `//:accelerated_scroll_state_test`, `//:background_deferral_test`, and `//:damage_region_render_test` pass. |
 | P5 Restore pending paint obligations | P0 | Implemented | Framework-only widget/container restoration after paint; both sibling orders and semantic-hook count pass in `//:roo_windows_test`, and `//:accelerated_scroll_state_test` passes. Host `Widget`/`Container` remain 40/56 bytes. |
-| P6 Activate sparse root damage | P0–P5 | Proposed | — |
+| P6 Activate sparse root damage | P0–P5 | Implemented | `MainWindow` snapshots four-box pending damage and passes it to the clipper; 200 exact writes for distant 10×10 boxes, rejected middle container, capacity/full/idle and paint-time gap tests pass in damage resource and core targets; 10 renderer regressions pass. |
 | P7 Preserve producer footprints | P6 | Proposed | — |
 | P8 Resource and device acceptance | P6, P7 | Proposed | — |
 | P9 Native output comparison | P8 | Proposed | — |

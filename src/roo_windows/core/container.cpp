@@ -381,10 +381,6 @@ Rect Container::getMaxSloppyTouchParentBounds() const {
 // are dirty, but a relatively small area actually gets invalidated (e.g.
 // because something moved).
 void Container::propagateDirty(const Widget* child, const Rect& rect) {
-  if (isDirty() && invalid_region_.contains(rect)) {
-    // Already fully invalidated, thus dirty.
-    return;
-  }
   Rect clipped(0, 0, -1, -1);
   if (isVisible()) {
     clipped = rect;

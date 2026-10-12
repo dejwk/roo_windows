@@ -1029,6 +1029,7 @@ TEST_F(RooWindowsRenderTest, PaintTimeSiblingObligationSurvivesClipCleanup) {
   target_ptr->semantic_invalidations = 0;
   trigger_ptr->arm(*target_ptr);
   trigger_ptr->invalidateInterior();
+  app_.root().invalidateDescending(Rect(0, 38, 9, 47));
   refresh();
   EXPECT_EQ(target_ptr->paints, 1);
   EXPECT_EQ(target_ptr->semantic_invalidations, 1);
@@ -1066,6 +1067,24 @@ TEST_F(RooWindowsRenderTest, PaintTimeEarlierSiblingRemainsScheduled) {
   EXPECT_EQ(target_ptr->paints, 2);
   EXPECT_EQ(target_ptr->semantic_invalidations, 1);
   EXPECT_EQ(QuantizeToArgb4444(color::Yellow), pixelAt(12, 12));
+  EXPECT_FALSE(app_.root().isDirty());
+}
+
+// A new child change inside the envelope of two older invalidations must
+// still reach the root's pending union through an already-invalidated parent.
+TEST_F(RooWindowsRenderTest, CenterChildChangeSurvivesAncestorEnvelope) {
+  auto panel = std::make_unique<OpaqueExposedPanel>(context());
+  auto target = std::make_unique<PaintTimeTarget>(context());
+  PaintTimeTarget* target_ptr = target.get();
+  panel->add(std::move(target), Rect(22, 14, 41, 33));
+  app_.add(std::move(panel), Box(0, 0, 63, 47));
+  refresh();
+  ASSERT_EQ(QuantizeToArgb4444(color::Green), pixelAt(26, 18));
+  app_.root().invalidateDescending(Rect(0, 0, 9, 9));
+  app_.root().invalidateDescending(Rect(54, 38, 63, 47));
+  target_ptr->setColor(color::Yellow);
+  refresh();
+  EXPECT_EQ(QuantizeToArgb4444(color::Yellow), pixelAt(26, 18));
   EXPECT_FALSE(app_.root().isDirty());
 }
 

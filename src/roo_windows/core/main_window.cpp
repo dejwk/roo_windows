@@ -38,7 +38,6 @@ bool IsInSubtree(const Widget& candidate, const Widget& subtree) {
 MainWindow::MainWindow(Application& app, const roo_display::Box& bounds)
     : Container(app.context()),
       app_(app),
-      redraw_bounds_(bounds),
       scrim_(app.context()),
       host_layer_(app.context()),
       transient_surface_host_(*this),
@@ -191,7 +190,8 @@ void MainWindow::refreshClickAnimation() { click_animation_.tick(); }
 
 void MainWindow::invalidateDescending() {
   Container::invalidateDescending();
-  redraw_bounds_ = bounds();
+  pending_damage_.clear();
+  pending_damage_.add(bounds().asBox());
   setDirty(bounds());
 }
 
@@ -199,7 +199,7 @@ void MainWindow::invalidateDescending(const Rect& rect) {
   const Rect clipped = Rect::Intersect(rect, bounds());
   if (clipped.empty()) return;
   Container::invalidateDescending(clipped);
-  redraw_bounds_ = UnionNonEmpty(redraw_bounds_, clipped);
+  pending_damage_.add(clipped.asBox());
   setDirty(clipped);
 }
 
@@ -219,19 +219,22 @@ void MainWindow::paintWindow(const roo_display::Surface& s,
         theme().framework.color.resolve(FrameworkColorRole::kCanvas)));
   }
   if (!isDirty()) return;
-  Canvas canvas(&s);
-  canvas.clipToExtents(redraw_bounds_);
   // New invalidations raised during painting belong to the next refresh.
-  redraw_bounds_ = Rect(0, 0, -1, -1);
+  internal::DamageRegion active = pending_damage_;
+  pending_damage_.clear();
+  Canvas canvas(&s);
+  canvas.clipToExtents(Rect(active.bounds()));
   {
-    Clipper clipper(clipper_state_, s.out(), deadline);
+    Clipper clipper(clipper_state_, s.out(), deadline, &active);
     canvas.set_out(clipper.out());
     paintWidget(canvas, clipper);
   }
-  // Painting can clear a descendant's dirty flags after it reports new work.
-  // Re-arm those obligations without replaying semantic invalidation hooks.
-  const Rect pending = redraw_bounds_;
-  if (!pending.empty()) restorePaintObligation(pending);
+  // The clipper has released its immutable borrow. Reuse the same stack
+  // storage to snapshot pending geometry before walking descendants.
+  active = pending_damage_;
+  for (uint8_t i = 0; i < active.size(); ++i) {
+    restorePaintObligation(Rect(active.at(i)));
+  }
   commitPresentationPinBounds();
 }
 
@@ -292,7 +295,6 @@ void MainWindow::invalidatePresentationRegion(const Rect& rect) {
   if (clipped.empty()) return;
   setDirty(clipped);
   invalidateDescending(clipped);
-  redraw_bounds_ = UnionNonEmpty(redraw_bounds_, clipped);
 }
 
 void MainWindow::setPresentationPinDirty(const Widget& anchor) {
@@ -412,11 +414,7 @@ void MainWindow::propagateDirty(const Widget* child, const Rect& rect) {
   }
   setDirty(clipped);
   if (!clipped.empty()) {
-    if (redraw_bounds_.empty()) {
-      redraw_bounds_ = clipped;
-    } else {
-      redraw_bounds_ = Rect::Extent(redraw_bounds_, clipped);
-    }
+    pending_damage_.add(clipped.asBox());
   }
 }
 
@@ -436,11 +434,7 @@ void MainWindow::childHidden(const Widget* child) {
 void MainWindow::childInvalidatedRegion(const Widget* child, Rect rect) {
   rect = Rect::Intersect(rect, bounds());
   if (!rect.empty()) {
-    if (redraw_bounds_.empty()) {
-      redraw_bounds_ = rect;
-    } else {
-      redraw_bounds_ = Rect::Extent(redraw_bounds_, rect);
-    }
+    pending_damage_.add(rect.asBox());
   }
   Container::childInvalidatedRegion(child, rect);
 }

@@ -12,6 +12,7 @@
 #include "roo_display/core/offscreen.h"
 #include "roo_windows/containers/scrollable_panel.h"
 #include "roo_windows/core/application.h"
+#include "roo_windows/core/damage_region.h"
 #include "roo_windows/core/panel.h"
 
 namespace {
@@ -90,6 +91,7 @@ class RecordingDevice : public roo_display::OffscreenDevice<Argb8888> {
   size_t unique() const { return unique_; }
   size_t addresses() const { return addresses_; }
   size_t copies() const { return copies_; }
+  uint16_t touched(int x, int y) const { return touched_[y * kWidth + x]; }
 
   void setAddress(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1,
                   BlendingMode mode) override {
@@ -213,6 +215,14 @@ class CountedPanel : public Panel {
   using Panel::Panel;
 
   Color background() const override { return Color(0xFF4466AA); }
+
+  size_t children_paints = 0;
+
+ protected:
+  void paintChildren(PaintContext& ctx) override {
+    ++children_paints;
+    Panel::paintChildren(ctx);
+  }
 };
 
 enum class Scene {
@@ -368,6 +378,96 @@ Metrics Measure(Scene scene) {
           : left->paint_calls + (right != nullptr ? right->paint_calls : 0);
   totals.allocations = allocation_count;
   return totals;
+}
+
+// Sparse root damage leaves the broad envelope gap completely untouched, and
+// a nested middle container is rejected before its descendants paint.
+TEST(DamageRegionResourceTest, DistantDamageWritesOnlyTwoSmallBoxes) {
+  std::vector<roo::byte> pixels(kWidth * kHeight * 4);
+  RecordingDevice device(pixels.data());
+  roo_display::Display display(device);
+  roo_scheduler::SchedulingService scheduler;
+  Environment environment(scheduler);
+  Application app(&environment, display);
+  auto root_panel = std::make_unique<CountedPanel>(app.context());
+  auto middle = std::make_unique<CountedPanel>(app.context());
+  CountedPanel* middle_ptr = middle.get();
+  auto middle_leaf = std::make_unique<CountedSurface>(app.context());
+  CountedSurface* middle_leaf_ptr = middle_leaf.get();
+  middle->add(std::move(middle_leaf), Rect(0, 0, 19, 19));
+  root_panel->add(std::move(middle), kCenter);
+  app.add(std::move(root_panel), roo_display::Box(0, 0, 319, 239));
+  app.refresh();
+  device.resetCounters();
+  middle_ptr->children_paints = 0;
+  middle_leaf_ptr->paint_calls = 0;
+  app.root().invalidateDescending(kLeft);
+  app.root().invalidateDescending(kRight);
+  app.refresh();
+  EXPECT_EQ(device.writes(), 200u);
+  EXPECT_EQ(device.unique(), 200u);
+  EXPECT_EQ(middle_ptr->children_paints, 0u);
+  EXPECT_EQ(middle_leaf_ptr->paint_calls, 0u);
+  EXPECT_FALSE(app.root().isDirty());
+  device.resetCounters();
+  app.refresh();
+  EXPECT_EQ(device.writes(), 0u);
+}
+
+// Root-local, full, overflow and empty requests keep the pending region and
+// widget dirty flags consistent after the initial display paint.
+TEST(DamageRegionResourceTest, RootDamageCapacityAndLifecycle) {
+  std::vector<roo::byte> pixels(kWidth * kHeight * 4);
+  RecordingDevice device(pixels.data());
+  roo_display::Display display(device);
+  roo_scheduler::SchedulingService scheduler;
+  Environment environment(scheduler);
+  Application app(&environment, display);
+  auto surface = std::make_unique<CountedSurface>(app.context());
+  CountedSurface* leaf = surface.get();
+  app.add(std::move(surface), roo_display::Box(0, 0, 319, 239));
+  app.refresh();
+
+  const Rect requests[] = {Rect(10, 10, 11, 11), Rect(50, 30, 51, 31),
+                           Rect(100, 70, 101, 71), Rect(150, 110, 151, 111),
+                           Rect(200, 150, 201, 151)};
+  internal::DamageRegion expected;
+  device.resetCounters();
+  for (const Rect& request : requests) {
+    expected.add(request.asBox());
+    app.root().invalidateDescending(request);
+  }
+  ASSERT_EQ(expected.size(), 4);
+  app.refresh();
+  size_t expected_writes = 0;
+  for (int y = 0; y < kHeight; ++y) {
+    for (int x = 0; x < kWidth; ++x) {
+      const bool damaged = expected.covers(roo_display::Box(x, y, x, y));
+      expected_writes += damaged;
+      EXPECT_EQ(device.touched(x, y), damaged ? 1 : 0);
+    }
+  }
+  EXPECT_EQ(device.writes(), expected_writes);
+  EXPECT_EQ(device.unique(), expected_writes);
+  EXPECT_FALSE(app.root().isDirty());
+
+  device.resetCounters();
+  app.root().invalidateInterior(kCenter);
+  app.refresh();
+  EXPECT_EQ(device.writes(), 400u);
+  device.resetCounters();
+  app.root().invalidateDescending();
+  app.refresh();
+  EXPECT_EQ(device.writes(), size_t(kWidth * kHeight));
+
+  device.resetCounters();
+  const size_t before = leaf->paint_calls;
+  leaf->setDirty(Rect(0, 0, -1, -1));
+  ASSERT_TRUE(app.root().isDirty());
+  app.refresh();
+  EXPECT_EQ(device.writes(), 0u);
+  EXPECT_EQ(leaf->paint_calls, before);
+  EXPECT_FALSE(app.root().isDirty());
 }
 
 // Verifies the baseline recorder sees area amplification and supplies

@@ -209,9 +209,8 @@ class MainWindow : public Container {
   // Stored as instance variable, to avoid vector reallocation on each paint.
   internal::ClipperState clipper_state_;
 
-  // Maintains the area that encapsulates all content that needs to be
-  // (re)drawn.
-  Rect redraw_bounds_;
+  // Bounded display-local damage pending for the next paint.
+  internal::DamageRegion pending_damage_;
 
   bool initialized_ = false;
 
