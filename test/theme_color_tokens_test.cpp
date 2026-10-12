@@ -69,10 +69,11 @@ TEST(Material3ThemeTest, InitializesCompactComponentSurfaceDefaults) {
   const material3::Material3Theme material = {};
 
   EXPECT_EQ(static_cast<size_t>(3), sizeof(material3::CardTheme));
-  EXPECT_EQ(static_cast<size_t>(27), sizeof(material3::ComponentTheme));
-  // Color is a packed 32-bit ARGB value on the supported target. The 27-byte
-  // payload therefore adds 28 aligned bytes to the prior 928-byte theme.
-  EXPECT_EQ(static_cast<size_t>(956), sizeof(material3::Material3Theme));
+  EXPECT_EQ(static_cast<size_t>(1), sizeof(material3::ToolbarTheme));
+  EXPECT_EQ(static_cast<size_t>(28), sizeof(material3::ComponentTheme));
+  // The 28-byte component payload and one-byte density field add 32 aligned
+  // bytes to the 928-byte color/state payload (Color has 32-bit alignment).
+  EXPECT_EQ(static_cast<size_t>(960), sizeof(material3::Material3Theme));
   EXPECT_EQ(material3::ColorToken::kSurfaceContainerLow,
             material.components.card.elevatedContainer);
   EXPECT_EQ(material3::ColorToken::kSurfaceContainerHighest,
@@ -117,6 +118,8 @@ TEST(Material3ThemeTest, InitializesCompactComponentSurfaceDefaults) {
             material.components.toggleIconButton.filledUnselectedContainer);
   EXPECT_EQ(material3::ColorToken::kSurfaceContainerHighest,
             material.components.switchControl.unselectedTrack);
+  EXPECT_EQ(material3::ColorToken::kSurfaceContainer,
+            material.components.toolbar.standardContainer);
 }
 
 TEST(Material3ThemeTest, MakesTheDocumentedFrameworkMapping) {
