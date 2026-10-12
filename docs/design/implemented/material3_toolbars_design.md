@@ -123,9 +123,10 @@ container, which knows which content must stay unobstructed.
 
 For a chart with three controls measuring 40 by 40 pixels at 100% zoom, a
 horizontal floating toolbar naturally measures
-`8 + 40 + 4 + 40 + 4 + 40 + 8 = 144` pixels wide and 64 pixels high. The controls
-start at `(8, 12)`, `(52, 12)`, and `(96, 12)`. Vertical orientation produces
-64 by 144 pixels with the coordinates transposed. These dimensions include
+`8 + 48 + 4 + 48 + 4 + 48 + 8 = 168` pixels wide and 64 pixels high. Each
+control occupies a 48 by 48 pixel slot; its visible bounds start at
+`(12, 12)`, `(64, 12)`, and `(116, 12)`. Vertical orientation produces
+64 by 168 pixels with the coordinates transposed. These dimensions include
 toolbar padding and exclude host placement margins.
 
 ## Design Details
@@ -195,6 +196,10 @@ $h=Scaled(64)$, and let $b_i$ be the gap after child $i$: `Scaled(4)` within a
 group/strip, `Scaled(16)` across docked slots. All following arithmetic is in
 pixels, using wide intermediates and saturating to representable spec/dimension
 ranges before narrowing.
+
+For floating toolbars, floor each margin-box extent at `Scaled(48)` before
+using it as $m_i$ or $c_i$. The child keeps its measured size and is centered
+with its margins inside that slot.
 
 The required packed length and natural cross size are:
 
@@ -286,9 +291,18 @@ does not move children. Invisible children still count toward group occupancy.
 
 ### Floating geometry and placement
 
-Floating controls use the same measurement rules and fixed 4 dp gaps. When
-exact constraints make the main axis longer than its natural size, center the
-packed strip. Under overfull constraints, pack from logical start. Rounded
+Floating controls use the same child measurement rules, then reserve a slot
+at least 48 dp per axis around each measured control including its margins.
+Center the control's margin box in its slot and use fixed 4 dp gaps between
+slots. This matches the default icon-button layout area assumed by
+[Compose's toolbar padding](https://github.com/androidx/androidx/blob/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/FloatingToolbar.kt).
+With a 40 dp button, the 8 dp toolbar padding plus 4 dp inside the slot gives
+12 dp visible clearance on each edge. The end button's center is 32 dp from
+the edge, matching the center of the 64 dp toolbar's rounded cap. The slot
+floor scales with zoom and requires no additional stored state.
+
+When exact constraints make the main axis longer than its natural size, center
+the packed strip. Under overfull constraints, pack from logical start. Rounded
 corners use the integer-pixel `BorderStyle` radius
 `floor(min(actual_width, actual_height) / 2)`, with no outline. The underlying
 border API cannot represent the half-pixel ideal for odd dimensions.

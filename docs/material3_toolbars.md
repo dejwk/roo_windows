@@ -25,11 +25,16 @@ the existing group gaps and do not move controls.
 
 Floating toolbars wrap both axes. The default horizontal strip is elevated;
 `setOrientation(kVertical)` stacks controls without rotating them. Both forms
-keep a 64 dp minimum on each axis, 8 dp inner padding, and 4 dp gaps. Placement
-margins are the host's responsibility: allow at least 16 dp around a horizontal
-strip and about 24 dp beside a vertical strip, including shadow clearance. A
-floating toolbar in a scaffold bottom slot reserves a bottom band; it does not
-overlay page content.
+keep a 64 dp minimum on each axis and 8 dp inner padding. Each control is
+centered with its margins in a slot at least 48 dp wide and tall, with 4 dp
+between slots. A 40 dp round button therefore has 12 dp visible clearance at
+each end and above/below; its center coincides with the
+center of the 64 dp toolbar's rounded cap. Larger controls grow their slots.
+This follows Compose's 48 dp minimum icon-button layout area and toolbar
+padding. Placement margins are the host's responsibility: allow at least 16 dp
+around a horizontal strip and about 24 dp beside a vertical strip, including
+shadow clearance. A floating toolbar in a scaffold bottom slot reserves a
+bottom band; it does not overlay page content.
 
 All controls must fit in the available padded area before presentation. When
 they do not, the toolbar keeps its minimum gaps and clips at the content edge.

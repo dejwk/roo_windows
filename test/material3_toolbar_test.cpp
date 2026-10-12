@@ -4,11 +4,13 @@
 
 #include "gtest/gtest.h"
 #include "roo_display/core/offscreen.h"
+#include "roo_icons/outlined/24/action.h"
 #include "roo_scheduler.h"
 #include "roo_windows/containers/static_layout.h"
 #include "roo_windows/core/application.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/material3/button/button.h"
+#include "roo_windows/material3/button/icon_button.h"
 #include "roo_windows/material3/toolbar/toolbar.h"
 
 namespace roo_windows::material3 {
@@ -229,49 +231,63 @@ TEST(Material3Toolbar, ExactOversizeAndMargins) {
 }
 
 // Verifies the floating strip's natural dimensions, orientation swap, exact
-// expansion, and physical mirroring against three 40 px controls.
+// expansion, and physical mirroring against three 40 px icon buttons. End
+// button centers coincide with the centers of the toolbar's rounded caps.
 TEST(Material3Toolbar, FloatingGeometryOrientationAndRtl) {
   roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   FloatingToolbar toolbar(context);
-  Probe first(context, 40, 40);
-  Probe second(context, 40, 40);
-  Probe third(context, 40, 40);
+  IconButton first(context, ic_outlined_24_action_done());
+  IconButton second(context, ic_outlined_24_action_done());
+  IconButton third(context, ic_outlined_24_action_done());
   toolbar.add(first);
   toolbar.add(second);
   toolbar.add(third);
 
   Dimensions measured =
       toolbar.measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
-  EXPECT_EQ(144, measured.width());
+  EXPECT_EQ(168, measured.width());
   EXPECT_EQ(64, measured.height());
-  toolbar.layout(Rect(0, 0, 143, 63));
-  EXPECT_EQ(8, first.parent_bounds().xMin());
-  EXPECT_EQ(52, second.parent_bounds().xMin());
-  EXPECT_EQ(96, third.parent_bounds().xMin());
+  toolbar.layout(Rect(0, 0, 167, 63));
+  EXPECT_EQ(12, first.parent_bounds().xMin());
+  EXPECT_EQ(64, second.parent_bounds().xMin());
+  EXPECT_EQ(116, third.parent_bounds().xMin());
   EXPECT_EQ(12, first.parent_bounds().yMin());
+  EXPECT_EQ(40, first.width());
+  EXPECT_EQ(40, first.height());
+  EXPECT_EQ(12, toolbar.width() - third.parent_bounds().xMax() - 1);
   EXPECT_EQ(32, toolbar.getBorderStyle().top_left_corner_radius());
 
   measured = toolbar.measure(WidthSpec::Exactly(200), HeightSpec::Exactly(64));
   toolbar.layout(Rect(0, 0, 199, 63));
-  EXPECT_EQ(36, first.parent_bounds().xMin());
+  EXPECT_EQ(28, first.parent_bounds().xMin());
   toolbar.setLayoutDirection(LayoutDirection::kRightToLeft);
   toolbar.measure(WidthSpec::Exactly(200), HeightSpec::Exactly(64));
   toolbar.layout(Rect(0, 0, 199, 63));
-  EXPECT_EQ(124, first.parent_bounds().xMin());
-  EXPECT_EQ(36, third.parent_bounds().xMin());
+  EXPECT_EQ(132, first.parent_bounds().xMin());
+  EXPECT_EQ(28, third.parent_bounds().xMin());
 
   toolbar.setOrientation(FloatingToolbarOrientation::kVertical);
   measured =
       toolbar.measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
   EXPECT_EQ(64, measured.width());
-  EXPECT_EQ(144, measured.height());
-  toolbar.layout(Rect(0, 0, 63, 143));
+  EXPECT_EQ(168, measured.height());
+  toolbar.layout(Rect(0, 0, 63, 167));
   EXPECT_EQ(12, first.parent_bounds().xMin());
-  EXPECT_EQ(8, first.parent_bounds().yMin());
-  EXPECT_EQ(52, second.parent_bounds().yMin());
-  EXPECT_EQ(96, third.parent_bounds().yMin());
+  EXPECT_EQ(12, first.parent_bounds().yMin());
+  EXPECT_EQ(64, second.parent_bounds().yMin());
+  EXPECT_EQ(116, third.parent_bounds().yMin());
+  EXPECT_EQ(12, toolbar.height() - third.parent_bounds().yMax() - 1);
+
+  third.setVisibility(Visibility::kGone);
+  second.setVisibility(Visibility::kInvisible);
+  measured =
+      toolbar.measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
+  EXPECT_EQ(116, measured.height());
+  toolbar.layout(Rect(0, 0, 63, 115));
+  EXPECT_EQ(64, second.parent_bounds().yMin());
+  EXPECT_TRUE(third.parent_bounds().empty());
   toolbar.clear();
 }
 
@@ -312,13 +328,12 @@ TEST(Material3Toolbar, FloatingTallChildAndBoundedOverflow) {
   toolbar.add(next);
   Dimensions measured =
       toolbar.measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
-  EXPECT_EQ(100, measured.width());
+  EXPECT_EQ(116, measured.width());
   EXPECT_EQ(96, measured.height());
   measured = toolbar.measure(WidthSpec::Exactly(70), HeightSpec::Exactly(96));
   toolbar.layout(Rect(0, 0, 69, 95));
-  EXPECT_EQ(8, tall.parent_bounds().xMin());
-  EXPECT_EQ(52, next.parent_bounds().xMin());
-  EXPECT_EQ(61, next.parent_bounds().xMax());
+  EXPECT_EQ(12, tall.parent_bounds().xMin());
+  EXPECT_TRUE(next.parent_bounds().empty());
   toolbar.clear();
 }
 

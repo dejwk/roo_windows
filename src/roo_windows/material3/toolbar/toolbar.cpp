@@ -525,6 +525,7 @@ Widget& FloatingToolbar::getChild(int index) {
 Dimensions FloatingToolbar::onMeasure(WidthSpec width, HeightSpec height) {
   const int padding = Scaled(internal::kToolbarPaddingDp);
   const int gap = Scaled(internal::kToolbarItemGapDp);
+  const int minimum_slot = Scaled(internal::kFloatingToolbarMinimumSlotDp);
   const bool horizontal =
       orientation() == FloatingToolbarOrientation::kHorizontal;
   int64_t packed = 0;
@@ -552,16 +553,16 @@ Dimensions FloatingToolbar::onMeasure(WidthSpec width, HeightSpec height) {
             2 * padding + margins.top() + margins.bottom(), preferred_height));
     entry.measured_width = measured.width();
     entry.measured_height = measured.height();
-    const int64_t main_extent = horizontal
-                                    ? static_cast<int64_t>(measured.width()) +
-                                          margins.left() + margins.right()
-                                    : static_cast<int64_t>(measured.height()) +
-                                          margins.top() + margins.bottom();
-    const int64_t cross_extent = horizontal
-                                     ? static_cast<int64_t>(measured.height()) +
-                                           margins.top() + margins.bottom()
-                                     : static_cast<int64_t>(measured.width()) +
-                                           margins.left() + margins.right();
+    // Compose reserves a 48 dp slot around small controls before applying the
+    // toolbar's 8 dp padding. Keep the child's visual dimensions unchanged.
+    const int64_t slot_width =
+        std::max<int64_t>(minimum_slot, static_cast<int64_t>(measured.width()) +
+                                            margins.left() + margins.right());
+    const int64_t slot_height = std::max<int64_t>(
+        minimum_slot, static_cast<int64_t>(measured.height()) + margins.top() +
+                          margins.bottom());
+    const int64_t main_extent = horizontal ? slot_width : slot_height;
+    const int64_t cross_extent = horizontal ? slot_height : slot_width;
     if (count++ > 0) packed += gap;
     packed += main_extent;
     max_cross = std::max(max_cross, cross_extent);
@@ -606,6 +607,7 @@ Dimensions FloatingToolbar::onMeasure(WidthSpec width, HeightSpec height) {
 void FloatingToolbar::onLayout(bool changed, const Rect& rect) {
   const int64_t padding = Scaled(internal::kToolbarPaddingDp);
   const int64_t gap = Scaled(internal::kToolbarItemGapDp);
+  const int64_t minimum_slot = Scaled(internal::kFloatingToolbarMinimumSlotDp);
   const bool horizontal =
       orientation() == FloatingToolbarOrientation::kHorizontal;
   const int64_t main_size = horizontal ? width() : height();
@@ -618,10 +620,11 @@ void FloatingToolbar::onLayout(bool changed, const Rect& rect) {
     if (entry.widget->isGone()) continue;
     const Margins margins = entry.widget->getMargins();
     if (count++ > 0) packed += gap;
-    packed += horizontal ? static_cast<int64_t>(entry.measured_width) +
-                               margins.left() + margins.right()
-                         : static_cast<int64_t>(entry.measured_height) +
-                               margins.top() + margins.bottom();
+    packed += std::max<int64_t>(
+        minimum_slot, horizontal ? static_cast<int64_t>(entry.measured_width) +
+                                       margins.left() + margins.right()
+                                 : static_cast<int64_t>(entry.measured_height) +
+                                       margins.top() + margins.bottom());
   }
   int64_t cursor = padding + std::max<int64_t>(0, (inner_main - packed) / 2);
   const Rect content = ClippedChildRect(
@@ -636,10 +639,12 @@ void FloatingToolbar::onLayout(bool changed, const Rect& rect) {
     }
     if (!first) cursor += gap;
     const Margins margins = child.getMargins();
-    const int64_t box_width = static_cast<int64_t>(entry.measured_width) +
-                              margins.left() + margins.right();
-    const int64_t box_height = static_cast<int64_t>(entry.measured_height) +
-                               margins.top() + margins.bottom();
+    const int64_t margin_width = margins.left() + margins.right();
+    const int64_t margin_height = margins.top() + margins.bottom();
+    const int64_t box_width =
+        std::max(minimum_slot, entry.measured_width + margin_width);
+    const int64_t box_height =
+        std::max(minimum_slot, entry.measured_height + margin_height);
     int64_t box_x = 0;
     int64_t box_y = 0;
     if (horizontal) {
@@ -656,9 +661,12 @@ void FloatingToolbar::onLayout(bool changed, const Rect& rect) {
       box_y = cursor;
       cursor += box_height;
     }
-    child.layout(ClippedChildRect(box_x + margins.left(), box_y + margins.top(),
-                                  entry.measured_width, entry.measured_height,
-                                  content));
+    child.layout(ClippedChildRect(
+        box_x + margins.left() +
+            (box_width - margin_width - entry.measured_width) / 2,
+        box_y + margins.top() +
+            (box_height - margin_height - entry.measured_height) / 2,
+        entry.measured_width, entry.measured_height, content));
     first = false;
   }
 }

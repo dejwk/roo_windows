@@ -127,6 +127,8 @@ enum class FloatingToolbarOrientation : uint8_t { kHorizontal, kVertical };
 
 /// A content-sized Material 3 action strip with a rounded surface and shadow.
 /// Its host supplies placement and keeps page content clear of the toolbar.
+/// Each child's margin box is centered in a slot of at least 48 dp per axis.
+/// The strip adds 8 dp padding and 4 dp between slots.
 class FloatingToolbar : public Material3Container {
  public:
   /// Creates an empty horizontal, elevated, standard-color strip in @p context.

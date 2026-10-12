@@ -241,8 +241,13 @@ TEST(Material3ToolbarResource, ZoomScalesOnlyToolbarTokens) {
   floating.add(child);
   Dimensions horizontal =
       floating.measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
-  EXPECT_EQ(std::max(Scaled(64), 2 * Scaled(8) + 40), horizontal.width());
-  EXPECT_EQ(std::max(Scaled(64), 2 * Scaled(8) + 40), horizontal.height());
+  EXPECT_EQ(std::max(Scaled(64), 2 * Scaled(8) + std::max(Scaled(48), 40)),
+            horizontal.width());
+  EXPECT_EQ(horizontal.width(), horizontal.height());
+  floating.layout(Rect(0, 0, horizontal.width() - 1, horizontal.height() - 1));
+  EXPECT_EQ(40, child.width());
+  EXPECT_EQ(40, child.height());
+  EXPECT_EQ(child.parent_bounds().xMin(), child.parent_bounds().yMin());
   floating.setOrientation(FloatingToolbarOrientation::kVertical);
   Dimensions vertical =
       floating.measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
