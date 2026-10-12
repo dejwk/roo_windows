@@ -1027,3 +1027,9 @@ narrowing. Layout uses bounded automatic arrays and measures exact child frames.
 width range; its previous two-bit-tag encoding silently truncated above 16383.
 `Widget` has no retained measurement spec and `CachedMeasure` stays the same size
 because its following 32-bit height spec already required alignment padding.
+
+Phase 4 implements `RedistributeGroupWidths()` and `GroupIntervalLeft()` as
+internal arithmetic helpers. Zero-width slots represent gone entries. Exhausted
+budgets cap expansion and the following logical neighbour receives odd pixels.
+Unit tests check the `[71, 138, 71]` worked example, every active index at 0/1/2/3/5/32
+entries, all size gaps, representative samples and constrained mirrored rows.

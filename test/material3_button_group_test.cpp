@@ -7,6 +7,7 @@
 #include "roo_windows/core/environment.h"
 #include "roo_windows/material3/button/button_group.h"
 #include "roo_windows/material3/button/internal/button_group_appearance.h"
+#include "roo_windows/material3/button/internal/button_group_geometry.h"
 #include "roo_windows/material3/button/internal/icon_geometry.h"
 #include "roo_windows/material3/internal/density.h"
 namespace roo_windows::material3 {
@@ -71,6 +72,84 @@ TEST(ButtonGroupHelpers, IconMetrics) {
   }
 }
 
+// Verifies the SVG's worked example and bounded asymmetric donations.
+TEST(ButtonGroupHelpers, WorkedPressArithmetic) {
+  int16_t widths[] = {80, 120, 80};
+  int16_t budgets[] = {20, 20, 20};
+  RedistributeGroupWidths(3, 1, 1, widths, budgets);
+  EXPECT_EQ(71, widths[0]);
+  EXPECT_EQ(138, widths[1]);
+  EXPECT_EQ(71, widths[2]);
+  EXPECT_EQ(304, widths[0] + widths[1] + widths[2] + 2 * 12);
+  int16_t bounded[] = {80, 120, 80};
+  int16_t exhausted[] = {2, 20, 3};
+  RedistributeGroupWidths(3, 1, 1, bounded, exhausted);
+  EXPECT_EQ(78, bounded[0]);
+  EXPECT_EQ(125, bounded[1]);
+  EXPECT_EQ(77, bounded[2]);
+  int16_t odd[] = {80, 100, 80};
+  RedistributeGroupWidths(3, 1, 1, odd, budgets);
+  EXPECT_EQ(73, odd[0]);
+  EXPECT_EQ(115, odd[1]);
+  EXPECT_EQ(72, odd[2]);
+}
+// Verifies conservation, floors and fixed-gap non-overlap for every press
+// index/count, size gap, representative emphasis and mirrored constrained row.
+TEST(ButtonGroupHelpers, PressGeometryInvariants) {
+  for (int count : {0, 1, 2, 3, 5, 32}) {
+    for (int active = -1; active < count; ++active) {
+      for (float emphasis : {0.0f, 0.1f, 0.5f, 1.0f}) {
+        int16_t widths[32] = {};
+        int16_t original[32] = {};
+        int16_t budgets[32] = {};
+        int sum = 0;
+        for (int i = 0; i < count; ++i) {
+          widths[i] = original[i] = Scaled(40 + 3 * i);
+          budgets[i] = Scaled(i % 3 == 0 ? 0 : 12);
+          sum += widths[i];
+        }
+        RedistributeGroupWidths(count, active, emphasis, widths, budgets);
+        int actual = 0;
+        for (int i = 0; i < count; ++i) {
+          actual += widths[i];
+          EXPECT_GE(widths[i], original[i] - budgets[i]);
+          if (i != active && i != active - 1 && i != active + 1) {
+            EXPECT_EQ(original[i], widths[i]);
+          }
+        }
+        EXPECT_EQ(sum, actual);
+        for (ButtonSize size :
+             {ButtonSize::kExtraSmall, ButtonSize::kSmall, ButtonSize::kMedium,
+              ButtonSize::kLarge, ButtonSize::kExtraLarge}) {
+          int gap = ResolveGroupGap(size, false);
+          for (int assigned :
+               {sum + std::max(0, count - 1) * gap, sum / 2, sum + 100}) {
+            int logical = 0;
+            int previous_right = -1;
+            for (int i = 0; i < count; ++i) {
+              int ltr = GroupIntervalLeft(assigned, logical, widths[i],
+                                          LayoutDirection::kLeftToRight);
+              int rtl = GroupIntervalLeft(assigned, logical, widths[i],
+                                          LayoutDirection::kRightToLeft);
+              EXPECT_EQ(assigned, ltr + rtl + widths[i]);
+              if (i > 0) {
+                EXPECT_EQ(gap, ltr - previous_right - 1);
+              }
+              previous_right = ltr + widths[i] - 1;
+              logical += widths[i] + gap;
+            }
+          }
+        }
+      }
+    }
+  }
+  int16_t gone[] = {80, 0, 120, 0, 80};
+  int16_t budgets[] = {20, 0, 20, 0, 20};
+  RedistributeGroupWidths(5, 2, 1, gone, budgets);
+  EXPECT_EQ(71, gone[0]);
+  EXPECT_EQ(138, gone[2]);
+  EXPECT_EQ(71, gone[4]);
+}
 class GroupFixture : public testing::Test {
  protected:
   roo_scheduler::SchedulingService scheduler;
