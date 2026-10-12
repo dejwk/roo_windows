@@ -132,6 +132,7 @@ class SplitButton : public Container, private MenuPresentationObserver {
     Rect getSloppyTouchParentBounds() const override { return parent_bounds(); }
     Rect getParentDecorationBounds() const override;
     void onClicked() override;
+    ClickActivationPolicy getClickActivationPolicy() const override;
 
    protected:
     BorderStyle resolveBorderStyle(bool pressed, float progress) const override;

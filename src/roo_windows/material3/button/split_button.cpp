@@ -300,7 +300,7 @@ BorderStyle SplitButton::SegmentButton::resolveShape(bool pressed, bool hover,
   uint8_t outer = ClampedRadius(height() / 2, width(), height());
   int resting = Scaled(tokens.inner_rest);
   int hovered = Scaled(tokens.inner_hover);
-  int pressed_radius = Scaled(tokens.inner_pressed);
+  int pressed_radius = isTrailing() ? 100000 : Scaled(tokens.inner_pressed);
   uint8_t from = ClampedRadius(open && isTrailing() ? height() / 2
                                : hover              ? hovered
                                                     : resting,
@@ -397,6 +397,12 @@ void SplitButton::SegmentButton::emitPersistentDecoration(
   PaintContext clipped =
       ctx.clipped(parent_clip.translate(-offsetLeft(), -offsetTop()));
   SurfaceWidget::emitPersistentDecoration(clipped);
+}
+
+ClickActivationPolicy SplitButton::SegmentButton::getClickActivationPolicy()
+    const {
+  return isTrailing() ? ClickActivationPolicy::kAfterForcedFinalFrame
+                      : ClickActivationPolicy::kImmediateContinueAnimation;
 }
 
 }  // namespace roo_windows::material3
