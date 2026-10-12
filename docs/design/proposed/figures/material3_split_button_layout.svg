@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="960" height="700" viewBox="0 0 960 700" role="img" aria-labelledby="title desc">
-  <title id="title">Split-button geometry, menu anchor, and foreground-first paint</title>
-  <desc id="desc">Small size at 100 percent zoom, enlarged three times. Both states have a 92 pixel primary segment, a 2 pixel gap, and a 48 pixel trailing segment, at height 40 pixels. Opening changes the trailing corners and icon, never its rectangle. Paint settles foreground before the remaining fill, with decorations and backdrop resolved last.</desc>
+  <title id="title">Split-button child geometry, menu anchor, and midpoint decoration clips</title>
+  <desc id="desc">Small size at 100 percent zoom, enlarged three times. Both states have a 92 pixel primary segment, a 2 pixel gap, and a 48 pixel trailing segment, at height 40 pixels. Opening changes the trailing corners and icon, never its rectangle. Two child buttons use existing surface rendering. Decoration clips meet halfway through the gap, preventing shadow overlap while preserving outward overflow.</desc>
   <rect width="960" height="700" fill="white"/>
   <style>
     text { font-family: sans-serif; fill: #202633; }
@@ -21,7 +21,7 @@
     </marker>
   </defs>
 
-  <text x="32" y="34" class="title">One widget, two independent segment surfaces</text>
+  <text x="32" y="34" class="title">A transparent container with two child buttons</text>
   <text x="32" y="58" class="note">Small · LTR · density 0 · zoom 100% · drawing scale 3:1 · label/artwork schematic</text>
   <text x="60" y="92" class="heading">Closed</text>
 
@@ -44,9 +44,11 @@
   <text x="546" y="185" class="body">Primary content cluster: 64 × 24 px.</text>
   <text x="546" y="208" class="note">Start/end padding: 16 / 12 px.</text>
   <text x="546" y="241" class="body">Total width: 92 + 2 + 48 = 142 px.</text>
-  <text x="546" y="264" class="note">Both segment heights: 40 px.</text>
-  <path class="arrow" d="M340 301 V235"/>
-  <text x="60" y="310" class="note">2 px gap = 6 SVG units</text>
+  <text x="546" y="264" class="note">Both child heights: 40 px.</text>
+  <!-- Common clip boundary: x=60 + 3*(92+1)=339; surface edges 336 and 342. -->
+  <path d="M339 100 V238 M339 356 V494" stroke="#b04428" stroke-width="1.5" stroke-dasharray="4 3" fill="none"/>
+  <path class="arrow" d="M339 301 V240"/>
+  <text x="60" y="310" class="note">2 px gap; one shadow clip gets each half</text>
 
   <text x="60" y="350" class="heading">Menu open</text>
   <g transform="translate(60 366)">
@@ -69,16 +71,16 @@
   <text x="60" y="543" class="note">Below-start placement</text>
   <path class="arrow" d="M240 538 H330"/>
 
-  <text x="32" y="601" class="heading">Paint front to back; exclude only settled pixels</text>
+  <text x="32" y="601" class="heading">Existing child rendering; decoration clips meet in the gap</text>
   <rect x="32" y="620" width="260" height="55" rx="6" fill="#edf3fa"/>
-  <text x="47" y="643" class="body">1. Foreground + final background</text>
-  <text x="47" y="663" class="note">Settle and exclude content tiles.</text>
+  <text x="47" y="643" class="body">1. Ordinary button content</text>
+  <text x="47" y="663" class="note">Reuse painter and click feedback.</text>
   <path class="arrow" d="M300 647 H323"/>
   <rect x="332" y="620" width="260" height="55" rx="6" fill="#edf3fa"/>
-  <text x="347" y="643" class="body">2. Remaining segment interior</text>
-  <text x="347" y="663" class="note">Fill only pixels not yet settled.</text>
+  <text x="347" y="643" class="body">2. Per-corner decoration</text>
+  <text x="347" y="663" class="note">Reuse rounded fill, outline, and shadow.</text>
   <path class="arrow" d="M600 647 H623"/>
   <rect x="632" y="620" width="296" height="55" rx="6" fill="#edf3fa"/>
-  <text x="647" y="643" class="body">3. Rounded rims + ancestor backdrop</text>
-  <text x="647" y="663" class="note">Leave gap and corner backdrop available.</text>
+  <text x="647" y="643" class="body">3. Clip at the gap midpoint</text>
+  <text x="647" y="663" class="note">Keep outer overflow and backdrop.</text>
 </svg>

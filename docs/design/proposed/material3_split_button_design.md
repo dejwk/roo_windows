@@ -1,7 +1,7 @@
 # Roo Windows Material 3 Split Button Design
 
-**Status: proposed.** Reviewed against the source tree on 2026-10-11. Buttons,
-menus, non-touch input, shared button appearance helpers, and density are
+**Status: proposed.** Revised for composition against the source tree on
+2026-10-12. Buttons, menus, non-touch input, shared button appearance helpers, and density are
 implemented. The split button and the menu amendments below are not. See the
 [design status index](../README.md).
 
@@ -16,8 +16,9 @@ behavior.
 A device's **Run** action often needs alternatives such as **Run once** or
 **Configure run**. Two unrelated buttons obscure that relationship, while an
 application-built composite repeats layout and menu coordination code. A
-dedicated split button can express the relationship and avoid retaining three
-widget objects for each control.
+dedicated split button can package that relationship and menu coordination.
+Split buttons are scarce in the intended applications; a modest increase in
+per-control RAM is acceptable in exchange for reusing ordinary button behavior.
 
 ## Background
 
@@ -44,13 +45,17 @@ surface, and presentation terminology. Relevant implemented facilities are:
   The [widget authoring rules](../../../.github/instructions/roo-windows-widget-authoring.instructions.md)
   require foreground-first, final-color painting and explicit decoration
   overflow. The ancestor must remain able to paint gaps between surfaces.
+  [`BorderStyle`](../../../src/roo_windows/core/border_style.h) carries four
+  independent corner radii, and
+  [`PaintContext::addDecoration()`](../../../src/roo_windows/core/paint_context.cpp)
+  captures the context clip for the existing decoration compositor.
 - The shared [click controller](../../../src/roo_windows/core/click_animation.h)
   admits one interaction at a time and settles deferred actions after a
-  completed refresh. `OVERLAY_CUSTOM` supports component-owned visuals while
-  retaining this lifecycle. `OVERLAY_NONE` bypasses its paint-time settlement.
+  completed refresh. Each child button reuses its normal overlay and this
+  lifecycle directly.
 - [Non-touch input](../implemented/non_touch_input_design.md) provides focus,
-  Enter/Space activation, and directional traversal. The task's Enter/Space
-  fallback calls the base press hook directly, without a pointer `onDown()`.
+  Enter/Space activation, and directional traversal. Each child is a normal
+  focus target and uses the task's Enter/Space fallback.
 - [Density](../implemented/material3_density_design.md) removes eligible
   whitespace without scaling text or icon artwork. Existing buttons read the
   theme setting; menu density is independently controlled by `MenuPolicy`.
@@ -83,40 +88,51 @@ explicit Roo adaptations.
    supported density levels and zoom factors. Explicit parent constraints win.
 6. Paint independent state layers, outlines, and shadows without covering the
    separation or writing an intermediate color under foreground content.
-7. Keep labels, icons, and the related menu as explicit borrows. Retain no child
-   buttons, second application callback, per-instance palette, or private timer.
-   Account for all retained state and validate embedded resource costs.
+7. Keep labels, icons, and the related menu as explicit borrows. Reuse existing
+   button input, animation, and surface rendering. Account for the container,
+   both children, and coordination state; avoid private timers, duplicate
+   application callbacks, and per-instance palettes.
 
 ## Design Overview
 
-`SplitButton` is one `SurfaceWidget` with two **segments**: local rectangles for
-the primary and menu actions. They are geometry, not child widgets or separate
-focus nodes. A **gesture segment** identifies the current pointer stream; a
-separate **click segment** identifies an admitted click until semantic delivery.
-Keeping them separate prevents a later rejected down event from retargeting an
-earlier deferred click. Both fit in packed flags.
+`SplitButton` is a transparent `Container` with two inline-owned child buttons:
+**primary** and **trailing**. Each segment is a real surface and independent
+focus target. Small private `Button` subclasses supply split geometry and
+semantic delivery; they retain the normal button painter and shared click
+controller. No widget multiplexes two pending click identities.
+
+The container measures and places its two children, propagates enabled state,
+and exposes the primary callback through its existing callback registry. Child
+`onClicked()` overrides forward directly to the owner, without registering two
+capturing callbacks. The container itself is not clickable or focusable.
 
 The widget borrows one `Menu` for its lifetime. A **presentation observer** is a
 non-owning, per-presentation housekeeping hook on that menu. It clears the
-trigger's open visual after detachment without replacing the menu subclass's
-existing `onFinished()` hook. Only a successful show installs the observer;
-there is no permanent registration at construction. `Widget::activated` records
-that this trigger owns the open presentation, not menu-item selection.
+trailing child's open visual after detachment without replacing the menu
+subclass's existing `onFinished()` hook. Only a successful show installs the
+observer; there is no permanent registration at construction. The trailing
+child's `activated` state records ownership of the open presentation.
+
+Both child decorations use existing per-corner rendering. Their clips meet at
+one vertical pixel boundary in the middle of the gap, so neither shadow spills
+onto the other child or overlaps the other shadow. This needs a clipped
+context around ordinary decoration emission, not a new surface painter.
 
 | Requirement | Chosen mechanism |
 | --- | --- |
-| Related actions and compact storage | One childless widget, one borrowed menu, existing primary callback registry |
-| Material appearance and sizing | Shared button colors; a separate split geometry table and one rectangle resolver |
-| Touch and keyboard reachability | Locked pointer segment; Enter/Space for primary, Down for menu |
+| Related actions | Transparent container with two inline child buttons and one borrowed menu |
+| Material appearance and sizing | Existing button colors and painter; split geometry and asymmetric corner resolution |
+| Touch and keyboard reachability | Ordinary child input and two focus stops; Enter/Space activates the focused child |
 | Safe open-state lifetime | Successful-admission result, per-presentation observer, synchronous cancellation for lifetime changes |
-| Correct repaint | Custom overlay, two decorations, explicit settled exclusions, ancestor-painted separation |
+| Correct repaint | Existing surface damage and decoration compositor; decoration clips meet at the gap midpoint |
 
 For example, an application constructs a persistent menu containing **Run once**
 and **Configure run**, then constructs `SplitButton(context, menu, "Run")` and
 registers `setOnInteractiveChange(...)` for the default run action. Tapping Run
-or pressing Enter invokes that handler once. Tapping the chevron or pressing
-Down opens the menu; menu items retain their own invocation behavior. Choosing
-an item does not implicitly rename the primary action.
+or pressing Enter while the primary child is focused invokes that handler once.
+Activating the trailing child opens the menu; its items retain their own
+invocation behavior. Choosing an item does not implicitly rename the primary
+action.
 
 ## Design Details
 
@@ -137,15 +153,17 @@ remain full. The last column is the nominal trailing width before scaling.
 The primary uses the current button family's label-large typography, leading
 icon slots, and icon-to-label gaps. The five leading slots are 20/24/24/32/40 dp
 and the gaps are 4/8/8/12/16 dp. Keep actual borrowed artwork intact; a larger
-icon enlarges its slot. Render the built-in chevron procedurally at its authored
-slot size so asset-size rounding cannot enlarge the trailing segment. It points
+icon enlarges its slot. Use shared, size-specific down/up chevron artwork at
+the authored slot size,
+rendered through the existing icon-only `Button` painter. Its extents must not
+enlarge the trailing segment through asset-size rounding. It points
 down while closed and up while open. There is no custom trailing icon setter.
 
-Measure the primary as one line. Cache label ink/advance width, line height,
-and the horizontal origin needed for negative bearings on construction,
-`setLabel()`, and `requestLayoutDescending()`. Suggested minimums use those
-cached values and cheap icon extents; they never traverse glyphs. Account for
-both advance and ink bounds, as the current dropdown helper does. Do not wrap
+Measure the primary as one line using the shared button content path. Account
+for both advance and ink bounds, including negative bearings, in that path so
+measurement and painting agree. Any needed correction belongs in `Button` and
+its shared helpers, with ordinary-button regression coverage; do not introduce
+a second text painter or split-only metric cache. Do not wrap
 or add ellipsis in v1; constrained content is clipped to its segment.
 
 Let $S(x)$ denote `Scaled(x)`, $d$ the theme density in $[-5,0]$, $C_w$ the
@@ -172,12 +190,18 @@ theme directly, with no per-instance density override. The borrowed menu keeps
 its independently authored `MenuPolicy::density` and layout direction.
 
 These are the initial natural dimensions; the rounded-interior content floor
-in [painting](#segment-surfaces-and-painting) completes the sizing calculation.
-Return the resulting natural dimensions from the cached sizing path and resolve
-them through `WidthSpec` and `HeightSpec` in `onMeasure()`. Split geometry owns
+in [child surfaces](#child-surfaces-and-decoration-clipping) completes the
+sizing calculation. Compute these dimensions in `onMeasure()` and resolve
+them through `WidthSpec` and `HeightSpec`. Keep suggested minimums cheap: the
+container returns `Dimensions(0, 0)` and child overrides return conservative
+token/icon bounds without measuring text. Exact text measurement belongs in
+`onMeasure()`, not the suggested-minimum path. Split geometry owns
 its padding internally, so `getPadding()` is zero; callers' explicit layout
 constraints and outer margins retain their usual meaning. Default outer
-margins match `Button`.
+margins match `Button`; both children override their own margins to zero.
+The container measures both children and assigns their exact resolved segment
+rectangles using normal child layout. It stores them inline and exposes a fixed
+two-child collection, without a vector or per-child heap allocation.
 
 For measured width $W$ and height $H$, reserve the trailing segment first:
 
@@ -214,7 +238,7 @@ logical offset to physical direction. In the open state all trailing corners
 are full, so the offset is zero. The widget width and separation never change
 when opening; the trailing shape changes inside its existing rectangle.
 
-![Split-button rectangles, optical alignment, and paint order](figures/material3_split_button_layout.svg)
+![Split-button child rectangles, optical alignment, and decoration clips](figures/material3_split_button_layout.svg)
 
 The figure shows Small at 100% zoom with a 64 px primary content cluster:
 $W_0=16+64+12+2+48=142$, $L=92$, $H=40$; no further content-floor increase is
@@ -222,128 +246,143 @@ needed. The closed offset is
 $\operatorname{round}(0.11(4-20))=-2$ px. Drawing scale is 3 SVG units per pixel;
 the 2 px separation is therefore exactly 6 SVG units in both states.
 
-### Segment surfaces and painting
+### Child surfaces and decoration clipping
 
-Derive from `SurfaceWidget` because the component owns fills, outlines, and
-elevation. Keep its whole-widget background transparent and border empty; those
-single-surface hooks cannot describe the separation. Override
-`fullyCoversBoundsWithOpaqueColors()` to false and
-`getDirectPaintExclusionBounds()` to empty. Otherwise the generic final
-exclusion would suppress ancestor repaint through the gap.
+Keep the `Container` background transparent, its border empty, and its own
+elevation zero. Return false from `fullyCoversBoundsWithOpaqueColors()` and an
+empty `getDirectPaintExclusionBounds()`. Use ordinary container traversal; the ancestor must remain able to paint the gap and corner backdrop.
+Each child uses the existing `Button` foreground painter, state layers, outline,
+shadow, and click-animation lifecycle. Hover and focus affect only the child
+that owns them; press affects the admitted child and activated affects only the
+trailing child. The container propagates enabled state to both children and
+avoids applying a second disabled tint over their resolved disabled colors.
 
-Use `OVERLAY_CUSTOM` and `ClickOverlayAnimation::kFade`. The framework retains
-sampled click timing and terminal settlement but does not apply its area
-overlay to the whole rectangle. Resolve per-segment layers from the theme:
-hover and focus affect both segments, press affects only the admitted click
-segment, and activated affects only the trailing segment. Suppress all layers
-when disabled, and return false from `useAutomaticDisabledStyle()` because the
-shared appearance resolver already supplies disabled colors. Do not apply the
-whole-widget `overlaySpec().base_overlay()` unchanged to both segments.
+Use two private subclasses of `Button`, including an icon-only trailing button,
+so all four variants share the same appearance and elevation behavior. The
+specialization supplies padding, natural dimensions, corner geometry, optical
+content placement, and a decoration clip. It does not override `paint()` or
+introduce `OVERLAY_CUSTOM`, a segment painter, or another animation controller.
 
-Reuse `ResolveButtonAppearance`, `ResolveButtonContainerRole`, and
-`ResolveButtonElevation` by explicitly mapping the four split variants to
-`ButtonVariant`. No new per-widget theme table or color cache is introduced.
-Inner-corner priority is press, then trailing-open, then hover, then rest.
-Focus changes the layer without changing corners. Press interpolation uses
-the existing button convention, `min(1, 3 * sampled_progress)`, and a held press
-uses the pressed endpoint. The custom fade uses the shared sampled progress
-and theme pressed opacity. Open/close and hover geometry change immediately;
-v1 has no independent menu-shape animation track.
+Add a small protected shape-resolution hook to `Button`: make its existing
+`resolveBorderStyle(bool pressed, float progress)` overridable and ensure both
+`getBorderStyle()` and before/after animation invalidation use it. The split
+resolver returns four independent radii through `BorderStyle`. Outer corners
+remain full; inner-corner priority is press, then trailing-open, then hover,
+then rest. Focus changes the layer without changing corners. Retain the button
+press interpolation, `min(1, 3 * sampled_progress)`, and its ordinary overlay.
+Hover and activated transitions explicitly invalidate from the old shape;
+open/close and hover geometry change immediately. There is no separate motion
+track or retained previous-geometry cache.
 
-Implement ordinary `paint(PaintContext&)` with a segment helper; no custom
-widget-tree traversal is needed:
+The existing button painter centers content. Add a protected content-placement
+hook, with unchanged ordinary-button defaults, to apply the split padding and
+trailing optical offset through that same painter. The hook adjusts content
+placement within the existing safe clip; it does not replace surface clipping
+or drawing. Keep borrowed icon artwork intact. Shared chevrons are immutable
+assets, not per-control buffers. These two narrow extension points add no
+per-instance fields to ordinary buttons.
 
-1. Resolve both rectangles, current corner radii, final layer colors, and
-   elevation from the same geometry/state snapshot.
-2. Within each segment's flat interior, draw icon and label content with its
-   final composited background using tiled/stacked drawables. Exclude each
-   settled rectangle, then fill only the remaining flat interior. Never fill
-   first and draw text over that intermediate color.
-3. In `emitPersistentDecoration()`, register one `PaintDecoration` per segment
-   for the rounded rim, outline, and shadow. Use the same layer-composited fill
-   as the corresponding interior. Register the trailing segment first as the
-   deterministic foreground order where the two shadows overlap.
-4. Leave the gap and transparent corner pixels unexcluded. Ancestor output and
-   the decoration compositor resolve the actual backdrop, including content
-   underneath a transparent parent. Do not pre-clear the widget or the gap to
-   a guessed background color.
+For decoration emission, create a narrowed `PaintContext` and delegate to
+`SurfaceWidget::emitPersistentDecoration()`. `PaintContext::addDecoration()`
+already retains this context's clip, so the existing compositor draws the
+asymmetric rounded fill, outline, and shadow with no rasterizer changes.
 
-Use per-segment content clipping like `Button`; text and icons must not cross
-the rounded rim or the neighboring segment. Derive natural content floors from
-that safe region so normal-sized content remains intact; explicit tight parent
-constraints alone are allowed to clip it. The height formula is a lower bound:
-raise the natural dimensions when the resolved corner/outline inset requires
-more room around oversized content. Use the same helper for minimums and paint.
+Define the clip split in physical container coordinates. Let $a$ be the
+exclusive right edge of the left child and $b$ the inclusive left edge of the
+right child. The actual gap is $b-a$ pixels. Choose
 
-`getParentDecorationBounds()` returns the union of both segment shadow extents,
-translated to parent coordinates; `hasDecorationOverflow()` agrees with it.
-Expose maximum segment elevation through `getElevation()` for conservative
-framework damage. A shape or elevation change invalidates the union of old and
-new coverage in the parent, including newly exposed rounded edges. Do not rely
-on `borderStyleChanged()` for the empty whole-widget border. Appearance setters
-and `onClickAnimationChanged(previous_progress)` recompute before/after segment
-geometry without retaining two rectangles or an appearance cache. Override
-interior invalidation to propagate rounded exposure to the parent even though
-the whole-widget border is empty. Invalidation
-must restore old shadow pixels even when elevation drops to zero.
+$$
+m=a+\left\lfloor\frac{b-a}{2}\right\rfloor.
+$$
+
+The left child's decoration clip ends at $m-1$; the right child's clip starts
+at $m$. Translate this common boundary into each child's local coordinates and
+intersect with its incoming clip. Keep the other clip edges unchanged, allowing
+normal outward, top, and bottom shadow overflow. Apply the same physical rule
+in RTL, where the roles of the children swap. An odd-width gap assigns its
+extra pixel to the right clip. When one child is empty, emit no decoration for
+it and omit the midpoint restriction on the remaining child.
+
+Because the split boundary lies outside both child surfaces, clipping the
+entire decoration leaves their fills and outlines intact while partitioning
+the shadows. The gap can contain shadow over the ancestor backdrop; it is not
+filled with either child's container color. This deliberately replaces
+compositing overlapping shadows and removes sibling paint-order dependence.
+The figure's 2 px gap is divided into one pixel per child.
+
+Allow child decoration overflow through the transparent container using the
+existing child overflow bookkeeping and parent clip policy. Report each
+child's shadow extent intersected with its midpoint half-plane; conservative
+larger invalidation is safe. Reuse `borderStyleChanged()` and elevation damage
+propagation for shape and elevation changes. When layout moves the clipping
+boundary, invalidate the union of old and new decoration coverage before the
+old geometry is lost. Repaint must restore old shadow pixels after movement,
+shape changes, or elevation dropping to zero.
+
+Use the shared surface safe interior for content clipping and natural sizing.
+Compute the natural content floor for the most restrictive supported shape so
+hover, press, and opening do not change measured size or unexpectedly clip
+content. Explicit tight parent constraints may clip. Reuse the existing
+foreground-first painting and exclusion machinery; no custom paint order or
+widget-tree traversal is needed.
 
 ### Touch, keys, and semantic delivery
 
-Hit testing uses the two measured rectangles, including their rounded-corner
-bounding boxes, but excludes the gap. Override both exact and sloppy target
-path hooks so the generic minimum sloppy span cannot reclaim the gap or create
-overlapping expanded action regions. Compact density uses the same rectangles
-for paint and input; there is no hidden 48 dp hit expansion.
+Each child owns its normal pointer stream and uses
+`ClickActivationPolicy::kAfterNaturalAnimation`. The shared controller still
+admits only one interaction at a time; child composition does not introduce
+parallel click animations. No gesture-segment, click-segment, or split-specific
+keyboard flags are retained.
 
-`onDown()` records the gesture segment. `onShowPress()` and `onSingleTapUp()`
-must use the shared controller's admission result before assigning the click
-segment. A down/up stream received while that controller is busy is rejected
-without modifying or canceling the previous admitted action. Preserve this
-distinction even when both streams target this same widget.
+Use exact child rectangle bounds for both initial targeting and pointer
+release, including their rounded-corner bounding boxes. Override the narrow
+sloppy-bounds/target hooks needed to prevent generic minimum-span expansion
+from reclaiming the gap or reaching the sibling. A release on the other child,
+in the gap, or outside the original child cancels and never transfers the
+click. Scroll takeover, hiding, disabling, and detachment use existing child
+cancellation. Compact density has no hidden 48 dp hit expansion.
 
-For an admitted pointer stream, release must still be inside its original
-segment. Release in the other segment, gap, or outside the widget cancels; it
-never retargets. Scroll takeover and `onCancel()` clear that stream's state and
-cancel its controller ownership. Hiding, disabling, and detaching cancel pending
-actions through the existing framework lifecycle. The split-specific state
-must also reset on those transitions.
+The primary child's `onClicked()` forwards to `onPrimaryInvoked()`, whose
+default calls the container's `triggerInteractiveChange()`. The trailing
+child's `onClicked()` calls `showMenu()`. Both guard enabled/presented state.
+Return immediately after dispatch: application code can destroy the complete
+control. No extra callback registry entries are needed for these internal
+routes. The container has no programmatic `onClicked()` activation contract.
 
-Both actions use `ClickActivationPolicy::kAfterNaturalAnimation`, preserving
-ordinary button delivery timing. `onClicked()` snapshots and clears the pending
-segment before dispatch. Primary calls `onPrimaryInvoked()`, whose default calls
-`triggerInteractiveChange()`. Menu calls `showMenu()`. A direct programmatic
-`onClicked()` with no pending segment means primary activation, never the last
-touched segment. Guard against disabled/unpresented invocation. Do not access
-widget members after a primary callback, which can destroy the widget.
+There are two focus stops, in primary-then-trailing logical order. Enter/Space
+activate the focused child through the ordinary task fallback. Tab/Shift-Tab
+and directional keys retain normal traversal; there is no split-specific Down
+shortcut or custom key pairing. Menu closure restores focus through the normal
+menu focus scope to the previously focused child when it is still eligible.
 
-The control is one focus stop. Enter/Space invoke primary; Down opens the menu,
-matching the existing dropdown convention. On Enter/Space key down, prepare the
-primary click segment only when the controller can admit it, then let the task
-fallback own physical-key pairing, press, release, and cancellation. Its
-synthetic center coordinate is not used to choose a segment. Clear the key flag
-on release, focus loss, or cancellation. Down uses the trailing segment and
-the same controller admission/confirmation path, consumes its down/up events,
-and ignores repeat. Tab, Shift-Tab, Left, Right, and Up retain normal traversal.
+Test overlapping input through the real task and gesture paths, including a
+second physical activation key while another is held and pointer/key overlap.
+The existing task fallback arms a key before knowing whether its base press
+hook admitted a click. Correct any resulting rejected-key pairing or
+confirmation bug in shared task/button handling, with ordinary-button tests;
+do not add split-only key bookkeeping to work around it. Rejected interactions
+must neither confirm nor cancel an earlier admitted interaction.
 
-While a menu is hosted, the menu focus scope and outside-input barrier handle
-keys and pointer events. An outside tap on either segment dismisses the menu
-without click-through or immediate reopening. Back/Escape closes a submenu
-first; the trailing open visual stays until the root chain is detached.
+While a menu is hosted, its focus scope and outside-input barrier handle keys
+and pointer events. An outside tap on either child dismisses the menu without
+click-through or immediate reopening. Back/Escape closes a submenu first; the
+trailing open visual stays until the root chain is detached.
 
 ### Menu admission and lifetime
 
 `showMenu()` first checks enabled/presented state, nonempty primary content, and
-obtains `getTask()`.
-Use [`CaptureTransientSourceGeometry`](../../../src/roo_windows/core/transient_surface_host.h)
-to validate widget provenance and obtain its full window-coordinate bounds.
-Translate the local trailing rectangle by that origin, then pass it to
-`Menu::showFromRect(..., MenuPlacement::kBelowStart, observer)`. Do not add local
-offsets to an already clipped origin. The menu keeps its existing viewport
-clamping and flip behavior. Missing owner returns
-`kInteractionOwnerUnavailable`; unusable source/segment returns
-`kAnchorUnavailable`; other results pass through unchanged.
+obtains `getTask()`. Call `Menu::show(owner, trailing_child, kBelowStart,
+observer)` using the actual trailing child as the placement source.
+[`CaptureTransientSourceGeometry`](../../../src/roo_windows/core/transient_surface_host.h)
+then validates its provenance and effective
+visibility directly. A primary child that remains visible cannot make a fully
+clipped trailing anchor eligible. Capture uses the full, unclipped child origin;
+menu viewport clamping and flip behavior remain unchanged. Missing owner or a
+disabled/empty control returns `kInteractionOwnerUnavailable`; an unusable
+trailing source returns `kAnchorUnavailable`; other results pass through.
 
-Set `activated` and observe effective presentation only for `kShown`. Failure
+Set the trailing child's `activated` state and observe the container's effective
+presentation only for `kShown`. Failure
 to register presentation observation immediately cancels the just-admitted
 menu and returns `kInteractionOwnerUnavailable`. Every
 other result leaves the trigger closed, except that a repeated request from
@@ -359,7 +398,8 @@ restoration, clear the stored pointer and menu interaction-owner state, notify
 the observer once, then invoke the existing `Menu::onFinished(reason)` as the
 last operation. Submenu transitions do not notify it.
 
-The observer is restricted housekeeping: it clears activated state, cancels
+The observer is restricted housekeeping: it clears the trailing child's activated
+state, restores its closed chevron and shape, cancels
 presentation observation, and invalidates the trigger. It must not invoke
 application callbacks, mutate menu structure, admit another presentation, or
 destroy either object. This restriction makes ordering before the unrestricted
@@ -377,12 +417,15 @@ which also clears root groups. Menu destruction additionally clears any active
 observer through the same housekeeping path before releasing persistent state.
 
 `SplitButton::dismissMenu()` uses synchronous cancellation only for its own
-activated presentation. Its destructor, disable transition, hidden/detached
+presentation, identified by the trailing child's activated state. Its
+destructor, disable transition, hidden/detached
 presentation notification, geometry setters, and theme/layout refresh call
 this path. It is safe after context shutdown: clear local state without calling
 dead services, using `tryContext()` and the existing menu shutdown contract.
 The borrowed menu must outlive the widget; label bytes and icon objects must
-outlive their use. All mutation takes place on the UI task.
+outlive their use. All mutation takes place on the UI task. The destructor cancels the menu and
+detaches both borrowed child registrations before the inline child members are
+destroyed. Propagate disabling to both children to cancel their pending input.
 
 Anchor geometry is a snapshot, as in current menu presentation. A local bounds
 change closes the menu; an unchanged `onLayout()` is inert. Ancestor movement
@@ -391,50 +434,46 @@ application moving/scrolling that subtree programmatically must call
 `dismissMenu()` first. The outside-input barrier already prevents an underlying
 user scroll while the menu is open. Live anchor following is outside v1.
 
-### RAM, work, and code-size budget
+### RAM, work, and code-size accounting
 
-Do not count a polymorphic observer base as free: on the usual 32-bit ABI it
-adds a secondary vptr. The private-state sketch below makes the estimate
-inspectable. Using the [target baseline](../../material3_target_baseline.md),
-budget approximately:
+Composition is the chosen tradeoff. Split buttons are scarce; avoiding a custom
+compound input state machine and two-surface painter is worth approximately
+60 bytes or more of additional control storage. That earlier saving was only
+an estimate and excluded possible implementation state. There is no 56 B
+acceptance ceiling and no requirement to compete with a childless control.
 
-| Retained payload | 32-bit estimate |
-| --- | ---: |
-| `SurfaceWidget` / `Widget` base | 24 B |
-| Observer subobject vptr | 4 B |
-| Borrowed string view, icon pointer, menu pointer | 16 B |
-| Three compact cached label metrics | 6 B |
-| Packed variant, size, direction, gesture/click/key flags | 2 B |
-| `SplitButton` total | about 52 B; acceptance ceiling 56 B |
-| Observer pointer in every existing `Menu::Impl` | +4 B payload, including idle menus |
+Using the [target baseline](../../material3_target_baseline.md), two existing
+40 B `Button` subobjects and an approximately 44 B `Container` start at about
+124 B on the 32-bit target. Add roughly 4 B for the observer's secondary vptr,
+4 B for the borrowed menu pointer, and a direction flag plus ABI padding:
+about 136 B before any implementation-specific adjustments. This is an
+inspectable estimate, not a measured limit. The API sketch retains no duplicate
+label/icon fields, child vector, or per-child owner pointer; children reach the
+owner through their attached parent and identify their role by member identity.
+Existing button fields retain the two children's size and variant settings.
 
-These are estimates, not measured results. The menu's persistent root tree,
-rows, optional submenu allocation, callback registry entries, and active
-presentation-registry storage are additional. Binding an already-built menu
-does not allocate a second menu. Observation can allocate on open, as it does
-for other observed widgets; segment layout, animation sampling, and painting
-add no heap allocation. Existing glyph renderer allocation is measured
-separately, not disguised as zero total paint allocation.
+The observer adds one pointer to every `Menu::Impl`, including idle menus.
+Persistent menu groups, rows, optional submenus, the primary callback registry
+entry, and active presentation observation are additional costs. Keep children
+inline, use direct internal semantic forwarding, and reuse the borrowed menu.
+No split-specific timer, animation registry, palette cache, or heap-allocated
+child collection is introduced. Observation can allocate on open. Report
+renderer allocations separately from split-specific allocations.
 
-For comparison, a 40 B `Button`, an approximately 32 B `IconButton`, and at
-least a 44 B container already total about 116 B, before a concrete layout's
-fields, child collection, and coordination state. Both approaches still need
-the same menu. The single widget roughly halves retained control storage,
-at the cost of a dedicated two-segment painter and input routing.
-
-Geometry, hit testing, and state updates do constant work over two segments.
-Label-metric refresh is linear in label length; ordinary paint still visits its
-glyphs. Shared const tokens contain five rows, tens of bytes in flash, rather
-than copies in every widget. Reuse existing palette, decoration, and click
-machinery to limit compiled code. Phase 4 records target ABI, linked section,
-allocation, and stack deltas; no unmeasured speed or firmware-size claim is an
-acceptance substitute.
+Geometry and routing operate over two children. Measurement retains ordinary
+button text-measurement costs, linear in label length where glyphs are visited;
+painting also visits glyphs. No constant-time cached measurement claim is made.
+Shared split tokens and chevron assets reside in flash. Phase 4 records actual
+object sizes, retained state, linked sections, allocations, and stack usage.
+Shared extension hooks must not add per-instance fields to `Widget` or ordinary
+`Button`; measured code-size changes are reported without an unsupported claim
+that composition always produces smaller firmware.
 
 ## Proposed API
 
 Add `material3/button/split_button.h` and its matching `.cpp`. This sketch shows
-the new consumer contract and retained state, omitting routine getters and
-rendering-hook declarations already specified above.
+the new consumer contract and retained state, omitting routine getters, fixed child-collection overrides, and
+geometry-hook declarations already specified above.
 
 ```cpp
 namespace roo_windows::material3 {
@@ -457,7 +496,7 @@ class MenuPresentationObserver {
 };
 
 /// Primary action and borrowed menu rendered as two coordinated segments.
-class SplitButton : public SurfaceWidget, private MenuPresentationObserver {
+class SplitButton : public Container, private MenuPresentationObserver {
  public:
   /// Borrows @p menu and @p label; defaults to Small and left-to-right layout.
   /// Menu and context must match. The menu must outlive this widget.
@@ -474,7 +513,7 @@ class SplitButton : public SurfaceWidget, private MenuPresentationObserver {
   /// Changes size, canceling an open menu and requesting layout.
   void setSize(ButtonSize size);
 
-  /// Replaces borrowed primary text and refreshes cached label metrics.
+  /// Replaces borrowed primary text and requests layout.
   void setLabel(roo::string_view label);
 
   /// Borrows primary artwork; nullptr clears it.
@@ -499,13 +538,17 @@ class SplitButton : public SurfaceWidget, private MenuPresentationObserver {
  private:
   void onMenuClosed(Menu& menu, PresentationFinishReason reason) override;
 
-  roo::string_view label_;
-  const MonoIcon* icon_ = nullptr;
+  // Private Button specialization. Overrides geometry, decoration clipping,
+  // exact touch bounds, and onClicked(); inherits paint and click lifecycle.
+  class SegmentButton : public Button {
+    // No additional retained fields. Owner/role derive from parent/member identity.
+    // Constructor and hook declarations omitted from this storage sketch.
+  };
+
+  SegmentButton primary_;
+  SegmentButton trailing_;
   Menu* menu_;
-  int16_t label_width_;
-  int16_t label_height_;
-  int16_t label_origin_;
-  uint16_t flags_;  // Variant, size, direction, gesture/click segment, key state.
+  LayoutDirection direction_ = LayoutDirection::kLeftToRight;
 };
 
 }  // namespace roo_windows::material3
@@ -513,8 +556,11 @@ class SplitButton : public SurfaceWidget, private MenuPresentationObserver {
 
 Provide the corresponding `variant()`, `size()`, `label()`, `icon()`,
 `layoutDirection()`, and `menu()` accessors. Empty primary content is allowed
-during construction; `isClickable()` requires nonempty text or an icon so an
-unlabeled blank action cannot be activated. Both segments share enabled state.
+during construction; both children are non-clickable until the primary has
+nonempty text or an icon. The container itself is always non-clickable. Both
+children share the public enabled state and are private implementation details.
+Label/icon getters forward to the primary child; size and variant setters update
+both children. No public child mutation API is exposed.
 No menu rebinding, text variant, square shape, arbitrary secondary callback,
 appearance override object, or value-selection API is introduced.
 
@@ -555,8 +601,8 @@ Follow the [shared C++ instructions](../../../.github/instructions/general-cpp-c
 and [example instructions](../../../.github/instructions/embedded-example-authoring.instructions.md).
 Run validation from the canonical `roo_windows` repository. Each phase is one
 commit; the target names marked new are created by that phase. No partial
-public split-button API is exposed: internal geometry/paint work precedes the
-complete interactive widget, so no warning-only menu stub is needed.
+public split-button API is exposed: shared button extension work precedes the
+complete composed widget, so no warning-only menu stub is needed.
 
 ### Phase 1: Safe menu observation and synchronous cancellation
 
@@ -579,65 +625,84 @@ Proposed commit message:
 > Add per-presentation housekeeping and synchronous cancellation that preserves
 > root groups, with lifetime tests and menu contract documentation.
 
-### Phase 2: Internal geometry and two-surface rendering
+### Phase 2: Reusable button geometry hooks
 
-Add private split tokens, the common geometry resolver, and the segment painter
-under `material3/button/internal/`. Include this document's numeric example and
-source links next to token tests. Expose no incomplete public widget.
+Make button shape resolution overridable and route before/after animation
+invalidation through it. Add the protected content-placement hook used by the
+existing painter. Preserve ordinary-button defaults and add no instance state.
+Correct shared text measurement/placement for negative bearings where needed.
+Document the protected extension contract in the button header and button design.
+Expose no incomplete public split-button widget.
 
-Create `//:material3_split_button_geometry_test` and
-`//:material3_split_button_golden_test` (new), using a minimal test widget for
-the internal painter. Cover five sizes, six densities, constrained/empty bounds,
-RTL, negative text bearings, oversized icons, all variants, and fractional
-outlines. Check open bounds, optical offsets, backdrop-visible gaps, overlapping
-shadows, and shrinking shape/elevation restoration. Instrument framebuffer writes
-to detect intermediate colors; final screenshots alone do not prove that rule.
-Run both new targets and `//:material3_button_test`.
+Extend `//:material3_button_test` with an asymmetric-shape subclass and optical
+placement fixture. Verify sampled and held presses, shape damage restoration,
+content clipping, negative bearings, and unchanged ordinary-button appearance.
+Use existing rendering fixtures to prove delegation to the decoration compositor
+with a narrowed context, including shadow pixels outside the surface bounds.
+Run button behavior/rendering targets and existing dropdown regression coverage.
 
 Proposed commit message:
 
-> Material 3 split-button design Phase 2: add segment geometry and painting.
+> Material 3 split-button design Phase 2: expose reusable button geometry hooks.
 >
-> Define sourced size tokens, density-aware geometry, optical centering, and
-> two-surface rendering with focused geometry and framebuffer coverage.
+> Keep existing button painting and click behavior while allowing asymmetric
+> shape resolution and content placement, with invalidation and text regressions.
 
-### Phase 3: Complete interactive widget and usage example
+### Phase 3: Composed control and usage example
 
-Add the public widget, cached metrics, borrowing contract, touch routing,
-Enter/Space and Down integration, menu ownership observation, and cleanup.
+Add split tokens, shared chevron artwork, and the public container with two
+inline `Button` children. Implement fixed child layout, asymmetric geometry,
+midpoint decoration clipping, direct semantic forwarding, and borrowed-menu
+observation/cleanup. Use two ordinary focus stops and normal child animation.
 Add a self-contained **Run / Run once / Configure run** example at
 `examples/material3/split_buttons/run_actions/run_actions.ino` (new), including
 the hardware and `ROO_TESTING` setup required by the example instructions.
-Document pointer and keyboard behavior with the example in the same commit.
+Document pointer, keyboard, and menu lifetime behavior in the same commit.
 
-Create `//:material3_split_button_test` (new), using actual task input routing
-and completed refreshes. Test slow/quick presses, gutter and cross-segment
-release, scroll takeover, a second tap during pending settlement, stale pointer
-state followed by keyboard activation, key repeat/focus loss, primary-handler
-self-destruction, and all admission/dismissal/teardown paths. Replace the golden
-fixture's test widget with the public widget and capture held/terminal/open
-states. Build `//examples/material3/split_buttons/run_actions:run_actions` (new)
-and run the split, menu, and existing dropdown behavior tests.
+Create `//:material3_split_button_geometry_test`,
+`//:material3_split_button_test`, and
+`//:material3_split_button_golden_test` (new). Cover five sizes, six densities,
+RTL, constrained/empty child bounds, oversized icons, and negative text bearings.
+Assert that hover, press, and opening preserve measured size. Test midpoint
+clips with even/odd/zero pixel gaps, asymmetric radii, fractional outlines,
+visible gap backdrop, outer shadow overflow, layout movement, and old-shadow
+restoration. Instrument framebuffer writes to check inherited foreground-first
+rendering; screenshots alone cannot establish absence of intermediate colors.
+
+Use real task input and completed refreshes for slow/quick presses, gutter and
+cross-child releases, scroll takeover, competing clicks, overlapping activation
+keys and pointer/key input, two-stop focus traversal, and handler self-destruction.
+Fix any shared admission/pairing defect in the owning core path and include an
+ordinary-button regression. Test partially clipped controls whose trailing child
+is invisible, shared-menu contention, deferred dismissal, and teardown. Capture
+independent hover/focus, held/terminal press, and menu-open states.
+
+Build `//examples/material3/split_buttons/run_actions:run_actions` (new) and run
+the three new targets plus menu, ordinary-button, and dropdown regressions.
 
 Proposed commit message:
 
-> Material 3 split-button design Phase 3: add the complete interactive control.
+> Material 3 split-button design Phase 3: add the composed interactive control.
 >
-> Connect touch and keyboard actions to primary callbacks and borrowed menus,
-> with lifecycle regressions, open-state goldens, and a runnable device example.
+> Combine two ordinary child buttons with split geometry and midpoint shadow
+> clipping, borrowing a persistent menu and preserving standard input behavior,
+> with lifecycle coverage and a runnable device example.
 
 ### Phase 4: Embedded resource and visual acceptance
 
 Add `//:material3_split_button_resource_test` (new) and a target size probe.
 Record an acceptance report alongside this design with compiler/flags, object
 sizes, shared menu implementation delta, linked `.text`/`.rodata`/`.data`/`.bss`,
-and static stack usage for measurement and paint. Compare equivalent controls
-with the same already-populated menu and primary callback registration.
+and static stack usage for measurement and paint. Include the transparent container, both inline children, observer subobject,
+menu borrow, flags, and alignment padding in the retained-control accounting.
+Use the same already-populated menu and callback setup across measurements.
 
-The target gate is at most 56 B for `SplitButton`, no fields added to `Widget`
-or ordinary `Button`, and one observer pointer of additional menu payload
-rounded only by ABI alignment. Fail the gate and revise the implementation
-before acceptance if these limits are exceeded. Resource fixtures must report
+The structural gates are no fields added to `Widget` or ordinary `Button`,
+inline child storage with no dynamic child collection or duplicate internal
+callbacks, and one observer pointer of additional menu payload rounded only by
+ABI alignment. Record and explain differences from the approximate 136 B
+control estimate; do not reject composition to recover an arbitrary 60 B.
+Resource fixtures must report
 zero split-specific allocations in repeated measure/paint/feedback paths;
 report open/close allocations and existing renderer allocations separately.
 
@@ -668,49 +733,49 @@ it does not establish implementation or device acceptance.
 ## Caveats
 
 This is a bounded Roo interpretation of Material's split-button family. It has
-one keyboard focus stop, whole-control hover/focus layers, menu-only secondary
-behavior, and immediate open/close geometry. It does not claim platform
-accessibility semantics for two independently exposed controls. The snapshot
-anchor and application responsibility for ancestor movement are specified in
+two keyboard focus stops, independent child hover/focus feedback, menu-only
+secondary behavior, and immediate open/close geometry. Two focus targets do not
+by themselves establish platform accessibility support. Shadows are partitioned
+at the gap midpoint rather than blended over one another. The snapshot anchor
+and application responsibility for ancestor movement are specified in
 [Menu admission and lifetime](#menu-admission-and-lifetime).
 
 ### Rejected Alternatives
 
-#### Compose a Button, IconButton, and layout
+#### One childless SurfaceWidget with two logical segments
 
-Composition reuses independent focus and interaction machinery and is a valid
-application solution. It retains at least roughly twice the control payload,
-and still needs split-specific corners, gap handling, and menu-open styling.
-The [resource analysis](#ram-work-and-code-size-budget) selects one widget for
-this narrowly defined family; it does not justify a generic compound-widget
-framework.
+This can reduce retained control storage, but requires multiplexed gesture and
+pending-click identities, custom keyboard routing, a two-surface painter, and
+special damage handling through single-surface hooks. Split buttons are scarce
+and the estimated saving is not a product constraint. The
+[resource accounting](#ram-work-and-code-size-accounting) accepts composition's
+larger footprint to reuse existing button behavior and reduce custom state.
 
-#### Use a whole-widget area overlay or no overlay
+#### A separate segment rasterizer or overlapping-shadow ordering
 
-An area overlay incorrectly shares the press/open visual and bridges the gap.
-No overlay bypasses click settlement. The custom overlay and explicit segment
-composition in [painting](#segment-surfaces-and-painting) retain the common
-controller and its scheduling without either failure.
+The existing `BorderStyle`, surface painter, and decoration compositor already
+support uneven corners and clip rectangles. Narrowing each child's decoration
+clip at the common midpoint avoids shadow overlap without new rasterization or
+sibling ordering rules. See [decoration clipping](#child-surfaces-and-decoration-clipping).
+
+#### One focus stop with custom secondary-action keys
+
+Two ordinary focus targets make both actions reachable with standard activation
+and traversal. A single stop would require additional semantic routing and key
+coordination with no demonstrated need in this component.
 
 #### Require a special Menu subclass or a permanent observer setter
 
 A subclass uses the existing terminal hook but excludes callers' existing menu
 subclasses. A permanent setter allows two triggers to overwrite one another
 and complicates destruction. The [per-presentation contract](#menu-admission-and-lifetime)
-costs one pointer per menu implementation and a measured observer subobject on
-the trigger while preserving existing menu ownership and completion behavior.
-
-#### Poll menu state or keep only the gesture segment
-
-Polling introduces wakeups and misses teardown boundaries; a gesture-only field
-can be overwritten before a deferred click dispatches. One terminal observer
-and separate packed gesture/click identities cover those cases without a
-private timer or additional application callback storage.
+costs one pointer per menu implementation and an observer subobject on the
+container while preserving existing menu ownership and completion behavior.
 
 ## Future Work
 
-- Independent segment hover and accessibility/focus nodes when a concrete
-  consumer requires them.
+- Platform accessibility semantics when the framework exposes an appropriate
+  integration API.
 - Animated open/close shape transitions using the shared animation registry.
 - Live anchor following for programmatically moving control trees.
 - Additional appearance policies or generic secondary actions as separately
