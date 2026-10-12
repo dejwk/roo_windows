@@ -582,7 +582,9 @@ class Clipper {
   /// The source certificate describes correct pixels from the preceding
   /// completed paint. The viewport and translation use device coordinates.
   /// Existing foreground, effects, and rounded masks are treated as read and
-  /// write restrictions. An empty result requests ordinary painting.
+  /// write restrictions. Active damage restricts the destination only: the
+  /// certified previous-frame source may lie outside current damage. An empty
+  /// result requests ordinary painting.
   internal::BlitPlan planBlitCopy(roo_display::Box source_certificate,
                                   roo_display::Box viewport, int16_t dx,
                                   int16_t dy) const;
@@ -590,8 +592,10 @@ class Clipper {
   /// Certifies one current framebuffer rectangle for a later blit source.
   ///
   /// Call this before traversing the cached subtree, while the clipper contains
-  /// only foreground restrictions. The returned device-coordinate rectangle
-  /// borrows no paint state and may outlive this Clipper.
+  /// only foreground restrictions. With active damage, the certificate stays
+  /// within one damage member so skipped foreground in gaps cannot contaminate
+  /// a future copy. The returned device-coordinate rectangle borrows no paint
+  /// state and may outlive this Clipper.
   roo_display::Box certifyBlitSource(roo_display::Box viewport) const;
 
   /// Rejects admission when foreground or modulation already covers the

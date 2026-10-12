@@ -373,7 +373,9 @@ geometry at both endpoints, which would incorrectly make damage a source
 restriction. The previous certificate can supply pixels outside active damage.
 Retain the existing conservative canvas-derived viewport in
 `BlitCacheContainer`; source opportunities outside that viewport still fall
-back to painting. Expanding source eligibility is outside this design.
+back to painting. Expanding source eligibility is outside this design. P3
+keeps that container path unchanged and applies destination membership inside
+`BlitPlanner` after its existing source and opaque-mask proof.
 
 Restrict each **new** source certificate to one active-damage member as well as
 the existing foreground/effect/mask proof. A foreground widget entirely inside
@@ -534,7 +536,7 @@ memory, records completed slices.
 | P0 Characterization | Existing renderer | Implemented | `damage_region_resource_test`, [baseline report](measurements/sparse_damage_baseline.md); host target and four renderer regressions pass. |
 | P1 Damage geometry | None | Implemented | `damage_region.h/.cpp`, pixel-oracle test; `//:damage_region_test` and ASan pass, 34-byte host state. |
 | P2 Direct clip queries and prepared gaps | P1 | Implemented | `ClipperOutput` trims direct clips and prepares exact gap exclusions; `//:damage_region_render_test`, `//:paint_context_test`, and `//:masked_exclusion_test` pass. |
-| P3 Copy and certificate restrictions | P2 | Proposed | — |
+| P3 Copy and certificate restrictions | P2 | Implemented | Destination-only damage restriction in `BlitPlanner`; `//:blit_plan_test`, `//:damage_region_render_test`, and `//:horizontal_page_host_render_test` pass. |
 | P4 Accelerated coverage guards | P2 | Proposed | — |
 | P5 Restore pending paint obligations | P0 | Proposed | — |
 | P6 Activate sparse root damage | P0–P5 | Proposed | — |

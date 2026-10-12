@@ -6,6 +6,7 @@
 #include "roo_display/core/offscreen.h"
 #include "roo_scheduler.h"
 #include "roo_windows/core/application.h"
+#include "roo_windows/core/blit_plan.h"
 #include "roo_windows/core/canvas.h"
 #include "roo_windows/core/clipper.h"
 #include "roo_windows/core/panel.h"
@@ -91,6 +92,16 @@ class RecordingDevice : public roo_display::OffscreenDevice<Argb8888> {
       setAddress(x0[i], y0[i], x1[i], y1[i], mode);
       fill(color, (x1[i] - x0[i] + 1) * (y1[i] - y0[i] + 1));
     }
+  }
+
+  void blitCopy(int16_t src_x0, int16_t src_y0, int16_t src_x1, int16_t src_y1,
+                int16_t dst_x0, int16_t dst_y0) override {
+    for (int y = dst_y0; y <= dst_y0 + src_y1 - src_y0; ++y) {
+      for (int x = dst_x0; x <= dst_x0 + src_x1 - src_x0; ++x) {
+        ++writes[y * kWidth + x];
+      }
+    }
+    OffscreenDevice::blitCopy(src_x0, src_y0, src_x1, src_y1, dst_x0, dst_y0);
   }
 
   std::array<uint8_t, kWidth * kHeight> writes{};
@@ -369,6 +380,56 @@ TEST(DamageRegionRenderTest, WidgetSkipsContentBeforeGapPreparation) {
     PaintContext ctx(canvas, clipper);
     parent_ptr->paintChildrenForTest(ctx);
     EXPECT_EQ(target->paint_calls, 1);
+  }
+}
+
+// Raw copy bypasses filters, so a legal source outside active damage is copied
+// only into damage. The regular paint supplies remaining damage without
+// repainting the copied rectangle.
+TEST(DamageRegionRenderTest, RawCopyAndFilteredRemainderMatchPixelOracle) {
+  std::array<roo::byte, kWidth * kHeight * 4> pixels{};
+  RecordingDevice device(pixels.data());
+  std::array<Color, kWidth * kHeight> original;
+  for (int y = 0; y < kHeight; ++y) {
+    for (int x = 0; x < kWidth; ++x) {
+      const Color color(0xFF000000u | (x << 16) | (y << 8) | (x ^ y));
+      original[y * kWidth + x] = color;
+      device.setAddress(x, y, x, y, BlendingMode::kSource);
+      device.fill(color, 1);
+    }
+  }
+  device.reset();
+  const Box full(0, 0, kWidth - 1, kHeight - 1);
+  internal::DamageRegion damage;
+  damage.add(Box(16, 0, 31, 23));
+  internal::ClipperState state;
+  Clipper clipper(state, device, roo_time::Uptime::Max(), &damage);
+  const internal::BlitPlan plan = clipper.planBlitCopy(full, full, 4, 0);
+  ASSERT_FALSE(plan.empty());
+  EXPECT_LT(plan.source.xMin(), damage.bounds().xMin());
+  EXPECT_TRUE(damage.covers(plan.destination));
+  clipper.addExclusion(plan.destination);
+  clipper.rawOut().blitCopy(plan.source.xMin(), plan.source.yMin(),
+                            plan.source.xMax(), plan.source.yMax(),
+                            plan.destination.xMin(), plan.destination.yMin());
+  clipper.setBounds(full);
+  const Color fresh(0xFF2488CC);
+  clipper.out()->fillRect(BlendingMode::kSource, full, fresh);
+  for (int y = 0; y < kHeight; ++y) {
+    for (int x = 0; x < kWidth; ++x) {
+      const int index = y * kWidth + x;
+      const bool damaged = damage.covers(Box(x, y, x, y));
+      EXPECT_EQ(device.writes[index], damaged ? 1 : 0);
+      const Color expected = plan.destination.contains(x, y)
+                                 ? original[y * kWidth + x - 4]
+                             : damaged ? fresh
+                                       : original[index];
+      int16_t px = x;
+      int16_t py = y;
+      Color actual;
+      device.raster().readColors(&px, &py, 1, &actual);
+      EXPECT_EQ(actual, expected);
+    }
   }
 }
 

@@ -151,7 +151,7 @@ class BlitPlanner {
               const RoundedClip* masks, const Box* exclusions,
               size_t exclusion_count, const ClippedOverlay* overlays,
               size_t overlay_count, const MaskedExclusion* masked,
-              size_t masked_count)
+              size_t masked_count, const internal::DamageRegion* damage)
       : source_certificate_(source_certificate),
         viewport_(viewport),
         search_opportunity_area_cutoff_(viewport.area() /
@@ -164,7 +164,8 @@ class BlitPlanner {
         overlays_(overlays),
         overlay_count_(overlay_count),
         masked_(masked),
-        masked_count_(masked_count) {}
+        masked_count_(masked_count),
+        damage_(damage) {}
 
   // Evaluates the bounded set of useful opaque-core shapes.
   BlitPlan plan() {
@@ -199,7 +200,16 @@ class BlitPlanner {
           break;
         }
       }
-      if (!duplicate) Search(candidates[i], 0);
+      if (duplicate) continue;
+      if (damage_ == nullptr) {
+        Search(candidates[i], 0);
+      } else {
+        // Source eligibility above is independent of active damage. Restrict
+        // only the destination, sharing budgets across members and core shapes.
+        for (uint8_t member = 0; member < damage_->size(); ++member) {
+          Search(Box::Intersect(candidates[i], damage_->at(member)), 0);
+        }
+      }
     }
     if (best_destination_.empty()) return BlitPlan();
 
@@ -319,6 +329,7 @@ class BlitPlanner {
   size_t overlay_count_;
   const MaskedExclusion* masked_;
   size_t masked_count_;
+  const internal::DamageRegion* damage_;
   Box best_destination_{0, 0, -1, -1};
   uint16_t nodes_remaining_ = kSearchNodeBudget;
 };
@@ -336,7 +347,7 @@ internal::BlitPlan Clipper::planBlitCopy(Box source_certificate, Box viewport,
   return BlitPlanner(source_certificate, viewport, dx, dy,
                      out_.activeRoundedClip(), exclusions.data(),
                      exclusions.size(), overlays.data(), overlays.size(),
-                     masked.data(), masked.size())
+                     masked.data(), masked.size(), damageRegion())
       .plan();
 }
 
@@ -348,7 +359,8 @@ Box Clipper::certifyBlitSource(Box viewport) const {
       out_.maskedExclusions();
   return BlitPlanner(viewport, viewport, 0, 0, out_.activeRoundedClip(),
                      exclusions.data(), exclusions.size(), overlays.data(),
-                     overlays.size(), masked.data(), masked.size())
+                     overlays.size(), masked.data(), masked.size(),
+                     damageRegion())
       .plan()
       .destination;
 }

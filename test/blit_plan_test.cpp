@@ -58,7 +58,8 @@ class PlannerScene {
     size_t mask_count;
   };
 
-  PlannerScene() : clipper_(state_, output_) {}
+  explicit PlannerScene(const internal::DamageRegion* damage = nullptr)
+      : clipper_(state_, output_, roo_time::Uptime::Max(), damage) {}
 
   RoundedClip& pushMask(const void* owner, Box bounds, BorderStyle style) {
     RoundedClip& mask = clipper_.prepareRoundedClip(owner, bounds, style);
@@ -357,6 +358,69 @@ TEST(BlitPlanTest, SearchOpportunityUsesOneEighthOfTarget) {
   EXPECT_EQ(Box(1, 0, 33, 63), above_cutoff_plan.destination);
   ExpectPlanSafe(scene, above_cutoff_plan, above_cutoff_certificate, viewport,
                  1, 0);
+}
+
+// A previous-frame source can lie outside current damage. Only the raw-copy
+// destination and the next certificate are constrained by active damage.
+TEST(BlitPlanTest, ActiveDamageRestrictsDestinationButNotPreviousSource) {
+  internal::DamageRegion damage;
+  damage.add(Box(48, 0, 95, 63));
+  PlannerScene scene(&damage);
+  const Box viewport(0, 0, 95, 63);
+  const BlitPlan plan = scene.plan(viewport, viewport, 4, 0);
+  ASSERT_FALSE(plan.empty());
+  ExpectPlanSafe(scene, plan, viewport, viewport, 4, 0);
+  EXPECT_TRUE(damage.covers(plan.destination));
+  EXPECT_LT(plan.source.xMin(), damage.bounds().xMin());
+  const Box certificate = scene.certify(viewport);
+  EXPECT_FALSE(certificate.empty());
+  EXPECT_TRUE(damage.covers(certificate));
+}
+
+// Disjoint members must not produce a copy or a future source certificate
+// crossing the gap, even when a skipped foreground contributor lives there.
+TEST(BlitPlanTest, DisjointDamageNeverCertifiesGap) {
+  internal::DamageRegion damage;
+  damage.add(Box(0, 0, 31, 63));
+  damage.add(Box(64, 0, 95, 63));
+  PlannerScene scene(&damage);
+  const Box viewport(0, 0, 95, 63);
+  // This foreground is inside the undamaged gap; normal widget traversal may
+  // skip registering it entirely, so a broad certificate would be unsafe.
+  const Box hidden_foreground(40, 8, 55, 55);
+  const BlitPlan plan = scene.plan(viewport, viewport, 4, 0);
+  ASSERT_FALSE(plan.empty());
+  EXPECT_TRUE(damage.covers(plan.destination));
+  EXPECT_FALSE(plan.destination.intersects(hidden_foreground));
+  const Box certificate = scene.certify(viewport);
+  ASSERT_FALSE(certificate.empty());
+  EXPECT_TRUE(damage.covers(certificate));
+  EXPECT_FALSE(certificate.intersects(hidden_foreground));
+}
+
+TEST(BlitPlanTest, DamageCombinesWithMaskAndCopyFallback) {
+  internal::DamageRegion damage;
+  damage.add(Box(4, 4, 91, 59));
+  PlannerScene scene(&damage);
+  const Box viewport(0, 0, 95, 63);
+  int owner;
+  scene.pushMask(&owner, viewport, BorderStyle(12, 0));
+  const BlitPlan plan = scene.plan(viewport, viewport, 4, -3);
+  ASSERT_FALSE(plan.empty());
+  ExpectPlanSafe(scene, plan, viewport, viewport, 4, -3);
+  EXPECT_TRUE(damage.covers(plan.destination));
+  EXPECT_TRUE(damage.covers(scene.certify(viewport)));
+
+  internal::DamageRegion tiny;
+  tiny.add(Box(10, 10, 11, 11));
+  PlannerScene tiny_scene(&tiny);
+  EXPECT_TRUE(tiny_scene.plan(viewport, viewport, 4, 0).empty());
+  EXPECT_TRUE(tiny_scene.certify(viewport).empty());
+
+  internal::DamageRegion empty;
+  PlannerScene empty_scene(&empty);
+  EXPECT_TRUE(empty_scene.plan(viewport, viewport, 4, 0).empty());
+  EXPECT_TRUE(empty_scene.certify(viewport).empty());
 }
 
 // Verifies absent history, non-overlapping history, and a zero translation
