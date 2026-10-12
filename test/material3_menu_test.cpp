@@ -245,6 +245,23 @@ TEST_F(Material3MenuTest, ObservationFollowsAdmissionAndCancellation) {
   EXPECT_EQ(1, menu_.finishes());
 }
 
+// Verifies cancellation preempts deferred click-feedback completion and never
+// delivers the menu's application completion hook.
+TEST_F(Material3MenuTest, CancellationPreemptsDeferredFinish) {
+  RecordingObserver observer(&menu_);
+  ASSERT_EQ(MenuShowResult::kShown,
+            menu_.show(owner_, source_, MenuPlacement::kBelowStart, &observer));
+  row_.onShowPress(10, 10);
+  ASSERT_TRUE(row_.isClicking());
+  menu_.dismissChain();
+  EXPECT_EQ(0, observer.closes());
+  menu_.cancelPresentation();
+  EXPECT_EQ(1, observer.closes());
+  EXPECT_EQ(PresentationFinishReason::kCancel, observer.reason());
+  EXPECT_EQ(0, menu_.finishes());
+  EXPECT_FALSE(row_.isClicking());
+}
+
 TEST_F(Material3MenuTest, VibrantPolicyColorsRowsFromThePanelFamily) {
   MenuPolicy policy;
   policy.color_style = MenuColorStyle::kVibrant;
