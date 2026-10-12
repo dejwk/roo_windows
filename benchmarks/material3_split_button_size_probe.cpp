@@ -6,6 +6,7 @@
 #include "roo_windows/core/container.h"
 #include "roo_windows/core/widget.h"
 #include "roo_windows/material3/button/button.h"
+#include "roo_windows/material3/button/internal/split_chevrons.h"
 #include "roo_windows/material3/button/split_button.h"
 #include "roo_windows/material3/menu/menu.h"
 
@@ -17,3 +18,6 @@ ROO_WINDOWS_SPLIT_SIZE_PROBE(roo_windows::Container, container);
 ROO_WINDOWS_SPLIT_SIZE_PROBE(roo_windows::material3::Button, button);
 ROO_WINDOWS_SPLIT_SIZE_PROBE(roo_windows::material3::SplitButton, split_button);
 ROO_WINDOWS_SPLIT_SIZE_PROBE(roo_windows::material3::Menu, menu);
+
+ROO_WINDOWS_SPLIT_SIZE_PROBE(roo_windows::material3::internal::SplitChevron,
+                             chevron_scratch);

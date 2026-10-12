@@ -4,7 +4,9 @@
 #include "roo_display.h"
 #include "roo_display/core/offscreen.h"
 #include "roo_scheduler.h"
+#include "roo_testing/system/timer.h"
 #include "roo_windows/core/application.h"
+#include "roo_windows/core/click_animation.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/gesture_detector.h"
 #include "roo_windows/core/panel.h"
@@ -99,23 +101,43 @@ class SplitButtonTest : public testing::Test {
 TEST_F(SplitButtonTest, PrimaryAndTrailingActionsStayIndependent) {
   int runs = 0;
   button_.setOnInteractiveChange([&runs] { ++runs; });
-  const MonoIcon* down = static_cast<Button&>(trailing()).icon();
   primary().onClicked();
   EXPECT_EQ(1, runs);
   EXPECT_FALSE(button_.isMenuOpen());
 
   trailing().onClicked();
   EXPECT_TRUE(button_.isMenuOpen());
-  const MonoIcon* up = static_cast<Button&>(trailing()).icon();
-  EXPECT_NE(down, up);
-  ASSERT_NE(nullptr, up);
-  EXPECT_EQ(down->anchorExtents(), up->anchorExtents());
   EXPECT_EQ(1, runs);
   EXPECT_EQ(MenuShowResult::kAlreadyPresented, button_.showMenu());
   button_.dismissMenu();
   EXPECT_FALSE(button_.isMenuOpen());
-  EXPECT_EQ(down, static_cast<Button&>(trailing()).icon());
   EXPECT_EQ(1, runs);
+}
+
+// Verifies the chevron uses the shared click controller through sampled,
+// held, and terminal feedback without adding a widget animation track.
+TEST_F(SplitButtonTest, ChevronFollowsClickProgressWithoutMovingSegments) {
+  Rect original = trailing().parent_bounds();
+  trailing().onShowPress(20, 20);
+  app_.refresh();
+  ASSERT_NE(nullptr, trailing().getClickAnimation());
+  system_time_delay_micros(kPressAnimationMillis * 500);
+  app_.refresh();
+  ASSERT_NE(nullptr, trailing().getClickAnimation());
+  EXPECT_NEAR(0.5f, trailing().getClickAnimation()->progress(), 0.001f);
+  EXPECT_FALSE(button_.isMenuOpen());
+  EXPECT_FALSE(app_.context().animations().contains(button_, 0));
+  EXPECT_EQ(original, trailing().parent_bounds());
+  system_time_delay_micros(kPressAnimationMillis * 500);
+  app_.refresh();
+  EXPECT_TRUE(trailing().isPressed());
+  EXPECT_FALSE(button_.isMenuOpen());
+  trailing().onSingleTapUp(20, 20);
+  app_.refresh();
+  EXPECT_TRUE(button_.isMenuOpen());
+  EXPECT_EQ(original, trailing().parent_bounds());
+  button_.dismissMenu();
+  EXPECT_FALSE(app_.context().animations().contains(button_, 0));
 }
 
 // Verifies the exact child rectangles leave a noninteractive gutter, including

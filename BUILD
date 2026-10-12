@@ -714,6 +714,7 @@ cc_test(
     deps = [
         ":roo_windows",
         "@roo_testing//:arduino_gtest_main",
+        "@roo_testing//roo_testing/system:manual_time_mode",
     ],
 )
 
@@ -729,6 +730,7 @@ cc_test(
         ":roo_windows",
         ":test_golden_utils",
         "@roo_testing//:arduino_gtest_main",
+        "@roo_testing//roo_testing/system:manual_time_mode",
     ],
 )
 

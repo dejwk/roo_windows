@@ -6,6 +6,7 @@
 #include "material3_density_acceptance_theme.h"
 #include "roo_display.h"
 #include "roo_display/core/offscreen.h"
+#include "roo_testing/system/timer.h"
 #include "roo_windows/core/application.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/panel.h"
@@ -108,7 +109,7 @@ class GoldenPanel final : public Panel {
 // Captures a complete split surface with the borrowed menu in its requested
 // state, including the ancestor backdrop visible through the separation.
 void CheckSplit(const char* name, SplitButtonVariant variant, bool open,
-                bool dark = false) {
+                bool dark = false, bool half_click = false) {
   constexpr int kWidth = 320;
   constexpr int kHeight = 240;
   std::vector<roo::byte> raster(kWidth * kHeight * 2);
@@ -137,6 +138,13 @@ void CheckSplit(const char* name, SplitButtonVariant variant, bool open,
   app.refresh();
   if (open) {
     ASSERT_EQ(MenuShowResult::kShown, button.showMenu());
+    app.refresh();
+  }
+  if (half_click) {
+    Widget* trailing = static_cast<Widget&>(button).focusChildAt(1);
+    trailing->onShowPress(trailing->width() / 2, trailing->height() / 2);
+    app.refresh();
+    system_time_delay_micros(kPressAnimationMillis * 500);
     app.refresh();
   }
   EXPECT_TRUE(::roo_windows::test::CompareOrUpdateGolden(
@@ -169,6 +177,12 @@ TEST(SplitButtonGolden, ClosedFilledDark) {
 
 TEST(SplitButtonGolden, OpenOutlinedDark) {
   CheckSplit("open_outlined_dark", SplitButtonVariant::kOutlined, true, true);
+}
+
+// Verifies the chevron paints the shared click controller's halfway sample.
+TEST(SplitButtonGolden, OpeningMidpoint) {
+  CheckSplit("opening_midpoint", SplitButtonVariant::kFilled, false, false,
+             true);
 }
 
 // Verifies foreground and decoration paths write each split-control pixel at
@@ -204,8 +218,8 @@ TEST(SplitButtonGolden, ForegroundFirstAvoidsIntermediatePixelWrites) {
 // Verifies opening and closing the borrowed menu leave display corners outside
 // the split control and menu footprint unwritten.
 TEST(SplitButtonGolden, MenuPresentationKeepsDisplayDamageLocal) {
-  constexpr int kWidth = 240;
-  constexpr int kHeight = 160;
+  constexpr int kWidth = Scaled(240);
+  constexpr int kHeight = Scaled(160);
   std::vector<roo::byte> raster(kWidth * kHeight * 2);
   WriteCountingDevice device(kWidth, kHeight, raster.data());
   roo_display::Display display(device);
@@ -222,7 +236,8 @@ TEST(SplitButtonGolden, MenuPresentationKeepsDisplayDamageLocal) {
   Menu menu(app.context());
   menu.addGroup(group);
   SplitButton button(app.context(), menu, "Run");
-  panel.add(WidgetRef(button), Rect(32, 32, 181, 71));
+  panel.add(WidgetRef(button),
+            Rect(Scaled(32), Scaled(32), Scaled(182) - 1, Scaled(72) - 1));
   app.refresh();
 
   device.reset();

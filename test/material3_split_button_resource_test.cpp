@@ -8,6 +8,7 @@
 #include "roo_windows/core/application.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/panel.h"
+#include "roo_windows/material3/button/internal/split_chevrons.h"
 #include "roo_windows/material3/button/split_button.h"
 
 namespace {
@@ -55,6 +56,22 @@ class TestPanel final : public Panel {
 
 static_assert(sizeof(SplitButton) >= sizeof(Container) + 2 * sizeof(Button),
               "inline children must account for their complete Button storage");
+
+// Verifies the reusable rectangle stack updates and samples animated geometry
+// without allocating after its two input slots have been constructed.
+TEST(SplitButtonResource, ChevronFramesReuseStackStorage) {
+  internal::SplitChevron chevron;
+  roo_display::Color pixels[24 * 24];
+  allocation_count = 0;
+  counting = true;
+  for (int i = 0; i <= 100; ++i) {
+    chevron.setGeometry(roo_display::Box(0, 0, 23, 23), 22, i / 100.0f,
+                        roo_display::color::White);
+    chevron.image().readColorRect(0, 0, 23, 23, pixels);
+  }
+  counting = false;
+  EXPECT_EQ(0u, allocation_count);
+}
 
 // Verifies repeated layout measurement adds no heap state after font warmup;
 // reports renderer and menu allocations separately for acceptance accounting.

@@ -5,7 +5,33 @@ behavior, geometry, menu lifetime, and visual captures are exercised by the
 split-button targets in `BUILD`. The `run_actions` example builds for the host
 and for ESP32-C3 without an upload.
 
-## Retained storage
+## Animated chevron revision (2026-10-12)
+
+The generated triangle assets have been replaced with a smooth chevron formed
+by subtracting two rotated rectangles in `RasterizableStack`. Its rotation
+consumes the trailing child's shared `ClickAnimation::progress()` sample,
+including held and terminal feedback. No independent track or per-control
+angle is retained. Its pivot is the trailing segment's fixed pixel center;
+corner-radius changes no longer shift the icon. The reusable chevron scratch
+is 296 B per rendering thread, plus storage for two stack inputs allocated
+on first use. It replaces the shared bitmap descriptors and generated RLE data.
+The retained control remains 136 B on ESP32-C3 and 224 B on the host.
+
+The focused resource test verifies zero allocations during 101 successive
+geometry updates and raster samples after constructing the scratch. Repeated
+measurement still allocates zero times. Four complete repaints report 12
+existing renderer allocations; a menu open/cancel cycle reports one allocation.
+Endpoint and halfway-click captures
+exercise the new drawing at all four supported zooms, and the geometry test
+checks half-turn symmetry for both odd and even pixel bounds. The revised
+ESP32-C3 example build succeeds; PlatformIO reports a total image size of
+1,226,538 B including the framework.
+
+The measurements below describe the original static-asset implementation.
+They are retained as a baseline; they do not describe the current chevron
+paint path or its linked section sizes.
+
+## Original retained storage
 
 The standalone 32-bit ESP32-C3 ABI probe (`benchmarks/material3_split_button_size_probe.sh`)
 uses `riscv32-esp-elf-g++` 14.2.0, `-std=gnu++17 -Os -fno-exceptions

@@ -132,6 +132,7 @@ class SplitButton : public Container, private MenuPresentationObserver {
     Rect getSloppyTouchParentBounds() const override { return parent_bounds(); }
     Rect getParentDecorationBounds() const override;
     void onClicked() override;
+    void paint(PaintContext& ctx) const override;
     ClickActivationPolicy getClickActivationPolicy() const override;
 
    protected:
@@ -151,7 +152,6 @@ class SplitButton : public Container, private MenuPresentationObserver {
   };
 
   void onMenuClosed(Menu& menu, PresentationFinishReason reason) override;
-  void syncChevron();
 
   SegmentButton primary_;
   SegmentButton trailing_;

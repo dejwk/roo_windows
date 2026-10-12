@@ -4,6 +4,7 @@
 #include <cmath>
 
 #include "roo_windows/core/click_animation.h"
+#include "roo_windows/material3/button/internal/button_appearance.h"
 #include "roo_windows/material3/button/internal/button_geometry.h"
 #include "roo_windows/material3/button/internal/split_chevrons.h"
 #include "roo_windows/material3/internal/density.h"
@@ -76,7 +77,6 @@ SplitButton::SplitButton(ApplicationContext& context, Menu& menu,
   trailing_.setParentClipMode(ParentClipMode::kUnclipped);
   attachChild(WidgetRef(primary_));
   attachChild(WidgetRef(trailing_));
-  syncChevron();
 }
 
 SplitButton::~SplitButton() {
@@ -112,7 +112,6 @@ void SplitButton::setSize(ButtonSize size) {
   dismissMenu();
   primary_.setSize(size);
   trailing_.setSize(size);
-  syncChevron();
   requestLayout();
 }
 
@@ -141,10 +140,6 @@ void SplitButton::setLayoutDirection(LayoutDirection direction) {
   invalidateInterior();
 }
 
-void SplitButton::syncChevron() {
-  trailing_.setIcon(&internal::SplitChevron(size(), isMenuOpen()));
-}
-
 MenuShowResult SplitButton::showMenu() {
   if (isMenuOpen()) return MenuShowResult::kAlreadyPresented;
   Task* owner = getTask();
@@ -156,7 +151,7 @@ MenuShowResult SplitButton::showMenu() {
       menu_->show(*owner, trailing_, MenuPlacement::kBelowStart, this);
   if (result != MenuShowResult::kShown) return result;
   trailing_.setActivated(true);
-  syncChevron();
+  trailing_.invalidateInterior();
   if (!context().presentations().observe(*this)) {
     menu_->cancelPresentation();
     return MenuShowResult::kInteractionOwnerUnavailable;
@@ -180,7 +175,7 @@ void SplitButton::onMenuClosed(Menu& menu, PresentationFinishReason reason) {
     context().presentations().unobserve(*this);
   }
   trailing_.setActivated(false);
-  syncChevron();
+  trailing_.invalidateInterior();
 }
 
 void SplitButton::onPrimaryInvoked() { triggerInteractiveChange(); }
@@ -292,6 +287,27 @@ void SplitButton::SegmentButton::onClicked() {
   }
 }
 
+void SplitButton::SegmentButton::paint(PaintContext& ctx) const {
+  if (!isTrailing()) {
+    Button::paint(ctx);
+    return;
+  }
+  // Synchronous painting borrows this thread's scratch only for this draw.
+  // Reusing its two inputs avoids allocation on subsequent animation frames.
+  static thread_local internal::SplitChevron chevron;
+  const ClickAnimation* animation = getClickAnimation();
+  // Keep the terminal orientation through a held press and menu admission.
+  // The shared controller supplies every intermediate frame and invalidation.
+  float fraction = isActivated() || isPressed() ? 1.0f : 0.0f;
+  if (!isActivated() && animation != nullptr) fraction = animation->progress();
+  chevron.setGeometry(
+      bounds().asBox(), Scaled(Tokens(size()).trailing_icon), fraction,
+      internal::ResolveButtonAppearance(theme(), variant(), isEnabled())
+          .content);
+  ctx.canvas().drawTiled(chevron.image(), bounds(),
+                         roo_display::kCenter | roo_display::kMiddle);
+}
+
 BorderStyle SplitButton::SegmentButton::resolveShape(bool pressed, bool hover,
                                                      bool open,
                                                      float progress) const {
@@ -341,23 +357,7 @@ Rect SplitButton::SegmentButton::resolveContentBounds(
   int right = std::min<int>(end, std::max(0, bounds.width() - left));
   Rect content(bounds.xMin() + left, bounds.yMin(), bounds.xMax() - right,
                bounds.yMax());
-  if (!isTrailing() || content.empty()) return content;
-  BorderStyle border = getBorderStyle();
-  int logical_start_radius =
-      owner()->direction_ == LayoutDirection::kLeftToRight
-          ? border.top_left_corner_radius()
-          : border.top_right_corner_radius();
-  int logical_end_radius = owner()->direction_ == LayoutDirection::kLeftToRight
-                               ? border.top_right_corner_radius()
-                               : border.top_left_corner_radius();
-  int delta = static_cast<int>(
-      std::floor(0.11f * (logical_start_radius - logical_end_radius) + 0.5f));
-  delta =
-      std::max(-Scaled(logical_start), std::min(delta, Scaled(logical_end)));
-  if (owner()->direction_ == LayoutDirection::kRightToLeft) delta = -delta;
-  delta = std::max(bounds.xMin() - content.xMin(),
-                   std::min(delta, bounds.xMax() - content.xMax()));
-  return content.translate(delta, 0);
+  return content;
 }
 
 void SplitButton::SegmentButton::notifyStateChanged(uint16_t state_diff) {

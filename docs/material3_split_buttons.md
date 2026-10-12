@@ -37,3 +37,10 @@ Four variants and five expressive sizes are supported. The theme's density
 changes natural height while keeping horizontal spacing, typography, and icon
 artwork stable. `setLayoutDirection()` mirrors the segments and padding within
 the control; the borrowed menu keeps its own `MenuPolicy::layout_direction`.
+
+The trailing chevron is drawn dynamically as the difference of two smooth
+rotated rectangles. It rotates through 180 degrees using the trailing button's sampled click
+progress, keeping a fixed center throughout hover, press, and open states.
+A held press keeps the completed orientation until release; an open menu keeps
+the chevron pointing up. Closing the menu restores the downward orientation.
+There is no separate chevron animation track or retained angle.
