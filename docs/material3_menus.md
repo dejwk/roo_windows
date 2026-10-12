@@ -66,6 +66,22 @@ ordinary and single-selection leaves dismiss by default. Back/Escape closes
 the deepest submenu first and then the root. Arrow keys, Home/End, and wrapping
 Tab traversal operate only within the deepest visible level.
 
+A trigger that needs to clear its own open state can pass a
+`MenuPresentationObserver*` to `show()` or `showFromRect()`. The menu borrows it
+only when presentation succeeds. Once the entire root chain has detached and
+focus has been restored, the menu clears that borrow and notifies the observer
+before calling its application-level `onFinished()` hook. Submenu closure does
+not notify the observer. Its callback is limited to local housekeeping: it
+must not reenter the menu, call application callbacks, or destroy the menu or
+observer.
+
+`dismissChain()` follows normal completion and can wait for click feedback's
+final frame before detaching and invoking `onFinished()`. A trigger that is
+being hidden, disabled, or destroyed should call `cancelPresentation()` while
+its observer is still alive. Cancellation detaches synchronously, notifies the
+observer with `kCancel`, suppresses `onFinished()`, and leaves persistent root
+groups available for later use.
+
 ## Scroll-copy policy
 
 Menus follow the application-wide `ScrollablePanel` policy. The default

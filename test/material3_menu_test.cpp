@@ -52,6 +52,32 @@ class RecordingMenu final : public Menu {
   PresentationFinishReason last_reason_ = PresentationFinishReason::kCancel;
 };
 
+class RecordingObserver final : public MenuPresentationObserver {
+ public:
+  explicit RecordingObserver(const RecordingMenu* observed_menu = nullptr)
+      : observed_menu_(observed_menu) {}
+
+  void onMenuClosed(Menu& menu, PresentationFinishReason reason) override {
+    menu_ = &menu;
+    reason_ = reason;
+    if (observed_menu_ != nullptr)
+      finishes_at_close_ = observed_menu_->finishes();
+    ++closes_;
+  }
+
+  int closes() const { return closes_; }
+  Menu* menu() const { return menu_; }
+  PresentationFinishReason reason() const { return reason_; }
+  int finishesAtClose() const { return finishes_at_close_; }
+
+ private:
+  const RecordingMenu* observed_menu_;
+  Menu* menu_ = nullptr;
+  PresentationFinishReason reason_ = PresentationFinishReason::kCancel;
+  int closes_ = 0;
+  int finishes_at_close_ = -1;
+};
+
 class RecordingItem final : public StandardMenuItem {
  public:
   explicit RecordingItem(const StandardMenuItemInit& init)
@@ -183,6 +209,40 @@ TEST_F(Material3MenuTest, CapturesFocusScopeWithoutInitiallyFocusingARow) {
   EXPECT_EQ(1, menu_.finishes());
   EXPECT_EQ(PresentationFinishReason::kBack, menu_.lastReason());
   EXPECT_NE(&row_, owner_.focus().focused());
+}
+
+// Verifies that only admitted root presentations borrow an observer and that
+// synchronous cancellation preserves persistent menu groups for reuse.
+TEST_F(Material3MenuTest, ObservationFollowsAdmissionAndCancellation) {
+  RecordingObserver first;
+  RecordingObserver contender(&menu_);
+  EXPECT_EQ(MenuShowResult::kAnchorUnavailable,
+            menu_.showFromRect(owner_, Rect(0, 0, -1, -1),
+                               MenuPlacement::kBelowStart, &contender));
+  EXPECT_EQ(0, contender.closes());
+
+  ASSERT_EQ(MenuShowResult::kShown,
+            menu_.show(owner_, source_, MenuPlacement::kBelowStart, &first));
+  EXPECT_EQ(
+      MenuShowResult::kAlreadyPresented,
+      menu_.show(owner_, source_, MenuPlacement::kBelowStart, &contender));
+  menu_.cancelPresentation();
+  EXPECT_EQ(1, first.closes());
+  EXPECT_EQ(&menu_, first.menu());
+  EXPECT_EQ(PresentationFinishReason::kCancel, first.reason());
+  EXPECT_EQ(0, contender.closes());
+  EXPECT_EQ(0, menu_.finishes());
+  menu_.cancelPresentation();
+  EXPECT_EQ(1, first.closes());
+
+  ASSERT_EQ(
+      MenuShowResult::kShown,
+      menu_.show(owner_, source_, MenuPlacement::kBelowStart, &contender));
+  EXPECT_NE(nullptr, row_.menuItem());
+  menu_.dismissChain();
+  EXPECT_EQ(1, contender.closes());
+  EXPECT_EQ(0, contender.finishesAtClose());
+  EXPECT_EQ(1, menu_.finishes());
 }
 
 TEST_F(Material3MenuTest, VibrantPolicyColorsRowsFromThePanelFamily) {

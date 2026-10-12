@@ -25,6 +25,19 @@ namespace roo_windows::material3 {
 class Menu;
 class MenuLevelBuilder;
 
+/// Receives housekeeping notification after an observed root presentation ends.
+/// The menu borrows this object only during the admitted presentation. The
+/// callback must not reenter the menu, mutate its structure, or invoke user
+/// code.
+class MenuPresentationObserver {
+ public:
+  /// Clears trigger state after detachment and before application completion.
+  virtual void onMenuClosed(Menu& menu, PresentationFinishReason reason) = 0;
+
+ protected:
+  ~MenuPresentationObserver() = default;
+};
+
 /// Selects the Material 3 expressive menu color family.
 enum class MenuColorStyle : uint8_t { kStandard, kVibrant };
 
@@ -459,17 +472,23 @@ class Menu {
   /// this instance is already active. Failure leaves focus and menu ownership
   /// unchanged. A successful call synchronously attaches the overlay, focuses
   /// its first eligible row, and makes it the active interactive transient.
+  /// The optional @p observer is borrowed only after successful admission. It
+  /// is notified once after root detachment, before `onFinished()`; it must
+  /// outlive that presentation or call `cancelPresentation()` first.
   MenuShowResult show(::roo_windows::Task& interaction_owner,
                       const Widget& placement_source,
-                      MenuPlacement placement = MenuPlacement::kBelowStart);
+                      MenuPlacement placement = MenuPlacement::kBelowStart,
+                      MenuPresentationObserver* observer = nullptr);
 
   /// Presents relative to a rectangle already expressed in window coordinates.
   ///
   /// This variant skips widget provenance checks but otherwise has the same
-  /// admission, focus activation, failure, and dismissal semantics as `show()`.
+  /// admission, focus activation, failure, dismissal, and observer contract as
+  /// `show()`.
   MenuShowResult showFromRect(
       ::roo_windows::Task& interaction_owner, const Rect& bounds_in_window,
-      MenuPlacement placement = MenuPlacement::kBelowStart);
+      MenuPlacement placement = MenuPlacement::kBelowStart,
+      MenuPresentationObserver* observer = nullptr);
 
   /// Recaptures a live placement source for an active menu.
   ///
@@ -488,6 +507,11 @@ class Menu {
   ///
   /// Detachment and focus restoration complete before `onFinished()` runs.
   void dismissChain();
+
+  /// Detaches an active chain synchronously without application completion.
+  /// Persistent root groups remain available for another presentation. An
+  /// admitted observer receives one kCancel notification after detachment.
+  void cancelPresentation();
 
  protected:
   /// Detaches persistent borrowed members before a derived destructor runs.
@@ -517,7 +541,8 @@ class Menu {
 
   MenuShowResult showCaptured(::roo_windows::Task& interaction_owner,
                               const Rect& bounds_in_window,
-                              MenuPlacement placement);
+                              MenuPlacement placement,
+                              MenuPresentationObserver* observer);
 
   class Impl;
 #if defined(ROO_WINDOWS_MENU_ABI_PROBE)

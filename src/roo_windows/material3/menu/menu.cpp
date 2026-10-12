@@ -587,6 +587,9 @@ class Menu::Impl {
       Impl& impl = *owner_.impl_;
       impl.interaction_owner = nullptr;
       impl.focus_scope.clearRememberedFocus();
+      MenuPresentationObserver* observer = impl.observer;
+      impl.observer = nullptr;
+      if (observer != nullptr) observer->onMenuClosed(owner_, reason);
       owner_.onFinished(reason);
     }
 
@@ -737,6 +740,7 @@ class Menu::Impl {
   bool population_active = false;
   FocusScope focus_scope;
   ::roo_windows::Task* interaction_owner = nullptr;
+  MenuPresentationObserver* observer = nullptr;
   Rect anchor;
   MenuPlacement placement = MenuPlacement::kBelowStart;
 
@@ -1134,7 +1138,8 @@ void Menu::invokeEntry(MenuEntry& entry, uint8_t level, uint16_t row,
 
 MenuShowResult Menu::show(::roo_windows::Task& interaction_owner,
                           const Widget& placement_source,
-                          MenuPlacement placement) {
+                          MenuPlacement placement,
+                          MenuPresentationObserver* observer) {
   if (impl_->registration.isActive()) return MenuShowResult::kAlreadyPresented;
   if (admission_in_progress_) return MenuShowResult::kReentrantReplacement;
   admission_in_progress_ = true;
@@ -1144,27 +1149,30 @@ MenuShowResult Menu::show(::roo_windows::Task& interaction_owner,
     admission_in_progress_ = false;
     return MenuShowResult::kAnchorUnavailable;
   }
-  MenuShowResult result = showCaptured(
-      interaction_owner, placement_geometry.bounds_in_window, placement);
+  MenuShowResult result =
+      showCaptured(interaction_owner, placement_geometry.bounds_in_window,
+                   placement, observer);
   admission_in_progress_ = false;
   return result;
 }
 
 MenuShowResult Menu::showFromRect(::roo_windows::Task& interaction_owner,
                                   const Rect& bounds_in_window,
-                                  MenuPlacement placement) {
+                                  MenuPlacement placement,
+                                  MenuPresentationObserver* observer) {
   if (impl_->registration.isActive()) return MenuShowResult::kAlreadyPresented;
   if (admission_in_progress_) return MenuShowResult::kReentrantReplacement;
   admission_in_progress_ = true;
   MenuShowResult result =
-      showCaptured(interaction_owner, bounds_in_window, placement);
+      showCaptured(interaction_owner, bounds_in_window, placement, observer);
   admission_in_progress_ = false;
   return result;
 }
 
 MenuShowResult Menu::showCaptured(::roo_windows::Task& interaction_owner,
                                   const Rect& bounds_in_window,
-                                  MenuPlacement placement) {
+                                  MenuPlacement placement,
+                                  MenuPresentationObserver* observer) {
   if (bounds_in_window.empty()) return MenuShowResult::kAnchorUnavailable;
   const TransientSurfaceSpec spec{TransientBarrierPaint::kTransparent,
                                   TransientAdmissionPolicy::kReplaceReplaceable,
@@ -1181,6 +1189,7 @@ MenuShowResult Menu::showCaptured(::roo_windows::Task& interaction_owner,
     return MapStartResult(started);
   }
   impl_->interaction_owner = &interaction_owner;
+  impl_->observer = observer;
   return MenuShowResult::kShown;
 }
 
@@ -1211,13 +1220,24 @@ void Menu::dismissChain() {
   }
 }
 
+void Menu::cancelPresentation() {
+  if (!impl_->registration.isActive()) return;
+  impl_->registration.DisablePresentationInput();
+  impl_->registration.CancelPresentation();
+  closeLevelsFrom(1, false);
+  unbindAllEntries();
+  impl_->interaction_owner = nullptr;
+  impl_->focus_scope.clearRememberedFocus();
+  MenuPresentationObserver* observer = impl_->observer;
+  impl_->observer = nullptr;
+  if (observer != nullptr) {
+    observer->onMenuClosed(*this, PresentationFinishReason::kCancel);
+  }
+}
+
 void Menu::prepareForDerivedDestruction() {
   if (!impl_) return;
-  if (impl_->registration.isActive()) {
-    impl_->registration.DisablePresentationInput();
-    impl_->registration.CancelPresentation();
-  }
-  impl_->focus_scope.clearRememberedFocus();
+  cancelPresentation();
   impl_->root_panel.clearGroups();
 }
 

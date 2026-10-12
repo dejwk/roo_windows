@@ -421,6 +421,13 @@ entry, and closes and detaches descendant levels before returning from its
 registration detach hook. Focus exit can then record the last root row. After
 the host detaches the root and vacates the slot, the registration's component
 completion clears that record before invoking the overridable `onFinished()`.
+An optional per-presentation `MenuPresentationObserver` receives a root-chain
+closure notification after detachment and before `onFinished()`. Failed
+admission and submenu-only closure do not transfer or notify the borrow.
+`cancelPresentation()` immediately removes an active registration, clears
+transient levels and bindings, notifies the observer with `kCancel`, and keeps
+persistent root groups; it suppresses application completion. This lets a
+trigger end the borrow before its own destruction.
 The root panel and its groups remain a persistent configuration subtree inside
 `MenuOverlay`; the host detaches that overlay from the composite layer and then
 completes its generic pin, focus, layer, slot, and completion ordering.
