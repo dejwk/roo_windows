@@ -1,6 +1,7 @@
 #include "roo_windows/material3/button/internal/button_geometry.h"
 
 #include <algorithm>
+#include <climits>
 
 #include "roo_windows/material3/typography.h"
 
@@ -66,9 +67,15 @@ ButtonContentMetrics ResolveButtonContentMetrics(roo::string_view label,
   int16_t text_width = 0;
   int16_t text_height = 0;
   if (!label.empty()) {
-    text_width = ButtonTextHorizontalExtents(font.getHorizontalStringMetrics(
-                                                 label, style.fontOptions()))
-                     .width();
+    roo_display::GlyphMetrics measured =
+        font.getHorizontalStringMetrics(label, style.fontOptions());
+    int32_t span =
+        std::max(measured.advance(),
+                 static_cast<int>(measured.screen_extents().xMax()) + 1) -
+        std::min(0, static_cast<int>(measured.screen_extents().xMin()));
+    CHECK_GE(span, 0);
+    CHECK_LE(span, INT16_MAX);
+    text_width = span;
     text_height = style.lineHeight();
   }
   int16_t icon_slot_width = 0;
@@ -84,21 +91,23 @@ ButtonContentMetrics ResolveButtonContentMetrics(roo::string_view label,
   }
   int16_t gap =
       (icon != nullptr && text_width > 0) ? Scaled(geometry.icon_gap_dp) : 0;
-  int16_t content_width = text_width;
+  int32_t content_width = text_width;
   if (icon != nullptr) {
     content_width = icon_slot_width;
     if (text_width > 0) {
       content_width += gap + text_width;
     }
   }
+  CHECK_LE(content_width, INT16_MAX);
   int icon_content_height = icon_slot_height;
   if (level != 0 && icon != nullptr) {
     icon_content_height = IconVerticalFootprint(*icon);
   }
   int16_t content_height = std::max<int>(text_height, icon_content_height);
-  return ButtonContentMetrics{text_width,       text_height, icon_slot_width,
-                              icon_slot_height, gap,         content_width,
-                              content_height};
+  return ButtonContentMetrics{
+      text_width,       text_height, icon_slot_width,
+      icon_slot_height, gap,         static_cast<int16_t>(content_width),
+      content_height};
 }
 
 Padding ResolveButtonPadding(ButtonSize size, SmallButtonPadding small_padding,

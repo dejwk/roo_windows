@@ -1016,3 +1016,14 @@ segmented-button symbol that users can already call.
 - Independently animated connected selection transitions, with measured active
   registry cost and a defined cancellation contract.
 - Generic non-surface containers, through a separate framework proposal.
+
+### Internal implementation evidence
+
+Phases 1–2 use pure appearance/metrics helpers and an internal test host; no
+partial public group API is published. Typed links precede structural attachment,
+clear severs all links before detaching, and all natural sums are checked before
+narrowing. Layout uses bounded automatic arrays and measures exact child frames.
+`WidthSpec` now uses a transient 32-bit word to retain the full positive int16
+width range; its previous two-bit-tag encoding silently truncated above 16383.
+`Widget` has no retained measurement spec and `CachedMeasure` stays the same size
+because its following 32-bit height spec already required alignment padding.

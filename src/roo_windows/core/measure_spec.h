@@ -14,22 +14,22 @@ enum MeasureSpecKind {
 /// Horizontal measurement constraint passed into `onMeasure()`.
 ///
 /// Encodes a `MeasureSpecKind` (UNSPECIFIED, AT_MOST, EXACTLY) and a width
-/// value into a single 16-bit word. Widgets use `getChildWidthSpec()` to
+/// value into a single 32-bit word. Widgets use `getChildWidthSpec()` to
 /// derive the spec they impose on a child given their own padding and the
 /// child's `PreferredSize`, and `resolveSize()` to clamp a desired width back
 /// into the constraint.
 class WidthSpec {
  public:
   static constexpr WidthSpec Unspecified(XDim hint) {
-    return WidthSpec(UNSPECIFIED | ((uint16_t)hint << 2));
+    return WidthSpec(UNSPECIFIED | ((uint32_t)(uint16_t)hint << 2));
   }
 
   static constexpr WidthSpec AtMost(XDim value) {
-    return WidthSpec(AT_MOST | ((uint16_t)value << 2));
+    return WidthSpec(AT_MOST | ((uint32_t)(uint16_t)value << 2));
   }
 
   static constexpr WidthSpec Exactly(XDim value) {
-    return WidthSpec(EXACTLY | ((uint16_t)value << 2));
+    return WidthSpec(EXACTLY | ((uint32_t)(uint16_t)value << 2));
   }
 
   MeasureSpecKind kind() const {
@@ -90,9 +90,9 @@ class WidthSpec {
  private:
   friend constexpr bool operator==(WidthSpec a, WidthSpec b);
 
-  constexpr WidthSpec(uint16_t value) : value_(value) {}
+  constexpr WidthSpec(uint32_t value) : value_(value) {}
 
-  uint16_t value_;
+  uint32_t value_;
 };
 
 inline constexpr bool operator==(WidthSpec a, WidthSpec b) {

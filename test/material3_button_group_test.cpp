@@ -1,7 +1,12 @@
+#include <climits>
+
+#include "button_group_test_support.h"
 #include "gtest/gtest.h"
 #include "roo_icons/outlined/24/action.h"
+#include "roo_windows/core/environment.h"
 #include "roo_windows/material3/button/internal/button_group_appearance.h"
 #include "roo_windows/material3/button/internal/icon_geometry.h"
+#include "roo_windows/material3/internal/density.h"
 namespace roo_windows::material3 {
 namespace {
 using namespace internal;
@@ -63,5 +68,151 @@ TEST(ButtonGroupHelpers, IconMetrics) {
     EXPECT_EQ(Scaled(2), ResolveGroupGap(size, true));
   }
 }
+
+class GroupFixture : public testing::Test {
+ protected:
+  roo_scheduler::SchedulingService scheduler;
+  Material3Theme material = DefaultTheme().material3Theme();
+  Theme theme{MakeFrameworkTheme(material), &material};
+  Environment environment{scheduler, theme};
+  ApplicationContext context{scheduler, environment.theme(),
+                             environment.keyboardColorTheme()};
+};
+// Verifies transparent empty groups and bounded adoption retain vector
+// capacity.
+TEST_F(GroupFixture, MembershipAndOwnership) {
+  test_support::InternalGroup group(context);
+  EXPECT_EQ(0, group.entryCount());
+  EXPECT_EQ(0,
+            group.measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0))
+                .width());
+  EXPECT_FALSE(group.adopt(std::unique_ptr<ButtonGroupLabelEntry>()));
+  for (int i = 0; i < 32; ++i)
+    EXPECT_TRUE(
+        group.adopt(std::make_unique<ButtonGroupLabelEntry>(context, "A")));
+  EXPECT_FALSE(group.adopt(
+      std::make_unique<ButtonGroupLabelEntry>(context, "Rejected")));
+  ButtonGroupLabelEntry borrowed(context, "Borrowed");
+  EXPECT_FALSE(group.add(borrowed));
+  EXPECT_EQ(nullptr, borrowed.parent());
+  size_t capacity = group.capacity();
+  group.clear();
+  EXPECT_EQ(0, group.entryCount());
+  EXPECT_EQ(capacity, group.capacity());
+  EXPECT_TRUE(group.add(borrowed));
+  EXPECT_TRUE(borrowed.isClickable());
+  group.clear();
+  EXPECT_EQ(nullptr, borrowed.parent());
+  EXPECT_FALSE(borrowed.isClickable());
+}
+// Verifies duplicate, cross-context and already-parented admissions are
+// checked.
+TEST_F(GroupFixture, InvalidAdmissionDiesBeforeCapacityCheck) {
+  ButtonGroupLabelEntry entry(context, "Day");
+  test_support::InternalGroup group(context);
+  group.add(entry);
+  EXPECT_DEATH(group.add(entry), "");
+  test_support::InternalGroup other(context);
+  EXPECT_DEATH(other.add(entry), "");
+  ApplicationContext another(scheduler, environment.theme(),
+                             environment.keyboardColorTheme());
+  ButtonGroupLabelEntry foreign(another, "Foreign");
+  EXPECT_DEATH(group.add(foreign), "");
+}
+// Verifies mixed density, exact frames, constraint clipping, RTL and gone
+// slots.
+TEST_F(GroupFixture, StableMixedLayout) {
+  MonoIcon icon = ic_outlined_24_action_home();
+  ButtonGroupLabelEntry label(context, "Day");
+  ButtonGroupIconEntry artwork(context, icon);
+  test_support::InternalGroup group(context);
+  group.add(label);
+  group.add(artwork);
+  for (int level = 0; level >= -5; --level) {
+    material.density = Density(static_cast<int8_t>(level));
+    for (LayoutDirection direction :
+         {LayoutDirection::kLeftToRight, LayoutDirection::kRightToLeft}) {
+      group.setLayoutDirection(direction);
+      Dimensions a = label.entryDimensions();
+      Dimensions b = artwork.entryDimensions();
+      Dimensions natural =
+          group.measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
+      EXPECT_EQ(a.width() + b.width() + Scaled(2), natural.width());
+      EXPECT_EQ(std::max(a.height(), b.height()), natural.height());
+      group.measure(WidthSpec::Exactly(natural.width() + 5),
+                    HeightSpec::Exactly(natural.height() + 10));
+      group.layout(Rect(0, 0, natural.width() + 4, natural.height() + 9));
+      EXPECT_EQ(a.width() + 3, label.width());
+      EXPECT_EQ(b.width() + 2, artwork.width());
+      EXPECT_EQ(0, label.offsetTop());
+      EXPECT_EQ(natural.height(), artwork.height());
+      EXPECT_EQ(direction == LayoutDirection::kLeftToRight
+                    ? 0
+                    : natural.width() + 5 - label.width(),
+                label.offsetLeft());
+      group.measure(WidthSpec::Exactly(20), HeightSpec::Exactly(12));
+      group.layout(Rect(0, 0, 19, 11));
+      EXPECT_EQ(a.width(), label.width());
+      EXPECT_EQ(b.width(), artwork.width());
+    }
+  }
+  label.setVisibility(Visibility::kInvisible);
+  EXPECT_GT(group.measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0))
+                .width(),
+            artwork.entryDimensions().width());
+  label.setVisibility(Visibility::kGone);
+  EXPECT_EQ(artwork.entryDimensions().width(),
+            group.measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0))
+                .width());
+  artwork.setVisibility(Visibility::kGone);
+  EXPECT_EQ(0,
+            group.measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0))
+                .height());
+}
+// Verifies full positive int16 exact widths survive framework spec encoding.
+TEST_F(GroupFixture, LargeExactFramesAndNaturalOverflow) {
+  EXPECT_EQ(INT16_MAX, WidthSpec::Exactly(INT16_MAX).value());
+  EXPECT_EQ(30000, WidthSpec::AtMost(30000).value());
+  ButtonGroupLabelEntry entry(context, "A");
+  test_support::InternalGroup group(context);
+  group.add(entry);
+  group.measure(WidthSpec::Exactly(30000), HeightSpec::Exactly(40));
+  group.layout(Rect(0, 0, 29999, 39));
+  EXPECT_EQ(30000, entry.width());
+  std::string oversized(8000, 'W');
+  entry.setLabel(oversized);
+  EXPECT_DEATH(
+      group.measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0)), "");
+}
+// Verifies adopted entries are deleted once and borrowed entries stay alive.
+TEST_F(GroupFixture, ClearAndDestruction) {
+  class Counted : public ButtonGroupLabelEntry {
+   public:
+    Counted(ApplicationContext& context, int& count)
+        : ButtonGroupLabelEntry(context, "A"), count_(count) {}
+    ~Counted() override { ++count_; }
+
+   private:
+    int& count_;
+  };
+  int destroyed = 0;
+  ButtonGroupLabelEntry borrowed(context, "Day");
+  {
+    test_support::InternalGroup group(context);
+    group.add(borrowed);
+    group.adopt(std::make_unique<Counted>(context, destroyed));
+    group.clear();
+    EXPECT_EQ(1, destroyed);
+    group.adopt(std::make_unique<Counted>(context, destroyed));
+  }
+  EXPECT_EQ(2, destroyed);
+  EXPECT_EQ(nullptr, borrowed.parent());
+}
+static_assert(sizeof(ButtonGroupLabelEntry) - sizeof(SurfaceWidget) <=
+              (sizeof(void*) == 4 ? 20 : 40));
+static_assert(sizeof(ButtonGroupIconEntry) - sizeof(SurfaceWidget) <=
+              (sizeof(void*) == 4 ? 12 : 24));
+static_assert(sizeof(test_support::InternalGroup) - sizeof(Container) <=
+              (sizeof(void*) == 4 ? 16 : 32));
 }  // namespace
 }  // namespace roo_windows::material3
