@@ -1,8 +1,10 @@
 # Roo Windows Material 3 Button Groups Design
 
 Status: **proposed**. No button-group implementation exists. Reviewed against
-the source tree on 2026-10-11; existing prerequisites are implemented. See the
-[status index](../README.md) and [Material 3 roadmap](../../material3_roadmap.md).
+`roo_windows` HEAD `86960589` and the working tree on 2026-10-12. Existing
+framework prerequisites are implemented; group-specific helpers, theme storage,
+widgets and tests below are proposed work. See the [status index](../README.md)
+and [Material 3 roadmap](../../material3_roadmap.md).
 
 ## Objective
 
@@ -36,8 +38,12 @@ and the temporary ownership-transfer role of `WidgetRef`.
   already provide five size tiers and round/square shapes. Shared
   [geometry](../../../src/roo_windows/material3/button/internal/button_geometry.h)
   and [appearance](../../../src/roo_windows/material3/button/internal/button_appearance.h)
-  helpers already serve buttons and `DropdownButton`; their extraction is not
-  a prerequisite to repeat.
+  helpers already serve buttons, `DropdownButton` and split buttons; their
+  extraction is not a prerequisite to repeat. Icon geometry and palette
+  resolvers remain file-local in
+  [`icon_button.cpp`](../../../src/roo_windows/material3/button/icon_button.cpp)
+  and [`toggle_icon_button.cpp`](../../../src/roo_windows/material3/button/toggle_icon_button.cpp).
+  Standalone icon buttons do not currently participate in application density.
 - [`Container`](../../../src/roo_windows/core/container.h) provides structural
   child attachment, focus enumeration, layout, clipping and invalidation.
   [`BorderStyle`](../../../src/roo_windows/core/border_style.h) supports four
@@ -51,22 +57,29 @@ and the temporary ownership-transfer role of `WidgetRef`.
   themes, task-local focus, physical-key activation and ordinary widget
   lifetime cleanup are available.
 
-There is no Material 3 group implementation. The
-[segmented-button proposal](material3_segmented_buttons_design.md) describes
-the older component; [split buttons](material3_split_button_design.md) remain a
-separate proposal, while [toolbars](../implemented/material3_toolbars_design.md)
-are implemented and are not a dependency of this one.
+There is no Material 3 group implementation. The [segmented-button
+proposal](material3_segmented_buttons_design.md) describes the classic
+shared-outline component and remains a distinct proposal. [Split
+buttons](../../material3_split_buttons.md) are implemented, including
+[acceptance evidence](../material3_split_button_acceptance.md); their source
+design still resides in `proposed/`. Their transparent composition and
+decoration hooks are useful precedents, but their fixed two-child layout and
+menu ownership are not group infrastructure.
+[Toolbars](../implemented/material3_toolbars_design.md) are also implemented
+and are not a dependency of this one.
 
 ### Material references and local decisions
 
-Material publishes button-group [overview](https://m3.material.io/components/button-groups/overview),
+Material publishes button-group
+[overview](https://m3.material.io/components/button-groups/overview),
 [specs](https://m3.material.io/components/button-groups/specs), and
-[guidelines](https://m3.material.io/components/button-groups/guidelines).
-Those pages require JavaScript and were not text-readable during this review.
-The following primary implementation references make the critical mechanics
-checkable:
+[guidelines](https://m3.material.io/components/button-groups/guidelines). The
+earlier review could not read those JavaScript pages as text; this review uses
+the official implementation sources below for concrete tokens. The following
+primary implementation references make the critical mechanics checkable
+(rechecked 2026-10-12):
 
-- AndroidX [ButtonGroup defaults](https://developer.android.com/reference/kotlin/androidx/compose/material3/ButtonGroupDefaults)
+- AndroidX [ButtonGroup defaults](https://github.com/androidx/androidx/blob/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/ButtonGroup.kt)
   define a 15% pressed-width expansion that compresses neighbouring entries.
   Gaps are spacing, not consumable motion bands.
 - AndroidX [connected group tokens](https://github.com/androidx/androidx/blob/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/ConnectedButtonGroupSmallTokens.kt)
@@ -78,11 +91,12 @@ checkable:
   distinguish selected and unselected contained treatments, including elevated
   buttons.
 
-This proposal follows those behaviours. Five-size geometry, compression limits,
-square connected contours, and animation timing below are explicit Roo Windows
-choices; they are not claims that every upstream implementation has the same
-API or complete token table. Source links on moving branches are references,
-not runtime dependencies.
+This proposal adopts the expansion ratio, small connected spacing and corner
+tokens, and enabled palette roles from those references. Fixed gaps, bounded
+compression, five-size geometry, square connected contours, selected-press
+precedence and animation timing below are explicit Roo Windows choices. They do
+not imply upstream API or token parity. Source links on moving branches are
+references, not runtime dependencies.
 
 ## Requirements
 
@@ -130,8 +144,17 @@ entry base handles the common group relationship and surface hooks.
 
 The group containers use the existing transparent `Container` path, while
 entries own the visible surfaces. This preserves framework child lifetime,
-focus and paint ordering without a new core hierarchy. Typed attachment limits
-the component to the two supported entry families.
+focus and paint ordering without a new core hierarchy. As with `SplitButton`,
+the container introduces no group surface: its explicit transparency and
+exclusion overrides are required by the current surface-owning container base.
+Typed attachment limits the component to the two supported entry families.
+
+Entries need to notify the group when shared click feedback or content changes,
+without consuming the application callback. A typed group pointer provides that
+reverse link and distinguishes group membership from merely having a structural
+parent. The latter matters because an entry is still a `Widget` that a caller
+can borrow into another layout. Only typed group attachment activates its group
+behaviour; no unchecked cast of an arbitrary `parent()` is needed.
 
 A view selector needs one application callback:
 
@@ -163,10 +186,11 @@ individual entries instead.
 
 ![Resting and pressed standard widths, and connected corner states](figures/material3_button_group_layout.svg)
 
-The figure uses small, round groups at 100% zoom and density zero. It is a
-geometry construction, not a rendering golden. Standard widths sum to 280 px
-and two 12 px gaps give 304 px; connected widths use two 2 px gaps for 284 px.
-The pressed and resting rows have identical outside bounds.
+The figure uses small, round groups at 100% zoom and density zero. Its fully
+unselected connected row illustrates optional empty selection. It is a geometry
+construction, not a rendering golden. Standard widths sum to 280 px and two 12
+px gaps give 304 px; connected widths use two 2 px gaps for 284 px. The pressed
+and resting rows have identical outside bounds.
 
 ## Design Details
 
@@ -176,8 +200,15 @@ Both groups accept at most 32 entries, including invisible and gone entries.
 This bounds indexing and scratch storage and avoids a second large-group API.
 Typical groups have three to five entries. `add()` returns false on null owned
 input or capacity exhaustion. It appends on success and never reorders entries.
-Attaching an already parented entry or one from another `ApplicationContext`
-is a checked programmer error, consistent with structural widget attachment.
+Attaching an already parented entry or one from another `ApplicationContext` is
+a checked programmer error. Check `parent() == nullptr`, `group_ == nullptr`
+and context equality explicitly before mutating storage: `Widget::setParent()`
+alone permits the same parent and does not reject a duplicate group insertion.
+Validate non-null input before checking capacity, so an already attached entry
+is never treated as an ordinary rejected owned argument. Record the raw pointer
+and group relationship before calling `attachChild()`; callbacks from
+structural setup must see consistent enumeration. Normalize selection after
+attachment.
 
 Borrowing and adoption follow the [framework contract](../glossary.md#widgetref):
 typed reference and `unique_ptr` overloads construct a temporary `WidgetRef`,
@@ -186,35 +217,57 @@ raw pointers only; `isOwnedByParent()` remains the ownership record. An owned
 argument passed by value is consumed even when admission fails and is then
 destroyed. Borrowed rejected inputs remain untouched.
 
-`clear()` cancels group relationships, clears the mask, removes entries from
-enumeration and detaches every child using `detachChild()`. Before each detach,
-clear that entry's group pointer and selected projection. Detachment cancels
-framework focus, gesture and pending click reachability. Adopted children are
-deleted by the framework; borrowed children survive and must outlive their
-attachment. Destructors perform the same cleanup without notifications. Vector
-capacity is retained by `clear()` and released by destruction. There is no
-individual removal or reorder API in v1; callers rebuild a short group.
+`clear()` first clears the mask, severs every entry's group relationship and
+clears its selected projection. Then pop one raw pointer from the vector before
+calling `detachChild()` on it, repeating until empty; never retain a vector
+iterator across detachment or enumerate a deleted child. This needs no second
+vector or allocation. Structural detachment cancels framework focus, gesture
+and pending click reachability. Group-specific state hooks become inert as soon
+as the relationship is cleared, so teardown cannot normalize a partially
+cleared mask back into a required selection. Adopted children are deleted by
+the framework; borrowed children survive and must outlive their attachment.
+Destructors perform the same cleanup without notifications. Vector capacity is
+retained by `clear()` and released by destruction. There is no individual
+removal or reorder API in v1; callers rebuild a short group.
 
-Detached entries remain configurable but are not clickable or focusable.
-They measure and paint with small, round, unselected defaults until attached.
-They are intended for groups, not as alternate standalone buttons. An internal
-typed owner pointer lets state and click hooks find the group without RTTI,
-global registries or installing application callbacks. No position or index is
-stored on entries; bounded scans resolve the current position.
+Detached entries remain configurable but are not clickable or focusable. They
+measure and paint with small, round, unselected defaults until attached. They
+are intended for groups, not as alternate standalone buttons. The same inert
+behaviour applies when an entry is placed directly in a generic layout. No
+position or index is stored on entries; bounded scans resolve the current
+position. The concrete group destructor clears while its selection policy is
+still alive; the internal base destructor requires empty membership.
 
 ### Measurement, density and constraints
 
 Entries have zero implicit margins. Label entries reuse current button content
-metrics and default small-button padding; icon entries use the uniform width
-of `IconButton`. Labels and icons are borrowed until replaced or destroyed.
-An icon-only constructor requires a non-null icon reference. Empty labels are
-allowed; there is no automatic switch to icon-only geometry.
+metrics and default small-button padding; icon entries use the uniform width of
+`IconButton`. Labels and icons are borrowed until replaced or destroyed. An
+icon-only constructor requires a non-null icon reference. Empty labels are
+allowed; there is no automatic switch to icon-only geometry. Exact entry
+metrics come from internal content helpers, not from measuring a standalone
+button with different margins. Entry and group suggested minimums are `(0, 0)`;
+entry `onMeasure()` supplies exact natural dimensions and wrap-content
+preferred size avoids the base preferred-size path remeasuring labels.
+
+Outlined entries reserve the family outline inset in both selected and
+unselected measurements and content bounds. Removing the painted outline on
+selection must not change the content anchor or its clipping. Labels use
+label-large typography and the existing button-family metrics at every size,
+matching this repository rather than importing a second typography table.
 
 Apply application density to heights using the existing button-family helpers,
 including content floors; spacing and corner tokens do not shrink with density.
-Entries in a row share the maximum of their natural heights and centre content
-vertically. This accommodates oversized icons without clipping their ink.
-No group-level density override is added. Runtime changes use
+For group icon entries, density is new behaviour: retain the standalone uniform
+width, measure icon height through `ResolveButtonContentMetrics({}, icon, size,
+level)`, and use the vertical edges of `ResolveButtonPadding()` to derive
+natural height. This matches standalone icon geometry at density zero and
+applies the button family's compact ink floor at negative levels. Ignore that
+helper's horizontal padding for icon-only entries. Standalone icon buttons stay
+unchanged. Entries in a row share the maximum of their natural heights and
+centre content vertically. The row starts at the group's top; excess assigned
+height remains below it. This accommodates oversized icons without clipping
+their ink. No group-level density override is added. Runtime changes use
 `requestLayoutDescending()` and `invalidateDescending()` at the affected root,
 as described in the density design.
 
@@ -247,12 +300,17 @@ group distributes $E=\max(W-W_0,0)$ extra pixels: add $\lfloor E/n\rfloor$ to
 each width and one pixel to each of the first $E\bmod n$ participating entries
 in attachment order. Never divide by zero.
 
-When the assigned width is smaller than natural, retain natural entry widths
-and clip at group bounds; do not wrap, compress to fit, or silently drop entries.
-An undersized height likewise clips the natural-height row. Applications must
-provide enough room or a scrolling parent for every action to be reachable.
-Use wider signed intermediates for sums and clamp to the framework dimension
-range before constructing rectangles. Zero-size rectangles remain empty.
+With the default clipped entries, when assigned width is smaller than natural,
+retain natural entry widths and clip at group bounds. Do not wrap, compress to
+fit, or silently drop entries. An undersized height likewise clips the
+natural-height row. Applications must provide enough room or a scrolling parent
+for every action to be reachable. Use `int32_t` intermediates for dimensions,
+sums and mirrored coordinates. The natural strip and each entry must fit the
+positive `int16_t` dimension range; reject unrepresentable content with a
+checked programmer error before narrowing. Saturating each child position
+independently would overlap entries and violate width conservation. Parent
+constraints within that range still use the clipping policy above. Zero-size
+rectangles remain empty.
 
 Compute logical positions, then mirror each interval as $x'=W-x-w$ in RTL;
 also mirror leading icons and exposed corners. Attachment indices, masks and
@@ -261,7 +319,9 @@ and corner position; gone slots do not. Visibility changes request layout
 through the existing framework path.
 
 Exact measurements belong in `onMeasure()`/`onLayout()`. Group suggested
-minimums return `(0, 0)` rather than measuring every label during a cheap query.
+minimums remain cheap as specified above. Before `layout()`, measure each
+participating child with its resolved exact frame dimensions so framework
+measurement state agrees with the placed rectangle, including animated widths.
 Use bounded stack scratch for resting widths, heights and compression budgets;
 do not derive resting widths from previously animated frames. No retained
 per-entry geometry cache is introduced in v1.
@@ -272,7 +332,9 @@ A fixed gap keeps adjacent rounded surfaces distinct throughout a press. The
 extra width instead comes from the immediate participating neighbours' padding.
 Let $c_i$ be the measured label/icon content width and
 $m_i=\min(w_i,c_i+2\,\mathrm{Scaled}(4))$ its compression floor. Define the
-available budget $b_i=\max(0,w_i-m_i)$. Invisible neighbours can donate padding;
+available budget $b_i=\max(0,w_i-m_i)$. Here $c_i$ includes the full icon slot,
+label advance/ink span and icon-label gap, plus any reserved outline insets; it
+is not just the visible glyph width. Invisible neighbours can donate padding;
 gone entries are skipped. Disabled neighbours retain their geometry and can
 also donate padding, but cannot become the press target.
 
@@ -298,12 +360,18 @@ The total stays 304 px including gaps. This is the figure's worked example.
 Reuse the shared click sample: $p=\min(1,3\,\mathrm{progress})$, matching the
 current button press-morph scale. With no sample, a held press gives $p=1$ and
 rest gives $p=0$. Resolve the click-controller target first, then the first
-visible enabled held press in attachment order. Only one entry expands at once.
-Switching target restores the old target before applying the new sample; no
-crossfade or persistent activated-entry expansion is added.
+visible enabled held press in attachment order. Use widget-local
+`getClickAnimation()` views; do not expose or retain a core controller pointer.
+Only one entry expands at once. Switching target restores the old target before
+applying the new sample; no crossfade or persistent activated-entry expansion
+is added.
 
-Entry `notifyStateChanged()` and `onClickAnimationChanged()` call a no-allocation
-group hook which requests layout and invalidates the strip. Compare resolved
+Entry `notifyStateChanged()` and `onClickAnimationChanged()` call a
+no-allocation group hook which requests layout and invalidates the strip for
+standard groups. Connected groups invalidate old/new corner decoration without
+width layout. Preserve `previous_progress` in the click hook and reconstruct
+the old state from `state_diff` for `borderStyleChanged(previous_style)`;
+damage limited to the new contour leaves stale rounded pixels. Compare resolved
 integer geometry during layout so unchanged samples do not move frames.
 Sampling occurs before layout. On click cancellation, hiding, detachment or
 loss of eligibility, resolve without the cancelled target. No registry track,
@@ -344,9 +412,15 @@ return false without shifting.
 Project the normalized mask through `Widget::setSelected()`, and override
 `useOverlayOnSelection()` to return false because the palette already encodes
 selection. Direct child selection is not a second API: while connected,
-`notifyStateChanged(kWidgetSelected)` repairs an external write to the canonical
-bit before returning. Reentrant repair terminates on equality. Activated state
-does not participate in selection or shape resolution.
+`notifyStateChanged(kWidgetSelected)` repairs an external write to the
+canonical bit before returning. Reentrant repair terminates on equality.
+Geometry and palette resolution read the canonical mask, so projection order
+never exposes a partially updated selector. Pass the previous mask into the
+projection helper to reconstruct each changed entry's old border before
+notifying surface damage; this mask is stack-local, not retained state.
+Activated state does not participate in selection or shape resolution. Both
+entry families suppress the generic activation/selection overlays; standard
+groups ignore persistent selected bits altogether.
 
 Use `kImmediateContinueAnimation` for connected entries, as toggle icon buttons
 do. Commit the entire mask, update every affected entry and schedule repaint
@@ -396,32 +470,58 @@ selected/unselected palette (elevated is label-only):
 
 Resolve the filled neutral through a new shared
 `components.buttonGroup.filledUnselectedContainer` token, defaulting to
-`kSurfaceContainer`. This adds one byte to `ComponentTheme`, with matching size
-assertions and theme tests, and keeps group theming independent of standalone
-toggle icon buttons. Elevated entries reuse `components.button.elevatedContainer`
-and the existing button elevation resolver. Use a consistent style across a
-connected selector in examples; per-entry styles remain available.
+`kSurfaceContainer`. This grows the current 28-byte
+[`ComponentTheme`](../../../src/roo_windows/material3/component_theme.h) to 29
+bytes, with matching size assertions and theme tests, and keeps group theming
+independent of standalone toggle icon buttons. Elevated entries reuse
+`components.button.elevatedContainer` and the existing button elevation
+resolver. Use a consistent style across a connected selector in examples;
+per-entry styles remain available.
 
 Outlined entries keep the family outline width while unselected and remove the
-outline when selected, without changing measurement. Disabled colors use the
-existing contained-style composites (38% on-surface content, 12% on-surface
-filled background, transparent outlined background and disabled outline).
-Disabled selection remains stored and retains its selected shape, but does not
-use enabled accent colors. Apply the Material disabled palette exactly once,
-with automatic disabled styling suppressed on entries and their group. Hover,
-focus and press layers use
-the resolved content treatment and the inherited surface overlay pipeline.
+outline when selected, without changing measurement or the reserved content
+inset. Unselected outlines use `outlineVariant`, matching existing families.
+Disabled colors use the existing contained-style composites (38% on-surface
+content, 12% on-surface filled background, transparent outlined background and
+disabled outline). For disabled outlined entries, show the disabled outline
+only when unselected; selected ones remain outline-free with transparent fill.
+This is the existing Roo toggle-icon disabled treatment, not a claim of exact
+Android token parity. Disabled selection remains stored and retains its
+selected shape, but does not use enabled accent colors. Apply the Material
+disabled palette exactly once, with automatic disabled styling suppressed on
+entries and their group. Effective disabling also suppresses entry
+hover/focus/press overlays, even though each child retains its local enabled
+flag. Hover, focus and press layers use the resolved content treatment and the
+inherited surface overlay pipeline.
 
 ### Focus, hit testing and painting
 
-Groups themselves are not clickable or focusable. Tab/Shift+Tab use ordinary
-task traversal through enabled, visible entries. Unmodified Left/Right moves
-focus within the group in physical direction without wrapping; Home/End chooses
-the first/last eligible entry in logical order. Other keys bubble normally.
-Use the existing focus manager and task Enter/Space activation path. Focus
-movement changes neither mask nor press emphasis. RTL changes placement, not
-key identity. Group disable blocks entry activation without overwriting each
-child's enabled bit; colors resolve effective group-and-entry enabled state.
+Groups themselves are not clickable or focusable. Entry `isClickable()` and
+`isFocusable()` require live typed membership and an enabled entry/group.
+Tab/Shift+Tab use ordinary task traversal. The group's `onKeyEvent()` handles
+unmodified `KeyPhase::kDown`/`kRepeat` events for Left/Right in physical
+direction without wrapping; Home/End chooses the first/last eligible entry in
+logical order. Eligibility requires effective visibility/enabled state and a
+nonempty frame. Consume these navigation keys even at an edge, preventing task
+fallback from escaping the group; Up/Down, modified keys and key releases
+bubble normally. Use `requestFocus()` on the chosen child and the existing task
+Enter/Space activation path. Focus movement does not change selection or start
+a press; ordinary focus loss still cancels any held key press. RTL changes
+placement, not key identity.
+
+Group disable preserves each child's local enabled bit. `Widget::setEnabled()`
+already cancels subtree gestures and focus, but it does not propagate child
+palette state or clear every retained click sample. The group state hook calls
+`Widget::onCancel()` on each entry to clear press state and cancel its
+identity-checked shared click, then invalidates descendants and old decoration,
+and requests standard resting layout. Resolve child palettes and elevation
+against `entry.isEnabled() && group.isEnabled()`, reconstructing the old group
+enabled value for damage. Re-enabling reveals the original local child flags;
+it neither resumes a cancelled click nor restores focus automatically. Entry
+`onClicked()` rechecks group membership, presentation and enabled ancestors
+before committing an action, including delayed standard-button delivery. An
+entry's own enabled-state hook also cancels its pending click when disabled, so
+a disable/re-enable before the next refresh cannot revive that action.
 
 Hit testing uses laid-out frames and the framework's existing strict/sloppy
 touch paths. The gap has no semantic action of its own. Do not add overlapping
@@ -431,16 +531,25 @@ entry even while neighbouring widths change. Cancellation never selects it.
 
 The internal group container reports transparent background, `kNone` container
 role, zero border/elevation/padding/margins, and
-`fullyCoversBoundsWithOpaqueColors() == false`. It introduces no opaque exclusion
-over the gaps. Because callers retain mutable entries,
-`mayHaveUnclippedChildren()` returns true; default entries stay clipped. Preserve
-the base clipped/unclipped paint and hit-test ordering.
+`fullyCoversBoundsWithOpaqueColors() == false`. It introduces no opaque
+exclusion over the gaps. It must also return an empty
+`getDirectPaintExclusionBounds()` and `getOverlayType() == OVERLAY_NONE`;
+transparent background alone does not override the inherited rectangular
+exclusion or area effects. Keep `respectsChildrenBoundaries()` false because
+elevated decorations can overlap adjacent entries despite disjoint frames.
+Because callers retain mutable entries, `mayHaveUnclippedChildren()` returns
+true; default entries stay clipped. Preserve the base clipped/unclipped paint
+and hit-test ordering. Default clipping also clips elevated shadows at group
+bounds. Callers can opt an entry into `kUnclipped` when the surrounding layout
+reserves decoration space; this also opts that entry out of the group's
+undersized-frame clipping. Ancestor clips still apply, and no stronger
+outside-group touch reachability is promised.
 
 Each entry paints final content through `paint(PaintContext&)` and the surface
 pipeline, resolving transparent glyph/icon pixels against the current surface
 in the same draw. Do not clear the strip and then repaint over it. Standard
 motion invalidates the full strip plus framework-tracked old/new decoration
-bounds; moved elevated shadows can extend outside the interior. Connected
+bounds; unclipped elevated shadows can extend outside the interior. Connected
 selection invalidates changed surfaces and their old/new corner/shadow coverage
 through `borderStyleChanged()`/`elevationChanged()`. A single-select change can
 damage both the old and new selections. Stable siblings need no new layout.
@@ -452,11 +561,11 @@ total label bytes and $P$ pointer size. Use one `std::vector<Entry*>`, not a
 parallel vector of ownership records or geometry caches. No entries are
 allocated by borrowing; adopted widget allocations remain caller-created.
 
-The internal entry base adds one owner pointer and packed style bits to
-`SurfaceWidget`; label entries add one string view and one icon pointer, and
+The internal entry base adds one group-membership pointer and packed style bits
+to `SurfaceWidget`; label entries add one string view and one icon pointer, and
 icon entries add one icon pointer. The internal group base adds one vector
-control block and packed size/shape/direction/morph bits to `Container`.
-The connected subclass adds only its mask and mode/required flags; the standard
+control block and packed size/shape/direction/morph bits to `Container`. The
+connected subclass adds only its mask and mode/required flags; the standard
 subclass needs no persistent animation state.
 
 These are incremental budgets, not guessed absolute object sizes:
@@ -468,40 +577,54 @@ These are incremental budgets, not guessed absolute object sizes:
 | Standard group above `Container` | 16 B | 32 B |
 | Connected group above `Container` | 24 B | 40 B |
 
-Budgets include alignment, assuming a three-pointer vector and a two-word string
-view; target probes must verify the ABI. Capacity costs another $CP$ bytes
-outside the object, plus allocator overhead. Five slots cost 20 B of pointer
-payload on ESP32; 32 slots cost 128 B. Do not reserve 32 slots eagerly for every
-small group. Clearing retains that capacity. One shared theme byte and const
-token tables are accounted separately.
+Budgets include alignment, assuming a three-pointer vector and a two-word
+string view; target probes must verify the ABI. Capacity costs another $CP$
+bytes outside the object, plus allocator overhead. Five slots cost 20 B of
+pointer payload on ESP32; 32 slots cost 128 B. Do not reserve 32 slots eagerly
+for every small group. Clearing retains that capacity. One shared theme byte
+and const token tables are accounted separately. Adding one theme byte does not
+imply that `sizeof(Theme)` grows by exactly one byte; measure aggregate
+alignment too.
 
-Measurement/layout scans cost $O(n+L)$ including text metrics, with at most
-three 32-element `int16_t` scratch arrays (192 B). This trades repeated short
-label measurement for zero retained geometry payload. Selection normalization
-is constant-time bit arithmetic and click lookup costs $O(n)$. Projection scans
-the entries; each changed entry's state hook also locates its canonical bit.
-For $k$ changed bits this costs $O(n+kn)$: ordinary single selection changes at
-most two bits, while replacing an entire multiple-selection mask is $O(n^2)$.
-Resolving position by scanning for each painted entry also gives $O(n^2)$ checks
-per full strip, at most 1,024 for 32 entries and 25 for a typical five. Those
-explicit bounds are preferred to cached indices and mutation bookkeeping.
-Raster cost still depends on damaged pixels and glyph work, not just $n$.
+The width/height arithmetic and text measurement cost $O(n+L)$ per pass, with
+at most three 32-element `int16_t` scratch arrays (192 B). This trades repeated
+short label measurement for zero retained geometry payload. Selection
+normalization is constant-time bit arithmetic and click lookup costs $O(n)$.
+Projection scans the entries; each changed entry's state hook also locates its
+canonical bit. For $k$ changed bits this costs $O(n+kn)$: ordinary single
+selection changes at most two bits, while replacing an entire
+multiple-selection mask is $O(n^2)$. Corner and palette queries also resolve
+position/selection by bounded scans. One such scan for each entry costs
+$O(n^2)$: 1,024 membership checks for 32 entries, 25 for a typical five. Layout
+damage and a full paint can each perform several such queries, so complete
+layout has an $O(n^2+L)$ bound rather than claiming that all framework work is
+linear. Those explicit bounds are preferred to cached indices and mutation
+bookkeeping. Raster cost still depends on damaged pixels and glyph work, not
+just $n$.
 
 Group-owned allocation occurs only when adding entries grows vector capacity.
-Layout, mask updates, click-sample handling and group painting add none. Existing
-font metric/stream painting, gesture-path buffers and shared services retain
-their own allocation contracts; measure their baseline separately. No extra
-animation registry tracks are introduced. Acceptance records host and target
-sizes, retained/peak allocation, linked flash delta and stack usage; it does
-not infer ESP32 sizes from a host build.
+Layout, mask updates, click-sample handling and group painting add none.
+Existing font metric/stream painting, gesture-path buffers and shared services
+retain their own allocation contracts; measure their baseline separately. No
+extra animation registry tracks are introduced. Acceptance records host and
+target sizes, retained/peak allocation, linked flash delta and stack usage; it
+does not infer ESP32 sizes from a host build. The 192 B cap covers explicit
+geometry arrays only, not the total call stack or font/renderer stack frames.
+Record the full stack estimate separately. Compare linked flash for both a
+standalone-button scene (no new family linked) and equivalent grouped scenes;
+helper extraction must not force all group implementations into ordinary apps.
 
 ## Proposed API
 
 The public header is `material3/button/button_group.h`. The following sketch
-shows the caller surface and all new retained state. Routine paint, measurement,
-input and surface overrides implement the contracts above; their declarations
-are omitted here. Internal bases are implementation details, not extension APIs.
-Public declarations receive Doxygen comments in the implementation.
+shows the caller surface and all new retained state. Routine paint,
+measurement, input and surface overrides implement the contracts above; their
+declarations are omitted here. Internal bases are implementation details, not
+extension APIs. The sketch lists retained state, not complete compilable
+declarations: context-forwarding constructors, friend access for typed
+attachment and virtual policy hooks are required implementation details.
+Initialize every packed field in constructors. Public declarations receive
+Doxygen comments in the implementation.
 
 ```cpp
 namespace roo_windows::material3 {
@@ -524,7 +647,8 @@ class ButtonGroupBase;
 
 class ButtonGroupEntry : public SurfaceWidget {
  protected:
-  // Common surface, click/state and owner-notification hooks live here.
+  // Group membership; allocation ownership remains in Widget.
+  // Common surface, click/state and group-notification hooks live here.
   ButtonGroupBase* group_ = nullptr;
   uint8_t style_ : 2;
 };
@@ -644,11 +768,15 @@ class ButtonGroup : public internal::ButtonGroupBase {
 ```
 
 Both constructors default to small, round, left-to-right and default (enabled)
-press morphing. Setters are UI-thread operations between completed frames.
-Size changes relayout descendants; shape, morph and direction changes invalidate
-old geometry and request the corresponding layout. Content changes relayout
-the group. Neither group accepts arbitrary `WidgetRef` publicly. Public APIs
-land only with functioning behaviour; intermediate helpers remain internal.
+press morphing. Setters are UI-thread operations between completed frames. Size
+changes relayout descendants; shape, morph and direction changes invalidate old
+geometry and request the corresponding layout. Content changes relayout the
+group and refresh stable content bounds; style changes also relayout when
+outline reservation changes. Equal-value setters do no work. Content mutation
+during click feedback recomputes resting widths and budgets from the new
+content; it does not retain old metrics or restart the click sample. Neither
+group accepts arbitrary `WidgetRef` publicly. Public APIs land only with
+functioning behaviour; intermediate helpers remain internal.
 
 ## Implementation Plan
 
@@ -659,43 +787,74 @@ Each phase below is one commit, with its tests and documentation in that commit.
 The named group targets and examples are **new targets to add**, not commands
 that already exist. Run all commands from the canonical `roo_windows` repository.
 
-### Phase 1: Internal entry surfaces and token reuse
+### Phase 1: Shared geometry, palettes and theme support
 
-Implement internal entry/base plumbing, borrowed label/icon content, contained
-palette helpers, connected corner resolution and the shared group theme token.
-Reuse the existing button helpers; extract only icon/toggle palette pieces that
-are currently file-local and needed by both consumers. Keep standalone geometry
-and `sizeof` unchanged. Publish no group API yet. Add helper/surface tests,
-representative selected/disabled corner and color goldens, and update the
-component-theme documentation and size assertions with the new byte.
+Implement pure contained palette helpers, connected corner resolution and the
+shared group theme token. Reuse the existing button helpers; extract the
+file-local icon geometry/palette pieces needed by both consumers. Keep matching
+`.h`/`.cpp` basenames under `button/internal/`, with explicit content, size,
+theme and enabled-state inputs rather than standalone-widget dependencies. Keep
+standalone geometry and `sizeof` unchanged. Publish no group API yet. Add
+helper/surface tests, representative selected/disabled corner and color
+goldens, and update the component-theme documentation and size assertions with
+the new byte.
 
 Proposed commit message:
 
-> Material 3 button groups Phase 1: add internal grouped surfaces.
+> Material 3 button groups Phase 1: add shared geometry and palette helpers.
 >
-> Add group entry internals, connected geometry and palette resolution, shared
+> Add reusable icon metrics, connected geometry and palette resolution, shared
 > theme support and focused rendering tests for the button-groups design.
 
 Validation: new `//:material3_button_group_test` and
 `//:material3_button_group_golden_test`; existing `//:material3_button_test`,
 `//:material3_icon_button_test`, `//:material3_toggle_icon_button_test`,
-`//:material3_component_surface_theme_test` and affected icon goldens. Internal
-tests can use a small concrete test host without exposing partial public types.
+`//:material3_component_surface_theme_test`, `//:material3_split_button_test`,
+`//:material3_dropdown_button_test` and affected button-family goldens.
+Internal tests can use a small concrete test host without exposing partial
+public types.
 
-### Phase 2: Publish connected groups and selection
+### Phase 2: Internal membership, surfaces and stable layout
 
-Publish both entry types and `ConnectedButtonGroup`, including typed ownership,
-mask normalization, stable layout, density, RTL and physical-key operation.
-Cover zero/one/32 entries, rejected 33rd entry, shifts at bit 31, mode changes,
-gone/invisible/disabled selection, direct selected-bit repair, borrowed/adopted
-cleanup and callback-triggered clear/destruction. Include constrained-width and
-odd-pixel distribution tests and connected rendering coverage in this phase.
-Add the realistic `examples/material3/button_groups/view_selector/` example
-with a leaf Bazel target and document its single group callback.
+Add the internal group/entry bases, borrowed content, typed attachment
+plumbing, transparent composition and stable connected layout. Use a private
+test host; publish no partial group API. Test empty/one/32 entries, rejected
+capacity and duplicate/context admission, borrowed/adopted clear and
+destruction, clipped and unclipped painting, exact child measurements, outline
+reservation, RTL and visibility changes and rejection of unrepresentable
+natural widths. Include mixed label/icon density floors, theme relayout and
+nonuniform backgrounds to catch accidental gap exclusions. Assert incremental
+sizes before exposing the public family. Document these invariants alongside
+the internal helpers.
 
 Proposed commit message:
 
-> Material 3 button groups Phase 2: add connected selection groups.
+> Material 3 button groups Phase 2: add internal membership and layout.
+>
+> Add bounded typed child storage, lifetime cleanup, entry surfaces and stable
+> row layout with ownership and transparent-composition regression coverage.
+
+Validation: group unit/golden targets, including `bazel test --config=asan
+//:material3_button_group_test`. No interactive example is needed for
+internal-only types.
+
+### Phase 3: Publish connected groups and selection
+
+Publish both entry types and `ConnectedButtonGroup`, including typed ownership,
+mask normalization, stable layout, density, RTL and physical-key operation.
+Cover shifts at bit 31, zero/all-bit masks, mode changes,
+gone/invisible/disabled selection, direct selected-bit repair, borrowed/adopted
+cleanup and callback-triggered clear/destruction/repopulation. Test group
+disable/re-enable during pointer and key presses without overwriting child
+flags, navigation edge consumption, direct-entry callback suppression, and
+mutation through `Widget&`. Include constrained-width and odd-pixel
+distribution tests and connected rendering coverage in this phase. Add the
+realistic `examples/material3/button_groups/view_selector/` example with a leaf
+Bazel target and document its single group callback.
+
+Proposed commit message:
+
+> Material 3 button groups Phase 3: add connected selection groups.
 >
 > Publish connected groups with bounded membership, single and multiple
 > selection, input/lifetime coverage and the view-selector example.
@@ -704,7 +863,7 @@ Validation: group unit and golden targets, ownership/callback cases under ASan,
 and `bazel build //examples/material3/button_groups/view_selector:view_selector`.
 Manually run that same target with `bazel run` for pointer and keyboard review.
 
-### Phase 3: Standard layout arithmetic
+### Phase 4: Standard layout arithmetic
 
 Implement the internal resting-width, compression-budget and mirrored-placement
 helpers. Test conservation and non-overlap for every active index at counts
@@ -715,7 +874,7 @@ and retain this section as the helper contract.
 
 Proposed commit message:
 
-> Material 3 button groups Phase 3: implement bounded press geometry.
+> Material 3 button groups Phase 4: implement bounded press geometry.
 >
 > Add standard-group width redistribution with fixed gaps, content floors,
 > deterministic rounding and geometry invariant tests.
@@ -723,19 +882,21 @@ Proposed commit message:
 Validation: `bazel test //:material3_button_group_test`. This phase needs no
 emulator UI because the new functionality is an internal layout calculation.
 
-### Phase 4: Publish standard groups and click-driven motion
+### Phase 5: Publish standard groups and click-driven motion
 
 Add `ButtonGroup` with click-sample/state hooks, full-strip restoration and
 per-entry action delivery. Test quick taps, held press, release, cancellation,
-retargeting, disabled morph, slow synchronous refresh and ancestor detachment.
-Use the shared controller rather than polling time or allocating widget tracks.
-Include incremental rendering comparisons against clean full paints for moved
-frames and elevated shadows. Add the mixed label/icon capture-action example
-at `examples/material3/button_groups/capture_actions/` and link both examples.
+retargeting, content changes mid-click, disabled morph, group/entry disabling,
+slow synchronous refresh, callback-triggered destruction and ancestor
+detachment. Use the shared controller rather than polling time or allocating
+widget tracks. Include incremental rendering comparisons against clean full
+paints for moved frames and elevated shadows. Add the mixed label/icon
+capture-action example at `examples/material3/button_groups/capture_actions/`
+and link both examples.
 
 Proposed commit message:
 
-> Material 3 button groups Phase 4: add standard action groups.
+> Material 3 button groups Phase 5: add standard action groups.
 >
 > Connect standard geometry to shared click feedback, preserve child action
 > delivery, and add motion restoration tests and a capture-action example.
@@ -744,7 +905,7 @@ Validation: group unit/golden targets, existing `//:click_animation_test`, and
 `bazel build //examples/material3/button_groups/capture_actions:capture_actions`.
 Run the example manually to review motion and repeat activation.
 
-### Phase 5: Resource acceptance and migration
+### Phase 6: Resource acceptance and migration
 
 Add `//:material3_button_group_resource_test` and
 `//:material3_button_group_size_probe`, following existing resource-test and
@@ -766,7 +927,7 @@ checks separately from automated results.
 
 Proposed commit message:
 
-> Material 3 button groups Phase 5: validate costs and document migration.
+> Material 3 button groups Phase 6: validate costs and document migration.
 >
 > Add allocation and target-ABI evidence, legacy migration guidance and final
 > status updates for the implemented button-group family.
@@ -840,11 +1001,13 @@ state and more cancellation paths. Typed owner hooks, the existing sparse event
 service and one shared click sample meet this scope. The bounded scan and scratch
 costs are explicit in the [resource model](#resource-model).
 
-#### Merge with the legacy segmented-button API
+#### Merge with the classic segmented-button proposal
 
-The older shared-outline model remains useful history but differs from connected
-groups' separated surfaces and changing inner corners. Keep the new family
-distinct and provide migration guidance rather than reinterpret a legacy symbol.
+The classic shared-outline proposal offers a compact unified contour and
+optional selected check glyph; connected groups offer separated surfaces and
+changing inner corners. Both remain unimplemented. Keep their APIs distinct;
+the migration path here is from the implemented `ToggleButtons`, not from a
+segmented-button symbol that users can already call.
 
 ## Future Work
 

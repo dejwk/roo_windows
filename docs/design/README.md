@@ -113,13 +113,13 @@ motion pauses. It does not restore paint interruption.
 
 | Design | Dependency status |
 | --- | --- |
-| Button groups | Buttons and icon buttons are implemented; no group implementation exists. |
+| [Button groups](proposed/material3_button_groups_design.md) | Reviewed 2026-10-12 against implemented button, split-button and input foundations. Group widgets, grouped icon density, theme slot and acceptance tests remain proposed. |
 | Display runtime Phase 7 task-bounded transient coverage | Phase 6 input is implemented. Phase 7 is reconciled as task-bounded attachment of the one shared window host layer, retaining one active-presentation authority and explicit interaction owner; the extension remains unimplemented. |
 | Display runtime Phase 8 migration and cost audit | Phases 2–6 and the shared display-wide host are implemented. Task-bounded coverage in Phase 7 remains proposed; final migration documentation, resource audit, and hardware validation belong to Phase 8. |
 | Interaction overlay reveal | Point and area ripples, widget-local click animation, paint context, and the navigation bar's component-local fade are implemented; shared fade reveal and paint-owned overlay policy are not. |
 | Navigation drawer | List support and basic dialogs are implemented and back routing exists; no drawer implementation exists. |
 | [Presentation registry](implemented/presentation_registry_design.md) | Effective presentation queries and targeted deferred widget notifications are implemented; consumers choose their lifecycle policies. |
-| Segmented buttons | Buttons are implemented; the superseding button-group design and this legacy component design are not implemented. |
+| [Segmented buttons](proposed/material3_segmented_buttons_design.md) | Classic shared-outline controls and expressive button groups are separate proposals; neither family is implemented. |
 | Sheets | Paint/overflow foundations, icon buttons, and shared back behavior are implemented; the sheet family is not. Before implementation, modal sheets must be reconciled to use the P1.6b shared host with explicit task ownership, host-owned barrier paint, presenter-owned focus, and presenter-handled outside dismissal. |
 | Time pickers | Buttons, icon buttons, basic dialogs, and shared back behavior are implemented; single-line text fields are implemented; picker-specific integration remains proposed. |
 | [Toolbars](implemented/material3_toolbars_design.md) | Docked and floating toolbars are implemented with grouped and oriented layouts, explicit overflow composition, examples, behavior and golden tests, and target resource measurements. Physical-device touch and shadow checks remain to be performed. |
