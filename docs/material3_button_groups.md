@@ -34,3 +34,21 @@ The view-selector example was launched with its `bazel run` target in an Xvfb
 emulator display. Keyboard Tab/End/Enter selected Month; pointer activation
 selected Day and updated the description. Both resulting frames were reviewed.
 Physical touchscreen and slow-display checks remain manual hardware work.
+
+`ButtonGroup` presents related actions with per-entry callbacks. Press emphasis
+expands one entry by up to 15% of its resting width, taking bounded padding from
+immediate participating neighbours. Gaps and the strip's outside width remain
+fixed. Content changes recompute widths without restarting feedback.
+`ButtonShapeMorph::kDisabled` suppresses width and corner motion while keeping
+ordinary click feedback and action delivery.
+
+Run the [capture actions](../examples/material3/button_groups/capture_actions/capture_actions.ino):
+
+```sh
+bazel run //examples/material3/button_groups/capture_actions:capture_actions
+```
+
+The capture-actions target was launched with `bazel run` in Xvfb. Tab/End/Enter
+invoked history and pointer activation invoked Capture; both feedback frames
+were reviewed. Motion regression tests compare incremental frames and elevated
+shadow restoration with clean full paints at the same retained click sample.

@@ -50,6 +50,15 @@ class ButtonGroupBase : public Container {
   bool respectsChildrenBoundaries() const override { return false; }
   /// Callers can opt mutable entries into unclipped painting.
   bool mayHaveUnclippedChildren() const override { return true; }
+  /// A transparent group owns no pixels; ancestors restore exposed backdrop.
+  void paint(PaintContext& context) const override {}
+
+  /// Restores the ancestor strip as well as invalidating entry surfaces.
+  void invalidateInterior() override;
+
+  /// Restores the specified transparent region in its ancestor surface.
+  void invalidateInterior(const Rect& rect) override;
+
   /// Cancels child clicks without overwriting local enabled flags.
   void notifyStateChanged(uint16_t state_diff) override;
   /// Moves focus with physical arrows and logical Home/End, without selection.
@@ -83,6 +92,10 @@ class ButtonGroupBase : public Container {
   int getChildrenCount() const override { return entryCount(); }
   const Widget& getChild(int index) const override { return *entries_[index]; }
   Widget& getChild(int index) override { return *entries_[index]; }
+  /// Restores momentary widths when a retained-slot entry becomes invisible.
+  void childHidden(const Widget* child) override;
+  /// Recomputes momentary eligibility when an entry becomes visible.
+  void childShown(const Widget* child) override;
   std::vector<ButtonGroupEntry*> entries_;
   uint8_t size_ : 3;
   uint8_t shape_ : 1;
@@ -93,6 +106,9 @@ class ButtonGroupBase : public Container {
   friend class ButtonGroupEntry;
   /// Reports entry feedback through a no-allocation policy hook.
   void entryFeedbackChanged();
+  /// Finds the shared click target first, then the first eligible held press.
+  int pressTarget(float* emphasis) const;
+
   /// Computes widths, optional content budgets and maximum row height.
   Dimensions measureStrip(int16_t* widths, int16_t* budgets = nullptr) const;
 };

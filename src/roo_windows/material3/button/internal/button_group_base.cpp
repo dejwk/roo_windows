@@ -4,6 +4,7 @@
 #include <climits>
 
 #include "roo_windows/core/click_animation.h"
+#include "roo_windows/material3/button/internal/button_group_geometry.h"
 namespace roo_windows::material3::internal {
 ButtonGroupBase::ButtonGroupBase(ApplicationContext& context)
     : Container(context),
@@ -14,29 +15,29 @@ ButtonGroupBase::ButtonGroupBase(ApplicationContext& context)
 ButtonGroupBase::~ButtonGroupBase() { CHECK(entries_.empty()); }
 void ButtonGroupBase::setSize(ButtonSize size) {
   if (this->size() == size) return;
-  invalidateDescending();
+  invalidateInterior();
   size_ = static_cast<uint8_t>(size);
   requestLayoutDescending();
 }
 void ButtonGroupBase::setShape(ButtonShape shape) {
   if (this->shape() == shape) return;
-  invalidateDescending();
+  invalidateInterior();
   shape_ = static_cast<uint8_t>(shape);
-  invalidateDescending();
+  invalidateInterior();
   requestLayout();
 }
 void ButtonGroupBase::setShapeMorph(ButtonShapeMorph morph) {
   if (shapeMorph() == morph) return;
-  invalidateDescending();
+  invalidateInterior();
   morph_ = static_cast<uint8_t>(morph);
-  invalidateDescending();
+  invalidateInterior();
   requestLayout();
 }
 void ButtonGroupBase::setLayoutDirection(LayoutDirection direction) {
   if (layoutDirection() == direction) return;
-  invalidateDescending();
+  invalidateInterior();
   direction_ = static_cast<uint8_t>(direction);
-  invalidateDescending();
+  invalidateInterior();
   requestLayout();
 }
 bool ButtonGroupBase::addEntry(ButtonGroupEntry* entry, WidgetRef reference) {
@@ -113,8 +114,18 @@ Dimensions ButtonGroupBase::onMeasure(WidthSpec width, HeightSpec height) {
           height.resolveSize(natural.height())};
 }
 void ButtonGroupBase::onLayout(bool changed, const Rect& rect) {
+  // Gone slots can change exposed corners without moving surviving frames.
+  // Restore the complete old strip before exact placement, without caching
+  // positions or a previous visibility mask on each entry.
+  invalidateInterior();
   int16_t widths[kMaxEntries];
-  Dimensions natural = measureStrip(widths);
+  int16_t budgets[kMaxEntries];
+  Dimensions natural = measureStrip(widths, connected() ? nullptr : budgets);
+  if (!connected() && shapeMorph() != ButtonShapeMorph::kDisabled) {
+    float emphasis = 0;
+    int active = pressTarget(&emphasis);
+    RedistributeGroupWidths(entryCount(), active, emphasis, widths, budgets);
+  }
   int count = 0;
   for (ButtonGroupEntry* entry : entries_)
     if (!entry->isGone()) ++count;
@@ -125,17 +136,49 @@ void ButtonGroupBase::onLayout(bool changed, const Rect& rect) {
     ButtonGroupEntry& entry = *entries_[i];
     if (entry.isGone()) continue;
     int32_t w = widths[i] + extra / count + (ordinal < extra % count ? 1 : 0);
-    int32_t left = layoutDirection() == LayoutDirection::kRightToLeft
-                       ? width() - x - w
-                       : x;
     CHECK_LE(w, INT16_MAX);
-    CHECK_GE(left, INT16_MIN);
-    CHECK_LE(left + w - 1, INT16_MAX);
+    int32_t left = GroupIntervalLeft(width(), x, static_cast<int16_t>(w),
+                                     layoutDirection());
     entry.measure(WidthSpec::Exactly(w), HeightSpec::Exactly(natural.height()));
     entry.layout(Rect(left, 0, left + w - 1, natural.height() - 1));
     x += w + ResolveGroupGap(size(), connected());
     ++ordinal;
   }
+}
+
+int ButtonGroupBase::pressTarget(float* emphasis) const {
+  for (int i = 0; i < entryCount(); ++i) {
+    ButtonGroupEntry& entry = *entries_[i];
+    if (!entry.eligible()) continue;
+    const ClickAnimation* animation = entry.getClickAnimation();
+    if (animation != nullptr) {
+      *emphasis = std::min(1.0f, 3 * animation->progress());
+      return i;
+    }
+  }
+  for (int i = 0; i < entryCount(); ++i) {
+    if (entries_[i]->eligible() && entries_[i]->isPressed()) {
+      *emphasis = 1;
+      return i;
+    }
+  }
+  *emphasis = 0;
+  return -1;
+}
+void ButtonGroupBase::childHidden(const Widget* child) {
+  Container::childHidden(child);
+  entryFeedbackChanged();
+}
+void ButtonGroupBase::childShown(const Widget* child) {
+  Container::childShown(child);
+  entryFeedbackChanged();
+}
+void ButtonGroupBase::invalidateInterior() {
+  invalidateInterior(getInteriorBounds());
+}
+void ButtonGroupBase::invalidateInterior(const Rect& rect) {
+  Container::invalidateInterior(rect);
+  notifyParentInvalidatedRegion(rect.translate(offsetLeft(), offsetTop()));
 }
 void ButtonGroupBase::entryFeedbackChanged() {
   if (connected()) return;

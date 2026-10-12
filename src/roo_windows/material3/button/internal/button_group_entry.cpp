@@ -185,8 +185,7 @@ Widget::OverlayType ButtonGroupEntry::getOverlayType() const {
 }
 ColorToken ButtonGroupEntry::effectiveOverlayColorRole() const {
   ColorToken role = containerRole();
-  if (static_cast<GroupStyle>(style_) == GroupStyle::kElevated ||
-      role == ColorToken::kNone ||
+  if (usesHighlighterColor() || role == ColorToken::kNone ||
       (group_ != nullptr && group_->connected() &&
        static_cast<GroupStyle>(style_) == GroupStyle::kFilled &&
        !group_->selected(group_->indexOf(*this))))

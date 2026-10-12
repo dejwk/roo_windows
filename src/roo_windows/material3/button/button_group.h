@@ -97,4 +97,33 @@ class ConnectedButtonGroup : public internal::ButtonGroupBase {
   uint8_t mode_ : 1;
   uint8_t selection_required_ : 1;
 };
+
+/// Standard action row with fixed gaps and bounded neighbour press compression.
+/// Uses small/round/LTR defaults and at most 32 typed entries. Each entry emits
+/// its own action callback after shared click feedback settles. Borrowed
+/// entries and content must outlive attachment. Configure on the UI thread
+/// between frames.
+class ButtonGroup : public internal::ButtonGroupBase {
+ public:
+  /// Creates an empty action row in @p context.
+  explicit ButtonGroup(ApplicationContext& context);
+  /// Detaches borrowed entries and destroys adopted entries silently.
+  ~ButtonGroup() override;
+  /// Borrows @p entry; false at capacity, checked on invalid
+  /// membership/context.
+  bool add(ButtonGroupButton& entry);
+  /// Borrows icon content with the same admission contract.
+  bool add(ButtonGroupIconButton& entry);
+  /// Consumes @p entry, adopting on success and destroying rejected ownership.
+  /// Null/capacity returns false; invalid membership/context is checked first.
+  bool add(std::unique_ptr<ButtonGroupButton> entry);
+  /// Consumes icon ownership with the same bounded admission contract.
+  bool add(std::unique_ptr<ButtonGroupIconButton> entry);
+  /// Detaches all entries, cancelling pending actions and retaining capacity.
+  void clear();
+
+ protected:
+  bool connected() const override { return false; }
+  void activateEntry(internal::ButtonGroupEntry& entry) override;
+};
 }  // namespace roo_windows::material3

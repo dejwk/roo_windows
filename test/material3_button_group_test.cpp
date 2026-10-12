@@ -159,6 +159,21 @@ class GroupFixture : public testing::Test {
   ApplicationContext context{scheduler, environment.theme(),
                              environment.keyboardColorTheme()};
 };
+// Verifies selected elevated surfaces use on-primary overlays, while an
+// unselected elevated surface retains the primary highlighter treatment.
+TEST_F(GroupFixture, ElevatedSelectionOverlayRole) {
+  ButtonGroupButton entry(context, "Day", ButtonGroupButtonStyle::kElevated);
+  ConnectedButtonGroup group(context);
+  group.add(entry);
+  EXPECT_EQ(ColorToken::kPrimary, entry.effectiveOverlayColorRole());
+  EXPECT_FALSE(entry.usesHighlighterColor());
+  group.setSelectionRequired(false);
+  group.setSelectionMask(0);
+  EXPECT_EQ(ColorToken::kSurfaceVariant, entry.effectiveOverlayColorRole());
+  EXPECT_TRUE(entry.usesHighlighterColor());
+  group.setEnabled(false);
+  EXPECT_EQ(Widget::OVERLAY_NONE, entry.getOverlayType());
+}
 // Verifies transparent empty groups and bounded adoption retain vector
 // capacity.
 TEST_F(GroupFixture, MembershipAndOwnership) {

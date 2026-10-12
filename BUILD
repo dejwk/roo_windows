@@ -1619,12 +1619,14 @@ cc_test(
 
 cc_test(
     name = "material3_button_group_test",
+    linkstatic = 1,
     srcs = ["test/material3_button_group_test.cpp", "test/material3_button_group_input_test.cpp", "test/button_group_test_support.h"],
     deps = [":roo_windows", "@roo_testing//:arduino_gtest_main", "@roo_testing//roo_testing/system:manual_time_mode"],
 )
 cc_test(
     name = "material3_button_group_golden_test",
+    linkstatic = 1,
     srcs = ["test/material3_button_group_golden_test.cpp", "test/material3_density_acceptance_theme.h", "test/button_group_test_support.h"],
     data = glob(["test/goldens/material3_button_group/*.ppm"], allow_empty = True),
-    deps = [":roo_windows", ":test_golden_utils", "@roo_testing//:arduino_gtest_main"],
+    deps = [":roo_windows", ":test_golden_utils", "@roo_testing//:arduino_gtest_main", "@roo_testing//roo_testing/system:manual_time_mode"],
 )

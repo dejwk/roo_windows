@@ -96,4 +96,27 @@ void ConnectedButtonGroup::clear() {
   selection_mask_ = 0;
   clearEntries();
 }
+
+ButtonGroup::ButtonGroup(ApplicationContext& context)
+    : ButtonGroupBase(context) {}
+ButtonGroup::~ButtonGroup() { clear(); }
+bool ButtonGroup::add(ButtonGroupButton& entry) {
+  return addEntry(&entry, WidgetRef(entry));
+}
+bool ButtonGroup::add(ButtonGroupIconButton& entry) {
+  return addEntry(&entry, WidgetRef(entry));
+}
+bool ButtonGroup::add(std::unique_ptr<ButtonGroupButton> entry) {
+  internal::ButtonGroupEntry* raw = entry.get();
+  return addEntry(raw, WidgetRef(std::move(entry)));
+}
+bool ButtonGroup::add(std::unique_ptr<ButtonGroupIconButton> entry) {
+  internal::ButtonGroupEntry* raw = entry.get();
+  return addEntry(raw, WidgetRef(std::move(entry)));
+}
+void ButtonGroup::clear() { clearEntries(); }
+void ButtonGroup::activateEntry(internal::ButtonGroupEntry& entry) {
+  if (indexOf(entry) < 0 || !entry.eligible()) return;
+  entry.Widget::onClicked();
+}
 }  // namespace roo_windows::material3

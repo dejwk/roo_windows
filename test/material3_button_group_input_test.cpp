@@ -6,6 +6,7 @@
 #include "roo_icons/outlined/24/action.h"
 #include "roo_testing/system/timer.h"
 #include "roo_windows/core/application.h"
+#include "roo_windows/core/click_animation.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/gesture_detector.h"
 #include "roo_windows/core/key_source.h"
@@ -331,6 +332,179 @@ TEST_F(ConnectedGroupInput, ReentrantAndDestructiveCallbacks) {
   raw->onClicked();
   EXPECT_EQ(nullptr, owned);
 }
+
+class StandardGroupInput : public ConnectedGroupInput {
+ protected:
+  StandardGroupInput() : actions_(app_.context()) {
+    panel_.removeAll();
+    group_.clear();
+    actions_.add(day_);
+    actions_.add(week_);
+    actions_.add(month_);
+    panel_.add(WidgetRef(actions_), Rect(20, 20, 279, 69));
+    app_.refresh();
+  }
+  ~StandardGroupInput() override { panel_.removeAll(); }
+  void settle() {
+    system_time_delay_micros(kPressAnimationMillis * 1000 + 1);
+    app_.refresh();
+    app_.refresh();
+  }
+  ButtonGroup actions_;
+};
+// Verifies quick taps use shared samples before layout, conserve width/gaps,
+// settle once after synchronous paint, and restore resting frames afterwards.
+TEST_F(StandardGroupInput, QuickTapHeldReleaseAndCallbacks) {
+  int callbacks = 0;
+  week_.setOnInteractiveChange([&] { ++callbacks; });
+  int before = week_.width();
+  int total = day_.width() + week_.width() + month_.width();
+  tap(week_);
+  EXPECT_EQ(0, callbacks);
+  system_time_delay_micros(kPressAnimationMillis * 200);
+  app_.refresh();
+  EXPECT_GT(week_.width(), before);
+  EXPECT_EQ(total, day_.width() + week_.width() + month_.width());
+  EXPECT_EQ(Scaled(12), week_.offsetLeft() - day_.parent_bounds().xMax() - 1);
+  settle();
+  EXPECT_EQ(1, callbacks);
+  EXPECT_EQ(before, week_.width());
+  week_.onShowPress(before / 2, 20);
+  system_time_delay_micros(kPressAnimationMillis * 1000 + 1);
+  app_.refresh();
+  EXPECT_GT(week_.width(), before);
+  week_.onSingleTapUp(week_.width() / 2, 20);
+  app_.refresh();
+  settle();
+  EXPECT_EQ(2, callbacks);
+  EXPECT_EQ(before, week_.width());
+  EXPECT_FALSE(app_.context().animations().contains(actions_, 0));
+}
+// Verifies cancellation, retargeting, held-state fallback and persistent bits
+// do not create a second target or retain expanded width after restoration.
+TEST_F(StandardGroupInput, RetargetAndCancellation) {
+  int callbacks = 0;
+  day_.setOnInteractiveChange([&] { ++callbacks; });
+  int day_width = day_.width();
+  int week_width = week_.width();
+  day_.onShowPress(10, 20);
+  system_time_delay_micros(kPressAnimationMillis * 200);
+  app_.refresh();
+  EXPECT_GT(day_.width(), day_width);
+  day_.onCancel();
+  week_.onShowPress(10, 20);
+  system_time_delay_micros(kPressAnimationMillis * 200);
+  app_.refresh();
+  EXPECT_GT(week_.width(), week_width);
+  week_.onCancel();
+  app_.refresh();
+  EXPECT_EQ(day_width, day_.width());
+  EXPECT_EQ(week_width, week_.width());
+  EXPECT_EQ(0, callbacks);
+  day_.setSelected(true);
+  day_.setActivated(true);
+  app_.refresh();
+  EXPECT_EQ(day_width, day_.width());
+  day_.setPressed(true);
+  app_.refresh();
+  EXPECT_GT(day_.width(), day_width);
+  day_.setPressed(false);
+  app_.refresh();
+  EXPECT_EQ(day_width, day_.width());
+}
+// Verifies content changes recompute resting geometry during feedback, while
+// morph-disabled and hidden/disabled entries return to resting layout.
+TEST_F(StandardGroupInput, ContentMutationAndEligibility) {
+  week_.onShowPress(10, 20);
+  system_time_delay_micros(kPressAnimationMillis * 200);
+  app_.refresh();
+  const ClickAnimation* sample = week_.getClickAnimation();
+  ASSERT_NE(nullptr, sample);
+  float progress = sample->progress();
+  week_.setLabel("Weekly capture");
+  app_.refresh();
+  EXPECT_FLOAT_EQ(progress, week_.getClickAnimation()->progress());
+  int expanded = week_.width();
+  actions_.setShapeMorph(ButtonShapeMorph::kDisabled);
+  app_.refresh();
+  EXPECT_LT(week_.width(), expanded);
+  actions_.setShapeMorph(ButtonShapeMorph::kDefault);
+  app_.refresh();
+  week_.setVisibility(Visibility::kInvisible);
+  app_.refresh();
+  EXPECT_EQ(week_.entryDimensions().width(), week_.width());
+  week_.setVisibility(Visibility::kVisible);
+  app_.refresh();
+  week_.setEnabled(false);
+  week_.setEnabled(true);
+  app_.refresh();
+  EXPECT_EQ(nullptr, week_.getClickAnimation());
+  EXPECT_EQ(week_.entryDimensions().width(), week_.width());
+}
+// Verifies group disable cancels pointer/key feedback and pending delivery,
+// preserves local flags, and cannot revive the action on re-enable.
+TEST_F(StandardGroupInput, DisableDuringPendingAction) {
+  int callbacks = 0;
+  week_.setOnInteractiveChange([&] { ++callbacks; });
+  day_.setEnabled(false);
+  tap(week_);
+  actions_.setEnabled(false);
+  actions_.setEnabled(true);
+  settle();
+  EXPECT_EQ(0, callbacks);
+  EXPECT_FALSE(day_.isEnabled());
+  EXPECT_TRUE(week_.isEnabled());
+  ASSERT_TRUE(week_.requestFocus());
+  key(KeyCode::kEnter);
+  actions_.setEnabled(false);
+  actions_.setEnabled(true);
+  key(KeyCode::kEnter, KeyPhase::kUp);
+  settle();
+  EXPECT_EQ(0, callbacks);
+  tap(week_);
+  week_.setEnabled(false);
+  week_.setEnabled(true);
+  settle();
+  EXPECT_EQ(0, callbacks);
+}
+// Verifies semantic delivery after a deliberately slow completed refresh can
+// destroy the running adopted entry/group, and detachment cancels delayed work.
+TEST_F(StandardGroupInput, SlowPaintDestructionAndDetach) {
+  class SlowEntry : public ButtonGroupButton {
+   public:
+    using ButtonGroupButton::ButtonGroupButton;
+    void paint(PaintContext& context) const override {
+      ButtonGroupButton::paint(context);
+      system_time_delay_micros(kPressAnimationMillis * 1000 + 1);
+    }
+  };
+  auto owned = std::make_unique<ButtonGroup>(app_.context());
+  auto child = std::make_unique<SlowEntry>(app_.context(), "Capture");
+  SlowEntry* raw = child.get();
+  owned->add(std::unique_ptr<ButtonGroupButton>(std::move(child)));
+  panel_.add(WidgetRef(*owned), Rect(20, 80, 219, 119));
+  app_.refresh();
+  int callbacks = 0;
+  raw->setOnInteractiveChange([&] {
+    ++callbacks;
+    panel_.removeAll();
+    owned.reset();
+  });
+  raw->onSingleTapUp(20, 20);
+  app_.refresh();
+  app_.refresh();
+  EXPECT_EQ(1, callbacks);
+  EXPECT_EQ(nullptr, owned);
+  panel_.add(WidgetRef(actions_), Rect(20, 20, 279, 69));
+  app_.refresh();
+  week_.setOnInteractiveChange([&] { ++callbacks; });
+  tap(week_);
+  panel_.removeAll();
+  settle();
+  EXPECT_EQ(1, callbacks);
+}
+static_assert(sizeof(ButtonGroup) - sizeof(Container) <=
+              (sizeof(void*) == 4 ? 16 : 32));
 static_assert(sizeof(ConnectedButtonGroup) - sizeof(Container) <=
               (sizeof(void*) == 4 ? 24 : 40));
 }  // namespace

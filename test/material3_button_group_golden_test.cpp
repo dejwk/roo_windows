@@ -5,6 +5,7 @@
 #include "gtest/gtest.h"
 #include "material3_density_acceptance_theme.h"
 #include "roo_icons/outlined/24/action.h"
+#include "roo_testing/system/timer.h"
 #include "roo_windows/core/application.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/panel.h"
@@ -12,6 +13,99 @@
 #include "roo_windows/material3/button/internal/button_group_appearance.h"
 namespace roo_windows::material3 {
 namespace {
+// Reports a useful coordinate instead of dumping complete framebuffer vectors.
+void ExpectSameRaster(const std::vector<roo::byte>& incremental,
+                      const std::vector<roo::byte>& full) {
+  if (incremental == full) return;
+  size_t first = 0;
+  while (first < full.size() && incremental[first] == full[first]) ++first;
+  EXPECT_TRUE(incremental == full)
+      << "first differing pixel=" << first / 2 % 320 << "," << first / 2 / 320;
+}
+class WriteCountingDevice final
+    : public roo_display::OffscreenDevice<roo_display::Argb4444> {
+ public:
+  WriteCountingDevice(int width, int height, roo::byte* raster)
+      : OffscreenDevice(width, height, raster, roo_display::Argb4444()),
+        width_(width),
+        writes_(width * height, 0) {}
+
+  void reset() { std::fill(writes_.begin(), writes_.end(), 0); }
+
+  void setAddress(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1,
+                  roo_display::BlendingMode mode) override {
+    left_ = x_ = x0;
+    right_ = x1;
+    y_ = y0;
+    OffscreenDevice::setAddress(x0, y0, x1, y1, mode);
+  }
+
+  void write(roo_display::Color* colors, uint32_t count) override {
+    countPixels(count);
+    OffscreenDevice::write(colors, count);
+  }
+
+  void fill(roo_display::Color color, uint32_t count) override {
+    countPixels(count);
+    OffscreenDevice::fill(color, count);
+  }
+
+  void writePixels(roo_display::BlendingMode mode, roo_display::Color* values,
+                   int16_t* x, int16_t* y, uint16_t count) override {
+    for (uint16_t i = 0; i < count; ++i) {
+      setAddress(x[i], y[i], x[i], y[i], mode);
+      write(values + i, 1);
+    }
+  }
+
+  void fillPixels(roo_display::BlendingMode mode, roo_display::Color color,
+                  int16_t* x, int16_t* y, uint16_t count) override {
+    for (uint16_t i = 0; i < count; ++i) {
+      setAddress(x[i], y[i], x[i], y[i], mode);
+      fill(color, 1);
+    }
+  }
+
+  void writeRects(roo_display::BlendingMode mode, roo_display::Color* values,
+                  int16_t* x0, int16_t* y0, int16_t* x1, int16_t* y1,
+                  uint16_t count) override {
+    for (uint16_t i = 0; i < count; ++i) {
+      fillRects(mode, values[i], x0 + i, y0 + i, x1 + i, y1 + i, 1);
+    }
+  }
+
+  void fillRects(roo_display::BlendingMode mode, roo_display::Color color,
+                 int16_t* x0, int16_t* y0, int16_t* x1, int16_t* y1,
+                 uint16_t count) override {
+    for (uint16_t i = 0; i < count; ++i) {
+      setAddress(x0[i], y0[i], x1[i], y1[i], mode);
+      fill(color, (x1[i] - x0[i] + 1) * (y1[i] - y0[i] + 1));
+    }
+  }
+
+  uint16_t writesAt(int x, int y) const { return writes_[y * width_ + x]; }
+
+ private:
+  void countPixels(uint32_t count) {
+    while (count-- != 0) {
+      if (x_ < width_ && y_ < static_cast<int>(writes_.size() / width_)) {
+        ++writes_[y_ * width_ + x_];
+      }
+      if (++x_ > right_) {
+        x_ = left_;
+        ++y_;
+      }
+    }
+  }
+
+  int width_;
+  std::vector<uint16_t> writes_;
+  int x_ = 0;
+  int y_ = 0;
+  int left_ = 0;
+  int right_ = 0;
+};
+
 class GoldenPanel : public Panel {
  public:
   using Panel::add;
@@ -133,9 +227,9 @@ TEST(ButtonGroupGolden, InternalLayoutAndRestoration) {
       group.setLayoutDirection(direction);
       app.refresh();
       std::vector<roo::byte> incremental = raster;
-      panel.invalidateDescending();
+      app.root().invalidateDescending();
       app.refresh();
-      EXPECT_EQ(incremental, raster);
+      ExpectSameRaster(incremental, raster);
     }
     panel.removeAll();
   }
@@ -187,9 +281,9 @@ TEST(ButtonGroupGolden, ConnectedSelectionAndRestoration) {
       }
       app.refresh();
       std::vector<roo::byte> incremental = raster;
-      panel.invalidateDescending();
+      app.root().invalidateDescending();
       app.refresh();
-      EXPECT_EQ(incremental, raster);
+      ExpectSameRaster(incremental, raster);
     }
     material.density = Density::kMinus3;
     for (auto& group : groups) {
@@ -198,13 +292,166 @@ TEST(ButtonGroupGolden, ConnectedSelectionAndRestoration) {
       group->setEnabled(false);
     }
     panel.requestLayoutDescending();
-    panel.invalidateDescending();
+    app.root().invalidateDescending();
     app.refresh();
     name =
         dark ? "connected_disabled_rtl_dark" : "connected_disabled_rtl_light";
     EXPECT_TRUE(test::CompareOrUpdateGolden(
         test::CaptureRgb(device.raster(), 0, 0, 320, 240),
         "test/goldens/material3_button_group/" + name + ".ppm", name));
+    panel.removeAll();
+  }
+}
+
+// Verifies gone endpoints update surviving corners even when constrained
+// natural frames remain unchanged; invisible slots retain their corner role.
+TEST(ButtonGroupGolden, ConstrainedGoneEndpointRestoration) {
+  std::vector<roo::byte> raster(320 * 160 * 2);
+  roo_display::OffscreenDevice<roo_display::Argb4444> device(320, 160,
+                                                             raster.data(), {});
+  roo_display::Display display(device);
+  roo_scheduler::SchedulingService scheduler;
+  Environment env(scheduler);
+  Application app(&env, display);
+  StripedPanel panel(app.context());
+  ButtonGroupButton day(app.context(), "Day");
+  ButtonGroupButton week(app.context(), "Week");
+  ButtonGroupButton month(app.context(), "Month");
+  ConnectedButtonGroup group(app.context());
+  group.add(day);
+  group.add(week);
+  group.add(month);
+  app.addTaskFullScreen(panel);
+  const int strip_width = day.entryDimensions().width() +
+                          week.entryDimensions().width() + Scaled(2);
+  panel.add(WidgetRef(group), Rect(24, 40, 23 + strip_width, 79));
+  app.refresh();
+  Rect before = week.parent_bounds();
+  for (Visibility visibility :
+       {Visibility::kInvisible, Visibility::kGone, Visibility::kVisible}) {
+    month.setVisibility(visibility);
+    app.refresh();
+    EXPECT_EQ(before, week.parent_bounds());
+    std::vector<roo::byte> incremental = raster;
+    app.root().invalidateDescending();
+    app.refresh();
+    ExpectSameRaster(incremental, raster);
+  }
+  group.setShape(ButtonShape::kSquare);
+  app.refresh();
+  std::vector<roo::byte> incremental = raster;
+  app.root().invalidateDescending();
+  app.refresh();
+  ExpectSameRaster(incremental, raster);
+  panel.removeAll();
+}
+// Verifies transparent groups never prefill the strip: every pixel is emitted
+// once with its final color, including rounded corners and gap restoration.
+TEST(ButtonGroupGolden, FinalPixelWritesDuringMotion) {
+  std::vector<roo::byte> raster(320 * 160 * 2);
+  WriteCountingDevice device(320, 160, raster.data());
+  roo_display::Display display(device);
+  roo_scheduler::SchedulingService scheduler;
+  Environment env(scheduler);
+  Application app(&env, display);
+  StripedPanel panel(app.context());
+  ButtonGroupButton left(app.context(), "Capture");
+  ButtonGroupButton right(app.context(), "Save");
+  ButtonGroup group(app.context());
+  group.add(left);
+  group.add(right);
+  app.addTaskFullScreen(panel);
+  panel.add(WidgetRef(group), Rect(24, 40, 295, 95));
+  app.refresh();
+  left.onShowPress(10, 20);
+  for (int step = 0; step < 3; ++step) {
+    device.reset();
+    system_time_delay_micros(kPressAnimationMillis * 100);
+    app.refresh();
+    for (int y = 0; y < 160; ++y)
+      for (int x = 0; x < 320; ++x)
+        ASSERT_LE(device.writesAt(x, y), 1) << "at " << x << "," << y;
+  }
+  left.onCancel();
+  device.reset();
+  app.refresh();
+  for (int y = 0; y < 160; ++y)
+    for (int x = 0; x < 320; ++x)
+      ASSERT_LE(device.writesAt(x, y), 1) << "at " << x << "," << y;
+  panel.removeAll();
+}
+// Verifies moving standard frames and unclipped elevated shadows restore
+// correctly at intermediate samples, cancellations and content changes.
+TEST(ButtonGroupGolden, StandardMotionRestoration) {
+  for (bool dark : {false, true}) {
+    std::vector<roo::byte> raster(320 * 160 * 2);
+    roo_display::OffscreenDevice<roo_display::Argb4444> device(
+        320, 160, raster.data(), {});
+    roo_display::Display display(device);
+    roo_scheduler::SchedulingService scheduler;
+    Material3Theme material = test_support::MakeAcceptanceTheme(dark);
+    Theme theme{MakeFrameworkTheme(material), &material};
+    Environment env(scheduler, theme);
+    Application app(&env, display);
+    StripedPanel panel(app.context());
+    ButtonGroupButton capture(app.context(), "Capture",
+                              ButtonGroupButtonStyle::kElevated);
+    ButtonGroupButton save(app.context(), "Save",
+                           ButtonGroupButtonStyle::kFilledTonal);
+    MonoIcon icon = ic_outlined_24_action_home();
+    ButtonGroupIconButton home(app.context(), icon,
+                               ButtonGroupIconStyle::kOutlined);
+    ButtonGroup group(app.context());
+    group.add(capture);
+    group.add(save);
+    group.add(home);
+    capture.setParentClipMode(ParentClipMode::kUnclipped);
+    app.addTaskFullScreen(panel);
+    panel.add(WidgetRef(group), Rect(24, 40, 295, 95));
+    app.refresh();
+    for (Widget* target :
+         {static_cast<Widget*>(&capture), static_cast<Widget*>(&save),
+          static_cast<Widget*>(&home)}) {
+      target->onShowPress(10, 20);
+      for (int step = 0; step < 4; ++step) {
+        system_time_delay_micros(kPressAnimationMillis * 80);
+        app.refresh();
+        std::vector<roo::byte> incremental = raster;
+        app.root().invalidateDescending();
+        app.refresh();
+        SCOPED_TRACE(::testing::Message() << "step=" << step << " target="
+                                          << (target == &capture ? "capture"
+                                              : target == &save  ? "save"
+                                                                 : "home"));
+        ExpectSameRaster(incremental, raster);
+      }
+      if (target == &save) {
+        std::string name =
+            dark ? "standard_pressed_dark" : "standard_pressed_light";
+        EXPECT_TRUE(test::CompareOrUpdateGolden(
+            test::CaptureRgb(device.raster(), 0, 0, 320, 160),
+            "test/goldens/material3_button_group/" + name + ".ppm", name));
+        save.setLabel("Store");
+        app.refresh();
+        std::vector<roo::byte> incremental = raster;
+        app.root().invalidateDescending();
+        app.refresh();
+        ExpectSameRaster(incremental, raster);
+      }
+      target->onCancel();
+      app.refresh();
+      std::vector<roo::byte> incremental = raster;
+      app.root().invalidateDescending();
+      app.refresh();
+      ExpectSameRaster(incremental, raster);
+    }
+    group.setLayoutDirection(LayoutDirection::kRightToLeft);
+    group.setShapeMorph(ButtonShapeMorph::kDisabled);
+    app.refresh();
+    std::vector<roo::byte> incremental = raster;
+    app.root().invalidateDescending();
+    app.refresh();
+    ExpectSameRaster(incremental, raster);
     panel.removeAll();
   }
 }
