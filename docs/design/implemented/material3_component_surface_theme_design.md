@@ -605,3 +605,8 @@ Material tokens are authoritative; application overrides express alternatives.
 - Slots for modal rails, expanded search, sheets and FABs as implementations land.
 - Independent modal/docked date-picker styling when those presentations acquire
   separate appearance policies.
+
+Button groups add `components.buttonGroup.filledUnselectedContainer`, defaulting
+to `kSurfaceContainer`. It selects the enabled neutral fill of connected filled
+entries independently of toggle icon buttons. ComponentTheme now occupies 29
+bytes; the aggregate Material3Theme remains 960 bytes after alignment.

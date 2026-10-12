@@ -96,6 +96,11 @@ struct ToggleIconButtonTheme {
   ColorToken filledUnselectedContainer = ColorToken::kSurfaceContainer;
 };
 
+/// Selects the connected filled group neutral surface.
+struct ButtonGroupTheme {
+  ColorToken filledUnselectedContainer = ColorToken::kSurfaceContainer;
+};
+
 /// Selects the enabled unselected track surface of switches.
 struct SwitchTheme {
   ColorToken unselectedTrack = ColorToken::kSurfaceContainerHighest;
@@ -114,7 +119,7 @@ struct SwitchTheme {
 /// live, so applications that later change a slot must invalidate affected
 /// subtrees between completed frames.
 ///
-/// The 28 compact token slots below cover the implemented component-surface
+/// The 29 compact token slots below cover the implemented component-surface
 /// contract. Adding a slot changes the application-owned Material3Theme ABI;
 /// rebuild the library and application together.
 struct ComponentTheme {
@@ -135,13 +140,14 @@ struct ComponentTheme {
   ButtonTheme button;
   ToggleIconButtonTheme toggleIconButton;
   SwitchTheme switchControl;
+  ButtonGroupTheme buttonGroup;
 };
 
 static_assert(sizeof(CardTheme) == 3,
               "Card surface defaults must occupy three compact tokens.");
 static_assert(alignof(CardTheme) == 1,
               "Card surface defaults must not introduce padding.");
-static_assert(sizeof(ComponentTheme) == 28,
+static_assert(sizeof(ComponentTheme) == 29,
               "Component theme must contain only implemented surface slots.");
 static_assert(alignof(ComponentTheme) == 1,
               "Component theme must not introduce padding.");

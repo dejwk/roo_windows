@@ -1616,3 +1616,15 @@ cc_test(
     for mode in [0, 1, 2]
     for zoom in [75, 100, 150, 200]
 ]
+
+cc_test(
+    name = "material3_button_group_test",
+    srcs = ["test/material3_button_group_test.cpp"],
+    deps = [":roo_windows", "@roo_testing//:arduino_gtest_main"],
+)
+cc_test(
+    name = "material3_button_group_golden_test",
+    srcs = ["test/material3_button_group_golden_test.cpp", "test/material3_density_acceptance_theme.h"],
+    data = glob(["test/goldens/material3_button_group/*.ppm"], allow_empty = True),
+    deps = [":roo_windows", ":test_golden_utils", "@roo_testing//:arduino_gtest_main"],
+)

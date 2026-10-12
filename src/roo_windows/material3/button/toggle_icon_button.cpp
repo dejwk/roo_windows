@@ -6,6 +6,8 @@
 #include "roo_display/color/color.h"
 #include "roo_display/ui/alignment.h"
 #include "roo_windows/core/click_animation.h"
+#include "roo_windows/material3/button/internal/icon_appearance.h"
+#include "roo_windows/material3/button/internal/icon_geometry.h"
 #include "roo_windows/material3/theme.h"
 
 using roo_display::AlphaBlend;
@@ -22,134 +24,20 @@ constexpr int kSelectionAnimationMs = 100;
 constexpr uint8_t kFullCornerRadius = 0xFF;
 constexpr float kShapeMorphProgressScale = 3.0f;
 
-struct GeometryTokens {
-  uint8_t height_dp;
-  uint8_t icon_size_dp;
-  uint8_t square_corner_radius_dp;
-  uint8_t pressed_corner_radius_dp;
-};
-
-constexpr GeometryTokens kGeometryTokens[] = {
-    {32, 20, 8, 6},   {40, 24, 12, 8},   {56, 24, 16, 12},
-    {96, 32, 28, 16}, {136, 40, 28, 16},
-};
-
-const GeometryTokens& GeometryFor(ButtonSize size) {
-  return kGeometryTokens[static_cast<uint8_t>(size)];
-}
-
-// Resolves the visible width for the expressive width token.
-int16_t ContainerWidth(const GeometryTokens& geometry,
-                       IconButtonWidth width_mode) {
-  int16_t height = Scaled(geometry.height_dp);
-  switch (width_mode) {
-    case IconButtonWidth::kNarrow:
-      return std::max<int16_t>(Scaled(geometry.icon_size_dp),
-                               height - Scaled(8));
-    case IconButtonWidth::kUniform:
-      return height;
-    case IconButtonWidth::kWide:
-      return height + Scaled(8);
-  }
-  return height;
-}
-
-// Creates one stable centered slot so selection never relayouts the control.
-Dimensions IconSlotDimensions(const ToggleIconButton& button) {
-  const GeometryTokens& geometry = GeometryFor(button.size());
-  int16_t width =
-      std::max<int16_t>(Scaled(geometry.icon_size_dp),
-                        button.unselectedIcon().anchorExtents().width());
-  int16_t height =
-      std::max<int16_t>(Scaled(geometry.icon_size_dp),
-                        button.unselectedIcon().anchorExtents().height());
-  if (button.selectedIcon() != nullptr) {
-    width = std::max<int16_t>(width,
-                              button.selectedIcon()->anchorExtents().width());
-    height = std::max<int16_t>(height,
-                               button.selectedIcon()->anchorExtents().height());
-  }
-  return Dimensions(width, height);
-}
-
-// Applies the standard disabled on-surface composite to the Material surface.
-Color DisabledComposite(const Theme& theme, Color fg, uint8_t alpha) {
-  return AlphaBlend(theme.material3Theme().color.surface, fg.withA(alpha));
-}
-
-// Resolves the enabled or disabled content color for the current toggle state.
 Color ResolveContentColor(const ToggleIconButton& button) {
-  const ColorScheme& colors = button.theme().material3Theme().color;
-  if (!button.isEnabled()) {
-    return DisabledComposite(button.theme(), colors.onSurface, 0x61);
-  }
-  if (!button.isSelected()) {
-    switch (button.style()) {
-      case IconButtonStyle::kFilled:
-      case IconButtonStyle::kOutlined:
-      case IconButtonStyle::kStandard:
-        return colors.onSurfaceVariant;
-      case IconButtonStyle::kFilledTonal:
-        return colors.onSecondaryContainer;
-    }
-  }
-  switch (button.style()) {
-    case IconButtonStyle::kStandard:
-      return colors.primary;
-    case IconButtonStyle::kFilled:
-      return colors.onPrimary;
-    case IconButtonStyle::kFilledTonal:
-      return colors.onSecondary;
-    case IconButtonStyle::kOutlined:
-      return colors.inverseOnSurface;
-  }
-  return colors.onSurfaceVariant;
+  return internal::ResolveToggleIconContentColor(
+      button.theme(), button.style(), button.isEnabled(), button.isSelected());
 }
-
-// Resolves the selected or unselected container fill without extra state.
 Color ResolveBackground(const ToggleIconButton& button) {
-  const ColorScheme& colors = button.theme().material3Theme().color;
-  if (!button.isEnabled()) {
-    switch (button.style()) {
-      case IconButtonStyle::kFilled:
-      case IconButtonStyle::kFilledTonal:
-        return DisabledComposite(button.theme(), colors.onSurface, 0x1F);
-      case IconButtonStyle::kStandard:
-      case IconButtonStyle::kOutlined:
-        return Transparent;
-    }
-  }
-  if (button.isSelected()) {
-    switch (button.style()) {
-      case IconButtonStyle::kStandard:
-        return Transparent;
-      case IconButtonStyle::kFilled:
-        return colors.primary;
-      case IconButtonStyle::kFilledTonal:
-        return colors.secondary;
-      case IconButtonStyle::kOutlined:
-        return colors.inverseSurface;
-    }
-  }
-  switch (button.style()) {
-    case IconButtonStyle::kFilled:
-      return colors.resolve(
-          button.theme()
-              .material3Theme()
-              .components.toggleIconButton.filledUnselectedContainer);
-    case IconButtonStyle::kFilledTonal:
-      return colors.secondaryContainer;
-    case IconButtonStyle::kStandard:
-    case IconButtonStyle::kOutlined:
-      return Transparent;
-  }
-  return Transparent;
+  return internal::ResolveToggleIconBackground(
+      button.theme(), button.style(), button.isEnabled(), button.isSelected());
 }
 
 // Resolves the size-specific square resting radius.
 uint8_t SquareRadius(const ToggleIconButton& button) {
   return static_cast<uint8_t>(std::min<int>(
-      Scaled(GeometryFor(button.size()).square_corner_radius_dp), 255));
+      Scaled(internal::IconGeometryFor(button.size()).square_corner_radius_dp),
+      255));
 }
 
 // Inverts the resting shape family when the button is selected.
@@ -161,7 +49,8 @@ uint8_t RestingRadius(const ToggleIconButton& button, bool selected) {
 // Resolves the shared size-specific pressed shape radius.
 uint8_t PressedRadius(const ToggleIconButton& button) {
   return static_cast<uint8_t>(std::min<int>(
-      Scaled(GeometryFor(button.size()).pressed_corner_radius_dp), 255));
+      Scaled(internal::IconGeometryFor(button.size()).pressed_corner_radius_dp),
+      255));
 }
 
 // Interpolates a packed corner radius without allocating animation state.
@@ -209,10 +98,13 @@ void ToggleIconButton::setSelected(bool selected) {
 }
 
 Padding ToggleIconButton::getPadding() const {
-  const GeometryTokens& geometry = GeometryFor(size());
-  Dimensions slot = IconSlotDimensions(*this);
+  const internal::IconGeometryTokens& geometry =
+      internal::IconGeometryFor(size());
+  Dimensions slot =
+      internal::ResolveIconSlot(size(), unselectedIcon(), selectedIcon());
   int16_t horizontal = std::max<int16_t>(
-      0, (ContainerWidth(geometry, widthMode()) - slot.width()) / 2);
+      0,
+      (internal::IconContainerWidth(size(), widthMode()) - slot.width()) / 2);
   int16_t vertical =
       std::max<int16_t>(0, (Scaled(geometry.height_dp) - slot.height()) / 2);
   return Padding(horizontal, vertical);
@@ -221,7 +113,8 @@ Padding ToggleIconButton::getPadding() const {
 Rect ToggleIconButton::getIconBounds() const {
   Rect b = bounds();
   if (b.empty()) return b;
-  Dimensions slot = IconSlotDimensions(*this);
+  Dimensions slot =
+      internal::ResolveIconSlot(size(), unselectedIcon(), selectedIcon());
   int16_t left = b.xMin() + (b.width() - slot.width()) / 2;
   int16_t top = b.yMin() + (b.height() - slot.height()) / 2;
   return Rect(left, top, left + slot.width() - 1, top + slot.height() - 1);
@@ -263,7 +156,8 @@ Color ToggleIconButton::getOutlineColor() const {
   }
   const ColorScheme& colors = theme().material3Theme().color;
   return isEnabled() ? colors.outlineVariant
-                     : DisabledComposite(theme(), colors.onSurface, 0x1F);
+                     : roo_display::AlphaBlend(colors.surface,
+                                               colors.onSurface.withA(0x1F));
 }
 
 BorderStyle ToggleIconButton::getBorderStyle() const {
@@ -292,7 +186,7 @@ void ToggleIconButton::paint(PaintContext& ctx) const {
 }
 
 Dimensions ToggleIconButton::getSuggestedMinimumDimensions() const {
-  return IconSlotDimensions(*this);
+  return internal::ResolveIconSlot(size(), unselectedIcon(), selectedIcon());
 }
 
 bool ToggleIconButton::usesHighlighterColor() const {

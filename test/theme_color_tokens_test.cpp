@@ -70,9 +70,9 @@ TEST(Material3ThemeTest, InitializesCompactComponentSurfaceDefaults) {
 
   EXPECT_EQ(static_cast<size_t>(3), sizeof(material3::CardTheme));
   EXPECT_EQ(static_cast<size_t>(1), sizeof(material3::ToolbarTheme));
-  EXPECT_EQ(static_cast<size_t>(28), sizeof(material3::ComponentTheme));
-  // The 28-byte component payload and one-byte density field add 32 aligned
-  // bytes to the 928-byte color/state payload (Color has 32-bit alignment).
+  EXPECT_EQ(static_cast<size_t>(29), sizeof(material3::ComponentTheme));
+  // The 29-byte component payload and one-byte density field add 32 aligned
+  // bytes to the 929-byte color/state payload (Color has 32-bit alignment).
   EXPECT_EQ(static_cast<size_t>(960), sizeof(material3::Material3Theme));
   EXPECT_EQ(material3::ColorToken::kSurfaceContainerLow,
             material.components.card.elevatedContainer);

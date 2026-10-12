@@ -14,7 +14,7 @@ namespace {
 template <typename Components>
 auto ComponentSurfaceSlots(Components& components) {
   using SlotPointer = decltype(&components.layoutScaffold.container);
-  return std::array<SlotPointer, 28>{
+  return std::array<SlotPointer, 29>{
       &components.layoutScaffold.container,
       &components.appBar.flatContainer,
       &components.appBar.scrolledContainer,
@@ -43,6 +43,7 @@ auto ComponentSurfaceSlots(Components& components) {
       &components.button.elevatedContainer,
       &components.toggleIconButton.filledUnselectedContainer,
       &components.switchControl.unselectedTrack,
+      &components.buttonGroup.filledUnselectedContainer,
   };
 }
 
@@ -68,7 +69,7 @@ roo_display::Color Rgb565Output(const ColorScheme& colors, ColorToken role) {
 }
 
 void ExpectRgb565SurfaceOutput(const Material3Theme& material,
-                               const std::array<ColorToken, 28>& expected) {
+                               const std::array<ColorToken, 29>& expected) {
   const auto slots = ComponentSurfaceSlots(material.components);
   for (size_t i = 0; i < slots.size(); ++i) {
     const ColorToken* slot = slots[i];
@@ -87,7 +88,7 @@ TEST(Material3ComponentSurfaceThemeTest,
   Material3Theme dark = DefaultTheme().material3Theme();
   SetDistinctNeutralSurfacePalette(light, 10);
   SetDistinctNeutralSurfacePalette(dark, 80);
-  constexpr std::array<ColorToken, 28> kDefaultRoles = {
+  constexpr std::array<ColorToken, 29> kDefaultRoles = {
       ColorToken::kSurface,
       ColorToken::kSurface,
       ColorToken::kSurfaceContainer,
@@ -116,6 +117,7 @@ TEST(Material3ComponentSurfaceThemeTest,
       ColorToken::kSurfaceContainerLow,
       ColorToken::kSurfaceContainer,
       ColorToken::kSurfaceContainerHighest,
+      ColorToken::kSurfaceContainer,
   };
 
   // Default roles are exercised against independently colored light and dark
@@ -131,8 +133,8 @@ TEST(Material3ComponentSurfaceThemeTest,
       ColorToken::kSurfaceContainerHigh,
       ColorToken::kSurfaceContainerHighest,
   };
-  std::array<ColorToken, 28> light_roles;
-  std::array<ColorToken, 28> dark_roles;
+  std::array<ColorToken, 29> light_roles;
+  std::array<ColorToken, 29> dark_roles;
   size_t index = 0;
   for (ColorToken* slot : ComponentSurfaceSlots(light.components)) {
     *slot = light_roles[index] = kNeutralRoles[index % kNeutralRoles.size()];
