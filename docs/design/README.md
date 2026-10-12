@@ -104,6 +104,7 @@ motion pauses. It does not restore paint interruption.
 
 | Design | Dependency status |
 | --- | --- |
+| [Sparse damage regions](in_progress/sparse_damage_regions_design.md) | P1 bounded damage geometry and its pixel-oracle tests are implemented. P0 characterization and P2–P8 renderer/resource phases remain; P9 compares native output filtering. |
 | [Selective accelerated redraw](in_progress/selective_accelerated_redraw_design.md) | P1 advisory budget and query are implemented. Background deferral with temporary composition lag (P2a), opt-in scrolling, guaranteed cleanup, and resource acceptance remain under development. |
 | Display runtime and cross-application input | Phases 1–6 are implemented. Explicit modal coverage and the final migration/cost audit remain proposed. |
 | Text system | `TextBlock` wrapping, justification, max-lines, ellipsis, caching, and golden coverage are implemented; shared rich paragraph layout and `RichTextBlock` remain. |
@@ -114,7 +115,6 @@ motion pauses. It does not restore paint interruption.
 
 | Design | Dependency status |
 | --- | --- |
-| [Sparse damage regions](proposed/sparse_damage_regions_design.md) | Proposed four-rectangle window damage with direct clip rejection/trimming, compiled gaps for output, and restoration of paint-time invalidations. Rounded clipping, copy planning, and accelerated cleanup are existing prerequisites; P0–P8 implementation and P9 native-filter comparison remain proposed. |
 | Display runtime Phase 7 task-bounded transient coverage | Phase 6 input is implemented. Phase 7 is reconciled as task-bounded attachment of the one shared window host layer, retaining one active-presentation authority and explicit interaction owner; the extension remains unimplemented. |
 | Display runtime Phase 8 migration and cost audit | Phases 2–6 and the shared display-wide host are implemented. Task-bounded coverage in Phase 7 remains proposed; final migration documentation, resource audit, and hardware validation belong to Phase 8. |
 | Interaction overlay reveal | Point and area ripples, widget-local click animation, paint context, and the navigation bar's component-local fade are implemented; shared fade reveal and paint-owned overlay policy are not. |

@@ -1,10 +1,11 @@
 # Sparse damage regions
 
-Status: **proposed**. Reviewed against `roo_windows` HEAD `1914bd23` and the
-working tree on 2026-10-12. None of this proposal is implemented. Synchronous
-painting, rounded child clipping, prepared exclusions, rounded scroll copying,
-and accelerated-scroll cleanup are existing prerequisites. The phase ledger
-below is the implementation handoff; update it as each phase lands.
+Status: **in progress**. Reviewed against `roo_windows` HEAD `1914bd23` and
+the working tree on 2026-10-12. P1 damage geometry is implemented; renderer
+integration and resource acceptance remain. Synchronous painting, rounded child
+clipping, prepared exclusions, rounded scroll copying, and accelerated-scroll
+cleanup are existing prerequisites. The phase ledger below is the implementation
+handoff; update it as each phase lands.
 
 Amended on 2026-10-13: use damage directly for early clip rejection and trimming,
 retain compiled gaps for initial output filtering, and compare native damage
@@ -424,7 +425,7 @@ ancestor depth of a reported change. These are independent input dimensions.
 
 | Storage or work | Chosen cost |
 | --- | --- |
-| Persistent damage | Four 8-byte device boxes plus count/alignment: approximately 34 bytes replacing the root's 10-byte `Rect`; measure the complete ABI delta. |
+| Persistent damage | Four 8-byte device boxes plus count/alignment: 34 bytes in the P1 host test, replacing the root's 10-byte `Rect` at P6; measure the complete target ABI delta. |
 | Active damage | One approximately 34-byte paint-stack snapshot, reused for restoration after the clipper is destroyed. |
 | Clipper input | One borrowed pointer to immutable damage; no stored copy and no per-widget fields. |
 | Complement scratch | At most ten 32-bit Y boundaries and four pairs of 32-bit X endpoints: 72 bytes of array payload, plus compiler locals. |
@@ -529,7 +530,7 @@ memory, records completed slices.
 | Phase | Depends on | Status | Delivered commit and evidence |
 | --- | --- | --- | --- |
 | P0 Characterization | Existing renderer | Proposed | — |
-| P1 Damage geometry | None | Proposed | — |
+| P1 Damage geometry | None | Implemented | `damage_region.h/.cpp`, pixel-oracle test; `//:damage_region_test` and ASan pass, 34-byte host state. |
 | P2 Direct clip queries and prepared gaps | P1 | Proposed | — |
 | P3 Copy and certificate restrictions | P2 | Proposed | — |
 | P4 Accelerated coverage guards | P2 | Proposed | — |
