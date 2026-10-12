@@ -2,730 +2,692 @@
 
 ## Implementation status
 
-**Proposed.** None of the defined scope is implemented. The status of existing and outstanding prerequisites is recorded in the [status index](../README.md).
+**Proposed.** Reviewed against `roo_windows` HEAD `e564685a` and the working
+tree on 2026-10-12. No segmented-button implementation exists. Shared button
+geometry hooks, density, menus, and non-touch input are implemented; the working
+tree also contains uncommitted split-button implementation and tests. Those
+changes are context, not a prerequisite or acceptance evidence for this design.
+See the [status index](../README.md).
 
 ## Objective
 
-Add a Material 3 segmented-button family to `roo_windows` that covers the
-non-expressive segmented-button component with:
-
-- single-select and multi-select groups,
-- two to five connected segments,
-- text-only, icon-only, and icon-plus-text segment content,
-- equal-width segment layout with shared outer-outline and separator
-  ownership,
-- optional selected check-icon behavior that does not change measured size,
-- and group-owned selection hooks that reuse the existing widget interaction
-  pipeline.
-
-This design intentionally targets the classic Material 3 segmented-button
-family. It does not merge the newer expressive connected button groups into the
-same API.
+Add classic Material 3 segmented buttons for compact single-choice and
+multiple-choice controls, with stable sizing and ordinary Roo input behavior.
 
 ## Motivation
 
-`roo_windows` already has Material 3 action buttons and standalone selection
-controls, but it still lacks the compact connected-choice surface used for view
-switching, sorting, and small filter sets. That leaves a gap between a row of
-independent buttons and heavier list-based selection UIs.
-
-The Material 3 expressive update now recommends connected button groups rather
-than segmented buttons, but segmented buttons remain a stable legacy Material 3
-surface in existing products. `roo_windows` needs a dedicated segmented-button
-API for those products without mutating the landed `material3::Button` family
-into a grouped, checkable control.
+A schedule view needs **Day / Week / Month** choices; a device filter can need
+several active categories at once. Independent action buttons do not express
+that connected selection clearly. A dedicated control can own the selection
+rules and shared border while applications use the existing change callback.
 
 ## Background
 
-### Current Status in `roo_windows`
+The [design glossary](../glossary.md) defines ownership, surfaces, and framework
+interaction terminology. Relevant current facilities are:
 
-The current checked-in Material 3 surfaces establish most of the primitives
-this design needs:
+- [`Button`](../../../src/roo_windows/material3/button/button.h) is a momentary
+  action surface with optional shape morphing. Its private
+  [appearance](../../../src/roo_windows/material3/button/internal/button_appearance.h)
+  and [geometry](../../../src/roo_windows/material3/button/internal/button_geometry.h)
+  helpers already exist, including text-bearing measurement. Extracting them
+  is not a prerequisite.
+- [`SurfaceWidget`](../../../src/roo_windows/core/surface_widget.h) is the
+  surface-owning base; `BasicSurfaceWidget` is obsolete.
+  [`Container`](../../../src/roo_windows/core/container.h) supplies child
+  traversal, rounded child clipping, decoration, and `invokeChild()`.
+- The [widget instructions](../../../.github/instructions/roo-windows-widget-authoring.instructions.md)
+  require raw retained child pointers, `attachChild()` / `detachChild()` for
+  ownership, and foreground-first painting. `WidgetRef` is only a temporary
+  transfer parameter. The renderer resolves final pixels through exclusions
+  and deferred decorations, not background-prefill followed by foreground.
+- [Lists](../implemented/material3_lists_design.md) already own separator bands;
+  [navigation rails](../implemented/material3_navigation_rail_design.md) own
+  selection. These are patterns to reuse, not instructions to copy their
+  storage or callback sequences unchanged.
+- [Non-touch input](../implemented/non_touch_input_design.md) provides ordinary
+  focus traversal and Enter/Space activation. Shared click feedback settles
+  semantic delivery after a completed refresh.
+- [Density](../implemented/material3_density_design.md) already changes eligible
+  whitespace without scaling text or artwork. New families need explicit
+  participation, content floors, and runtime relayout coverage.
 
-- [../implemented/material3_buttons_design.md](../implemented/material3_buttons_design.md) and the landed
-  [src/roo_windows/material3/button/button.h](../../../src/roo_windows/material3/button/button.h)
-  define the current Material 3 button family as momentary action widgets,
-  not grouped or checkable buttons.
-- [src/roo_windows/material3/checkbox/checkbox.h](../../../src/roo_windows/material3/checkbox/checkbox.h),
-  [src/roo_windows/material3/radio_button/radio_button.h](../../../src/roo_windows/material3/radio_button/radio_button.h),
-  and [src/roo_windows/material3/switch/switch.h](../../../src/roo_windows/material3/switch/switch.h)
-  show the repo's current selection-state patterns: compact widgets, no new
-  callback surface, and click handling through the existing widget base class.
-- [../implemented/material3_lists_design.md](../implemented/material3_lists_design.md) already closes on a
-  shared-band paint model where the owner container keeps separator ownership
-  instead of making every child paint overlapping borders.
-- [material3_navigation_rail_design.md](../implemented/material3_navigation_rail_design.md)
-  already closes on the owner-container pattern for shared selection state and
-  virtual no-op hooks instead of per-child stored callbacks.
+Material references are the [overview](https://m3.material.io/components/segmented-buttons/overview),
+[specifications](https://m3.material.io/components/segmented-buttons/specs), and
+[guidelines](https://m3.material.io/components/segmented-buttons/guidelines).
+The specification page required JavaScript during this review. Concrete tokens
+were checked against official AndroidX
+[OutlinedSegmentedButtonTokens, version v0_162](https://github.com/androidx/androidx/blob/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/OutlinedSegmentedButtonTokens.kt)
+and its [segmented-button implementation](https://github.com/androidx/androidx/blob/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/SegmentedButton.kt),
+accessed 2026-10-12. The tokens specify a 40 dp container, 1 dp outline,
+18 dp icon, label-large typography, and full outer corners. Selected colors are
+secondary-container / on-secondary-container; unselected content is on-surface.
+AndroidX supplies 12 dp horizontal padding and an 8 dp icon gap.
 
-What does not exist today:
-
-- no Material 3 segmented-button widget family,
-- no grouped button selection container under `material3/`,
-- no shared segmented-button token surface for outline, spacing, and selected
-  colors,
-- and no example or tests that cover connected grouped-button painting.
-
-The current `material3::Button` implementation is useful as token and overlay
-context, but it is not the right public shape for segmented buttons.
-
-### Material 3 Signals
-
-The current Material 3 segmented-button references are:
-
-- [Overview](https://m3.material.io/components/segmented-buttons/overview)
-- [Specs](https://m3.material.io/components/segmented-buttons/specs)
-- [Guidelines](https://m3.material.io/components/segmented-buttons/guidelines)
-
-The relevant signals carried into this design are:
-
-1. Segmented buttons are the legacy Material 3 grouped-choice surface; the
-   expressive update recommends connected button groups instead.
-2. Segmented buttons come in two behavioral variants: single-select and
-   multi-select.
-3. A segmented-button group is intended for two to five choices.
-4. Segments may contain label text, an icon, or both.
-5. Labels stay on one line and do not wrap.
-6. The component height is `40dp`, the outline width is `1dp`, and horizontal
-   padding is at least `12dp` per side.
-7. Spacing between content elements inside a segment is `8dp`.
-8. Unselected content uses `on-surface` on a transparent container with an
-   `outline` stroke.
-9. Selected segments use `secondary-container` with
-   `on-secondary-container` content.
-10. When a segment uses both icon and label text, the selected state replaces
-    the segment icon with the selected check icon.
-11. The official segmented-button outline is fully rounded at the outer group
-    boundary.
-
-### Local Design References
-
-The most relevant local references are:
-
-- [../implemented/material3_buttons_design.md](../implemented/material3_buttons_design.md)
-- [../implemented/material3_lists_design.md](../implemented/material3_lists_design.md)
-- [material3_navigation_rail_design.md](../implemented/material3_navigation_rail_design.md)
-- [widget_authoring.md](../../widget_authoring.md)
-- [../.github/instructions/roo-windows-widget-authoring.instructions.md](../../../.github/instructions/roo-windows-widget-authoring.instructions.md)
-
-Those references impose four concrete local constraints:
-
-1. Do not add grouped-selection state to every `material3::Button` instance.
-2. Keep selection ownership on the group rather than on each child.
-3. Keep shared outline and separator ownership on the group rather than making
-   adjacent children paint overlapping `1dp` strokes.
-4. Reuse the current `SurfaceWidget` overlay and click-animation pipeline; do
-   not introduce a segmented-button-local ripple subsystem.
+This proposal covers classic segmented buttons. Expressive connected button
+groups remain a separate proposed family. Capacity, icon-only selection policy,
+density, keyboard behavior, and non-overlapping separator ownership below are
+Roo decisions, not claims of exact AndroidX behavior.
 
 ## Requirements
 
-### Functional Requirements
-
-1. Introduce a Material 3 segmented-button family under `roo_windows/material3`.
-2. Support both single-select and multi-select groups.
-3. Limit one group to two through five segments.
-4. Support text-only, icon-only, and icon-plus-text segment content.
-5. Keep labels single-line and horizontally centered.
-6. Resolve colors, typography, spacing, and outline defaults from the active
-   `Theme`.
-7. Support the optional selected check icon without changing the measured size
-   of the group when selection changes.
-8. Support RTL layout for logical first/last corners, separator placement, and
-   icon/text ordering.
-
-### Interaction Requirements
-
-1. Each segment is clickable through the existing widget input path.
-2. In single-select mode, clicking a different segment selects exactly one
-   segment; clicking the already-selected segment keeps it selected.
-3. In multi-select mode, clicking a segment toggles only that segment.
-4. Selection change notifications are group-owned.
-5. The group exposes virtual hooks for semantic adapters and also participates
-   in the existing widget interactive-change callback path.
-6. Pressed, hovered, focused, disabled, and activated visuals flow through the
-   existing widget state model.
-
-### API Requirements
-
-1. Expose one `SegmentedButtonGroup` container.
-2. Expose one `SegmentedButton` child widget.
-3. Keep `SegmentedButton` content fixed to label plus optional icon; do not
-   expose arbitrary child slots.
-4. Keep selection state off the child public API; the group owns it.
-5. Keep the maximum segment count explicit in the API.
-6. Do not fold expressive connected button groups into this API.
-7. Do not mutate the landed `material3::Button` type in place.
-
-### Embedded Constraints
-
-1. Do not allocate on paint, overlay, or gesture paths.
-2. Store the canonical selection state once per group, not once per segment.
-3. Do not store per-segment callback objects.
-4. Do not store a per-segment selected-icon pointer; selected-icon rendering
-   uses one shared check glyph.
-5. Keep group child capacity fixed at five segments so `add()` and `clear()`
-   do not depend on heap-backed child vectors.
-6. Add pointer-size-aware size-budget tests for the new public types.
+1. Support two to five connected horizontal choices, single or multiple
+   selection, and text-only, icon-only, or icon-plus-text content.
+2. Keep one-line content centered and measured size independent of selection,
+   hover, focus, and press. Offer an optional selected check glyph.
+3. Keep logical selection indices stable under RTL and visibility changes.
+   Support tight parent constraints without overflow or negative geometry.
+4. Use active theme colors and shared density, with one outer pill outline,
+   single separators, zero elevation, and independent child state layers.
+5. Support touch and ordinary keyboard activation, individual and group
+   disabling, and one group notification per interactive selection change.
+6. Make child ownership, borrowed content lifetime, teardown, and callback
+   reentrancy explicit. Avoid per-child application callback registration.
+7. Keep hot component paths allocation-free and retained storage bounded.
+   Account for all children, shared renderer costs, and target ABI padding.
 
 ## Design Overview
 
-The public surface is split into two widget types:
+`SegmentedButtonGroup` is a `Container` holding at most five `SegmentedButton`
+surfaces. A **segment** is a real child input/focus target with borrowed label
+and icon content. Its logical index is its insertion position. A **cell** is
+its rectangular allocation in the horizontal layout. A **separator band** is
+the narrow allocation between cells, painted by the group.
 
-1. `material3::SegmentedButtonGroup`, a horizontal `Container` that owns
-   selection state, equal-width layout, shared outline bands, and vertical
-   separator bands.
-2. `material3::SegmentedButton`, a compact `BasicSurfaceWidget` child that
-   owns content layout, container fill, and state-layer paint for one segment.
+The group owns one selection bitmask, the outer rounded clip and outline,
+equal-width allocation, and separator bands. Children own rectangular fills,
+content, and normal state layers; the group's rounded clip supplies the outer
+corners. There is no independent rounded child edge to misalign with the outer
+outline at fractional zoom.
 
-Selection is group-owned. The group stores one packed `selection_mask_` and
-each child stores only an owner pointer, its index, and its first/middle/last
-position. That keeps the single-select and multi-select rules in one place and
-avoids putting a selected-state byte on every segment.
+Retain five raw child pointers. Each child keeps one typed group pointer so it
+can query selection and geometry without RTTI or assuming an arbitrary parent
+is a group. Find its index by scanning at most five pointers; do not also store
+an index, position enum, selection byte, or direction on each child.
 
-Paint ownership is also group-owned where edges are shared. The group paints:
+| Requirement | Mechanism |
+| --- | --- |
+| Single/multiple selection | One group bitmask and normalization path |
+| Stable content size | Measure normal and selected content together |
+| Shared edges and RTL | Group cell allocation, rounded owner clip, disjoint separator bands |
+| Ordinary interaction | Real child surfaces, shared click controller, one terminal group hook |
+| Bounded ownership | Five raw pointers and existing parent-owned ownership bit |
 
-- the outer `1dp` rounded outline,
-- the `1dp` vertical separator bands between segments,
-- and no fill.
+For **Day / Week / Month**, selecting Week sets mask `0b010`. Selecting Month
+sets `0b100` in single mode and `0b110` in multiple mode. RTL moves Day to the
+right but keeps its mask bit and callback index zero.
 
-Each segment paints:
-
-- its selected or unselected fill,
-- its state layer,
-- and its icon / text content.
-
-That split follows the same direct-to-framebuffer rule used by the list design:
-shared edge pixels belong to the owner, not to adjacent children.
-
-![Segmented button group ownership and equal-width layout](figures/material3_segmented_button_outline_ownership.svg)
-
-The decisive design choices are:
-
-1. add a new segmented-button family instead of extending `material3::Button`,
-2. keep selection canonical on the group as a bitmask,
-3. keep the group fixed-capacity at five segments,
-4. reserve selected-icon width during measurement so selection changes do not
-   reflow the control,
-5. keep the grouped outline and separators group-owned,
-6. and leave expressive connected button groups for a later design.
+![Cell allocation and shared rounded rendering](figures/material3_segmented_button_outline_ownership.svg)
 
 ## Design Details
 
-### Type Split and Selection Ownership
+### Ownership, capacity, and visibility
 
-`SegmentedButtonGroup` derives from `Container`.
+The group starts empty. `add(SegmentedButton&)` borrows a child;
+`add(std::unique_ptr<SegmentedButton>)` adopts it. Both validate capacity,
+context identity, and absence of an existing parent/group before constructing
+a temporary `WidgetRef` and calling `attachChild()`. Null owned input fails.
+Failure leaves the group unchanged; an owned argument passed by value is
+destroyed on failure. Borrowed objects are never deleted by a failed add.
 
-That choice is semantic. The group owns child sequencing, shared geometry, and
-the outer outline / separator decoration that spans multiple children. A plain
-`BasicWidget` would force the design to reimplement child enumeration and paint
-coordination that `Container` already provides.
+`clear()` clears selection silently, resets each child's group link, and calls
+`detachChild()` exactly once per stored child. The destructor performs the same
+detachment before its pointer array disappears. Only `detachChild()` applies
+the ownership bit and deletes adopted children. Borrowed children outlive their
+attachment; label bytes and icon objects outlive their use. All mutation is on
+the UI task. Context shutdown uses the existing detach contract, without
+calling dead context services.
 
-`SegmentedButton` derives from `BasicSurfaceWidget`.
+Zero children measure zero and paint nothing. One child is permitted during
+construction/reconfiguration and renders a single pill, but is non-interactive;
+normal application controls have two through five participating choices. An
+empty label with no icon also makes that child non-interactive.
+Detached segments have no standalone control behavior: they measure zero,
+paint nothing, and report unselected until admitted to a group.
 
-Each segment owns a meaningful per-segment surface: selected and unselected
-fills, state layers, and segment-local clipping for first/middle/last rounded
-corners. The segment does not own the shared stroke.
+Hidden children reserve a cell but paint nothing and cannot be activated.
+Gone children do not receive a cell. Neither visibility state renumbers logical
+indices or clears selection. With fewer than two non-gone children, interaction
+is disabled. Layout still services pending measure/layout requests for hidden
+and gone children as the base container contract requires. Geometry and corner
+coverage are based on non-gone cells, not on the highest selected bit.
 
-Selection is group-owned and represented by one `uint8_t selection_mask_`.
-With at most five segments, one bit per segment is sufficient.
+Because children are caller supplied, `mayHaveUnclippedChildren()` returns
+`true`, and custom paint traversal preserves normal unclipped/clipped grouping.
+The standard connected appearance uses clipped children. Explicitly selecting
+`ParentClipMode::kUnclipped` retains the framework's documented escape behavior,
+including bypassing this group's rounded mask; it is not a second segmented
+appearance policy.
 
-- In single-select mode, the normalized mask is either `0` or exactly one bit.
-- In multi-select mode, any subset of the low `segment_count()` bits is valid.
+### Selection and terminal notification
 
-The group does not duplicate that state on its children. Each child asks the
-group whether its bit is set.
+Only the low `segmentCount()` bits are valid. Single mode retains the lowest
+set bit; multiple mode retains any valid subset, including zero. Changing modes
+normalizes the current mask. Appending a child leaves its bit clear. Disabling
+or hiding a selected child preserves its bit.
 
-Single-select behavior is closed as follows:
+`selectedIndex()` returns the lowest selected logical index in either mode,
+or `-1`. `setSelectedIndex(-1)` clears selection; a valid index replaces the
+mask with that one bit in either mode. Other indices are ignored.
+`isSelected()` returns false for an invalid index. Setters, mode changes, add,
+and clear are silent: they update state and damage but emit no semantic hook
+or interactive event. Equal assignments are inert.
 
-1. programmatic `setSelectedIndex(-1)` and `setSelectionMask(0)` are allowed,
-   because construction and tests need an empty initial state,
-2. user interaction never clears the active segment by tapping it again,
-3. and any multi-bit mask written into a single-select group is normalized to
-   the lowest-numbered set bit.
+On an admitted, settled click, the child forwards to the group's
+`invokeChild()` and returns without further child access. The group verifies
+membership and current eligibility, then selects the invoked bit in single
+mode or toggles it in multiple mode. Reselecting the same single choice is
+inert. For a change, it commits the normalized mask and invalidates affected
+surfaces **before** calling `onSelectionChanged(old_mask, new_mask)`.
+The routing hook returns false for a non-member and true for a member even
+when that invocation is ineligible or leaves selection unchanged.
 
-Click handling is:
+That hook is the sole terminal application boundary. Its default implementation
+calls `triggerInteractiveChange()` exactly once. Overrides can replace this
+behavior or call the base implementation as their final action. No code in the
+child or group accesses either object after the hook: the callback can clear,
+detach, reconfigure, or destroy the group. A programmatic setter inside the
+callback is silent and its new state wins. There is no earlier invocation hook
+followed by more work on potentially destroyed widgets, and no second automatic
+event after a virtual application hook.
 
-1. `SegmentedButton::onClicked()` delegates to its owning group,
-2. the group calls `onSegmentInvoked(index)` first,
-3. the group computes the next normalized selection mask,
-4. if the mask changed, the group updates the affected child visuals,
-5. the group calls `onSelectionChanged(old_mask, new_mask)`,
-6. and the group emits one interactive-change event for itself through the
-   existing widget event dispatcher.
+The inherited child callback registration API still exists, but child clicks
+are handled by the group and do not dispatch child interactive-change events.
+Selection is not mirrored into `Widget::activated`; external activation state
+does not change the canonical selection mask.
 
-This matches the navigation-rail design pattern: virtual no-op hooks for
-semantic adapters, and no new stored callback object on each child.
+### Input, enabled state, and focus
 
-### Layout and Measurement
+The group is neither clickable nor focusable. Each eligible segment is an
+ordinary focus stop. Tab/directional navigation moves focus through the
+existing task policy; moving focus does not select. Enter/Space activates via
+the existing click controller. There is no roving-focus radio-group protocol,
+custom key-repeat timer, or auto-selection on arrow navigation in v1.
 
-Segmented buttons are always horizontal and never wrap.
+A segment is effectively enabled only when both it and its group are enabled.
+Disabling the group preserves individual child enabled flags, cancels pending
+input in the subtree through the core lifecycle, and invalidates descendants.
+Re-enabling restores eligibility only for individually enabled children. Check
+eligibility again at semantic settlement; hidden, gone, disabled, or detached
+segments cannot deliver a stale selection change. Use the existing shared
+gesture cancellation path, fixing that path with regression coverage if needed.
 
-Each segment resolves one inner content width from:
+Exact hit bounds are the cell rectangles, including their parts under the
+outer outline. Separator bands are non-clickable: override each child's sloppy
+touch bounds to equal its cell, preventing the generic 50-pixel expansion from
+bridging separators or adjoining choices. A cross-cell release never activates
+the other cell; cancellation follows the normal gesture policy. This exact-hit
+choice is a Roo exception to ordinary buttons' sloppy expansion. Surrounding
+padding does not itself enlarge a hit target; explicit parent sizing can.
 
-- minimum left and right padding of `12dp`,
-- optional leading icon slot,
-- optional selected-icon slot reservation,
-- one `8dp` gap between adjacent content elements,
-- and the measured width of one single-line label.
+### Tokens, content, and density
 
-The selected-icon reservation rule is closed explicitly because it affects
-layout stability.
+Add a shared private `segmented_button_tokens.h`, with no per-widget palette or
+density override. Use theme color roles and existing label-large typography.
+Defaults: 40 dp height, 12 dp horizontal padding per cell edge, 8 dp icon/text
+gap, 18 dp minimum icon slot, 1 dp outer outline/separator, full outer corners,
+zero margins between cells, and zero elevation. The group has no interactive
+state layer of its own.
 
-- If `showSelectedIcon()` is `false`, no check slot is reserved.
-- If `showSelectedIcon()` is `true` and the segment has label text, the segment
-  reserves one check-icon slot even while unselected.
-- If the segment has both icon and label, the selected check glyph reuses the
-  existing icon slot width.
-- If the segment is icon-only, the selected-icon feature is ignored and no
-  extra slot is reserved.
+| State | Fill | Content |
+| --- | --- | --- |
+| Enabled, unselected | Transparent | On-surface |
+| Enabled, selected | Secondary-container | On-secondary-container |
+| Disabled, unselected | Transparent | On-surface at 38% |
+| Disabled, selected | Secondary-container | On-surface at 38% |
 
-That guarantees selection changes do not alter natural width.
+The group outline and separators use outline when the group is enabled, and
+on-surface at 12% when it is disabled. Individual disabling changes that cell's
+content but leaves the shared outline uniform. This explicitly follows the
+token file's disabled outline role; the linked AndroidX implementation instead
+applies disabled alpha to outline. Both group and child disable automatic
+disabled tinting to avoid applying it twice. Alpha resolves against the current
+surface/backdrop through the shared compositor.
 
-The group uses equal-width segments. Let `n` be the segment count, `o` the
-`1dp` outer outline band, `s` the `1dp` separator band, and `w_i` the measured
-inner width of segment `i`. The natural group width is:
+Resolve selected state layers from on-secondary-container and unselected state
+layers from on-surface through the existing overlay hooks and theme opacities.
+Effective disabling suppresses hover/press/focus overlays. Selection supplies
+the semantic surface role without setting the generic activated flag. Ordinary
+hover, focus, and click feedback retain the shared lifecycle and fixed shape.
+
+The selected check option defaults to true. With label text, reserve one icon
+slot of width equal to the maximum of the 18 dp token, normal icon extents, and
+check extents. A selected check replaces a normal leading icon, or appears
+before text-only content. Reserve the same width and height in both states.
+With checks disabled, reserve only actual normal content. Icon-only segments
+keep their identity icon and use selected colors; they reserve no extra check
+slot. Empty content reserves no check slot. Mixed content forms are allowed.
+
+Center the currently visible content cluster; unselected text-only content is
+centered without a phantom leading glyph even though its natural width reserves
+the possible check. Selecting it changes content placement immediately, not
+the measured size. RTL reverses icon/text order. Use the shared text-span
+helper covering both advance and ink, including negative bearings. Icon slots
+cover anchor and painted horizontal extents; oversized artwork raises natural
+size rather than silently changing scale. Tight constraints clip all content
+to its allocated cell and the owner mask.
+
+Read density from `theme().material3Theme().density`. For signed level
+$d \in [-5,0]$, the nominal height is $\max(24,40+4d)$ dp. After scaling,
+raise height to the maximum content footprint plus 4 dp of clearance on each
+vertical edge. Text uses line height; icon/check footprint uses the existing
+button geometry convention for centered artwork, preserving asymmetric ink.
+Include both selected and normal content in that floor. Text, icon artwork,
+horizontal padding, gaps, and strokes do not shrink with density. Explicit
+constraints can clip below the natural floor. No per-child metric cache is
+introduced. Runtime theme/density changes use `requestLayoutDescending()` and
+`invalidateDescending()` as documented by the density design.
+
+### Measurement and integer allocation
+
+Suggested minimums remain cheap and non-measuring. Exact text and icon
+measurement occurs in `onMeasure()`. Let $n$ be the number of non-gone cells,
+$p$ the scaled horizontal padding, $c_i$ the reserved content width of cell
+$i$, $o=\mathrm{Scaled}(\mathrm{SmallNumber}(1))$ the fixed-point outline,
+and $s=\max(1,\lceil o\rceil)$ its integer separator allocation. For $n>0$:
 
 $$
-W_\text{natural} = 2o + (n - 1)s + n \cdot \max_i w_i
+W_\text{natural}=n\max_i(2p+c_i)+(n-1)s
 $$
 
-Natural group height is the spec height: `40dp`.
+Padding is measured from each cell boundary and already accommodates the outer
+stroke. Do not add another outer inset to the width: end-cell fills extend
+under the owner's rounded clip/outline. Natural height is the shared maximum
+of the density token and all state-independent content floors above.
 
-The group owns the stroke bands. Child segment bounds are therefore inset away
-from the outer outline and separated by explicit `1dp` vertical bands. Child
-paint never writes into those shared columns.
+Resolve parent width/height constraints first. For available width
+$W\ge(n-1)s$, distribute $A=W-(n-1)s$ pixels among cells: each gets
+$\lfloor A/n\rfloor$, and the first $A\bmod n$ logical cells receive one more
+pixel. Lay out in logical order, then mirror the complete allocation for RTL.
+Widths differ by at most one pixel, sum exactly to the available width, and
+never leave a trailing remainder gap. All cells occupy the full allocated
+height; the group alone clips outer corners.
 
-When the parent gives the group more width than its natural width, the group
-distributes the additional width evenly across all segments. When the parent
-forces the group narrower than natural width, the group still divides the
-available inner width evenly and child labels clip within their own content
-bounds. v1 does not add ellipsis state or horizontal scrolling.
+When $W<(n-1)s$, allocate empty child bounds and paint the clipped group outline
+only; omit separators and content. Zero width/height paints nothing. Use wide
+signed intermediates, clamp before narrowing dimensions, and never construct
+wrapped rectangles. Labels remain single-line, clipped without ellipsis.
 
-The Material spec's `48dp` target remains an application-layout concern, not a
-widget-local height increase. The widget reports a `40dp` natural height and is
-expected to live in surrounding padding or layout that satisfies the larger tap
-target when required, matching the current button practice.
+The figure's worked example uses three 96-pixel cells and two 1-pixel bands:
+$W=3\cdot96+2=290$, $H=40$. At $W=292$, logical cell widths become
+97, 97, and 96. These figures illustrate allocation, not measured label widths.
 
-### Visual Model and Theme Resolution
+### Rounded composition and damage
 
-The segmented-button family has one visual style in this design. There is no
-baseline-versus-expressive selector.
+The group reports a pill `BorderStyle` with the fixed-point outline and enables
+`clipsChildrenToRoundedBounds()`. Children report rectangular, outline-free
+surfaces. Transparent unselected fills must report that they do not fully cover
+bounds with opaque colors. The group reports a transparent background and does
+not claim an opaque rectangular exclusion. Theme surface inheritance supplies
+the resolved backdrop required by the existing direct-pixel renderer.
 
-Resolved defaults are:
+Use the current rounded-owner compositor for child pixels and the outer
+outline. It combines coverage and backdrop before emitting final colors;
+integer cell boundaries do not justify rounding the outer stroke to an integer.
+Do not independently draw an inset child pill and then overpaint its edge with
+a group stroke. Keep child overlays inside their cell and owner mask, with
+fixed geometry throughout click feedback.
 
-1. Typography uses the same Material 3 `label-large` role already used by
-   `material3::Button`.
-2. Unselected segments use transparent fill with `on-surface` content.
-3. Selected segments use `secondary-container` fill with
-   `on-secondary-container` content.
-4. The group outline and separators use `outline`.
-5. Disabled content and outline use the same `on-surface` alpha-composite
-   treatment already used by the Material 3 button family.
-6. Resting elevation is always zero.
-7. The outer group shape is fully rounded.
-8. First, middle, last, and only-segment positions resolve segment fill clips.
+Separator bands are additional group-owned foreground, not borders painted by
+both neighbors. Paint them from a `paintChildren()` override **after** delegating
+to `Container::paintChildren()`, preserving its child grouping. Re-enter the
+existing rounded owner scope for these disjoint bands, resolve the centered
+fixed-point stroke and the band's backdrop in one tiled draw, then register
+settled exclusions. This uses the full group-height context: ordinary
+`Container::paint()` receives an interior clip that excludes curved decoration
+areas and cannot by itself paint full-height separators. Delegate remaining
+surface clearing to the normal container path; its persistent decoration owns
+the outer outline. Reuse the core rounded-scope helpers; do not add a new
+rasterizer or per-instance clip storage.
 
-The group outline is a pill. Child fill shapes are the pill inset by the `1dp`
-stroke band.
+The drawing order inside a child is foreground content resolved with its
+background/state layer, then exclusions, then remaining surface/decorations.
+Never prefill a cell and subsequently draw its text over that fill. A dirty
+selection change invalidates affected cells; changes to geometry, visibility,
+direction, density, or group enabled state invalidate shared decoration and
+descendants. The rounded compositor can repaint additional clean contributors
+to settle fractional edges. Do not promise strictly cell-local framebuffer
+writes or suppress those repaints. Validate final-color write behavior as well
+as final screenshots, including on a contrasting ancestor backdrop.
 
-- only segment: full pill,
-- first segment: rounded on the logical leading edge,
-- middle segment: square rectangle,
-- last segment: rounded on the logical trailing edge.
+### Retained RAM and work
 
-Unlike `material3::Button`, segmented buttons do not morph shape during the
-click animation. The current overlay and press pipeline remains active, but the
-corner geometry stays fixed for the entire gesture.
+Let $P$ be pointer size, $V=\mathrm{sizeof}(\texttt{roo::string_view})$, and
+$A(T)$ round up to the relevant class alignment. Structural ceilings are:
 
-### Content Model and Selected Icon Policy
+- Child: $A(\mathrm{sizeof}(\texttt{SurfaceWidget})+V+2P)$ for label, icon,
+  and typed group link. No cached index, geometry, palette, or callback.
+- Group: $A(\mathrm{sizeof}(\texttt{Container})+5P+2)$ for five pointers,
+  one selection byte, and one packed count/mode/check/direction byte.
 
-The fixed content model is one non-owning `roo::string_view` label plus one
-optional `MonoIcon*`.
+On a typical 32-bit ABI with an 8-byte string view, these add at most 16 bytes
+per child and 24 bytes per group over the bases. A three-choice control costs
+the group **plus three child objects**, not just its live pointer count. Five
+pointer slots remain allocated even in an empty group. Borrowing avoids child
+heap allocation, not child RAM; adopted children also pay allocator overhead.
+Record actual host and target sizes instead of asserting an unmeasured absolute
+base size. Ordinary `Widget`, `SurfaceWidget`, `Container`, and `Button` gain no
+instance fields for this feature.
 
-The design deliberately does not add:
-
-- trailing icons,
-- per-segment custom selected icons,
-- or arbitrary child slots.
-
-The selected-icon policy is group-owned through one `showSelectedIcon` flag.
-That mirrors the Material guidance closely enough without putting another
-policy byte on every segment.
-
-Behavior is:
-
-1. text-only selected segments prepend the shared check glyph,
-2. icon-plus-text selected segments replace the normal icon with the shared
-   check glyph,
-3. icon-only segments keep their existing icon and rely on container/content
-   color change for selected emphasis,
-4. and all selected-icon paint uses the same resolved content color as the
-   current selected state.
-
-The design does not add runtime validation that forbids mixed text-only,
-icon-only, and icon-plus-text segments in one group. The Material guidance is
-still correct, but the geometry already supports all three layouts and the repo
-preference is to avoid policy fields that do not change paint or interaction.
-
-### Paint Ownership and Invalidation
-
-The shared-band ownership model is the most important implementation detail.
-
-The group paints after its children and owns only the pixels that are shared
-across segments:
-
-1. the outer `1dp` stroke band,
-2. the `1dp` separator bands,
-3. and no interior fill.
-
-Each segment paints only inside its own fill bounds:
-
-1. selected or unselected fill,
-2. icon and text content,
-3. state-layer overlay inside the same clip.
-
-This yields the repaint consequences the repo wants:
-
-1. a dirty segment repaint stays segment-local because the child bounds exclude
-   the group-owned stroke columns,
-2. an invalidated group repaint redraws the shared outline and separator bands
-   after child paint,
-3. and no pixel is written twice with different colors during one pass.
-
-The group background remains transparent. There is no second container fill at
-the group level behind the child segment fills.
-
-### RTL and Logical Geometry
-
-The component is logically ordered.
-
-RTL affects:
-
-- first versus last segment corner rounding,
-- the meaning of leading and trailing padding,
-- and icon-plus-text ordering inside the segment.
-
-Selection bit positions stay index-based, not direction-based. Segment `0` is
-the first child added to the group; RTL changes its visual placement, not its
-bit position or callback index.
-
-### Relationship to the Existing Button Family
-
-The segmented-button family does not subclass `material3::Button`.
-
-That decision is closed for two reasons:
-
-1. `material3::Button` is a momentary action widget with size and shape-morph
-   semantics that do not fit grouped selection.
-2. Adding group ownership, selected state, and shared-edge paint behavior to
-   `material3::Button` would burden every button instance with fields and
-   branches that only segmented buttons need.
-
-If implementation needs shared helpers for disabled compositing or typography,
-those helpers should move into a private internal utility file used by both
-families. Public inheritance is the wrong reuse mechanism here.
-
-### RAM Budget
-
-The important accounting rule is structural: segmented-button state is paid by
-segmented buttons only, and the canonical selection state lives once per group.
-
-Target host-side size-budget tests are:
-
-1. `SegmentedButton`:
-   `sizeof(BasicSurfaceWidget) + sizeof(roo::string_view) + 2 * sizeof(void*) + 8`
-2. `SegmentedButtonGroup`:
-   `sizeof(Container) + kMaxSegments * sizeof(WidgetRef) + 8`
-
-Those tests protect the design intent:
-
-1. the child pays only for label storage, optional icon pointer, and owner
-   linkage,
-2. the group pays once for child references and the selection mask,
-3. and the landed `material3::Button` type stays unchanged.
+Index lookup is at most five pointer comparisons. Selection updates and layout
+visit at most five children. Repeated owner lookups can make a pass quadratic
+in the bounded count (at most 25 comparisons), a small cost relative to glyph
+measurement/rasterization. Text work is linear in visited label bytes/glyphs;
+painting also depends on visible pixels. Keep glyphs/tokens in shared flash.
+Component measure, paint, feedback, and borrowed add/clear introduce no heap
+allocation. Report existing renderer, callback-registry, and core input-path
+allocations separately rather than claiming the complete UI is allocation-free.
 
 ## Proposed API
 
-### Core Types
+Add matching `material3/button/segmented_button.h` and `.cpp`. The sketch shows
+the consumer contract and all new retained state; routine surface, input,
+child-enumeration, and layout overrides specified above are omitted.
 
 ```cpp
-namespace roo_windows {
-namespace material3 {
+namespace roo_windows::material3 {
 
-enum class SegmentedButtonSelectionMode : uint8_t {
-  kSingle,
-  kMultiple,
-};
+/// Selects mutually exclusive or independent choices.
+enum class SegmentedButtonSelectionMode : uint8_t { kSingle, kMultiple };
 
 class SegmentedButtonGroup;
 
-class SegmentedButton : public BasicSurfaceWidget {
+/// One choice whose selection belongs to its attached segmented group.
+class SegmentedButton : public SurfaceWidget {
  public:
+  /// Borrows @p label and @p icon; detached segments are inert.
   explicit SegmentedButton(ApplicationContext& context,
                            roo::string_view label = {},
                            const MonoIcon* icon = nullptr);
 
+  /// Returns the borrowed label.
   roo::string_view label() const;
+
+  /// Borrows replacement text and requests layout and repaint.
   void setLabel(roo::string_view label);
 
+  /// Returns the borrowed icon, or nullptr.
   const MonoIcon* icon() const;
+
+  /// Borrows replacement artwork; nullptr clears it.
   void setIcon(const MonoIcon* icon);
 
+  /// Queries the owner's canonical selection; false when detached.
   bool selected() const;
 
-  bool isClickable() const override;
-  Dimensions getSuggestedMinimumDimensions() const override;
-  void paint(PaintContext& ctx) const override;
-
  protected:
+  /// Forwards a settled invocation to the group, then immediately returns.
   void onClicked() override;
 
  private:
   friend class SegmentedButtonGroup;
 
-  enum class Position : uint8_t {
-    kOnly,
-    kFirst,
-    kMiddle,
-    kLast,
-  };
-
-  void attachToGroup(SegmentedButtonGroup* group, uint8_t index,
-                     Position position);
-  void detachFromGroup();
-  void setPositionFromGroup(Position position);
-
   roo::string_view label_;
   const MonoIcon* icon_;
-  SegmentedButtonGroup* group_;
-  uint8_t index_ : 3;
-  uint8_t position_ : 2;
+  SegmentedButtonGroup* group_ = nullptr;
 };
 
+/// A fixed-capacity connected choice control owning selection and layout.
 class SegmentedButtonGroup : public Container {
  public:
+  /// Maximum structural child count, including hidden and gone children.
   static constexpr uint8_t kMaxSegments = 5;
 
+  /// Creates an empty group, with checks enabled and left-to-right layout.
   explicit SegmentedButtonGroup(
       ApplicationContext& context,
-      SegmentedButtonSelectionMode mode =
-          SegmentedButtonSelectionMode::kSingle);
+      SegmentedButtonSelectionMode mode = SegmentedButtonSelectionMode::kSingle);
 
+  /// Detaches borrowed children and releases adopted children through the core.
+  ~SegmentedButtonGroup() override;
+
+  /// Returns the active selection rule.
   SegmentedButtonSelectionMode selectionMode() const;
+
+  /// Changes the rule and silently normalizes existing selection.
   void setSelectionMode(SegmentedButtonSelectionMode mode);
 
+  /// Returns whether labeled selections display the shared check glyph.
   bool showSelectedIcon() const;
+
+  /// Changes check reservation and requests layout and repaint.
   void setShowSelectedIcon(bool show);
 
+  /// Returns the group's logical layout direction.
+  LayoutDirection layoutDirection() const;
+
+  /// Mirrors geometry and content without renumbering selection bits.
+  void setLayoutDirection(LayoutDirection direction);
+
+  /// Returns the structural child count.
   int segmentCount() const;
 
+  /// Returns false for indices outside the structural child array.
   bool isSelected(int index) const;
 
+  /// Returns the lowest selected index, or -1, in either mode.
   int selectedIndex() const;
+
+  /// Selects one index silently; -1 clears, other invalid indices are ignored.
   void setSelectedIndex(int index);
 
+  /// Returns the canonical normalized mask.
   uint8_t selectionMask() const;
+
+  /// Silently masks absent bits and enforces the active selection rule.
   void setSelectionMask(uint8_t mask);
 
+  /// Borrows an unattached same-context child; false on invalid input/capacity.
   bool add(SegmentedButton& segment);
+
+  /// Adopts a child; failure destroys the supplied owned argument.
   bool add(std::unique_ptr<SegmentedButton> segment);
+
+  /// Detaches all children and silently clears selection.
   void clear();
 
-  void paint(PaintContext& ctx) const override;
+  /// Allows caller-supplied children to use the framework's unclipped mode.
+  bool mayHaveUnclippedChildren() const override { return true; }
+
+  /// Handles member invocations; callers return without touching the child.
+  bool invokeChild(Widget& child) override;
 
  protected:
-  int getChildrenCount() const override;
-  const Widget& getChild(int idx) const override;
-  Widget& getChild(int idx) override;
-  Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
-  void onLayout(bool changed, const Rect& rect) override;
-
-  virtual void onSegmentInvoked(int index) {}
-  virtual void onSelectionChanged(uint8_t old_mask, uint8_t new_mask) {}
+  /// Terminal interactive-change hook; default dispatches the group callback.
+  virtual void onSelectionChanged(uint8_t old_mask, uint8_t new_mask);
 
  private:
-  void handleSegmentClick(SegmentedButton& segment);
-  void propagatePositions();
+  friend class SegmentedButton;
+
+  int indexOf(const SegmentedButton& segment) const;
   uint8_t normalizeMask(uint8_t mask) const;
 
-  WidgetRef segments_[kMaxSegments];
-  uint8_t selection_mask_;
+  SegmentedButton* segments_[kMaxSegments] = {};
+  uint8_t selection_mask_ = 0;
   uint8_t segment_count_ : 3;
   uint8_t mode_ : 1;
   uint8_t show_selected_icon_ : 1;
+  uint8_t direction_ : 1;
 };
 
-}  // namespace material3
-}  // namespace roo_windows
+}  // namespace roo_windows::material3
 ```
 
-### API Notes
+Representative consumer setup uses borrows and the existing callback registry:
 
-1. `selectionMask()` is the canonical selection state for both modes.
-2. `selectedIndex()` is a convenience view of the canonical mask and returns
-   `-1` when no bit is selected.
-3. In single-select mode, `setSelectionMask()` keeps only the lowest set bit.
-4. `setSelectedIndex(-1)` clears the current selection programmatically.
-5. `add()` returns `false` when the group already owns five segments.
-6. `showSelectedIcon()` affects only segments with label text.
-7. The public API does not expose per-segment callbacks.
-8. The public API does not reinterpret or extend the existing
-   `material3::Button` symbol.
+```cpp
+// Declare borrowed segments first so they outlive the group.
+material3::SegmentedButton day(context, "Day");
+material3::SegmentedButton week(context, "Week");
+material3::SegmentedButton month(context, "Month");
+material3::SegmentedButtonGroup view(context);
+CHECK(view.add(day));
+CHECK(view.add(week));
+CHECK(view.add(month));
+view.setSelectedIndex(1);
+view.setOnInteractiveChange([&view, &controller]() {
+  controller.setScheduleView(view.selectedIndex());
+});
+// Attach view through the application's normal layout API; all objects above
+// remain alive while that layout borrows them.
+```
 
 ## Implementation Plan
 
-Implementation work for these phases follows the repo-local
-[roo_windows widget authoring instruction](../../../.github/instructions/roo-windows-widget-authoring.instructions.md).
+Follow the [shared C++ instructions](../../../.github/instructions/general-cpp-code-authoring-instructions.md),
+[widget instructions](../../../.github/instructions/roo-windows-widget-authoring.instructions.md),
+and [example instructions](../../../.github/instructions/embedded-example-authoring.instructions.md).
+Run validation from the canonical `roo_windows` repository. Each phase maps to
+one commit. Target names marked new must be added with their phase. Keep the
+public widget out of the header until its full contract works; do not publish
+declarations or warning-only click/paint stubs as an intermediate feature.
 
-### Phase 1: Declare the Segmented-Button Types and Size Budgets
+### Phase 1: Private geometry and rounded-band rendering proof
 
-Code slice:
+Add private tokens and geometry helpers for content reservation, density,
+integer allocation, and direction. Reuse existing text/icon helpers, extracting
+only genuinely shared operations without changing ordinary button behavior.
+Add an internal rendering fixture using the current rounded owner compositor
+with rectangular child surfaces and full-height separator bands. Keep the
+fixture out of the public API and document its geometry beside the helpers.
 
-1. Add `SegmentedButtonSelectionMode`, `SegmentedButton`, and
-   `SegmentedButtonGroup` declarations.
-2. Add fixed-capacity child storage to the group API.
-3. Add pointer-size-aware size-budget tests for both public types.
-4. Leave all existing Material 3 button and selection widgets untouched.
-
-Proposed commit message:
-
-> Material 3 segmented buttons Phase 1: declare the widget family.
->
-> Add `SegmentedButton` and `SegmentedButtonGroup` declarations together with
-> size-budget tests that keep grouped-selection state out of
-> `material3::Button`.
-
-Validation: add `material3_segmented_button_test` and run
-`bazel test //:material3_segmented_button_test` from the `roo_windows`
-workspace.
-
-### Phase 2: Implement Segment Measurement and Content Paint
-
-Code slice:
-
-1. Implement token-backed segment measurement for text-only, icon-only, and
-   icon-plus-text content.
-2. Implement selected-icon slot reservation so selection does not alter natural
-   width.
-3. Implement per-position segment fill clips and content paint.
-4. Reuse the existing Material 3 overlay pipeline without adding a new ripple
-   subsystem.
+Create `//:material3_segmented_button_geometry_test` and
+`//:material3_segmented_button_rendering_test` (new). Cover 0–5 cells, all six
+densities, zoom 75/100/150/200, odd remainders, width below separator capacity,
+zero bounds, negative text bearings, oversized/asymmetric icon extents, and
+stable selected/check widths and heights. Instrument final-color writes and
+test separator/outline junctions against a contrasting backdrop. Exit requires
+correct rounded coverage with no intermediate-color writes or retained clip
+state. Any missing compositor capability is fixed in the owning core with
+rounded-child regression tests, not bypassed with a separate widget rasterizer.
+Run both new targets and `//:rounded_child_clip_test` /
+`//:rounded_owner_effect_test` from this repository with `bazel test`.
 
 Proposed commit message:
 
-> Material 3 segmented buttons Phase 2: paint individual segments.
+> Material 3 segmented buttons design Phase 1: validate geometry and shared edges.
 >
-> Implement segment measurement and paint, including selected-icon reservation,
-> fixed `40dp` height, and first/middle/last shape clips.
+> Add private segmented tokens, content and allocation helpers, and rendering
+> fixtures that verify rounded owner clipping and separator composition.
 
-Validation: run `bazel test //:material3_segmented_button_test` with focused
-cases for content permutations, measurement stability, and disabled-state
-colors.
+### Phase 2: Complete public control and focused examples
 
-### Phase 3: Implement Group Layout, Shared Bands, and Selection Semantics
+Add both public types, fixed raw-pointer storage, ownership cleanup, silent
+selection setters, terminal callback routing, and normal input/focus behavior.
+Add `docs/material3_segmented_buttons.md` (new) covering lifetimes, disabled and
+visibility behavior, exact hit regions, and RTL. Add focused runnable examples
+at `examples/material3/segmented_buttons/schedule_view/schedule_view.ino` and
+`examples/material3/segmented_buttons/event_filters/event_filters.ino` (new),
+teaching view selection and multiple filters respectively. Use self-contained
+hardware and `ROO_TESTING` setup; keep the appearance matrix in tests.
 
-Code slice:
+Create `//:material3_segmented_button_test` and
+`//:material3_segmented_button_golden_test` (new). Test mask normalization,
+invalid indices, modes, add failures, adopted/borrowed clear/destruction,
+context shutdown, hidden/gone cells, and effective disabled state. Use real
+task input and completed refreshes for slow/quick clicks, key activation,
+cross-cell release, separator hits, scroll takeover, competing input, and
+pending teardown. Verify callback count, silent setters/reselection, callback
+reconfiguration, and callback destruction. Capture light/dark, RTL, checks,
+icon-only, disabled, hover, focus, held/terminal press, and discontiguous
+multiple selections. Check removal/movement restores the old backdrop.
 
-1. Implement fixed-capacity add / clear behavior and child enumeration.
-2. Implement equal-width layout and RTL-aware first/last propagation.
-3. Implement group-owned outer stroke and separator-band paint.
-4. Implement single-select and multi-select click semantics on the canonical
-   selection mask.
-5. Implement group-level virtual hooks and interactive-change dispatch.
+Run all four new targets. Build the two new leaf targets
+`//examples/material3/segmented_buttons/schedule_view:schedule_view` and
+`//examples/material3/segmented_buttons/event_filters:event_filters`. Run
+`//:material3_button_test`, `//:rounded_child_clip_test`, and
+`//:rounded_owner_effect_test` for reused paths; add focused core regressions
+for any shared input/rendering fix made in this phase.
 
 Proposed commit message:
 
-> Material 3 segmented buttons Phase 3: add grouped layout and selection.
+> Material 3 segmented buttons design Phase 2: add connected selection controls.
 >
-> Implement `SegmentedButtonGroup` layout, shared-band paint ownership, and
-> single-select / multi-select interaction semantics.
+> Add complete group and segment APIs, bounded ownership, safe selection
+> notification, input and rendering coverage, usage documentation, and focused
+> single-choice and multiple-choice examples.
 
-Validation: run `bazel test //:material3_segmented_button_test` and add golden
-coverage through `bazel test //:material3_segmented_button_golden_test` for
-shared-outline ownership, selected and unselected colors, and RTL geometry.
+### Phase 3: Embedded acceptance and status update
 
-### Phase 4: Add Example Coverage and Migration Documentation
+Create `//:material3_segmented_button_resource_test` (new) and a target ABI/size
+probe. Enforce the structural size ceilings, no added fields on ordinary base
+types, and zero component-specific allocations during repeated measurement,
+paint, feedback, and borrowed add/clear. Report core renderer and callback
+setup allocations separately. Record object sizes, 2/3/5-child totals,
+`.text`/`.rodata`/`.data`/`.bss`, static stack usage, and compiler/flags alongside
+the design, following the [target baseline](../../material3_target_baseline.md).
 
-Code slice:
-
-1. Add an example under `examples/material3/segmented_buttons/` that shows one
-   single-select and one multi-select group.
-2. Add example states for text-only, icon-plus-text, and icon-only groups.
-3. Add documentation links from adjacent Material 3 examples or docs where
-   relevant.
+Run geometry/rendering/golden targets at all four zoom factors and six density
+levels. Compile a focused example for the supported embedded target without
+uploading firmware. Record manual emulator/touchscreen checks separately from
+automated evidence. Update the status index and roadmap only after the defined
+scope passes; move the design to implemented and repair links at that point.
 
 Proposed commit message:
 
-> Material 3 segmented buttons Phase 4: add examples and final coverage.
+> Material 3 segmented buttons design Phase 3: record embedded acceptance.
 >
-> Add a Material 3 segmented-buttons example and complete the focused visual
-> coverage for grouped outline, separator, and selection behavior.
-
-Validation: run `bazel test //:material3_segmented_button_test
-//:material3_segmented_button_golden_test` and build the segmented-buttons
-example in the emulation workflow.
+> Add allocation and ABI gates, target section and stack reports, visual
+> acceptance evidence, and status updates for the completed component.
 
 ## Testing Plan
 
-Testing should cover the component at three levels.
+Geometry units, write-instrumented rendering fixtures, actual task input,
+deterministic goldens, ownership/callback lifetime tests, example builds, and
+host/target resource probes cover complementary contracts. Phase sections own
+the detailed cases and targets. Screenshots alone do not prove absence of
+intermediate framebuffer colors or safe callback destruction.
 
-1. Unit tests for API and state behavior:
-   selection-mask normalization, `selectedIndex()` behavior, add / clear bounds,
-   click semantics for both modes, and size-budget assertions.
-2. Measurement and layout tests:
-   equal-width distribution, selected-icon width reservation, `40dp` natural
-   height, text-only versus icon-bearing widths, and RTL first/last geometry.
-3. Golden tests:
-   unselected, selected, disabled, hovered, and pressed states; outer-stroke
-   and separator ownership; text-only and icon-plus-text layouts; and one
-   multi-select example with discontiguous selected segments.
-
-The focused validation targets are:
-
-- `bazel test //:material3_segmented_button_test`
-- `bazel test //:material3_segmented_button_golden_test`
+This documentation review validates relative links, figure structure and
+bounds, and a whitespace-clean diff. It does not establish implementation,
+performance, accessibility, or physical touchscreen acceptance.
 
 ## Caveats
 
+Ordinary focus stops do not provide platform radio-group accessibility
+semantics. Compact density and exact cell hit bounds do not guarantee a 48 dp
+touch target. Icon-only selection and uniform shared outline colors are
+explicit Roo choices. Fractional rounded coverage can repaint more than the
+changed cell; the design prioritizes final-color correctness over an unsupported
+promise of strictly local writes.
+
 ### Rejected Alternatives
 
-#### Extend `material3::Button` with Group and Selected State
+#### Add selection fields to ordinary Button or subclass it unchanged
 
-This was rejected because it would add grouped-selection state, shared-edge
-paint branches, and group-owner linkage to every Material 3 button instance.
-That violates the repo's pay-for-what-you-use rule and still leaves the shared
-outline ownership problem unsolved.
+Ordinary buttons already support disabling shape morphing and overriding
+geometry, so inheritance is technically possible. Their private content/color
+path nevertheless lacks this group's selected check reservation, RTL content,
+and selection palette. Extending that API solely for this family adds coupling
+and unused size/variant state. A direct surface with shared metric helpers
+keeps the [storage contract](#retained-ram-and-work) explicit.
 
-#### Render the Entire Control as One Monolithic Widget
+#### One childless segmented widget
 
-This was rejected because it would force one large widget to reimplement:
+A monolithic widget can save child base storage, but must implement logical
+focus stops, per-cell gesture identities, state layers, and click settlement.
+Real children reuse those existing behaviors. This is a RAM-versus-complexity
+tradeoff, not a claim that composition is smaller.
 
-- per-segment pressed and focused state,
-- per-segment hit testing,
-- and per-segment overlay ownership.
+#### Overlapping child outlines and separate rounded child fills
 
-Child widgets already solve those problems cleanly. The fixed-capacity group
-plus compact child widgets is the smaller long-term design.
+These resemble AndroidX's overlapping row, but conflict with Roo's direct
+framebuffer constraints and complicate fractional edge composition. The
+[rounded owner model](#rounded-composition-and-damage) gives one owner to the
+outline and separators and uses the existing compositor for coverage.
 
-#### Treat Expressive Connected Button Groups as the Same API
+#### Dynamic child vector or cached child positions
 
-This was rejected because the Material spec has already split the two families.
-Segmented buttons are the legacy connected-choice surface; expressive connected
-button groups are a newer visual system and deserve their own design and token
-surface.
-
-#### Use a Heap-Backed Dynamic Child Vector
-
-This was rejected because the component spec already closes the useful range at
-five segments. A fixed-capacity child array gives the same product surface with
-clearer RAM bounds and no heap dependency on `add()`.
+Two through five choices justify an eager five-pointer array (20 bytes on a
+32-bit target), avoiding vector capacity/allocation behavior. Bounded scans
+replace cached child indices and shape fields; the typed owner pointer remains
+necessary for safe child queries. `WidgetRef` storage is prohibited by current
+ownership instructions, independently of this size tradeoff.
 
 ## Future Work
 
-1. Add a separate expressive connected button group family instead of trying to
-   evolve this segmented-button API in place.
-2. Add density tokens if a concrete product needs the `40dp - 4dp * n`
-   condensed heights from the Material spec.
-3. Add optional product-level appearance overrides through one shared const
-   appearance pointer if a real customization need appears that theme tokens do
-   not already cover.
+- Expressive connected button groups as a separate family.
+- Platform accessibility adapters when the framework exposes an integration
+  surface, and any roving-focus policy as a separately specified behavior.
+- Check/content transition animation through the shared animation registry.
+- Product appearance or density overrides backed by a concrete consumer.
