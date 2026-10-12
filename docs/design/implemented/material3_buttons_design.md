@@ -549,6 +549,13 @@ buttons scale their border in sixteenths of a pixel, retaining 0.75 px at 75%
 and 1.5 px at 150% zoom instead of truncating to whole pixels.
 
 Button geometry should be token-backed and shared by variant family.
+The protected `resolveBorderStyle(pressed, progress)` and
+`resolveContentBounds(bounds)` hooks let specialized buttons supply asymmetric
+corners and content placement while retaining the shared surface painter and
+click animation. Their ordinary-button defaults preserve the existing shape
+and full content rectangle. Text measurement and painting center the union of
+glyph ink and advance, so negative bearings and right overhangs participate in
+natural width instead of being clipped by an advance-only slot.
 
 Unlike the earlier draft, this design should expose the common Material 3
 geometry selectors directly in the widget API instead of forcing them through

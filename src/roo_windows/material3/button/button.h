@@ -165,10 +165,16 @@ class Button : public SurfaceWidget {
   /// Tracks press transitions to drive the corner-radius morph animation.
   void notifyStateChanged(uint16_t state_diff) override;
 
- private:
-  // Resolves geometry for either the current sample or a previous one.
-  BorderStyle resolveBorderStyle(bool pressed, float progress) const;
+  /// Resolves the current or sampled border geometry for button animation.
+  /// Subclasses may vary corners without replacing the surface painter.
+  virtual BorderStyle resolveBorderStyle(bool pressed, float progress) const;
 
+  /// Places content inside @p bounds, leaving ordinary buttons unchanged.
+  /// The returned rectangle must stay within the surface; the common painter
+  /// clears the remaining foreground area through its normal surface path.
+  virtual Rect resolveContentBounds(const Rect& bounds) const;
+
+ private:
   void paintWithCanvas(const Canvas& canvas) const;
 
   // Content color for label and icon, resolved against the active theme.

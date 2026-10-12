@@ -44,6 +44,13 @@ const ButtonGeometryTokens& ButtonGeometryTokensFor(ButtonSize size) {
   return kButtonGeometryTokens[static_cast<uint8_t>(size)];
 }
 
+roo_display::Box ButtonTextHorizontalExtents(
+    const roo_display::GlyphMetrics& metrics) {
+  const roo_display::Box& ink = metrics.screen_extents();
+  return roo_display::Box(std::min<int>(0, ink.xMin()), 0,
+                          std::max<int>(metrics.advance() - 1, ink.xMax()), 0);
+}
+
 // Measures the content block without widget padding. For icons, keep at least
 // the token slot size so the size tables remain stable even if the concrete
 // drawable is smaller than the Material 3 target.
@@ -59,8 +66,9 @@ ButtonContentMetrics ResolveButtonContentMetrics(roo::string_view label,
   int16_t text_width = 0;
   int16_t text_height = 0;
   if (!label.empty()) {
-    text_width =
-        font.getHorizontalStringMetrics(label, style.fontOptions()).advance();
+    text_width = ButtonTextHorizontalExtents(font.getHorizontalStringMetrics(
+                                                 label, style.fontOptions()))
+                     .width();
     text_height = style.lineHeight();
   }
   int16_t icon_slot_width = 0;

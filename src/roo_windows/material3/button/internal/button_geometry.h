@@ -1,5 +1,6 @@
 #pragma once
 
+#include "roo_display/font/font.h"
 #include "roo_windows/material3/button/button.h"
 
 namespace roo_windows::material3::internal {
@@ -23,6 +24,10 @@ struct ButtonContentMetrics {
   int16_t content_width;
   int16_t content_height;
 };
+
+/// Returns the horizontal span containing both text advance and painted ink.
+roo_display::Box ButtonTextHorizontalExtents(
+    const roo_display::GlyphMetrics& metrics);
 
 /// Returns the shared tokens for @p size.
 const ButtonGeometryTokens& ButtonGeometryTokensFor(ButtonSize size);

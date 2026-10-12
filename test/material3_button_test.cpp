@@ -9,7 +9,9 @@
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/measure_spec.h"
 #include "roo_windows/material3/button/button.h"
+#include "roo_windows/material3/button/internal/button_geometry.h"
 #include "roo_windows/material3/internal/elevation.h"
+#include "roo_windows/material3/typography.h"
 
 namespace roo_windows {
 namespace material3 {
@@ -92,6 +94,73 @@ class FinalFrameRecordingButton : public Button {
  private:
   mutable uint8_t radius_at_last_paint_ = 0;
 };
+
+class AsymmetricButton final : public Button {
+ public:
+  using Button::Button;
+
+  Rect contentBoundsForTest(const Rect& bounds) const {
+    return resolveContentBounds(bounds);
+  }
+
+ protected:
+  BorderStyle resolveBorderStyle(bool pressed, float progress) const override {
+    BorderStyle base = Button::resolveBorderStyle(pressed, progress);
+    return BorderStyle(base.top_left_corner_radius(), 4, 4,
+                       base.bottom_left_corner_radius(), base.outline_width());
+  }
+
+  Rect resolveContentBounds(const Rect& bounds) const override {
+    return Rect(bounds.xMin() + 3, bounds.yMin(), bounds.xMax() - 1,
+                bounds.yMax());
+  }
+};
+
+// Verifies that shared button painting and border resolution honor subclass
+// geometry without adding fields or changing ordinary button defaults.
+TEST(Material3Button, ProtectedGeometryHooksPreserveOrdinaryDefaults) {
+  roo_scheduler::SchedulingService scheduler;
+  Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
+  AsymmetricButton split_segment(context, "Run");
+  Button ordinary(context, "Run");
+  split_segment.layout(Rect(0, 0, 79, 39));
+  ordinary.layout(Rect(0, 0, 79, 39));
+
+  EXPECT_EQ(4, split_segment.getBorderStyle().top_right_corner_radius());
+  EXPECT_EQ(4, split_segment.getBorderStyle().bottom_right_corner_radius());
+  EXPECT_GT(ordinary.getBorderStyle().top_right_corner_radius(), 4);
+  EXPECT_EQ(Rect(3, 0, 78, 39),
+            split_segment.contentBoundsForTest(Rect(0, 0, 79, 39)));
+  split_segment.setPressed(true);
+  EXPECT_EQ(4, split_segment.getBorderStyle().top_right_corner_radius());
+}
+
+// Verifies that natural text width contains both advance and ink when a glyph
+// has a negative left bearing or extends beyond its advance.
+TEST(Material3Button, TextMeasurementIncludesOverhangingInk) {
+  roo_scheduler::SchedulingService scheduler;
+  Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
+  const TextStyle& style = text_style_label_large();
+  const roo_display::Font& font = style.font();
+  bool found_overhang = false;
+  for (char letter = '!'; letter <= '~'; ++letter) {
+    char label[] = {letter, '\0'};
+    roo_display::GlyphMetrics glyph =
+        font.getHorizontalStringMetrics(label, style.fontOptions());
+    roo_display::Box ink = glyph.screen_extents();
+    if (ink.xMin() >= 0 && ink.xMax() < glyph.advance()) continue;
+    found_overhang = true;
+    Button button(context, label);
+    int measured =
+        internal::ResolveButtonContentMetrics(label, nullptr, button.size())
+            .text_width;
+    EXPECT_EQ(internal::ButtonTextHorizontalExtents(glyph).width(), measured);
+    EXPECT_GE(measured, glyph.advance());
+  }
+  EXPECT_TRUE(found_overhang);
+}
 
 // Verifies that a default button comes up with the intended Material 3 visual
 // variant and geometry selectors, while preserving the supplied label.

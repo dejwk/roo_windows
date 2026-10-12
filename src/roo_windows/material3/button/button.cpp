@@ -17,6 +17,23 @@ using roo_display::StringViewLabel;
 
 namespace roo_windows {
 namespace material3 {
+namespace {
+
+// Align the complete text footprint, including ink outside its advance box.
+class ButtonLabel final : public StringViewLabel {
+ public:
+  using StringViewLabel::StringViewLabel;
+
+  roo_display::Box anchorExtents() const override {
+    roo_display::Box original = StringViewLabel::anchorExtents();
+    roo_display::Box horizontal =
+        internal::ButtonTextHorizontalExtents(metrics());
+    return roo_display::Box(horizontal.xMin(), original.yMin(),
+                            horizontal.xMax(), original.yMax());
+  }
+};
+
+}  // namespace
 
 Button::Button(ApplicationContext& context, roo::string_view label,
                ButtonVariant variant)
@@ -128,6 +145,8 @@ BorderStyle Button::resolveBorderStyle(bool pressed, float progress) const {
       pressed, progress, {width(), height()});
 }
 
+Rect Button::resolveContentBounds(const Rect& bounds) const { return bounds; }
+
 void Button::onClickAnimationChanged(float previous_progress) {
   borderStyleChanged(resolveBorderStyle(isPressed(), previous_progress));
 }
@@ -179,7 +198,26 @@ Dimensions Button::onMeasure(WidthSpec width, HeightSpec height) {
 void Button::paint(PaintContext& ctx) const { paintWithCanvas(ctx.canvas()); }
 
 void Button::paintWithCanvas(const Canvas& canvas) const {
-  Rect b = bounds();
+  Rect surface = bounds();
+  Rect b = resolveContentBounds(surface);
+  if (b.empty()) {
+    canvas.clearRect(surface);
+    return;
+  }
+  if (surface.xMin() < b.xMin()) {
+    canvas.clearRect(surface.xMin(), surface.yMin(), b.xMin() - 1,
+                     surface.yMax());
+  }
+  if (b.xMax() < surface.xMax()) {
+    canvas.clearRect(b.xMax() + 1, surface.yMin(), surface.xMax(),
+                     surface.yMax());
+  }
+  if (surface.yMin() < b.yMin()) {
+    canvas.clearRect(b.xMin(), surface.yMin(), b.xMax(), b.yMin() - 1);
+  }
+  if (b.yMax() < surface.yMax()) {
+    canvas.clearRect(b.xMin(), b.yMax() + 1, b.xMax(), surface.yMax());
+  }
   Color content = resolveContentColor();
   if (label_.empty() && !hasIcon()) {
     canvas.clearRect(b);
@@ -188,9 +226,8 @@ void Button::paintWithCanvas(const Canvas& canvas) const {
   const TextStyle& style = text_style_label_large();
   const roo_display::Font& font = style.font();
   if (!hasIcon()) {
-    canvas.drawTiled(
-        StringViewLabel(label_, font, content, style.fontOptions()), b,
-        kCenter | kMiddle);
+    canvas.drawTiled(ButtonLabel(label_, font, content, style.fontOptions()), b,
+                     kCenter | kMiddle);
     return;
   }
   MonoIcon ic = *icon_;
@@ -201,7 +238,7 @@ void Button::paintWithCanvas(const Canvas& canvas) const {
   }
   // Center the icon+label cluster as a single block so size-dependent icon
   // slots do not bias the text away from the visual center.
-  StringViewLabel l(label_, font, content, style.fontOptions());
+  ButtonLabel l(label_, font, content, style.fontOptions());
   internal::ButtonContentMetrics metrics =
       internal::ResolveButtonContentMetrics(
           label_, icon_, size(),
