@@ -134,7 +134,9 @@ class AppBar : public Material3Container {
   /// Returns the non-owning title text view.
   roo::string_view title() const { return title_widget_.text(); }
 
-  /// Replaces the non-owning subtitle text view.
+  /// Adds secondary context under the title using a borrowed one-line view.
+  /// Small bars retain their 64dp height; flexible bars use their expanded
+  /// subtitle height. The backing text must outlive the view.
   void setSubtitle(roo::string_view subtitle);
 
   /// Returns the non-owning subtitle text view.

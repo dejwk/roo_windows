@@ -105,6 +105,8 @@ class PoolOverview : public FlexLayout {
     // A small app bar is the recommended choice when content, rather than the
     // screen title, should receive most of the vertical space.
     app_bar_.setTitle("Pool overview");
+    // Identify the selected pool within the compact bar's existing height.
+    app_bar_.setSubtitle("Backyard pool");
     app_bar_.setLeading(menu_);
     app_bar_.setTrailing(0, refresh_);
 

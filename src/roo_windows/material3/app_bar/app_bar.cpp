@@ -125,6 +125,8 @@ roo_display::Color internal::AppBarSubtitle::textColor(
   if (parent() == nullptr) return foreground;
   auto connection = internal::FindAppBarConnection(*parent());
   if (connection == nullptr || connection->limit() == 0 ||
+      static_cast<const AppBar&>(*parent()).variant() ==
+          AppBarVariant::kSmall ||
       connection->collapse() == 0) {
     return foreground;
   }
@@ -408,7 +410,8 @@ Dimensions AppBar::onMeasure(WidthSpec width, HeightSpec height) {
   title_widget_.setTextStyle(titleTextStyle());
   bool subtitle_visible = tokens().supports_subtitle &&
                           !subtitle_widget_.text().empty() &&
-                          (connection == nullptr || connection->limit() == 0 ||
+                          (variant_ == AppBarVariant::kSmall ||
+                           connection == nullptr || connection->limit() == 0 ||
                            connection->collapse() * 2 < connection->limit());
   subtitle_widget_.setVisibility(subtitle_visible ? Visibility::kVisible
                                                   : Visibility::kGone);

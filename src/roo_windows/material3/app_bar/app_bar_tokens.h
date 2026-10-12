@@ -16,7 +16,7 @@ struct AppBarVariantTokens {
 };
 
 inline constexpr AppBarVariantTokens kSmallAppBarTokens = {64, 64, 0,
-                                                           0,  1,  false};
+                                                           0,  1,  true};
 inline constexpr AppBarVariantTokens kMediumFlexibleAppBarTokens = {
     112, 136, 0, 24, 2, true};
 inline constexpr AppBarVariantTokens kLargeFlexibleAppBarTokens = {

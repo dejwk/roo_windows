@@ -127,6 +127,11 @@ TEST_F(MovingAppBarTest, FlingSurvivesCollapsingViewport) {
 // restores the bar when the content origin has never left zero.
 TEST_F(MovingAppBarTest, SmallBarAndShortContent) {
   install(AppBarScrollBehavior::kEnterAlways, AppBarVariant::kSmall, 20);
+  bar_->setSubtitle("Solar heating");
+  refresh();
+  Widget* subtitle = static_cast<Widget&>(*bar_).focusChildAt(1);
+  ASSERT_NE(subtitle, nullptr);
+  const Rect subtitle_bounds = subtitle->parent_bounds();
   panel_->onDragStart(0, 0);
   panel_->onDrag(0, 0, 0, -32);
   refresh();
@@ -134,6 +139,10 @@ TEST_F(MovingAppBarTest, SmallBarAndShortContent) {
       static_cast<Widget&>(*bar_).focusChildAt(0));
   EXPECT_EQ(bar_->theme().material3Theme().color.onSurface,
             title->textColor(bar_->background()));
+  EXPECT_FALSE(subtitle->isGone());
+  EXPECT_EQ(subtitle_bounds.translate(0, -32), subtitle->parent_bounds());
+  EXPECT_GT(DarkInkRows(offscreen_.raster(), 0).second,
+            title->parent_bounds().yMax());
   panel_->onDrag(0, 0, 0, -32);
   refresh();
   EXPECT_EQ(0, bar_->height());

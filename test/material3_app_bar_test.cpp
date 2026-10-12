@@ -9,6 +9,7 @@
 #include "roo_windows/material3/app_bar/app_bar.h"
 #include "roo_windows/material3/app_bar/app_bar_tokens.h"
 #include "roo_windows/material3/button/icon_button.h"
+#include "roo_windows/material3/typography.h"
 
 namespace roo_windows::material3 {
 namespace {
@@ -339,10 +340,20 @@ TEST(Material3AppBar, TitleVariantsUseFixedShellHeightsAndSubtitleRules) {
   app_bar.setTitle("Inbox");
   app_bar.setSubtitle("3 unread");
 
-  EXPECT_EQ(1, app_bar.childCount());
+  EXPECT_EQ(2, app_bar.childCount());
   EXPECT_EQ(Scaled(64),
             app_bar.measure(WidthSpec::Exactly(320), HeightSpec::Unspecified(0))
                 .height());
+
+  app_bar.layout(Rect(0, 0, 319, Scaled(64) - 1));
+  EXPECT_EQ(text_style_title_large().lineHeight(), app_bar.childAt(0).height());
+  EXPECT_EQ(text_style_body_medium().lineHeight(), app_bar.childAt(1).height());
+  EXPECT_EQ(app_bar.childAt(0).parent_bounds().yMax() + 1,
+            app_bar.childAt(1).offsetTop());
+  EXPECT_EQ(app_bar.childAt(0).offsetLeft(), app_bar.childAt(1).offsetLeft());
+  app_bar.setSubtitle({});
+  EXPECT_EQ(1, app_bar.childCount());
+  app_bar.setSubtitle("3 unread");
 
   app_bar.setVariant(AppBarVariant::kMediumFlexible);
   EXPECT_EQ(Scaled(136),
