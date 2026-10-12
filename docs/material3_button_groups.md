@@ -52,3 +52,37 @@ The capture-actions target was launched with `bazel run` in Xvfb. Tab/End/Enter
 invoked history and pointer activation invoked Capture; both feedback frames
 were reviewed. Motion regression tests compare incremental frames and elevated
 shadow restoration with clean full paints at the same retained click sample.
+
+## Migrating legacy icon selectors
+
+`roo_windows::ToggleButtons` remains available. New Material 3 selectors use
+`ButtonGroupIconButton` entries and `ConnectedButtonGroup`; each entry borrows
+its icon. Construct entries before a borrowed group, or adopt them with the
+`unique_ptr` overloads.
+
+```cpp
+using namespace roo_windows::material3;
+ButtonGroupIconButton overview(context, overview_icon);
+ButtonGroupIconButton history(context, history_icon);
+ConnectedButtonGroup views(context);  // Single selection, selection required.
+views.add(overview);
+views.add(history);
+views.setSelectionMask(1u << initial_index);
+views.setOnInteractiveChange([&views] {
+  ShowView(views.selectedIndex());
+});
+```
+
+Replace `getActive()` with `selectedIndex()` and `setActive(index)` with
+`setSelectionMask(1u << index)` for a valid attachment index in `[0, entryCount())`.
+To preserve legacy `-1` (empty selection), first call
+`setSelectionRequired(false)`, then pass a zero mask. Required selection defaults
+to the first attached entry. Observe the group callback rather than individual
+entry callbacks; initial/programmatic mask updates are silent. Multiple selection
+uses `setSelectionMode(ConnectedButtonGroupSelectionMode::kMultiple)` and
+`selectionMask()`; `selectedIndex()` returns `-1` unless exactly one bit is set.
+
+The [implemented design](design/implemented/material3_button_groups_design.md)
+defines the geometry and lifetime contracts. The
+[acceptance report](design/material3_button_group_acceptance.md) records object,
+allocation, flash and stack measurements and the remaining physical checks.

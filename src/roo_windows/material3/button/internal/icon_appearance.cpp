@@ -1,7 +1,9 @@
 #include "roo_windows/material3/button/internal/icon_appearance.h"
 
 #include "roo_display/color/color.h"
+
 namespace roo_windows::material3::internal {
+
 using roo_display::AlphaBlend;
 using roo_display::color::Transparent;
 struct ColorTokens {
@@ -27,6 +29,7 @@ constexpr ColorTokens kColorTokens[] = {
 ColorToken ResolveIconContainerRole(IconButtonStyle style) {
   return kColorTokens[static_cast<uint8_t>(style)].container;
 }
+
 // Composites disabled on-surface content onto the Material surface token.
 Color IconDisabledComposite(const Theme& theme, Color fg, uint8_t alpha) {
   return AlphaBlend(theme.material3Theme().color.surface, fg.withA(alpha));

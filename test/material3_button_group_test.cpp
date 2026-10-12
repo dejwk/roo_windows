@@ -10,8 +10,10 @@
 #include "roo_windows/material3/button/internal/button_group_geometry.h"
 #include "roo_windows/material3/button/internal/icon_geometry.h"
 #include "roo_windows/material3/internal/density.h"
+
 namespace roo_windows::material3 {
 namespace {
+
 using namespace internal;
 // Verifies selected, unselected and disabled roles for every contained style.
 TEST(ButtonGroupHelpers, ConnectedPalette) {
@@ -37,6 +39,7 @@ TEST(ButtonGroupHelpers, ConnectedPalette) {
               ResolveConnectedAppearance(theme, style, true, false).outline);
   }
 }
+
 // Verifies exposed corners survive press and RTL mirrors only their placement.
 TEST(ButtonGroupHelpers, ConnectedCorners) {
   Dimensions frame(80, 40);
@@ -58,6 +61,7 @@ TEST(ButtonGroupHelpers, ConnectedCorners) {
       true, true, true, 1, frame, 0);
   EXPECT_EQ(20, single.top_right_corner_radius());
 }
+
 // Verifies extracted icon slots and widths preserve standalone geometry.
 TEST(ButtonGroupHelpers, IconMetrics) {
   MonoIcon icon = ic_outlined_24_action_home();
@@ -93,6 +97,7 @@ TEST(ButtonGroupHelpers, WorkedPressArithmetic) {
   EXPECT_EQ(115, odd[1]);
   EXPECT_EQ(72, odd[2]);
 }
+
 // Verifies conservation, floors and fixed-gap non-overlap for every press
 // index/count, size gap, representative emphasis and mirrored constrained row.
 TEST(ButtonGroupHelpers, PressGeometryInvariants) {
@@ -150,6 +155,7 @@ TEST(ButtonGroupHelpers, PressGeometryInvariants) {
   EXPECT_EQ(138, gone[2]);
   EXPECT_EQ(71, gone[4]);
 }
+
 class GroupFixture : public testing::Test {
  protected:
   roo_scheduler::SchedulingService scheduler;
@@ -159,6 +165,7 @@ class GroupFixture : public testing::Test {
   ApplicationContext context{scheduler, environment.theme(),
                              environment.keyboardColorTheme()};
 };
+
 // Verifies selected elevated surfaces use on-primary overlays, while an
 // unselected elevated surface retains the primary highlighter treatment.
 TEST_F(GroupFixture, ElevatedSelectionOverlayRole) {
@@ -174,6 +181,7 @@ TEST_F(GroupFixture, ElevatedSelectionOverlayRole) {
   group.setEnabled(false);
   EXPECT_EQ(Widget::OVERLAY_NONE, entry.getOverlayType());
 }
+
 // Verifies transparent empty groups and bounded adoption retain vector
 // capacity.
 TEST_F(GroupFixture, MembershipAndOwnership) {
@@ -201,6 +209,7 @@ TEST_F(GroupFixture, MembershipAndOwnership) {
   EXPECT_EQ(nullptr, borrowed.parent());
   EXPECT_FALSE(borrowed.isClickable());
 }
+
 // Verifies duplicate, cross-context and already-parented admissions are
 // checked.
 TEST_F(GroupFixture, InvalidAdmissionDiesBeforeCapacityCheck) {
@@ -215,6 +224,7 @@ TEST_F(GroupFixture, InvalidAdmissionDiesBeforeCapacityCheck) {
   ButtonGroupLabelEntry foreign(another, "Foreign");
   EXPECT_DEATH(group.add(foreign), "");
 }
+
 // Verifies mixed density, exact frames, constraint clipping, RTL and gone
 // slots.
 TEST_F(GroupFixture, StableMixedLayout) {
@@ -265,6 +275,7 @@ TEST_F(GroupFixture, StableMixedLayout) {
             group.measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0))
                 .height());
 }
+
 // Verifies full positive int16 exact widths survive framework spec encoding.
 TEST_F(GroupFixture, LargeExactFramesAndNaturalOverflow) {
   EXPECT_EQ(INT16_MAX, WidthSpec::Exactly(INT16_MAX).value());
@@ -280,6 +291,7 @@ TEST_F(GroupFixture, LargeExactFramesAndNaturalOverflow) {
   EXPECT_DEATH(
       group.measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0)), "");
 }
+
 // Verifies adopted entries are deleted once and borrowed entries stay alive.
 TEST_F(GroupFixture, ClearAndDestruction) {
   class Counted : public ButtonGroupLabelEntry {
@@ -304,6 +316,7 @@ TEST_F(GroupFixture, ClearAndDestruction) {
   EXPECT_EQ(2, destroyed);
   EXPECT_EQ(nullptr, borrowed.parent());
 }
+
 // Verifies grouped icon density and oversized ink floors at all five sizes,
 // selected outline reservation and live descendant theme relayout.
 TEST_F(GroupFixture, AllGroupSizesAndDensityFloors) {
@@ -348,6 +361,7 @@ TEST_F(GroupFixture, AllGroupSizesAndDensityFloors) {
     }
   }
 }
+
 static_assert(sizeof(ButtonGroupLabelEntry) - sizeof(SurfaceWidget) <=
               (sizeof(void*) == 4 ? 20 : 40));
 static_assert(sizeof(ButtonGroupIconEntry) - sizeof(SurfaceWidget) <=

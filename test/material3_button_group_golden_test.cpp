@@ -11,8 +11,10 @@
 #include "roo_windows/core/panel.h"
 #include "roo_windows/material3/button/button_group.h"
 #include "roo_windows/material3/button/internal/button_group_appearance.h"
+
 namespace roo_windows::material3 {
 namespace {
+
 // Reports a useful coordinate instead of dumping complete framebuffer vectors.
 void ExpectSameRaster(const std::vector<roo::byte>& incremental,
                       const std::vector<roo::byte>& full) {
@@ -22,6 +24,7 @@ void ExpectSameRaster(const std::vector<roo::byte>& incremental,
   EXPECT_TRUE(incremental == full)
       << "first differing pixel=" << first / 2 % 320 << "," << first / 2 / 320;
 }
+
 class WriteCountingDevice final
     : public roo_display::OffscreenDevice<roo_display::Argb4444> {
  public:
@@ -146,6 +149,7 @@ class PaletteSurface : public SurfaceWidget {
   bool selected_;
   bool enabled_;
 };
+
 // Verifies real surface rendering for each palette and selection combination.
 TEST(ButtonGroupGolden, ConnectedHelperSurfaces) {
   for (bool dark : {false, true}) {
@@ -190,6 +194,7 @@ class StripedPanel : public GoldenPanel {
     }
   }
 };
+
 // Verifies stable mixed entries preserve patterned gaps and default clipping.
 TEST(ButtonGroupGolden, InternalLayoutAndRestoration) {
   for (bool unclipped : {false, true}) {
@@ -345,6 +350,7 @@ TEST(ButtonGroupGolden, ConstrainedGoneEndpointRestoration) {
   ExpectSameRaster(incremental, raster);
   panel.removeAll();
 }
+
 // Verifies transparent groups never prefill the strip: every pixel is emitted
 // once with its final color, including rounded corners and gap restoration.
 TEST(ButtonGroupGolden, FinalPixelWritesDuringMotion) {
@@ -380,6 +386,7 @@ TEST(ButtonGroupGolden, FinalPixelWritesDuringMotion) {
       ASSERT_LE(device.writesAt(x, y), 1) << "at " << x << "," << y;
   panel.removeAll();
 }
+
 // Verifies moving standard frames and unclipped elevated shadows restore
 // correctly at intermediate samples, cancellations and content changes.
 TEST(ButtonGroupGolden, StandardMotionRestoration) {

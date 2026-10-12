@@ -1,10 +1,14 @@
 # Roo Windows Material 3 Button Groups Design
 
-Status: **proposed**. No button-group implementation exists. Reviewed against
-`roo_windows` HEAD `86960589` and the working tree on 2026-10-12. Existing
-framework prerequisites are implemented; group-specific helpers, theme storage,
-widgets and tests below are proposed work. See the [status index](../README.md)
+Status: **implemented**. All six phases are complete as of 2026-10-12:
+shared helpers/theme, typed membership, connected selection, bounded press
+geometry, standard actions, and resource/migration acceptance. See the
+[acceptance report](../material3_button_group_acceptance.md),
+[usage guide](../../material3_button_groups.md), [status index](../README.md)
 and [Material 3 roadmap](../../material3_roadmap.md).
+
+The framework/background audit below records the design-review baseline at
+HEAD `86960589`; the implementation evidence records the completed behavior.
 
 ## Objective
 
@@ -23,7 +27,7 @@ group-specific fields to every standalone button.
 
 ## Background
 
-### Current framework
+### Framework at design review
 
 The [design glossary](../glossary.md) defines borrowed and adopted children
 and the temporary ownership-transfer role of `WidgetRef`.
@@ -57,8 +61,8 @@ and the temporary ownership-transfer role of `WidgetRef`.
   themes, task-local focus, physical-key activation and ordinary widget
   lifetime cleanup are available.
 
-There is no Material 3 group implementation. The [segmented-button
-proposal](material3_segmented_buttons_design.md) describes the classic
+The design-review baseline had no Material 3 group implementation. The
+[segmented-button proposal](../proposed/material3_segmented_buttons_design.md) describes the classic
 shared-outline component and remains a distinct proposal. [Split
 buttons](../../material3_split_buttons.md) are implemented, including
 [acceptance evidence](../material3_split_button_acceptance.md) and an
@@ -1005,7 +1009,8 @@ costs are explicit in the [resource model](#resource-model).
 
 The classic shared-outline proposal offers a compact unified contour and
 optional selected check glyph; connected groups offer separated surfaces and
-changing inner corners. Both remain unimplemented. Keep their APIs distinct;
+changing inner corners. Connected groups are implemented; classic segmented buttons remain proposed.
+Keep their APIs distinct;
 the migration path here is from the implemented `ToggleButtons`, not from a
 segmented-button symbol that users can already call.
 
@@ -1019,8 +1024,9 @@ segmented-button symbol that users can already call.
 
 ### Internal implementation evidence
 
-Phases 1–2 use pure appearance/metrics helpers and an internal test host; no
-partial public group API is published. Typed links precede structural attachment,
+Phases 1–2 introduced pure appearance/metrics helpers and an internal test host
+before publishing the functioning public family in Phases 3 and 5. Typed links
+precede structural attachment,
 clear severs all links before detaching, and all natural sums are checked before
 narrowing. Layout uses bounded automatic arrays and measures exact child frames.
 `WidthSpec` now uses a transient 32-bit word to retain the full positive int16
@@ -1033,3 +1039,19 @@ internal arithmetic helpers. Zero-width slots represent gone entries. Exhausted
 budgets cap expansion and the following logical neighbour receives odd pixels.
 Unit tests check the `[71, 138, 71]` worked example, every active index at 0/1/2/3/5/32
 entries, all size gaps, representative samples and constrained mirrored rows.
+
+Phases 3 and 5 publish both entry types and concrete group policies. Connected
+selection has one canonical mask, immediate group-only notifications, and stable
+frames. Standard entries retain per-entry actions and use the shared click sample
+for width/corner emphasis. The transparent base paints no pixels; its interior
+invalidation propagates to ancestors. Layout restores the old strip even when
+changing a gone endpoint leaves surviving frames unchanged, because their outer
+corner role still changes. Root-level full-paint comparisons and per-pixel write
+counts verify restoration without intermediate background fills.
+
+Phase 6 enforces object-size ceilings in both host and target probes. Layout
+uses two 32-element int16 arrays (128 B explicit geometry scratch), while the
+compiler's complete `onLayout` frame is 240 B. The acceptance report separately
+records renderer/font allocations, retained vector capacity, linked flash,
+representative call-chain estimates, emulator interaction, and pending physical
+checks. Both families build for ESP32-C3 with exceptions and RTTI disabled.

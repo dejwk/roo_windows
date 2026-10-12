@@ -223,6 +223,8 @@ filegroup(
         "//examples/material3/app_bar/exit_until_collapsed",
         "//examples/material3/badge/custom_anchor",
         "//examples/material3/badge/notification_count",
+        "//examples/material3/button_groups/view_selector",
+        "//examples/material3/button_groups/capture_actions",
         "//examples/material3/buttons/compact_controls",
         "//examples/material3/buttons/pool_actions",
         "//examples/material3/buttons/toggle_preference",

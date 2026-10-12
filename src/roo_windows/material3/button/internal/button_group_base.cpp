@@ -5,20 +5,25 @@
 
 #include "roo_windows/core/click_animation.h"
 #include "roo_windows/material3/button/internal/button_group_geometry.h"
+
 namespace roo_windows::material3::internal {
+
 ButtonGroupBase::ButtonGroupBase(ApplicationContext& context)
     : Container(context),
       size_(static_cast<uint8_t>(ButtonSize::kSmall)),
       shape_(static_cast<uint8_t>(ButtonShape::kRound)),
       direction_(static_cast<uint8_t>(LayoutDirection::kLeftToRight)),
       morph_(static_cast<uint8_t>(ButtonShapeMorph::kDefault)) {}
+
 ButtonGroupBase::~ButtonGroupBase() { CHECK(entries_.empty()); }
+
 void ButtonGroupBase::setSize(ButtonSize size) {
   if (this->size() == size) return;
   invalidateInterior();
   size_ = static_cast<uint8_t>(size);
   requestLayoutDescending();
 }
+
 void ButtonGroupBase::setShape(ButtonShape shape) {
   if (this->shape() == shape) return;
   invalidateInterior();
@@ -26,6 +31,7 @@ void ButtonGroupBase::setShape(ButtonShape shape) {
   invalidateInterior();
   requestLayout();
 }
+
 void ButtonGroupBase::setShapeMorph(ButtonShapeMorph morph) {
   if (shapeMorph() == morph) return;
   invalidateInterior();
@@ -33,6 +39,7 @@ void ButtonGroupBase::setShapeMorph(ButtonShapeMorph morph) {
   invalidateInterior();
   requestLayout();
 }
+
 void ButtonGroupBase::setLayoutDirection(LayoutDirection direction) {
   if (layoutDirection() == direction) return;
   invalidateInterior();
@@ -40,6 +47,7 @@ void ButtonGroupBase::setLayoutDirection(LayoutDirection direction) {
   invalidateInterior();
   requestLayout();
 }
+
 bool ButtonGroupBase::addEntry(ButtonGroupEntry* entry, WidgetRef reference) {
   if (entry == nullptr) return false;
   CHECK(entry->parent() == nullptr);
@@ -54,6 +62,7 @@ bool ButtonGroupBase::addEntry(ButtonGroupEntry* entry, WidgetRef reference) {
   invalidateDescending();
   return true;
 }
+
 void ButtonGroupBase::clearEntries() {
   for (ButtonGroupEntry* entry : entries_) {
     entry->group_ = nullptr;
@@ -67,12 +76,14 @@ void ButtonGroupBase::clearEntries() {
   requestLayout();
   invalidateInterior();
 }
+
 int ButtonGroupBase::indexOf(const ButtonGroupEntry& entry) const {
   for (int i = 0; i < entryCount(); ++i) {
     if (entries_[i] == &entry) return i;
   }
   return -1;
 }
+
 void ButtonGroupBase::projectSelection(uint32_t previous, uint32_t current) {
   for (int i = 0; i < entryCount(); ++i) {
     uint32_t bit = uint32_t{1} << i;
@@ -81,6 +92,7 @@ void ButtonGroupBase::projectSelection(uint32_t previous, uint32_t current) {
     entries_[i]->Widget::setSelected((current & bit) != 0);
   }
 }
+
 Dimensions ButtonGroupBase::measureStrip(int16_t* widths,
                                          int16_t* budgets) const {
   int32_t total = 0;
@@ -108,11 +120,13 @@ Dimensions ButtonGroupBase::measureStrip(int16_t* widths,
   CHECK_LE(height, INT16_MAX);
   return {static_cast<int16_t>(total), height};
 }
+
 Dimensions ButtonGroupBase::onMeasure(WidthSpec width, HeightSpec height) {
   Dimensions natural = measureStrip(nullptr);
   return {width.resolveSize(natural.width()),
           height.resolveSize(natural.height())};
 }
+
 void ButtonGroupBase::onLayout(bool changed, const Rect& rect) {
   // Gone slots can change exposed corners without moving surviving frames.
   // Restore the complete old strip before exact placement, without caching
@@ -165,26 +179,32 @@ int ButtonGroupBase::pressTarget(float* emphasis) const {
   *emphasis = 0;
   return -1;
 }
+
 void ButtonGroupBase::childHidden(const Widget* child) {
   Container::childHidden(child);
   entryFeedbackChanged();
 }
+
 void ButtonGroupBase::childShown(const Widget* child) {
   Container::childShown(child);
   entryFeedbackChanged();
 }
+
 void ButtonGroupBase::invalidateInterior() {
   invalidateInterior(getInteriorBounds());
 }
+
 void ButtonGroupBase::invalidateInterior(const Rect& rect) {
   Container::invalidateInterior(rect);
   notifyParentInvalidatedRegion(rect.translate(offsetLeft(), offsetTop()));
 }
+
 void ButtonGroupBase::entryFeedbackChanged() {
   if (connected()) return;
   invalidateInterior();
   requestLayout();
 }
+
 void ButtonGroupBase::notifyStateChanged(uint16_t state_diff) {
   if ((state_diff & kWidgetEnabled) != 0) {
     for (ButtonGroupEntry* entry : entries_) {
@@ -196,6 +216,7 @@ void ButtonGroupBase::notifyStateChanged(uint16_t state_diff) {
   }
   Container::notifyStateChanged(state_diff);
 }
+
 bool ButtonGroupBase::onKeyEvent(const KeyEvent& event) {
   if (event.modifiers != 0 || event.phase == KeyPhase::kUp) return false;
   bool forward = event.code == KeyCode::kRight;

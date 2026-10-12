@@ -12,8 +12,10 @@
 #include "roo_windows/material3/button/internal/icon_geometry.h"
 #include "roo_windows/material3/internal/density.h"
 #include "roo_windows/material3/typography.h"
+
 namespace roo_windows::material3::internal {
 namespace {
+
 // Match button alignment including painted ink outside text advance bounds.
 class GroupLabel : public roo_display::StringViewLabel {
  public:
@@ -25,6 +27,7 @@ class GroupLabel : public roo_display::StringViewLabel {
             original.yMax()};
   }
 };
+
 // Converts the contained style encoding to the existing momentary family.
 ButtonVariant Variant(uint8_t style) {
   return static_cast<ButtonVariant>(style + 1);
@@ -33,9 +36,11 @@ ButtonVariant Variant(uint8_t style) {
 ButtonGroupEntry::ButtonGroupEntry(ApplicationContext& context,
                                    GroupStyle style)
     : SurfaceWidget(context), style_(static_cast<uint8_t>(style)) {}
+
 bool ButtonGroupEntry::effectivelyEnabled() const {
   return isEnabled() && (group_ == nullptr || group_->isEnabled());
 }
+
 bool ButtonGroupEntry::eligible() const {
   if (group_ == nullptr || presentationState() != PresentationState::kPresented)
     return false;
@@ -45,14 +50,17 @@ bool ButtonGroupEntry::eligible() const {
   }
   return true;
 }
+
 bool ButtonGroupEntry::isClickable() const {
   return group_ != nullptr && effectivelyEnabled();
 }
+
 int ButtonGroupEntry::outlineInset() const {
   return static_cast<GroupStyle>(style_) == GroupStyle::kOutlined
              ? Scaled(SmallNumber(1)).ceil()
              : 0;
 }
+
 Dimensions ButtonGroupEntry::entryDimensions(int16_t* content_width) const {
   ButtonSize size = group_ == nullptr ? ButtonSize::kSmall : group_->size();
   int8_t level = ResolveDensityLevel(theme().material3Theme().density);
@@ -79,15 +87,18 @@ Dimensions ButtonGroupEntry::entryDimensions(int16_t* content_width) const {
   }
   return {static_cast<int16_t>(width), height};
 }
+
 Dimensions ButtonGroupEntry::onMeasure(WidthSpec width, HeightSpec height) {
   Dimensions natural = entryDimensions();
   return {width.resolveSize(natural.width()),
           height.resolveSize(natural.height())};
 }
+
 PreferredSize ButtonGroupEntry::getPreferredSize() const {
   return {PreferredSize::WrapContentWidth(),
           PreferredSize::WrapContentHeight()};
 }
+
 ColorToken ButtonGroupEntry::containerRole() const {
   if (group_ != nullptr && group_->connected())
     return ResolveConnectedContainerRole(
@@ -95,6 +106,7 @@ ColorToken ButtonGroupEntry::containerRole() const {
         group_->selected(group_->indexOf(*this)));
   return ResolveButtonContainerRole(theme(), Variant(style_));
 }
+
 Color ButtonGroupEntry::background() const {
   if (group_ != nullptr && group_->connected())
     return ResolveConnectedAppearance(theme(), static_cast<GroupStyle>(style_),
@@ -104,6 +116,7 @@ Color ButtonGroupEntry::background() const {
   return ResolveButtonAppearance(theme(), Variant(style_), effectivelyEnabled())
       .container;
 }
+
 Color ButtonGroupEntry::getOutlineColor() const {
   if (group_ != nullptr && group_->connected())
     return ResolveConnectedAppearance(theme(), static_cast<GroupStyle>(style_),
@@ -113,6 +126,7 @@ Color ButtonGroupEntry::getOutlineColor() const {
   return ResolveButtonAppearance(theme(), Variant(style_), effectivelyEnabled())
       .outline;
 }
+
 BorderStyle ButtonGroupEntry::resolveBorder(bool selected, bool pressed,
                                             float progress,
                                             bool enabled) const {
@@ -169,6 +183,7 @@ BorderStyle ButtonGroupEntry::resolveBorder(bool selected, bool pressed,
   return ResolveButtonBorderStyle(size, shape, Variant(style_), morph, pressed,
                                   progress, {width(), height()});
 }
+
 BorderStyle ButtonGroupEntry::getBorderStyle() const {
   const ClickAnimation* animation = getClickAnimation();
   return resolveBorder(
@@ -176,13 +191,16 @@ BorderStyle ButtonGroupEntry::getBorderStyle() const {
       isPressed(), animation == nullptr ? -1 : animation->progress(),
       effectivelyEnabled());
 }
+
 uint8_t ButtonGroupEntry::getElevation() const {
   return ResolveButtonElevation(Variant(style_), effectivelyEnabled(),
                                 isPressed());
 }
+
 Widget::OverlayType ButtonGroupEntry::getOverlayType() const {
   return effectivelyEnabled() ? OVERLAY_AREA : OVERLAY_NONE;
 }
+
 ColorToken ButtonGroupEntry::effectiveOverlayColorRole() const {
   ColorToken role = containerRole();
   if (usesHighlighterColor() || role == ColorToken::kNone ||
@@ -192,14 +210,17 @@ ColorToken ButtonGroupEntry::effectiveOverlayColorRole() const {
     return ColorToken::kSurfaceVariant;
   return role;
 }
+
 bool ButtonGroupEntry::usesHighlighterColor() const {
   return static_cast<GroupStyle>(style_) == GroupStyle::kElevated &&
          (group_ == nullptr || !group_->selected(group_->indexOf(*this)));
 }
+
 void ButtonGroupEntry::contentChanged() {
   invalidateInterior();
   requestLayout();
 }
+
 void ButtonGroupEntry::changeStyle(GroupStyle style) {
   if (style_ == static_cast<uint8_t>(style)) return;
   BorderStyle previous = getBorderStyle();
@@ -209,6 +230,7 @@ void ButtonGroupEntry::changeStyle(GroupStyle style) {
   elevationChanged(std::max(elevation, getElevation()));
   contentChanged();
 }
+
 void ButtonGroupEntry::selectionChanged(bool previous_selected) {
   const ClickAnimation* animation = getClickAnimation();
   borderStyleChanged(resolveBorder(
@@ -216,6 +238,7 @@ void ButtonGroupEntry::selectionChanged(bool previous_selected) {
       animation == nullptr ? -1 : animation->progress(), effectivelyEnabled()));
   invalidateInterior();
 }
+
 void ButtonGroupEntry::groupEnabledChanged(bool previous_effectively_enabled) {
   const ClickAnimation* animation = getClickAnimation();
   borderStyleChanged(resolveBorder(
@@ -229,6 +252,7 @@ void ButtonGroupEntry::groupEnabledChanged(bool previous_effectively_enabled) {
                              isPressed())));
   invalidateInterior();
 }
+
 void ButtonGroupEntry::notifyStateChanged(uint16_t diff) {
   if (group_ != nullptr && group_->connected() &&
       (diff & kWidgetSelected) != 0) {
@@ -254,21 +278,25 @@ void ButtonGroupEntry::notifyStateChanged(uint16_t diff) {
   if (group_ != nullptr && (diff & (kWidgetPressed | kWidgetEnabled)) != 0)
     group_->entryFeedbackChanged();
 }
+
 void ButtonGroupEntry::onClickAnimationChanged(float previous_progress) {
   borderStyleChanged(resolveBorder(
       group_ != nullptr && group_->selected(group_->indexOf(*this)),
       isPressed(), previous_progress, effectivelyEnabled()));
   if (group_ != nullptr) group_->entryFeedbackChanged();
 }
+
 ClickActivationPolicy ButtonGroupEntry::getClickActivationPolicy() const {
   return group_ != nullptr && group_->connected()
              ? ClickActivationPolicy::kImmediateContinueAnimation
              : ClickActivationPolicy::kAfterNaturalAnimation;
 }
+
 void ButtonGroupEntry::onClicked() {
   if (!eligible()) return;
   group_->activateEntry(*this);
 }
+
 void ButtonGroupEntry::paint(PaintContext& context) const {
   const Canvas& canvas = context.canvas();
   int inset = outlineInset();
@@ -336,24 +364,29 @@ void ButtonGroupEntry::paint(PaintContext& context) const {
                      roo_display::kCenter | roo_display::kMiddle);
   canvas.clearRect(x + second, b.yMin(), b.xMax(), b.yMax());
 }
+
 ButtonGroupLabelEntry::ButtonGroupLabelEntry(ApplicationContext& context,
                                              roo::string_view label,
                                              GroupStyle style)
     : ButtonGroupEntry(context, style), label_(label) {}
+
 void ButtonGroupLabelEntry::setLabel(roo::string_view label) {
   if (label_.data() == label.data() && label_.size() == label.size()) return;
   label_ = label;
   contentChanged();
 }
+
 void ButtonGroupLabelEntry::setIcon(const MonoIcon* icon) {
   if (icon_ == icon) return;
   icon_ = icon;
   contentChanged();
 }
+
 ButtonGroupIconEntry::ButtonGroupIconEntry(ApplicationContext& context,
                                            const MonoIcon& icon,
                                            GroupStyle style)
     : ButtonGroupEntry(context, style), icon_(&icon) {}
+
 void ButtonGroupIconEntry::setIcon(const MonoIcon& icon) {
   if (icon_ == &icon) return;
   icon_ = &icon;

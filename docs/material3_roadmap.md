@@ -102,8 +102,9 @@ implementations. The app-bar/search-entry family has focused unit tests,
 goldens, an example, and scaffold integration. Lists are implemented through
 Phase 12, including Material 3 menu reuse. Docked and floating toolbars are
 implemented. Split buttons also have a composed control and a Run actions
-example. Navigation drawer, sheets, time pickers, and button groups remain
-design or integration work; the backlog below records their scope.
+example. Standard action groups and connected selection groups have mixed-content
+examples, regression coverage, and target resource acceptance. Navigation drawer,
+sheets, and time pickers remain design or integration work; the backlog below records their scope.
 
 Several source families still lack matching design documents:
 
@@ -261,12 +262,12 @@ dependencies, and completion check when scheduling it.
 | Date pickers | [Implemented design](design/implemented/material3_date_pickers_design.md) | Modal calendar and numeric input, month/year selection, and a docked field with compact promotion have an example and focused behavior, golden, and resource tests. Range selection and simultaneous source editing remain future work. |
 | Time pickers | [Proposed design](design/proposed/material3_time_pickers_design.md) | Select a consuming flow and confirm localization and target-size requirements before scheduling picker-specific integration. P2.1 text fields and P1.8 dialogs are available. |
 | Icon buttons | [Implemented design](design/implemented/material3_icon_buttons_design.md) | The non-toggle family has unit, golden, size-budget, and compact-controls toolbar coverage. Future work can adopt it in an app bar, menu anchor, or badge-aware host. |
-| Toggle icon buttons | [Implemented design](design/implemented/material3_toggle_icon_buttons_design.md) | The family has focused unit and rendering coverage plus compact-controls persistent-preference adoption. Independent selection semantics remain until button-group policy is scheduled. |
+| Toggle icon buttons | [Implemented design](design/implemented/material3_toggle_icon_buttons_design.md) | The family has focused unit and rendering coverage plus compact-controls persistent-preference adoption. Independent toggles retain their own selection; connected button groups provide coordinated selection. |
 | FABs and extended FABs | [Implemented design](design/implemented/material3_fabs_design.md) | Icon-only and extended widgets, color styles, elevation, explicit collapse, unit and golden tests, and a fixed-overlay/rail-header example have landed. FAB menus and automatic screen-level docking remain separate work. |
 | DropdownButton utility | [Implemented design](design/implemented/material3_dropdown_button_design.md) | A compact single-select button reuses the menu host; the example, goldens, and resource checks have landed. |
 | Toolbars | [Implemented design](design/implemented/material3_toolbars_design.md) | Docked and floating surfaces, chart and drawing examples, tests, and target resource acceptance are complete. Device touch and shadow checks remain. |
 | Split buttons | [Design](design/implemented/material3_split_button_design.md), [usage](material3_split_buttons.md), and [acceptance](design/material3_split_button_acceptance.md) | Composed control, Run actions example, host tests, and ESP32-C3 build are complete; physical touch checks remain manual. |
-| Button groups | [Proposed design](design/proposed/material3_button_groups_design.md) | Select a concrete consuming flow before scheduling this family. |
+| Button groups | [Implemented design](design/implemented/material3_button_groups_design.md), [usage](material3_button_groups.md), and [acceptance](design/material3_button_group_acceptance.md) | Standard actions and connected selection, mixed label/icon entries, density/RTL, examples, rendering/input/lifetime tests, and ESP32-C3 acceptance are complete. Physical compact-touch and slow-display checks remain manual. |
 | Chips | No local design | Name a concrete filter/selection consumer, then add a chips design covering only its required variants and shared selection semantics. |
 | Focused/expanded search | No complete local design | Add an explicit search-workflow design covering query ownership, suggestions/results, focus, Back, and presentation lifetime. |
 | Tooltips and pointer-specific affordances | No complete local design | Define pointer/hover routing and tooltip lifetime before component APIs. |

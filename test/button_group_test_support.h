@@ -1,6 +1,9 @@
 #pragma once
+
 #include "roo_windows/material3/button/internal/button_group_base.h"
+
 namespace roo_windows::material3::test_support {
+
 // Exercises internal membership before the public family is available.
 class InternalGroup : public internal::ButtonGroupBase {
  public:

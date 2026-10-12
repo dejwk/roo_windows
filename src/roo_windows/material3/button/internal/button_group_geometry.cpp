@@ -3,7 +3,9 @@
 #include <algorithm>
 #include <climits>
 #include <cmath>
+
 namespace roo_windows::material3::internal {
+
 void RedistributeGroupWidths(int count, int active, float emphasis,
                              int16_t* widths, const int16_t* budgets) {
   if (active < 0 || active >= count || widths[active] == 0) return;
@@ -24,6 +26,7 @@ void RedistributeGroupWidths(int count, int active, float emphasis,
   if (previous >= 0) widths[previous] -= from_left;
   if (next < count) widths[next] -= from_right;
 }
+
 int16_t GroupIntervalLeft(int32_t group_width, int32_t logical_left,
                           int16_t width, LayoutDirection direction) {
   int32_t left = direction == LayoutDirection::kRightToLeft

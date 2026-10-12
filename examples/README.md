@@ -21,6 +21,15 @@ commands and documentation should use the hierarchical labels. Each leaf
 package delegates `.ino` wrapping, Arduino startup, and frontend compatibility
 to roo_testing's public `roo_arduino_example` macro.
 
+For Material 3 button groups, the [schedule view selector](material3/button_groups/view_selector/view_selector.ino)
+teaches one group selection callback, and [capture actions](material3/button_groups/capture_actions/capture_actions.ino)
+teaches individual actions with coordinated press motion:
+
+```sh
+bazel run //examples/material3/button_groups/view_selector:view_selector
+bazel run //examples/material3/button_groups/capture_actions:capture_actions
+```
+
 The separate [`emulation`](../emulation/README.md) workspace remains available
 as a scratch harness for locally edited or multi-file experiments. It is not
 needed to run a checked-in example.

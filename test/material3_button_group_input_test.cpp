@@ -12,7 +12,9 @@
 #include "roo_windows/core/key_source.h"
 #include "roo_windows/core/panel.h"
 #include "roo_windows/material3/button/button_group.h"
+
 namespace roo_windows::test {
+
 struct ApplicationWorkTestAccess {
   static void PollPointer(Application& app) {
     app.window_.touch_sensor_.pollOnce();
@@ -24,12 +26,14 @@ struct ApplicationWorkTestAccess {
 
 namespace roo_windows::material3 {
 namespace {
+
 class InputPanel : public Panel {
  public:
   using Panel::add;
   using Panel::Panel;
   using Panel::removeAll;
 };
+
 class ManualGroupTouch : public roo_display::TouchDevice {
  public:
   void set(bool down, int x, int y) {
@@ -54,6 +58,7 @@ class ManualGroupTouch : public roo_display::TouchDevice {
   int x_ = 0;
   int y_ = 0;
 };
+
 class GroupKeys : public KeySource {
  public:
   void push(KeyEvent event) {
@@ -73,6 +78,7 @@ class GroupKeys : public KeySource {
  private:
   std::vector<KeyEvent> pending_;
 };
+
 class ConnectedGroupInput : public testing::Test {
  protected:
   ConnectedGroupInput()
@@ -146,6 +152,7 @@ class ConnectedGroupInput : public testing::Test {
   ConnectedButtonGroup group_;
   GroupKeys keys_;
 };
+
 // Verifies every normalization path, attachment bit 31 and invalid queries.
 TEST_F(ConnectedGroupInput, CanonicalMasksAndProjectionRepair) {
   EXPECT_EQ(1u, group_.selectionMask());
@@ -185,6 +192,7 @@ TEST_F(ConnectedGroupInput, CanonicalMasksAndProjectionRepair) {
   group_.clear();
   EXPECT_EQ(0u, group_.selectionMask());
 }
+
 // Verifies only the group emits changed selection and configuration stays
 // silent.
 TEST_F(ConnectedGroupInput, InteractiveSingleAndMultiple) {
@@ -219,6 +227,7 @@ TEST_F(ConnectedGroupInput, InteractiveSingleAndMultiple) {
   EXPECT_EQ(2u, group_.selectionMask());
   EXPECT_EQ(0, child_changes);
 }
+
 // Verifies selection persists for disabled/invisible/gone members, and delayed
 // actions recheck all ancestors before accepting activation.
 TEST_F(ConnectedGroupInput, VisibilityEnablementAndDetachedEntries) {
@@ -251,6 +260,7 @@ TEST_F(ConnectedGroupInput, VisibilityEnablementAndDetachedEntries) {
   day_.onClicked();
   EXPECT_EQ(0u, group_.selectionMask());
 }
+
 // Verifies task key delivery, focus-only navigation, RTL and edge consumption.
 TEST_F(ConnectedGroupInput, PhysicalKeysAndNavigation) {
   ASSERT_TRUE(day_.requestFocus());
@@ -285,6 +295,7 @@ TEST_F(ConnectedGroupInput, PhysicalKeysAndNavigation) {
       {KeyPhase::kDown, KeyCode::kHome, kKeyModifierShift, 0}));
   EXPECT_FALSE(group_.onKeyEvent({KeyPhase::kDown, KeyCode::kUp, 0, 0}));
 }
+
 // Verifies real touch activation and cancellation when group disable interrupts
 // pointer or physical-key presses without overwriting child flags.
 TEST_F(ConnectedGroupInput, PointerAndKeyDisableCancel) {
@@ -306,6 +317,7 @@ TEST_F(ConnectedGroupInput, PointerAndKeyDisableCancel) {
   EXPECT_EQ(2u, group_.selectionMask());
   EXPECT_FALSE(day_.isPressed());
 }
+
 // Verifies callbacks can replace the mask, clear/repopulate, or destroy both
 // the group and the currently executing adopted entry, with no later access.
 TEST_F(ConnectedGroupInput, ReentrantAndDestructiveCallbacks) {
@@ -352,6 +364,7 @@ class StandardGroupInput : public ConnectedGroupInput {
   }
   ButtonGroup actions_;
 };
+
 // Verifies quick taps use shared samples before layout, conserve width/gaps,
 // settle once after synchronous paint, and restore resting frames afterwards.
 TEST_F(StandardGroupInput, QuickTapHeldReleaseAndCallbacks) {
@@ -380,6 +393,7 @@ TEST_F(StandardGroupInput, QuickTapHeldReleaseAndCallbacks) {
   EXPECT_EQ(before, week_.width());
   EXPECT_FALSE(app_.context().animations().contains(actions_, 0));
 }
+
 // Verifies cancellation, retargeting, held-state fallback and persistent bits
 // do not create a second target or retain expanded width after restoration.
 TEST_F(StandardGroupInput, RetargetAndCancellation) {
@@ -412,6 +426,7 @@ TEST_F(StandardGroupInput, RetargetAndCancellation) {
   app_.refresh();
   EXPECT_EQ(day_width, day_.width());
 }
+
 // Verifies content changes recompute resting geometry during feedback, while
 // morph-disabled and hidden/disabled entries return to resting layout.
 TEST_F(StandardGroupInput, ContentMutationAndEligibility) {
@@ -441,6 +456,7 @@ TEST_F(StandardGroupInput, ContentMutationAndEligibility) {
   EXPECT_EQ(nullptr, week_.getClickAnimation());
   EXPECT_EQ(week_.entryDimensions().width(), week_.width());
 }
+
 // Verifies group disable cancels pointer/key feedback and pending delivery,
 // preserves local flags, and cannot revive the action on re-enable.
 TEST_F(StandardGroupInput, DisableDuringPendingAction) {
@@ -467,6 +483,7 @@ TEST_F(StandardGroupInput, DisableDuringPendingAction) {
   settle();
   EXPECT_EQ(0, callbacks);
 }
+
 // Verifies semantic delivery after a deliberately slow completed refresh can
 // destroy the running adopted entry/group, and detachment cancels delayed work.
 TEST_F(StandardGroupInput, SlowPaintDestructionAndDetach) {
@@ -503,6 +520,7 @@ TEST_F(StandardGroupInput, SlowPaintDestructionAndDetach) {
   settle();
   EXPECT_EQ(1, callbacks);
 }
+
 static_assert(sizeof(ButtonGroup) - sizeof(Container) <=
               (sizeof(void*) == 4 ? 16 : 32));
 static_assert(sizeof(ConnectedButtonGroup) - sizeof(Container) <=

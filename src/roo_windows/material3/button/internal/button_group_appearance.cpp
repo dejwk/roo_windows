@@ -4,7 +4,9 @@
 #include <cmath>
 
 #include "roo_windows/material3/button/internal/button_geometry.h"
+
 namespace roo_windows::material3::internal {
+
 ColorToken ResolveConnectedContainerRole(const Theme& theme, GroupStyle style,
                                          bool selected) {
   switch (style) {
@@ -24,6 +26,7 @@ ColorToken ResolveConnectedContainerRole(const Theme& theme, GroupStyle style,
   }
   return ColorToken::kNone;
 }
+
 ButtonAppearance ResolveConnectedAppearance(const Theme& theme,
                                             GroupStyle style, bool selected,
                                             bool enabled) {
@@ -57,6 +60,7 @@ ButtonAppearance ResolveConnectedAppearance(const Theme& theme,
   if (selected) result.outline = roo_display::color::Transparent;
   return result;
 }
+
 BorderStyle ResolveConnectedBorder(ButtonSize size, ButtonShape shape,
                                    LayoutDirection direction, bool first,
                                    bool last, bool selected, float emphasis,
@@ -77,6 +81,7 @@ BorderStyle ResolveConnectedBorder(ButtonSize size, ButtonShape shape,
                      last ? exposed : adjacent, first ? exposed : adjacent,
                      outline);
 }
+
 int16_t ResolveGroupGap(ButtonSize size, bool connected) {
   static constexpr uint8_t kGaps[] = {18, 12, 8, 8, 8};
   return Scaled(connected ? 2 : kGaps[static_cast<uint8_t>(size)]);

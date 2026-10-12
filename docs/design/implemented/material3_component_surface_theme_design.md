@@ -139,7 +139,8 @@ example below satisfy requirement 6.
 
 ### Complete slot inventory
 
-These are the complete **27** slots. Paths are relative to `components` and
+These are the original **27** slots. Dropdown buttons and button groups add
+two later slots; the current payload is 29 bytes. Paths are relative to `components` and
 describe enabled resting surfaces. Token names omit `md.comp.`; palette names
 use existing C++ spelling instead of the specification's `md.sys.color.*` names.
 
@@ -295,7 +296,7 @@ overriding virtual surface methods keep their explicit behavior.
 
 ### Resources, ownership, and palette changes
 
-The completed component theme contains 27 one-byte enums in nonempty groups:
+The original completed component theme contains 27 one-byte enums in nonempty groups:
 27 bytes, alignment 1. Assert both. Appending it to the documented 928-byte,
 four-byte-aligned Material theme is expected to produce 956 bytes, a 28-byte
 increase including padding. Verify the supported target ABI. `Theme` retains
@@ -520,7 +521,7 @@ applicable goldens, and example builds.
 ### Phase 6: Integrated acceptance and costs
 
 Add an integrated surface-role rendering fixture with default/customized
-light/dark palettes and RGB565 output. Assert the final 27-byte payload, unchanged
+light/dark palettes and RGB565 output. Assert the original 27-byte payload (29 with later additions), unchanged
 widget sizes, and supported-target theme delta. Update the
 [target baseline](../../material3_target_baseline.md), release notes and example
 instructions. Record source rationale for changed defaults; mark this design

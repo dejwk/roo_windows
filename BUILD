@@ -1630,3 +1630,16 @@ cc_test(
     data = glob(["test/goldens/material3_button_group/*.ppm"], allow_empty = True),
     deps = [":roo_windows", ":test_golden_utils", "@roo_testing//:arduino_gtest_main", "@roo_testing//roo_testing/system:manual_time_mode"],
 )
+
+cc_test(
+    name = "material3_button_group_resource_test",
+    srcs = ["test/material3_button_group_resource_test.cpp"],
+    linkstatic = 1,
+    deps = [":roo_windows", "@roo_testing//:arduino_gtest_main", "@roo_testing//roo_testing/system:manual_time_mode"],
+)
+cc_library(
+    name = "material3_button_group_size_probe",
+    srcs = ["benchmarks/material3_button_group_size_probe.cpp"],
+    hdrs = ["benchmarks/standalone_abi_logging_stub.h"],
+    deps = [":roo_windows"],
+)
