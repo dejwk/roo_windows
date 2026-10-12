@@ -14,6 +14,7 @@
 #include "roo_windows/core/application.h"
 #include "roo_windows/core/damage_region.h"
 #include "roo_windows/core/panel.h"
+#include "roo_windows/core/presentation_pin.h"
 
 namespace {
 bool track_allocations = false;
@@ -223,6 +224,22 @@ class CountedPanel : public Panel {
     ++children_paints;
     Panel::paintChildren(ctx);
   }
+};
+
+class MovingPin final : public PresentationPin {
+ public:
+  explicit MovingPin(Rect& bounds) : bounds_(bounds) {}
+
+ protected:
+  Rect boundsInWindow() const override { return bounds_; }
+
+  void paint(PaintContext& ctx) const override {
+    ctx.fillRect(bounds_, Color(0xFF22CC44));
+    ctx.addExclusion(bounds_);
+  }
+
+ private:
+  Rect& bounds_;
 };
 
 enum class Scene {
@@ -468,6 +485,39 @@ TEST(DamageRegionResourceTest, RootDamageCapacityAndLifecycle) {
   EXPECT_EQ(device.writes(), 0u);
   EXPECT_EQ(leaf->paint_calls, before);
   EXPECT_FALSE(app.root().isDirty());
+}
+
+// A pin jump reports two distant footprints; the old surface and new pin
+// each write 100 pixels without touching the broad gap between them.
+TEST(DamageRegionResourceTest, MovingPinWritesOnlyOldAndNewFootprints) {
+  Rect pin_bounds = kLeft;
+  std::vector<roo::byte> pixels(kWidth * kHeight * 4);
+  RecordingDevice device(pixels.data());
+  roo_display::Display display(device);
+  roo_scheduler::SchedulingService scheduler;
+  Environment environment(scheduler);
+  Application app(&environment, display);
+  auto panel = std::make_unique<CountedPanel>(app.context());
+  auto anchor = std::make_unique<CountedSurface>(app.context());
+  CountedSurface* anchor_ptr = anchor.get();
+  panel->add(std::move(anchor), Rect(150, 100, 150, 100));
+  app.add(std::move(panel), roo_display::Box(0, 0, 319, 239));
+  app.refresh();
+  ASSERT_EQ(
+      anchor_ptr->showPresentationPin(std::make_unique<MovingPin>(pin_bounds)),
+      PresentationPinShowResult::kShown);
+  app.refresh();
+
+  device.resetCounters();
+  pin_bounds = kRight;
+  app.refresh();
+  EXPECT_EQ(device.writes(), 200u);
+  EXPECT_EQ(device.unique(), 200u);
+  EXPECT_EQ(device.touched(15, 15), 1u);
+  EXPECT_EQ(device.touched(305, 225), 1u);
+  EXPECT_EQ(device.touched(155, 115), 0u);
+  EXPECT_FALSE(app.root().isDirty());
+  anchor_ptr->hidePresentationPin();
 }
 
 // Verifies the baseline recorder sees area amplification and supplies

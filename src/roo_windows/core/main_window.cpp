@@ -344,8 +344,8 @@ void MainWindow::preparePresentationPinsForPaint() {
                           bounds());
     }
     if (current_bounds != current->presented_bounds_) {
-      invalidatePresentationRegion(
-          UnionNonEmpty(current->presented_bounds_, current_bounds));
+      invalidatePresentationRegion(current->presented_bounds_);
+      invalidatePresentationRegion(current_bounds);
     }
   }
 }

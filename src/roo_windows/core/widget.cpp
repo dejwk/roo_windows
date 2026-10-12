@@ -568,10 +568,14 @@ void Widget::setPressed(bool pressed) {
     if (getOverlayType() != OVERLAY_NONE) {
       invalidateInterior();
     }
-    invalidated_bounds =
-        Rect::Extent(invalidated_bounds,
-                     getInteriorBounds().translate(offsetLeft(), offsetTop()));
-    notifyParentInvalidatedRegion(invalidated_bounds);
+    Rect current_bounds =
+        getInteriorBounds().translate(offsetLeft(), offsetTop());
+    if (!invalidated_bounds.empty()) {
+      notifyParentInvalidatedRegion(invalidated_bounds);
+    }
+    if (!current_bounds.empty() && current_bounds != invalidated_bounds) {
+      notifyParentInvalidatedRegion(current_bounds);
+    }
   }
   notifyStateChanged(kWidgetPressed);
 }

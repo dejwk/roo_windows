@@ -48,7 +48,7 @@ presentation terminology. Relevant implementation points are:
 
 | Area | Current behavior |
 | --- | --- |
-| [MainWindow](../../../src/roo_windows/core/main_window.cpp) | Accumulates one `redraw_bounds_` rectangle; clears it before painting so new requests survive. Root invalidation and presentation pins also add damage. |
+| [MainWindow](../../../src/roo_windows/core/main_window.cpp) | Accumulates a bounded `pending_damage_` union; snapshots and clears it before painting so new requests survive. Root invalidation and presentation pins also add damage. |
 | [Container](../../../src/roo_windows/core/container.cpp) | Stores one `invalid_region_` for its surface. Dirty propagation can stop when that envelope contains the new rectangle. |
 | [Widget](../../../src/roo_windows/core/widget.cpp) | Calls `prepareClip()` before content generation, clears clipped-away descendants, and publishes decorations and exclusions after content. |
 | [ClipperOutput](../../../src/roo_windows/core/clipper.cpp) | Prepares relevant exclusions once for its current bounds. Clip queries and output share them; overlay changes alone do not invalidate that preparation. |
@@ -420,8 +420,10 @@ a producer has already supplied a bounding rectangle.
 
 P7 covers `preparePresentationPinsForPaint()`,
 `ClickAnimation::invalidateTransientFootprint()`, and the press-state old/new
-interior notification in `Widget::setPressed()`. Preserve their ownership,
-visibility, clipping, and existing repaint requests. Keep conservative
+interior notification in `Widget::setPressed()`. They now submit their two
+footprints independently to the bounded root union. Pin presentation still
+retains a conservative `presented_bounds_` rectangle for lifecycle bookkeeping;
+visibility, clipping, and existing repaint requests remain intact. Keep conservative
 presentation bookkeeping and structural/visual bounds as rectangles; they are
 not interchangeable with damage accumulation.
 
@@ -544,7 +546,7 @@ memory, records completed slices.
 | P4 Accelerated coverage guards | P2 | Implemented | Exact viewport coverage and per-band damage guards; `//:accelerated_scroll_state_test`, `//:background_deferral_test`, and `//:damage_region_render_test` pass. |
 | P5 Restore pending paint obligations | P0 | Implemented | Framework-only widget/container restoration after paint; both sibling orders and semantic-hook count pass in `//:roo_windows_test`, and `//:accelerated_scroll_state_test` passes. Host `Widget`/`Container` remain 40/56 bytes. |
 | P6 Activate sparse root damage | P0–P5 | Implemented | `MainWindow` snapshots four-box pending damage and passes it to the clipper; 200 exact writes for distant 10×10 boxes, rejected middle container, capacity/full/idle and paint-time gap tests pass in damage resource and core targets; 10 renderer regressions pass. |
-| P7 Preserve producer footprints | P6 | Proposed | — |
+| P7 Preserve producer footprints | P6 | Implemented | Pin preflight, click spill, and press-state notifications submit old/new bounds separately; moving-pin regression writes 200 pixels with an untouched gap; producer and settlement suites pass. |
 | P8 Resource and device acceptance | P6, P7 | Proposed | — |
 | P9 Native output comparison | P8 | Proposed | — |
 

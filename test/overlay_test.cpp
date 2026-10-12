@@ -90,8 +90,7 @@ class NonAnimatedClickableIcon : public ClickableIcon {
 
 class PolicyClickableIcon : public ClickableIcon {
  public:
-  PolicyClickableIcon(ApplicationContext& context,
-                      ClickActivationPolicy policy)
+  PolicyClickableIcon(ApplicationContext& context, ClickActivationPolicy policy)
       : ClickableIcon(context, ic_outlined_24_navigation_menu()),
         policy_(policy) {}
 
@@ -313,6 +312,18 @@ class MutableClickAnimationOverflowWidget : public PointOverlayBoxWidget {
 
  private:
   int16_t overflow_;
+};
+
+class SplitPressFootprintWidget : public Widget {
+ public:
+  explicit SplitPressFootprintWidget(ApplicationContext& context)
+      : Widget(context) {}
+
+  Dimensions getSuggestedMinimumDimensions() const override { return {48, 20}; }
+
+  Rect getInteriorBounds() const override {
+    return isPressed() ? Rect(38, 2, 43, 7) : Rect(2, 2, 7, 7);
+  }
 };
 
 class FullWidthColumnWidget : public FlexLayout {
@@ -1087,8 +1098,7 @@ TEST_F(RooWindowsRenderTest, ActivationPoliciesDeliverAtTheirSelectedBoundary) {
   app_.add(std::move(forced), Box(0, 8, 23, 31));
   refresh();
 
-  forced_ptr->onSingleTapUp(forced_ptr->width() / 2,
-                            forced_ptr->height() / 2);
+  forced_ptr->onSingleTapUp(forced_ptr->width() / 2, forced_ptr->height() / 2);
   ASSERT_NE(nullptr, forced_ptr->getClickAnimation());
   EXPECT_FLOAT_EQ(1.0f, forced_ptr->getClickAnimation()->progress());
   EXPECT_EQ(0, forced_ptr->clickCount());
@@ -1112,9 +1122,9 @@ TEST_F(RooWindowsRenderTest, ActivationPoliciesDeliverAtTheirSelectedBoundary) {
   app_.add(std::move(continue_animation), Box(0, 8, 23, 31));
   refresh();
   continue_ptr->onShowPress(continue_ptr->width() / 2,
-                             continue_ptr->height() / 2);
+                            continue_ptr->height() / 2);
   continue_ptr->onSingleTapUp(continue_ptr->width() / 2,
-                               continue_ptr->height() / 2);
+                              continue_ptr->height() / 2);
   EXPECT_EQ(1, continue_ptr->clickCount());
   EXPECT_EQ(continue_ptr, app_.root().click_animation().target());
   delay(kPressAnimationMillis + 20);
@@ -1127,7 +1137,7 @@ TEST_F(RooWindowsRenderTest, ActivationPoliciesDeliverAtTheirSelectedBoundary) {
   app_.add(std::move(immediate), Box(0, 8, 23, 31));
   refresh();
   immediate_ptr->onSingleTapUp(immediate_ptr->width() / 2,
-                                immediate_ptr->height() / 2);
+                               immediate_ptr->height() / 2);
   EXPECT_EQ(1, immediate_ptr->clickCount());
   EXPECT_FALSE(app_.root().click_animation().isBusy());
 }
@@ -1583,9 +1593,8 @@ TEST_F(RooWindowsRenderTest,
   EXPECT_EQ(Rect(15, 9, 42, 32), panel_ptr->invalidated_regions.front());
 }
 
-// Verifies that click-animation ticks invalidate the union of previous and
-// current transient spill bounds so stale tint does not remain when transient
-// bounds shrink mid-animation.
+// Verifies that click-animation ticks report previous and current transient
+// spill bounds separately so stale tint clears without repainting their gap.
 TEST_F(RooWindowsRenderTest,
        ClickAnimationTickInvalidatesPreviousAndCurrentTransientBounds) {
   auto panel = std::make_unique<RecordingPanel>(context());
@@ -1608,8 +1617,29 @@ TEST_F(RooWindowsRenderTest,
   front_ptr->setOverflow(2);
   app_.root().refreshClickAnimation();
 
-  ASSERT_EQ(1u, panel_ptr->invalidated_regions.size());
-  EXPECT_EQ(Rect(12, 4, 45, 37), panel_ptr->invalidated_regions.front());
+  ASSERT_EQ(2u, panel_ptr->invalidated_regions.size());
+  EXPECT_EQ(Rect(12, 4, 45, 37), panel_ptr->invalidated_regions[0]);
+  EXPECT_EQ(Rect(18, 10, 39, 31), panel_ptr->invalidated_regions[1]);
+}
+
+// Press-state changes report old and new interior footprints individually.
+TEST_F(RooWindowsRenderTest, PressStateReportsSeparateInteriorFootprints) {
+  auto panel = std::make_unique<RecordingPanel>(context());
+  RecordingPanel* panel_ptr = panel.get();
+  auto widget = std::make_unique<SplitPressFootprintWidget>(context());
+  SplitPressFootprintWidget* target = widget.get();
+  panel->add(std::move(widget), Rect(0, 0, 47, 19));
+  app_.add(std::move(panel), Box(0, 0, 63, 47));
+  panel_ptr->invalidated_regions.clear();
+  target->setPressed(true);
+  ASSERT_EQ(panel_ptr->invalidated_regions.size(), 2u);
+  EXPECT_EQ(panel_ptr->invalidated_regions[0], Rect(2, 2, 7, 7));
+  EXPECT_EQ(panel_ptr->invalidated_regions[1], Rect(38, 2, 43, 7));
+  panel_ptr->invalidated_regions.clear();
+  target->setPressed(false);
+  ASSERT_EQ(panel_ptr->invalidated_regions.size(), 2u);
+  EXPECT_EQ(panel_ptr->invalidated_regions[0], Rect(38, 2, 43, 7));
+  EXPECT_EQ(panel_ptr->invalidated_regions[1], Rect(2, 2, 7, 7));
 }
 
 // Verifies that once the press animation reaches progress 1.0 the overlay

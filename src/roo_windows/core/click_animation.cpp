@@ -103,11 +103,12 @@ void ClickAnimation::sampleFrameTime() {
 
 void ClickAnimation::invalidateTransientFootprint() {
   Rect current = target_->getParentTransientPaintBounds();
-  Rect repaint = previous_transient_footprint_.empty()
-                     ? current
-                     : Rect::Extent(previous_transient_footprint_, current);
-  if (repaint != target_->parent_bounds()) {
-    target_->notifyParentInvalidatedRegion(repaint);
+  if (!previous_transient_footprint_.empty() &&
+      previous_transient_footprint_ != target_->parent_bounds()) {
+    target_->notifyParentInvalidatedRegion(previous_transient_footprint_);
+  }
+  if (current != target_->parent_bounds()) {
+    target_->notifyParentInvalidatedRegion(current);
   }
   previous_transient_footprint_ = current;
 }
