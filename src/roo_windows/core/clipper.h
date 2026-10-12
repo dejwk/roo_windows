@@ -12,6 +12,7 @@
 #include "roo_display/shape/smooth.h"
 #include "roo_time.h"
 #include "roo_windows/core/background_deferral.h"
+#include "roo_windows/core/damage_region.h"
 #include "roo_windows/core/exclusion_filter.h"
 #include "roo_windows/core/press_overlay.h"
 #include "roo_windows/core/rounded_clip.h"
@@ -25,6 +26,7 @@ class Clipper;
 namespace internal {
 
 struct BlitPlan;
+struct DamageRegionRenderTestPeer;
 
 class RoundedRepaintScope;
 
@@ -100,6 +102,7 @@ class ClipperState {
 
  private:
   friend class ClipperOutput;
+  friend struct DamageRegionRenderTestPeer;
 
   std::vector<roo_display::Box> exclusions_;
   std::vector<roo_display::Box> bounded_exclusions_;
@@ -126,9 +129,11 @@ class ClipperState {
 class ClipperOutput : public roo_display::DisplayOutput {
  public:
   /// Wraps @p out with fresh paint state, reusing the buffers in @p state.
-  ClipperOutput(internal::ClipperState& state, roo_display::DisplayOutput& out)
+  ClipperOutput(internal::ClipperState& state, roo_display::DisplayOutput& out,
+                const internal::DamageRegion* damage = nullptr)
       : state_(state),
         orig_output_(out),
+        damage_(damage),
         bounds_(0, 0, -1, -1),
         press_overlay_(state.press_overlay_),
         exclusions_(state.exclusions_),
@@ -256,6 +261,14 @@ class ClipperOutput : public roo_display::DisplayOutput {
   /// The caller must adopt the returned device-space clip before drawing.
   roo_display::Box prepareClip(roo_display::Box requested);
 
+  /// Reports whether active damage covers @p candidate; null damage is full.
+  bool damageCovers(const roo_display::Box& candidate) const {
+    return damage_ == nullptr || damage_->covers(candidate);
+  }
+
+  /// Returns borrowed active damage for internal copy/cleanup consumers.
+  const internal::DamageRegion* damageRegion() const { return damage_; }
+
   /// Retains one record for @p owner_key without activating its mask.
   /// Each owner prepares exactly once per synchronous paint. Preparation is
   /// separate because unclipped children must paint before mask activation.
@@ -372,6 +385,7 @@ class ClipperOutput : public roo_display::DisplayOutput {
   }
 
  private:
+  friend struct DamageRegionRenderTestPeer;
   /// Records an exclusion through the active rounded-mask chain.
   void addRoundedExclusion(const roo_display::Box& exclusion);
 
@@ -485,6 +499,7 @@ class ClipperOutput : public roo_display::DisplayOutput {
 
   ClipperState& state_;
   roo_display::DisplayOutput& orig_output_;
+  const DamageRegion* damage_;
   roo_display::Box bounds_;
   PressOverlay& press_overlay_;
   std::vector<roo_display::Box>& exclusions_;
@@ -524,9 +539,21 @@ class ClipperOutput : public roo_display::DisplayOutput {
 class Clipper {
  public:
   /// Wraps @p out for a complete paint pass, reusing buffers in @p state.
+  /// Borrowed @p damage must outlive this clipper; null is unrestricted.
   Clipper(internal::ClipperState& state, roo_display::DisplayOutput& out,
-          roo_time::Uptime deadline = roo_time::Uptime::Max())
-      : out_(state, out), deadline_(deadline) {}
+          roo_time::Uptime deadline = roo_time::Uptime::Max(),
+          const internal::DamageRegion* damage = nullptr)
+      : out_(state, out, damage), deadline_(deadline) {}
+
+  /// Reports whether immutable active damage covers @p candidate.
+  bool damageCovers(const roo_display::Box& candidate) const {
+    return out_.damageCovers(candidate);
+  }
+
+  /// Returns borrowed active damage for internal copy/cleanup consumers.
+  const internal::DamageRegion* damageRegion() const {
+    return out_.damageRegion();
+  }
 
   /// Reports expired advice without interrupting traversal or sampling motion.
   bool paintBudgetExceeded() const {

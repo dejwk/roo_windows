@@ -533,7 +533,7 @@ memory, records completed slices.
 | --- | --- | --- | --- |
 | P0 Characterization | Existing renderer | Implemented | `damage_region_resource_test`, [baseline report](measurements/sparse_damage_baseline.md); host target and four renderer regressions pass. |
 | P1 Damage geometry | None | Implemented | `damage_region.h/.cpp`, pixel-oracle test; `//:damage_region_test` and ASan pass, 34-byte host state. |
-| P2 Direct clip queries and prepared gaps | P1 | Proposed | — |
+| P2 Direct clip queries and prepared gaps | P1 | Implemented | `ClipperOutput` trims direct clips and prepares exact gap exclusions; `//:damage_region_render_test`, `//:paint_context_test`, and `//:masked_exclusion_test` pass. |
 | P3 Copy and certificate restrictions | P2 | Proposed | — |
 | P4 Accelerated coverage guards | P2 | Proposed | — |
 | P5 Restore pending paint obligations | P0 | Proposed | — |
@@ -617,10 +617,11 @@ exclusion preparation, then compile gaps only within surviving bounds. Retain
 output-side preparation for callers that bypass the query and preserve lazy
 overlay composition. Exercise the input directly in low-level tests;
 `MainWindow` still passes no damage. No drawing routine gains a native damage
-algorithm.
+algorithm. P2 now uses this path in the internal clipper, while `MainWindow`
+continues to pass null damage until P6.
 
 **Validation:** new render target, `//:paint_context_test`,
-`//:masked_exclusion_test`, and `//:masked_exclusion_subdivision_test`.
+`//:masked_exclusion_test` (which includes subdivision cases).
 Cover all output methods, clip shrinking and later expansion, exclusion and
 effect changes, unrestricted versus empty damage, nested masks and translucent
 overlays. Assert no outside-damage writes, no duplicate writes, unchanged

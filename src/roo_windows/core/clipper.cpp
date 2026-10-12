@@ -8,9 +8,12 @@ namespace roo_windows {
 namespace internal {
 
 roo_display::Box ClipperOutput::prepareClip(roo_display::Box requested) {
-  setBounds(requested);
+  const roo_display::Box candidate =
+      damage_ == nullptr ? requested : damage_->intersectionBounds(requested);
+  setBounds(candidate);
+  if (candidate.empty()) return candidate;
   prepareExclusions();
-  const roo_display::Box visible = exclusion_union_.visibleBounds(requested);
+  const roo_display::Box visible = exclusion_union_.visibleBounds(candidate);
   // The original prepared inputs also describe this subset. Adopting the
   // trimmed clip here lets its first output reuse them without another scan.
   // Overlays, if previously prepared, need the narrower bounds on next output.
@@ -22,6 +25,9 @@ roo_display::Box ClipperOutput::prepareClip(roo_display::Box requested) {
 void ClipperOutput::prepareExclusions() {
   if (exclusions_valid_) return;
   bounded_exclusions_.clear();
+  if (damage_ != nullptr) {
+    damage_->appendComplement(bounds_, bounded_exclusions_);
+  }
   for (const auto& e : exclusions_) {
     if (e.intersects(bounds_)) {
       bounded_exclusions_.push_back(e);
