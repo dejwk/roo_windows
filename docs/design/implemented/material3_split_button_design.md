@@ -1,9 +1,13 @@
 # Roo Windows Material 3 Split Button Design
 
-**Status: proposed.** Revised for composition against the source tree on
-2026-10-12. Buttons, menus, non-touch input, shared button appearance helpers, and density are
-implemented. The split button and the menu amendments below are not. See the
-[design status index](../README.md).
+**Status: implemented.** Reconciled with the source tree on 2026-10-12,
+including the procedural, click-driven chevron revision in `86960589`.
+The composed control, menu observation/cancellation, example, and focused
+host/target validation are implemented. See the [usage guide](../../material3_split_buttons.md),
+[acceptance evidence](../material3_split_button_acceptance.md), and
+[design status index](../README.md). Physical touchscreen checks remain manual;
+the implementation plan below retains the original validation checklist and
+does not claim automated coverage of every listed case.
 
 ## Objective
 
@@ -98,8 +102,10 @@ explicit Roo adaptations.
 `SplitButton` is a transparent `Container` with two inline-owned child buttons:
 **primary** and **trailing**. Each segment is a real surface and independent
 focus target. Small private `Button` subclasses supply split geometry and
-semantic delivery; they retain the normal button painter and shared click
-controller. No widget multiplexes two pending click identities.
+semantic delivery; they retain the normal button surface rendering and shared
+click controller. Primary content uses the ordinary button painter; the trailing
+foreground draws a procedural chevron. No widget multiplexes two pending click
+identities.
 
 The container measures and places its two children, propagates enabled state,
 and exposes the primary callback through its existing callback registry. Child
@@ -139,8 +145,10 @@ action.
 ### Geometry, content, and density
 
 Authored lengths in this table are dp. The linked files identify each row's
-source. Inner radii describe the corners facing the separation; outer radii
-remain full. The last column is the nominal trailing width before scaling.
+source. Inner radii describe the corners facing the separation; the press column
+applies to the primary segment. The trailing segment presses toward full
+rounding, and its open state is fully rounded. Outer radii remain full. The last
+column is the nominal trailing width before scaling.
 
 | Size | Height | Primary start/end padding | Trailing icon slot | Trailing start/end padding | Inner rest / hover / press | Trailing width |
 | --- | ---: | --- | ---: | --- | --- | ---: |
@@ -153,11 +161,11 @@ remain full. The last column is the nominal trailing width before scaling.
 The primary uses the current button family's label-large typography, leading
 icon slots, and icon-to-label gaps. The five leading slots are 20/24/24/32/40 dp
 and the gaps are 4/8/8/12/16 dp. Keep actual borrowed artwork intact; a larger
-icon enlarges its slot. Use shared, size-specific down/up chevron artwork at
-the authored slot size,
-rendered through the existing icon-only `Button` painter. Its extents must not
-enlarge the trailing segment through asset-size rounding. It points
-down while closed and up while open. There is no custom trailing icon setter.
+icon enlarges its slot. The trailing foreground is a smooth chevron generated
+at the authored slot size from two rotated rectangles, as described below.
+It points down while idle and closed, rotates during admitted click feedback,
+and points up while held at completion or while its menu is open. There is no
+custom trailing icon setter or generated bitmap asset.
 
 Measure the primary as one line using the shared button content path. Account
 for both advance and ink bounds, including negative bearings, in that path so
@@ -169,7 +177,8 @@ or add ellipsis in v1; constrained content is clipped to its segment.
 Let $S(x)$ denote `Scaled(x)`, $d$ the theme density in $[-5,0]$, $C_w$ the
 primary content width, and $C_h$ the larger of the primary and chevron content
 heights. At density zero, content height includes nominal icon slots. At
-compact densities, use the density design's centered painted-icon footprint.
+compact densities, primary icons use the density design's centered painted-icon
+footprint; the chevron retains its nominal slot as its content-height floor.
 Let $h_s$, $p_s$, $p_e$, $t_s$, $t_e$, and $i_t$ denote the selected table's
 height, primary paddings, trailing paddings, and trailing icon slot.
 
@@ -189,14 +198,12 @@ buttons; it does not change the scope of already implemented widgets. Read the
 theme directly, with no per-instance density override. The borrowed menu keeps
 its independently authored `MenuPolicy::density` and layout direction.
 
-These are the initial natural dimensions; the rounded-interior content floor
-in [child surfaces](#child-surfaces-and-decoration-clipping) completes the
-sizing calculation. Compute these dimensions in `onMeasure()` and resolve
+These are the natural dimensions. Compute them in `onMeasure()` and resolve
 them through `WidthSpec` and `HeightSpec`. Keep suggested minimums cheap: the
-container returns `Dimensions(0, 0)` and child overrides return conservative
-token/icon bounds without measuring text. Exact text measurement belongs in
-`onMeasure()`, not the suggested-minimum path. Split geometry owns
-its padding internally, so `getPadding()` is zero; callers' explicit layout
+container and primary child return `Dimensions(0, 0)`; the trailing child
+returns its nominal square icon slot without measuring text. Exact text
+measurement belongs in `onMeasure()`, not the suggested-minimum path. Split
+geometry owns its padding internally, so `getPadding()` is zero; callers' explicit layout
 constraints and outer margins retain their usual meaning. Default outer
 margins match `Button`; both children override their own margins to zero.
 The container measures both children and assigns their exact resolved segment
@@ -214,73 +221,91 @@ trailing rectangle is `(W-T', 0, W-1, H-1)`, using the actual `Rect` constructor
 inclusive end coordinates. Empty dimensions produce empty segments. With less
 than $T+g$ width, the primary disappears and only the remaining gap space and
 clipped trailing segment remain. Expanded width goes to the primary. A local
-`LayoutDirection` setting mirrors the two rectangles, paddings, and optical
-offset for right-to-left layout; it does not rewrite the caller's menu policy.
+`LayoutDirection` setting mirrors the two rectangles and paddings for
+right-to-left layout; it does not rewrite the caller's menu policy.
 
 Clamp every radius to half the segment's smaller measured dimension before
 narrowing to the radius storage type. Keep scaled dimensions in signed wide
 intermediates: 136 dp at 200% is 272 px. Outlined strokes use
 `Scaled(SmallNumber(1))`, preserving fractional widths at 75% and 150% zoom.
 
-Optical alignment follows AndroidX's
-[horizontal centering rule](https://github.com/androidx/androidx/blob/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/HorizontalCenterOptically.kt).
-For the trailing segment, let $r_s,r_e$ be the average current radii at its
-logical start and end. Shift the centered icon by
+### Procedural chevron and fixed centering
 
-$$
-\delta=\operatorname{round}\!\left(\operatorname{clamp}
-  (0.11(r_s-r_e),-S(t_s),S(t_e))\right).
-$$
+The trailing child's `paint()` uses
+[`internal::SplitChevron`](../../../src/roo_windows/material3/button/internal/split_chevrons.cpp).
+A `RasterizableStack` composites two `SmoothRotatedFilledRect` inputs: an outer
+square in the resolved button content color, followed by an opaque square
+cutout with `kDestinationOut`. Their difference leaves two perpendicular arms.
+Rotating this construction by 45 degrees produces the down chevron.
 
-Round to nearest pixel, with half ties toward positive infinity, then clamp
-again to the available horizontal slack under tight constraints. Convert the
-logical offset to physical direction. In the open state all trailing corners
-are full, so the offset is zero. The widget width and separation never change
-when opening; the trailing shape changes inside its existing rectangle.
+For a scaled icon slot $q$, the square side is $q/(2\sqrt{2})$ and the stroke
+width is $q/12$. The initial outer-square center offset is
+$-(\text{side}-\text{stroke})/(2\sqrt{2})$ vertically; the cutout is a further
+$\sqrt{2}\,\text{stroke}$ above it. This centers the visible ink envelope.
+Rotate both offsets with the artwork about the fixed segment center
+$((x_{min}+x_{max})/2,(y_{min}+y_{max})/2)$, preserving half-pixel coordinates.
+Both stack extents and anchor extents remain the full segment bounds.
+Corner-radius changes never shift the pivot; RTL only moves the segment.
 
-![Split-button child rectangles, optical alignment, and decoration clips](figures/material3_split_button_layout.svg)
+Rotation is $\pi p$, where $p$ is the trailing child's existing
+`ClickAnimation::progress()` sample. The shared click controller supplies frame
+scheduling and invalidation. With no active sample, a held press stays up;
+otherwise a closed idle control points down. An activated, successfully opened
+menu keeps the chevron up. Closing restores the down orientation immediately.
+There is no separate animation track, clock advancement in paint, or retained
+per-control angle. Programmatic opening immediately selects the up orientation.
+
+One reusable `thread_local` scratch object holds the two rectangles and stack.
+It reserves two stack inputs on first use; subsequent geometry changes and
+raster samples reuse that capacity. The synchronous paint call borrows it for
+one draw. The existing surface compositor supplies clipping, state layers,
+outline, and shadow around this foreground.
+
+![Split-button child rectangles, fixed chevron center, and decoration clips](figures/material3_split_button_layout.svg)
 
 The figure shows Small at 100% zoom with a 64 px primary content cluster:
-$W_0=16+64+12+2+48=142$, $L=92$, $H=40$; no further content-floor increase is
-needed. The closed offset is
-$\operatorname{round}(0.11(4-20))=-2$ px. Drawing scale is 3 SVG units per pixel;
-the 2 px separation is therefore exactly 6 SVG units in both states.
+$W_0=16+64+12+2+48=142$, $L=92$, $H=40$. Drawing scale is 3 SVG units per pixel;
+the 2 px separation is exactly 6 SVG units in both states. The chevron remains
+centered in the same trailing rectangle throughout the click and open state.
 
 ### Child surfaces and decoration clipping
 
 Keep the `Container` background transparent, its border empty, and its own
 elevation zero. Return false from `fullyCoversBoundsWithOpaqueColors()` and an
 empty `getDirectPaintExclusionBounds()`. Use ordinary container traversal; the ancestor must remain able to paint the gap and corner backdrop.
-Each child uses the existing `Button` foreground painter, state layers, outline,
-shadow, and click-animation lifecycle. Hover and focus affect only the child
+Both children use existing button state layers, outline, shadow, and the
+click-animation lifecycle. The primary uses the ordinary foreground painter;
+the trailing child draws the procedural chevron. Hover and focus affect only the child
 that owns them; press affects the admitted child and activated affects only the
 trailing child. The container propagates enabled state to both children and
 avoids applying a second disabled tint over their resolved disabled colors.
 
-Use two private subclasses of `Button`, including an icon-only trailing button,
+Use two instances of a private `Button` subclass, including the trailing button,
 so all four variants share the same appearance and elevation behavior. The
-specialization supplies padding, natural dimensions, corner geometry, optical
-content placement, and a decoration clip. It does not override `paint()` or
-introduce `OVERLAY_CUSTOM`, a segment painter, or another animation controller.
+specialization supplies padding, natural dimensions, corner geometry, content
+placement, and a decoration clip. Its `paint()` override delegates primary
+content to `Button::paint()` and draws only the trailing foreground. It introduces
+no `OVERLAY_CUSTOM`, duplicate surface painter, or animation controller.
 
-Add a small protected shape-resolution hook to `Button`: make its existing
-`resolveBorderStyle(bool pressed, float progress)` overridable and ensure both
-`getBorderStyle()` and before/after animation invalidation use it. The split
-resolver returns four independent radii through `BorderStyle`. Outer corners
+The protected `Button::resolveBorderStyle(bool pressed, float progress)` hook
+is overridable. Both `getBorderStyle()` and before/after animation invalidation
+use it. The split resolver returns four independent radii through `BorderStyle`.
+Outer corners
 remain full; inner-corner priority is press, then trailing-open, then hover,
-then rest. Focus changes the layer without changing corners. Retain the button
-press interpolation, `min(1, 3 * sampled_progress)`, and its ordinary overlay.
+then rest. The trailing press target is full rounding; the primary uses the
+table's pressed inner radius. Focus changes the layer without changing corners.
+Retain the button press interpolation, `min(1, 3 * sampled_progress)`, and its
+ordinary overlay.
 Hover and activated transitions explicitly invalidate from the old shape;
 open/close and hover geometry change immediately. There is no separate motion
 track or retained previous-geometry cache.
 
-The existing button painter centers content. Add a protected content-placement
-hook, with unchanged ordinary-button defaults, to apply the split padding and
-trailing optical offset through that same painter. The hook adjusts content
-placement within the existing safe clip; it does not replace surface clipping
-or drawing. Keep borrowed icon artwork intact. Shared chevrons are immutable
-assets, not per-control buffers. These two narrow extension points add no
-per-instance fields to ordinary buttons.
+The existing button painter centers content. Its protected content-placement
+hook applies primary split padding, with unchanged ordinary-button defaults.
+The hook adjusts content placement within the existing safe clip; it does not
+replace surface clipping or drawing. Keep borrowed primary icon artwork intact. The procedural chevron
+uses the fixed segment bounds instead of this content hook. These two narrow
+extension points add no per-instance fields to ordinary buttons.
 
 For decoration emission, create a narrowed `PaintContext` and delegate to
 `SurfaceWidget::emitPersistentDecoration()`. `PaintContext::addDecoration()`
@@ -319,18 +344,20 @@ boundary, invalidate the union of old and new decoration coverage before the
 old geometry is lost. Repaint must restore old shadow pixels after movement,
 shape changes, or elevation dropping to zero.
 
-Use the shared surface safe interior for content clipping and natural sizing.
-Compute the natural content floor for the most restrictive supported shape so
-hover, press, and opening do not change measured size or unexpectedly clip
-content. Explicit tight parent constraints may clip. Reuse the existing
-foreground-first painting and exclusion machinery; no custom paint order or
+Use the shared surface safe interior for primary content clipping. Natural
+size uses the content-height floor above and is independent of hover, press,
+and opening. Parent constraints and rounded safe interiors can clip content.
+Reuse the existing foreground-first painting and exclusion machinery; no custom paint order or
 widget-tree traversal is needed.
 
 ### Touch, keys, and semantic delivery
 
-Each child owns its normal pointer stream and uses
-`ClickActivationPolicy::kAfterNaturalAnimation`. The shared controller still
-admits only one interaction at a time; child composition does not introduce
+Each child owns its normal pointer stream. The primary uses
+`ClickActivationPolicy::kImmediateContinueAnimation`: an accepted click delivers
+the action immediately while visual feedback continues. The trailing child uses
+`kAfterForcedFinalFrame`, so a quick click paints terminal feedback before
+opening the menu. The shared controller still admits only one interaction at
+a time; child composition does not introduce
 parallel click animations. No gesture-segment, click-segment, or split-specific
 keyboard flags are retained.
 
@@ -446,8 +473,9 @@ Using the [target baseline](../../material3_target_baseline.md), two existing
 40 B `Button` subobjects and an approximately 44 B `Container` start at about
 124 B on the 32-bit target. Add roughly 4 B for the observer's secondary vptr,
 4 B for the borrowed menu pointer, and a direction flag plus ABI padding:
-about 136 B before any implementation-specific adjustments. This is an
-inspectable estimate, not a measured limit. The API sketch retains no duplicate
+about 136 B before any implementation-specific adjustments. The ESP32-C3 ABI
+probe measured 136 B for the implemented control (224 B on the 64-bit host).
+The API sketch retains no duplicate
 label/icon fields, child vector, or per-child owner pointer; children reach the
 owner through their attached parent and identify their role by member identity.
 Existing button fields retain the two children's size and variant settings.
@@ -463,16 +491,22 @@ renderer allocations separately from split-specific allocations.
 Geometry and routing operate over two children. Measurement retains ordinary
 button text-measurement costs, linear in label length where glyphs are visited;
 painting also visits glyphs. No constant-time cached measurement claim is made.
-Shared split tokens and chevron assets reside in flash. Phase 4 records actual
-object sizes, retained state, linked sections, allocations, and stack usage.
+Shared split tokens reside in flash. The procedural chevron adds 296 B of
+scratch per rendering thread on ESP32-C3, plus capacity for two stack inputs
+allocated on first use. It adds no per-control state. The
+[acceptance report](../material3_split_button_acceptance.md) records object sizes,
+allocation counts, and target builds; its original static-asset section and
+stack measurements are explicitly historical.
 Shared extension hooks must not add per-instance fields to `Widget` or ordinary
 `Button`; measured code-size changes are reported without an unsupported claim
 that composition always produces smaller firmware.
 
 ## Proposed API
 
-Add `material3/button/split_button.h` and its matching `.cpp`. This sketch shows
-the new consumer contract and retained state, omitting routine getters, fixed child-collection overrides, and
+The implemented API is in
+[`material3/button/split_button.h`](../../../src/roo_windows/material3/button/split_button.h)
+and its matching `.cpp`. This sketch shows the consumer contract and retained
+state, omitting routine getters, fixed child-collection overrides, and
 geometry-hook declarations already specified above.
 
 ```cpp
@@ -539,7 +573,8 @@ class SplitButton : public Container, private MenuPresentationObserver {
   void onMenuClosed(Menu& menu, PresentationFinishReason reason) override;
 
   // Private Button specialization. Overrides geometry, decoration clipping,
-  // exact touch bounds, and onClicked(); inherits paint and click lifecycle.
+  // exact touch bounds, and onClicked(); reuses the shared click lifecycle.
+  // paint() delegates primary content and draws a procedural trailing chevron.
   class SegmentButton : public Button {
     // No additional retained fields. Owner/role derive from parent/member identity.
     // Constructor and hook declarations omitted from this storage sketch.
@@ -599,8 +634,15 @@ run_button.setOnInteractiveChange([&controller]() { controller.runDefault(); });
 Follow the [shared C++ instructions](../../../.github/instructions/general-cpp-code-authoring-instructions.md),
 [widget instructions](../../../.github/instructions/roo-windows-widget-authoring.instructions.md),
 and [example instructions](../../../.github/instructions/embedded-example-authoring.instructions.md).
-Run validation from the canonical `roo_windows` repository. Each phase is one
-commit; the target names marked new are created by that phase. No partial
+Run validation from the canonical `roo_windows` repository. The original four
+phases below were delivered in `5b0ed8d6`, `e564685a`, `3e505814`, and `cf205a0e`.
+Subsequent revisions changed click delivery and replaced static artwork with
+the procedural chevron in `86960589`. The details above describe current
+behavior. The phase checklists record intended validation; the
+[acceptance report](../material3_split_button_acceptance.md) records the evidence
+actually collected, rather than certifying every original checklist case.
+Each original phase maps to one commit; the target names marked new are created
+by that phase. No partial
 public split-button API is exposed: shared button extension work precedes the
 complete composed widget, so no warning-only menu stub is needed.
 
@@ -726,9 +768,13 @@ framebuffer goldens and write instrumentation, example compile coverage, and
 host/target resource probes. The phase sections own the detailed cases and
 commands; existing menu, button, and dropdown targets provide regression
 coverage for shared paths. Physical touch usability is a separate manual check,
-especially for compact density. The current documentation-only review requires
-valid relative links, SVG structure and bounds, and a whitespace-clean diff;
-it does not establish implementation or device acceptance.
+especially for compact density. The implemented chevron revision adds fixed
+center/half-turn symmetry, intermediate-angle shape checks, shared-click
+progress coverage, midpoint captures at all four zooms, and allocation checks
+after scratch initialization. See the [acceptance report](../material3_split_button_acceptance.md)
+for recorded results and the distinction between current and baseline resource
+measurements. Documentation revisions require valid relative links, SVG
+structure and bounds, and a whitespace-clean diff.
 
 ## Caveats
 

@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="960" height="700" viewBox="0 0 960 700" role="img" aria-labelledby="title desc">
   <title id="title">Split-button child geometry, menu anchor, and midpoint decoration clips</title>
-  <desc id="desc">Small size at 100 percent zoom, enlarged three times. Both states have a 92 pixel primary segment, a 2 pixel gap, and a 48 pixel trailing segment, at height 40 pixels. Opening changes the trailing corners and icon, never its rectangle. Two child buttons use existing surface rendering. Decoration clips meet halfway through the gap, preventing shadow overlap while preserving outward overflow.</desc>
+  <desc id="desc">Small size at 100 percent zoom, enlarged three times. Both states have a 92 pixel primary segment, a 2 pixel gap, and a 48 pixel trailing segment, at height 40 pixels. Click progress rotates the chevron about a fixed center. Opening keeps it up and changes the trailing corners, never its rectangle. Two child buttons use existing surface rendering. Decoration clips meet halfway through the gap, preventing shadow overlap while preserving outward overflow.</desc>
   <rect width="960" height="700" fill="white"/>
   <style>
     text { font-family: sans-serif; fill: #202633; }
@@ -12,7 +12,7 @@
     .open { fill: #d9cbed; }
     .guide { stroke: #677486; stroke-width: 1; fill: none; }
     .anchor { stroke: #196f9b; stroke-width: 1.5; stroke-dasharray: 5 4; fill: none; }
-    .chevron { stroke: #302b3e; stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .chevron { fill: #302b3e; }
     .arrow { stroke: #677486; stroke-width: 1.5; fill: none; marker-end: url(#arrow); }
   </style>
   <defs>
@@ -32,15 +32,15 @@
     <path class="surface" d="M294 0 H366 A60 60 0 0 1 426 60 A60 60 0 0 1 366 120 H294 A12 12 0 0 1 282 108 V12 A12 12 0 0 1 294 0 Z"/>
     <rect x="48" y="24" width="192" height="72" rx="2" class="anchor"/>
     <text x="144" y="72" font-size="32" text-anchor="middle">Run</text>
-    <!-- Geometric center 354; closed correction -2 px = -6 SVG units. -->
-    <path class="chevron" d="M330 51 L348 69 L366 51"/>
+    <!-- Fixed center (354, 60); exact 22 px slot chevron at 3:1. -->
+    <path class="chevron" d="M341.389 49.805 L337.500 53.695 L354.000 70.195 L370.500 53.695 L366.611 49.805 L354.000 62.416 Z"/>
     <path class="guide" d="M0 132 V150 M276 132 V150 M282 132 V150 M426 132 V150 M0 145 H276 M282 145 H426"/>
     <text x="138" y="168" class="body" text-anchor="middle">primary L = 92 px</text>
     <text x="354" y="168" class="body" text-anchor="middle">T = 48 px</text>
   </g>
-  <path class="arrow" d="M534 132 H507 L407 154"/>
-  <text x="546" y="132" class="body">Chevron center shifts 2 px toward primary.</text>
-  <text x="546" y="155" class="note">round(0.11 × (4 − 20)) = −2</text>
+  <path class="arrow" d="M534 132 H507 L414 162"/>
+  <text x="546" y="132" class="body">Chevron rotates around a fixed center.</text>
+  <text x="546" y="155" class="note">Rotation = π × shared click progress.</text>
   <text x="546" y="185" class="body">Primary content cluster: 64 × 24 px.</text>
   <text x="546" y="208" class="note">Start/end padding: 16 / 12 px.</text>
   <text x="546" y="241" class="body">Total width: 92 + 2 + 48 = 142 px.</text>
@@ -56,7 +56,7 @@
     <!-- Same x=282..426, now full radius 60 on all four corners. -->
     <rect x="282" y="0" width="144" height="120" rx="60" class="open"/>
     <text x="144" y="72" font-size="32" text-anchor="middle">Run</text>
-    <path class="chevron" d="M336 69 L354 51 L372 69"/>
+    <path class="chevron" d="M366.611 70.195 L370.500 66.305 L354.000 49.805 L337.500 66.305 L341.389 70.195 L354.000 57.584 Z"/>
     <rect x="282" y="0" width="144" height="120" class="anchor"/>
   </g>
   <path class="arrow" d="M535 404 H495 L467 409"/>
@@ -73,8 +73,8 @@
 
   <text x="32" y="601" class="heading">Existing child rendering; decoration clips meet in the gap</text>
   <rect x="32" y="620" width="260" height="55" rx="6" fill="#edf3fa"/>
-  <text x="47" y="643" class="body">1. Ordinary button content</text>
-  <text x="47" y="663" class="note">Reuse painter and click feedback.</text>
+  <text x="47" y="643" class="body">1. Segment foreground</text>
+  <text x="47" y="663" class="note">Primary content / procedural chevron.</text>
   <path class="arrow" d="M300 647 H323"/>
   <rect x="332" y="620" width="260" height="55" rx="6" fill="#edf3fa"/>
   <text x="347" y="643" class="body">2. Per-corner decoration</text>

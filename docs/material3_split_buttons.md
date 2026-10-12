@@ -1,5 +1,8 @@
 # Material 3 split buttons
 
+See the [implemented design](design/implemented/material3_split_button_design.md) for geometry,
+click feedback, and ownership contracts.
+
 `material3::SplitButton` groups a default action with a menu of related
 actions. For example, a device may **Run** normally, **Run once**, or
 **Configure run**. It renders the primary action and trailing chevron as two

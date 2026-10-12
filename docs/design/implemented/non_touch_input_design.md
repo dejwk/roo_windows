@@ -121,9 +121,9 @@ Several local pieces already fit a keyboard-first extension.
 Several local design docs explicitly assume touch-primary behavior or defer
 keyboard / pointer focus routing:
 
-- [material3_split_button_design.md](../proposed/material3_split_button_design.md)
-  explicitly says v1 does not add per-segment hover or keyboard-focus routing
-  because touch is still the primary interaction model.
+- [material3_split_button_design.md](../implemented/material3_split_button_design.md)
+  originally deferred per-segment hover and keyboard focus. Its implemented
+  revision now uses two ordinary child focus targets and shared input routing.
 - [material3_menus_design.md](material3_menus_design.md) explicitly avoids a
   hover-only interaction model for embedded touch targets.
 - [../implemented/material3_slider_design.md](../implemented/material3_slider_design.md) defers keyboard
@@ -708,7 +708,7 @@ fall out of the simple clickable model.
 
 4. Childless compound widgets
 
-   [material3_split_button_design.md](../proposed/material3_split_button_design.md)
+   [material3_split_button_design.md](../implemented/material3_split_button_design.md)
    explicitly deferred per-segment hover and keyboard-focus routing because the
    framework had no such model.
 

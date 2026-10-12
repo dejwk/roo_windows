@@ -61,9 +61,9 @@ There is no Material 3 group implementation. The [segmented-button
 proposal](material3_segmented_buttons_design.md) describes the classic
 shared-outline component and remains a distinct proposal. [Split
 buttons](../../material3_split_buttons.md) are implemented, including
-[acceptance evidence](../material3_split_button_acceptance.md); their source
-design still resides in `proposed/`. Their transparent composition and
-decoration hooks are useful precedents, but their fixed two-child layout and
+[acceptance evidence](../material3_split_button_acceptance.md) and an
+[implemented design](../implemented/material3_split_button_design.md). Their
+transparent composition and decoration hooks are useful precedents, but their fixed two-child layout and
 menu ownership are not group infrastructure.
 [Toolbars](../implemented/material3_toolbars_design.md) are also implemented
 and are not a dependency of this one.

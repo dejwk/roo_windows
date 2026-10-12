@@ -809,7 +809,7 @@ The following are intentionally out of scope for this first design:
 4. multi-line button labels,
 5. toggle / selectable icon buttons,
 6. split buttons in this document; see
-   [material3_split_button_design.md](../proposed/material3_split_button_design.md),
+   [material3_split_button_design.md](../implemented/material3_split_button_design.md),
 7. and a large Android-style setter surface for every color, inset, and
    drawable parameter.
 

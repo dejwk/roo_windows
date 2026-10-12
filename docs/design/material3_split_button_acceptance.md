@@ -1,5 +1,8 @@
 # Material 3 split button acceptance
 
+See the [implemented design](implemented/material3_split_button_design.md) for geometry,
+click feedback, and ownership contracts.
+
 The composed `SplitButton` has two inline `Button` children. Its public
 behavior, geometry, menu lifetime, and visual captures are exercised by the
 split-button targets in `BUILD`. The `run_actions` example builds for the host
