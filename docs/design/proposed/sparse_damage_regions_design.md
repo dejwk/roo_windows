@@ -6,6 +6,10 @@ painting, rounded child clipping, prepared exclusions, rounded scroll copying,
 and accelerated-scroll cleanup are existing prerequisites. The phase ledger
 below is the implementation handoff; update it as each phase lands.
 
+Amended on 2026-10-13: use damage directly for early clip rejection and trimming,
+retain compiled gaps for initial output filtering, and compare native damage
+filtering in a separate measurement phase after the hybrid implementation.
+
 ## Objective
 
 Preserve separation between small invalidations so a refresh avoids writing
@@ -118,16 +122,27 @@ foreground exclusions are considered.
 
 The root stores at most four damage rectangles. Containers retain their
 existing conservative surface rectangles; the shared clipper enforces the
-precise active union. `prepareClip()` also uses these prepared exclusions, so
-widgets entirely inside a gap can avoid content generation. No second widget
-traversal paints another rectangle.
+precise active union. The initial implementation combines two mechanisms:
+
+1. `prepareClip()` intersects its requested clip with each damage member and
+   bounds the surviving intersections. An empty result skips widget content
+   generation before any exclusions are prepared.
+2. For a surviving clip, prepare semantic and gap exclusions inside those
+   smaller bounds. Reuse them for further clip trimming and exact output
+   filtering, including holes that a rectangular canvas clip cannot represent.
+
+This keeps widget rejection to at most four rectangle intersections while
+preserving the existing output algorithms. No second widget traversal paints
+another rectangle. [P9](#p9-compare-native-damage-output-filtering) measures
+native output filtering against this hybrid; it does not change the initial
+implementation choice.
 
 | Requirement | Mechanism |
 | --- | --- |
 | Correct pixels and ordering, R1/R3 | Exact gap exclusions share the existing ordinary and rounded output filter; contributor and decoration order remains intact. |
 | Bounded conservative damage, R2/R5 | Four window-owned members, deterministic outward merging, and a bounded complement sweep. |
 | Next-refresh work, R4 | Consume pending damage before painting, then restore pending paint obligations after traversal. |
-| Fast paths and measurements, R6 | Shared prepared exclusions, empty/full-coverage shortcuts, and explicit resource gates. |
+| Fast paths and measurements, R6 | Direct four-member clip rejection/trimming before shared exclusion preparation, coverage shortcuts, and explicit resource gates. |
 | Copy and cleanup safety, R7 | Separate destination coverage and source eligibility; require exact viewport coverage for complete-scroll admission. |
 | Incremental integration, R8 | Optional internal damage input defaults to unrestricted behavior until the root is switched. |
 
@@ -164,10 +179,58 @@ with an early exit at the first nonempty gap; do not collect temporary fragments
 just to answer this query. The empty candidate is covered; an empty region
 covers no nonempty candidate.
 
+### Direct damage rejection and trimming
+
+An undamaged widget does not need complement construction to prove that it can
+skip painting. For requested clip $C$ and damage members $D_i$, compute
+
+$$
+B=\operatorname{bbox}\!\left(\bigcup_i(C\cap D_i)\right).
+$$
+
+`DamageRegion::intersectionBounds(C)` ignores empty intersections and accumulates
+their envelope in one local box. It returns empty when none survive. This is
+at most four rectangle intersections and bounding updates, with no sorting,
+allocation, fragment list, or exclusion scan. Intersect each member separately:
+`C` intersected with the overall damage envelope would retain undamaged gaps.
+For the figure above, a widget clip `(100, 100)..(199, 139)` is rejected even
+though it lies inside the 300 by 220 damage envelope.
+
+`ClipperOutput::prepareClip()` follows this sequence:
+
+```text
+candidate = damage present ? damage.intersectionBounds(requested) : requested
+setBounds(candidate)
+if candidate is empty: return empty
+prepareExclusions() within candidate
+visible = exclusion_union.visibleBounds(candidate)
+adopt visible using the existing prepared-subset reuse; return visible
+```
+
+Update bounds even on early rejection so later expansion cannot reuse stale
+preparation. A null damage pointer preserves unrestricted behavior; a non-null
+empty region rejects every clip. Direct damage rejection performs no exclusion
+preparation or overlay composition. Callers still adopt the returned clip.
+
+`B` is the exact bounding box of the damage intersections, not a disjoint
+region. The later semantic-exclusion search can trim it further but retains
+its existing conservative search limit. Internal holes remain for output
+filtering. If a requested clip meets only one damage member, the trimmed
+candidate is wholly inside that member and needs no gap fragments.
+
+The existing empty-clip handling skips the content paint hook; a container can
+also skip descendant drawing, while dirty-flag cleanup can still visit them.
+Keep the [decoration overflow path](#rounded-contributors-and-effects): a shadow
+can reach damage even when its widget's content clip is rejected. Do not put
+an unconditional widget return ahead of that path.
+
 ### Compiling gap exclusions
 
-Compile $C\setminus D$ while preparing exclusions for a clip. Choose a
-horizontal-band sweep with fixed local scratch:
+Compile $C\setminus D$ while preparing exclusions for the current clip. After
+direct damage trimming, $C$ is the surviving candidate above. Other entry
+points that bypass `prepareClip()` still receive exact gap filtering through
+ordinary output preparation; correctness must not depend on the early query.
+Choose a horizontal-band sweep with fixed local scratch:
 
 1. Intersect damage members with $C$; discard empty intersections.
 2. Collect `C.yMin`, widened `C.yMax + 1`, and the intersections' corresponding
@@ -178,7 +241,9 @@ horizontal-band sweep with fixed local scratch:
 
 With $N\leq4$ members there are at most $2N+2=10$ Y boundaries, $2N+1=9$
 bands, and $N+1=5$ gaps per band. Thus at most 45 gap rectangles are appended.
-This is a conservative pre-coalescing bound, not an expected count. The first
+This is a conservative pre-coalescing bound, not an expected count. A clip
+inside one damage member emits no gaps, and the illustrated two-corner envelope
+emits three. Directly rejected widget clips never run this compiler. The first
 implementation emits these bands directly; it does not maintain another
 fragment vector or vertical-coalescing cache. This makes storage and failure
 behavior inspectable.
@@ -195,10 +260,11 @@ Keep rounded descriptors in their existing separate prepared array.
 
 Reuse `exclusions_valid_`: changed bounds or registered exclusions rebuild the
 combined list; overlay/effect-only changes do not. Active damage cannot change
-while a clipper exists, so no generation counter is needed. When `prepareClip()`
-shrinks $C$ to a subset, its prepared gaps remain valid for that subset exactly
-as existing exclusions do. A later expansion goes through `setBounds()` and
-rebuilds preparation.
+while a clipper exists, so no generation counter is needed. Direct damage
+trimming precedes preparation. When the later exclusion search shrinks $C$ to
+a subset, its prepared gaps remain valid for that subset exactly as existing
+exclusions do. A later expansion goes through `setBounds()` and rebuilds
+preparation.
 
 Do not call `addExclusion()` for gaps, prune overlays because of them, add them
 to `exclusions()`, or present them to source certification as scene coverage.
@@ -277,8 +343,9 @@ authorize arbitrary tree destruction or unsupported reentrant paints.
 
 Keep the synchronous rounded reconstruction path. Prepare and mask child groups
 in their current order, accumulate fractional colors, and publish owner
-decoration normally. Gaps restrict output and early content eligibility; they
-are not opaque scene contributors and cannot supply boundary colors.
+decoration normally. Direct damage intersection restricts early content
+eligibility; compiled gaps restrict output and subsequent exclusion trimming.
+Neither supplies opaque scene coverage or boundary colors.
 
 Keep decoration overflow handling even when content is rejected by damage:
 a shadow can reach active damage from a widget whose content does not. Preserve
@@ -364,16 +431,18 @@ ancestor depth of a reported change. These are independent input dimensions.
 | Prepared gap payload | At most 360 additional live bytes in the existing reusable vector. Vector capacity growth can retain more; record actual capacity and allocator cost. |
 | Accumulation | At most five candidates, ten pairs per merge decision, with bounded repeat simplification. No input history is retained. |
 | Propagation | One ordinary ancestor walk per notification, $O(d)$ before existing subclass work; no new ancestry search. |
-| Complement preparation | $O(N^2\log N)$ for band and interval sorting, on invalid prepared clips. Constants are bounded by four members. |
+| Direct clip query | $O(N)$: at most four box intersections and envelope updates, constant box scratch, no allocation or sorting. Rejected queries perform no exclusion preparation. |
+| Complement preparation | $O(N^2\log N)$ for band and interval sorting, on invalid prepared clips that survive the direct query, or on output that bypasses it. Constants are bounded by four members. |
 | Filtering | Existing algorithms see $E+H$ ordinary rectangles; fewer output pixels do not imply fewer membership scans. |
 | Obligation restoration | Up to $O(NV)$ after paints that report further damage; no walk on an ordinary settled paint. |
 
-Choose compilation at `prepareExclusions()` without a second cached global
-complement. This reuses established preparation and avoids another retained
-fragment list and cache state. Overlay-only changes already avoid repeated
-preparation. P8 measures the cost under many small widgets; failures require
-an explicit design amendment and measurement, not an undocumented switch to a
-different representation.
+Choose direct clip queries plus compilation at `prepareExclusions()`, without
+a second cached global complement. This reuses established output preparation
+and avoids another retained fragment list and cache state. Overlay-only changes
+already avoid repeated preparation. P8 separates query cost, rejected-query
+count, complement construction, filtering, and device traffic. P9 compares
+native output filtering without weakening the cheap direct query. Algorithm
+changes require a measured design amendment, not an undocumented switch.
 
 Keep the current single-region path free of gap fragments when its canvas clip
 is already inside that region. Warmed fixed-scene allocations must not increase.
@@ -401,6 +470,8 @@ class DamageRegion {
   uint8_t size() const;
   const roo_display::Box& at(uint8_t index) const;
   roo_display::Box bounds() const;
+  // Bounds of the union of member intersections, empty if none; allocation-free.
+  roo_display::Box intersectionBounds(const roo_display::Box& clip) const;
   bool covers(const roo_display::Box& candidate) const;
   void appendComplement(const roo_display::Box& clip,
                         std::vector<roo_display::Box>& output) const;
@@ -433,8 +504,9 @@ internal::DamageRegion pending_damage_;
 
 `damageCovers()` returns true for unrestricted mode and otherwise tests the
 union. Low-level clipper callers keep unrestricted behavior until they explicitly
-supply damage. P2 implements filtering and the query completely; P3/P4 extend
-their separate consumers before P6 activates sparse damage at the window.
+supply damage. P2 implements direct clip trimming, filtering and the coverage
+query completely; P3/P4 extend their separate consumers before P6 activates
+sparse damage at the window.
 There are no placeholder APIs returning success for unimplemented behavior.
 
 ## Implementation Plan
@@ -458,13 +530,14 @@ memory, records completed slices.
 | --- | --- | --- | --- |
 | P0 Characterization | Existing renderer | Proposed | — |
 | P1 Damage geometry | None | Proposed | — |
-| P2 Prepared damage exclusions | P1 | Proposed | — |
+| P2 Direct clip queries and prepared gaps | P1 | Proposed | — |
 | P3 Copy and certificate restrictions | P2 | Proposed | — |
 | P4 Accelerated coverage guards | P2 | Proposed | — |
 | P5 Restore pending paint obligations | P0 | Proposed | — |
 | P6 Activate sparse root damage | P0–P5 | Proposed | — |
 | P7 Preserve producer footprints | P6 | Proposed | — |
 | P8 Resource and device acceptance | P6, P7 | Proposed | — |
+| P9 Native output comparison | P8 | Proposed | — |
 
 P0/P1 and, after P2, P3/P4 can be delegated independently with explicit file
 ownership. Serialize edits to `BUILD`, this ledger, and the design index, or
@@ -474,7 +547,9 @@ files without an agreed owner. No agent implements a later phase silently.
 Each handoff records files changed, exact validation commands/results, resource
 deltas, unresolved failures, and the next eligible phase. Update only the
 delivered phase's status. Move the document/index to in-progress after the first
-phase and to implemented only after P8's required gates pass. Move this design's
+phase. P8 accepts the production hybrid; mark the full design implemented after
+that acceptance and P9's comparison report. Native production integration is a
+separate amendment, not a prerequisite for this design. Move this design's
 figure and measurement reports with it, update inbound links, and check all
 relative links after each status-directory move.
 
@@ -507,50 +582,61 @@ Update the Motivation evidence reference and ledger with the checked-in report.
 
 **Files:** new `core/damage_region.h/.cpp`, `test/damage_region_test.cpp`, `BUILD`.
 
-Implement accumulation, deterministic merge policy, envelope and exact coverage
-queries, and the bounded complement sweep. Keep the helper independent of
-widgets, clipping state, and device I/O. Document inclusive-boundary conversion
-and fragment bounds beside the algorithms.
+Implement accumulation, deterministic merge policy, envelope, direct
+`intersectionBounds()` and exact coverage queries, and the bounded complement
+sweep. Keep the helper independent of widgets, clipping state, and device I/O.
+Document inclusive-boundary conversion and fragment bounds beside the algorithms.
 
 **Validation:** `//:damage_region_test`. Compare coverage and complements with a
 small-grid pixel oracle for overlapping, nested, adjacent, crossing, empty and
 clipped inputs; exercise the fifth insertion, tie cases, full representable
 boundary arithmetic, and repeated additions. Assert original coverage is never
-lost, gaps are disjoint and exact, and emitted count never exceeds 45. Update
-API/resource notes with measured helper size.
+lost, gaps are disjoint and exact, and emitted count never exceeds 45. Compare
+`intersectionBounds()` with the oracle's exact bounding box, including a query
+inside the damage envelope but between every member. Verify the query allocates
+nothing. Update API/resource notes with measured helper size.
 
 **Proposed commit message:**
 
 > Sparse damage regions P1: add bounded damage accumulation and exact complements.
 >
-> Implement the four-rectangle helper, deterministic conservative merging and
-> band-based gap generation with geometry-oracle coverage.
+> Implement the four-rectangle helper, direct intersection bounds, conservative
+> merging and band-based gap generation with geometry-oracle coverage.
 
-### P2 Integrate damage with prepared exclusions
+### P2 Add direct clip queries and prepared damage exclusions
 
 **Files:** `core/clipper.h/.cpp`, `test/paint_context_test.cpp`, and focused
 `test/damage_region_render_test.cpp` support/target.
 
-Add the optional immutable damage input and exact coverage query. Append gaps
-inside shared exclusion preparation and preserve lazy overlay composition.
-Exercise the input directly in low-level tests; `MainWindow` still passes no
-damage. No drawing routine gains a complement-specific algorithm.
+Add the optional immutable damage input and exact coverage query. Implement
+the [direct query sequence](#direct-damage-rejection-and-trimming) before
+exclusion preparation, then compile gaps only within surviving bounds. Retain
+output-side preparation for callers that bypass the query and preserve lazy
+overlay composition. Exercise the input directly in low-level tests;
+`MainWindow` still passes no damage. No drawing routine gains a native damage
+algorithm.
 
 **Validation:** new render target, `//:paint_context_test`,
 `//:masked_exclusion_test`, and `//:masked_exclusion_subdivision_test`.
 Cover all output methods, clip shrinking and later expansion, exclusion and
 effect changes, unrestricted versus empty damage, nested masks and translucent
 overlays. Assert no outside-damage writes, no duplicate writes, unchanged
-semantic descriptors, and preparation reuse after overlay-only changes. Add
-tests for `prepareClip()` rejection and trimming, including decoration overflow.
-Update the shared-preparation documentation in this design.
+semantic descriptors, and preparation reuse after overlay-only changes.
+Instrument preparation through test-only counters: a direct damage rejection
+must make zero preparation/compiler calls, allocate nothing, and avoid content
+paint hooks for widgets without decoration overflow. Test exact damage-envelope
+trimming, one-member survivors with zero gap fragments, and multi-member
+survivors whose internal gaps remain filtered. Check expansion after rejection,
+semantic-exclusion trimming after damage trimming, decoration overflow reaching
+damage from rejected content, and exact filtering without `prepareClip()`.
+Update the direct-query and shared-preparation documentation in this design.
 
 **Proposed commit message:**
 
-> Sparse damage regions P2: compile damage gaps into prepared exclusions.
+> Sparse damage regions P2: trim clips directly before preparing damage gaps.
 >
-> Add an optional synchronous damage view to Clipper and reuse the existing
-> output filter and early clip preparation without changing semantic exclusions.
+> Reject undamaged clips with the bounded damage query, then reuse prepared
+> exclusions for surviving clips and exact output without changing scene coverage.
 
 ### P3 Restrict raw copy destinations and new certificates
 
@@ -649,6 +735,9 @@ inside a damage gap. Compare complete-render pixels for rounded/effected,
 overlapping and unclipped scenes. The unmerged two-box background case must
 write exactly 200 pixels and zero gap pixels after initial painting. Verify
 capacity overflow, full refresh, root-local invalidation and settled idle state.
+Assert an undamaged middle widget skips its content hook without preparing
+exclusions for that query; include a rejected container and the shadow-overflow
+exception. Paint-time requests for skipped widgets must survive restoration.
 Record this as the first end-to-end sparse behavior in the status index.
 
 **Proposed commit message:**
@@ -690,7 +779,8 @@ benchmark/example instead of creating a new public demo API.
 Run the P0 scenes with one, two and four damage members, dense overlap, fifth
 insertion, 0/8/32 children, nested rounded owners, and simple/blit/accelerated
 scroll policies. Measure total refresh median/p95 time, emitted pixels and
-address commands, hook visits, complement counts/preparation calls, warmed
+address commands, hook visits, direct-query time/rejections, complement
+counts/preparation calls and time, output-filter CPU time, warmed
 allocations, live/retained heap, object/vtable/flash sizes, and target stack.
 Use the same build flags and scene setup for baseline and candidate.
 
@@ -719,6 +809,51 @@ document and receive its own measured rationale before implementation.
 > Record sparse and contiguous damage measurements, bounded memory and stack
 > costs, and complete regression and device evidence for the implemented design.
 
+### P9 Compare native damage output filtering
+
+**Files:** benchmark-only filter prototype and driver under `benchmarks/`, a
+focused benchmark target, and `measurements/sparse_damage_native_comparison.md`
+beside this document. Keep production filtering and public APIs unchanged.
+
+Compare the accepted hybrid against an output filter that consults the four
+damage members directly. Both use the same early `intersectionBounds()` query
+and semantic/rounded exclusions. Concentrate the prototype in the filter:
+point membership, streamed visible runs, and disjoint rectangle portions
+inside damage. Union overlapping members before emitting output; preserve
+input cursor advancement across skipped streamed pixels and safe row batching.
+Exercise direct images through the filtered methods, and retain filtering when
+semantic exclusions are empty but damage has holes. Do not repaint widgets
+once per damage member.
+
+Use one/two/four members, overlap and crossing shapes, fragmented damage,
+large background fills, sparse pixels and streamed images, plus the P8
+single-rectangle/full-frame and rounded controls. Report actual gap counts;
+the 45-fragment bound is not an assumed workload. Measure filter-only CPU,
+total refresh median/p95, writes, address commands, scratch/retained RAM,
+allocations, stack and flash on the same host and ESP32-S3 setups. Follow P8's
+batching protocol and reuse its fixtures.
+
+**Decision criterion:** recommend a separate native-integration amendment only
+when pixels and write uniqueness match, the existing memory/stack/allocation
+gates hold, and native filtering improves median total refresh by at least 10%
+in at least two of the fragmented fill, sparse-pixel and streamed-image scenes,
+with no control regression beyond P8's 5% median / 10% p95 limits. Report flash
+and retained-memory deltas alongside the timing decision. Otherwise retain the
+hybrid. These are proposed thresholds; fewer descriptors alone do not pass.
+
+**Validation:** run the prototype against the same geometry/pixel/write-count
+oracles and output-method cases as P1/P2, then record reproducible commands,
+source revisions, target results and the decision. Missing target evidence
+leaves P9 pending. This phase completes with a checked-in comparison and
+recommendation; it never silently replaces the production filter.
+
+**Proposed commit message:**
+
+> Sparse damage regions P9: compare native damage filtering with compiled gaps.
+>
+> Add a benchmark-only prototype and reproducible correctness and cost evidence
+> to decide whether a separate output-filter integration is justified.
+
 ## Testing Plan
 
 Use the [repository test launcher](../../../.roo_testing/bin/bazel) from the
@@ -731,7 +866,10 @@ Validation has four layers: geometry against a pixel-set oracle; clipper output
 against a recording device exercising every output method; full widget scenes
 against complete-render snapshots and write counts; and host/target resource
 measurements. Correct final pixels alone cannot establish that gaps were not
-written or that pixels were written only once.
+written or that pixels were written only once. Test-only preparation counters
+establish that direct rejection avoids complement construction; hook counts
+establish that widgets actually skip content generation. P9 reuses the same
+oracles for its isolated comparison rather than changing production behavior.
 
 Snapshots use already-settled scenes before submitting measured damage. Compare
 effects at the same sampled animation state. Count raw copy destinations as
@@ -775,13 +913,24 @@ consumption and effect lifetimes, and requires special handling for overlapping
 damage. The chosen [single traversal](#paint-lifetime-and-restoration-of-new-obligations)
 preserves current composition contracts.
 
-#### Teach every drawing path about complemented unions
+#### Compile gaps before testing widget damage
 
-Native union membership avoids materializing gaps and can help large region
-counts. Here it duplicates changes across streamed runs, sparse points,
-rectangle subtraction and whole-window shortcuts. The four-member compiler
-reuses the already-tested filter with a known
-[45-fragment bound](#compiling-gap-exclusions).
+Shared exclusion preparation can discover an empty visible clip, but it first
+builds and scans data unnecessary for a four-member intersection test. The
+chosen [direct query](#direct-damage-rejection-and-trimming) rejects gaps before
+preparation and reduces the bounds of surviving work. Reusing output filtering
+does not require using complement construction for that first decision.
+
+#### Replace output filtering with native damage handling immediately
+
+Native membership avoids gap storage and repeated complement scans even at
+four members. Its changes belong mainly in `ExclusionFilter`, not in individual
+widgets. It still needs correct point tests, streamed runs, overlap-free
+rectangle emission, row batching and output-bypass guards. The initial hybrid
+keeps these tested algorithms while making widget rejection cheap. The
+[P9 comparison](#p9-compare-native-damage-output-filtering) evaluates the real
+runtime and memory benefit before a separate production integration; it does
+not assume that four members versus a loose 45-gap bound predicts the speedup.
 
 #### Cache a global complement for each paint
 
@@ -817,4 +966,6 @@ same paint obligation without treating cleanup as a new content change.
 Potential separate improvements are a larger region capacity backed by measured
 workloads, vertical coalescing of compiled gaps, rasterizer-aware disjoint clips,
 and broader source-viewport reuse for partial scroll copies. None is required
-for the correctness or acceptance of the four-member design above.
+for the correctness or acceptance of the four-member design above. Production
+native damage filtering is a separate extension governed by P9's measured
+recommendation; the comparison itself is part of this implementation plan.
