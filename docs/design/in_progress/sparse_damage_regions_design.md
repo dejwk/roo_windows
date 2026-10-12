@@ -316,7 +316,9 @@ previously reported obligation, not a new semantic invalidation.
 
 The hook must not call `setDirty()`, parent notification, layout hooks, cache
 invalidation, or accelerated scrolling's `observeDamage()`. Original requests
-already performed those actions. Calling ordinary virtual
+already performed those actions. P5 re-arms the existing rectangular pending
+region after the clipper's scope ends; P6 changes only that snapshot to iterate
+the bounded pending union. Calling ordinary virtual
 `invalidateDescending()` again would reset acceleration's baseline after every
 cleanup request and can cancel valid cache state unnecessarily. A framework-only
 virtual adds a vtable slot, whose flash cost must be measured, but no per-widget
@@ -538,7 +540,7 @@ memory, records completed slices.
 | P2 Direct clip queries and prepared gaps | P1 | Implemented | `ClipperOutput` trims direct clips and prepares exact gap exclusions; `//:damage_region_render_test`, `//:paint_context_test`, and `//:masked_exclusion_test` pass. |
 | P3 Copy and certificate restrictions | P2 | Implemented | Destination-only damage restriction in `BlitPlanner`; `//:blit_plan_test`, `//:damage_region_render_test`, and `//:horizontal_page_host_render_test` pass. |
 | P4 Accelerated coverage guards | P2 | Implemented | Exact viewport coverage and per-band damage guards; `//:accelerated_scroll_state_test`, `//:background_deferral_test`, and `//:damage_region_render_test` pass. |
-| P5 Restore pending paint obligations | P0 | Proposed | — |
+| P5 Restore pending paint obligations | P0 | Implemented | Framework-only widget/container restoration after paint; both sibling orders and semantic-hook count pass in `//:roo_windows_test`, and `//:accelerated_scroll_state_test` passes. Host `Widget`/`Container` remain 40/56 bytes. |
 | P6 Activate sparse root damage | P0–P5 | Proposed | — |
 | P7 Preserve producer footprints | P6 | Proposed | — |
 | P8 Resource and device acceptance | P6, P7 | Proposed | — |

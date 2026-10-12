@@ -159,6 +159,12 @@ Implications for paint logic:
   the widget, or a region being revealed. Repaint every pixel in the invalid
   region, while still applying any state-driven dirty updates.
 
+Paint-time state changes use the ordinary invalidation APIs. If a widget
+reports new damage while a refresh is painting, the framework retains that
+request for the next refresh and restores descendant dirty flags after the
+current traversal. This restoration does not invoke widget invalidation hooks
+again. Custom widgets should not call the framework-only restoration hook.
+
 Containers already track invalid regions. Small widgets may choose to repaint
 the full clipped region when invalidated, but they still should avoid writing
 the same pixel more than once in a single paint pass.

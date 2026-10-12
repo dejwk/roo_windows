@@ -770,6 +770,11 @@ class Widget {
   // Mark this widget and its descendants as non-dirty.
   virtual void markCleanDescending() { markClean(); }
 
+  /// Re-arms dirty flags for damage reported during an active paint. This is
+  /// framework-only state restoration, not a new invalidation: callers must
+  /// already have scheduled the next frame and run semantic hooks once.
+  virtual void restorePaintObligation(const Rect& rect);
+
   // Normal widget authoring hook. Override this for widget-local painting;
   // use ctx.canvas() only when a lower-level API still requires Canvas.
   virtual void paint(PaintContext& ctx) const;

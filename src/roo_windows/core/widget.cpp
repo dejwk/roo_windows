@@ -725,6 +725,10 @@ PaintContext Widget::preparePaintContext(const Canvas& in, Clipper& clipper) {
   return PaintContext(prepareCanvas(in), clipper);
 }
 
+void Widget::restorePaintObligation(const Rect& rect) {
+  if (rect.intersects(maxBounds())) markInvalidated();
+}
+
 void Widget::paint(PaintContext&) const {}
 
 void Widget::paintWidget(const Canvas& canvas, Clipper& clipper) {

@@ -223,9 +223,15 @@ void MainWindow::paintWindow(const roo_display::Surface& s,
   canvas.clipToExtents(redraw_bounds_);
   // New invalidations raised during painting belong to the next refresh.
   redraw_bounds_ = Rect(0, 0, -1, -1);
-  Clipper clipper(clipper_state_, s.out(), deadline);
-  canvas.set_out(clipper.out());
-  paintWidget(canvas, clipper);
+  {
+    Clipper clipper(clipper_state_, s.out(), deadline);
+    canvas.set_out(clipper.out());
+    paintWidget(canvas, clipper);
+  }
+  // Painting can clear a descendant's dirty flags after it reports new work.
+  // Re-arm those obligations without replaying semantic invalidation hooks.
+  const Rect pending = redraw_bounds_;
+  if (!pending.empty()) restorePaintObligation(pending);
   commitPresentationPinBounds();
 }
 

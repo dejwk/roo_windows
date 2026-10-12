@@ -168,6 +168,7 @@ class Container : public SurfaceWidget {
   bool invalidateBeneathDescending(const Rect& rect,
                                    const Widget* subject) override;
   void markCleanDescending() override;
+  void restorePaintObligation(const Rect& rect) final;
 
   // To be overwritten by scrolling containers, for which we want to delay the
   // recognition of touch down as 'press', to give the container a small delay

@@ -197,6 +197,61 @@ class RedirtyingColorWidget : public Widget {
   mutable int paint_count_;
 };
 
+class PaintTimeTarget : public SurfaceWidget {
+ public:
+  explicit PaintTimeTarget(ApplicationContext& context)
+      : SurfaceWidget(context) {}
+
+  Color background() const override { return color_; }
+
+  Dimensions getSuggestedMinimumDimensions() const override { return {20, 20}; }
+
+  void paint(PaintContext& ctx) const override {
+    ++paints;
+    ctx.clear();
+  }
+
+  void setColor(Color color) {
+    color_ = color;
+    invalidateInterior();
+  }
+
+  void invalidateDescending(const Rect& rect) override {
+    ++semantic_invalidations;
+    Widget::invalidateDescending(rect);
+  }
+
+  mutable int paints = 0;
+  int semantic_invalidations = 0;
+
+ private:
+  Color color_ = color::Green;
+};
+
+class PaintTimeTrigger : public SurfaceWidget {
+ public:
+  explicit PaintTimeTrigger(ApplicationContext& context)
+      : SurfaceWidget(context) {}
+
+  Color background() const override { return color::Red; }
+
+  Dimensions getSuggestedMinimumDimensions() const override { return {20, 20}; }
+
+  void arm(PaintTimeTarget& target) { target_ = &target; }
+
+  void paint(PaintContext& ctx) const override {
+    ctx.clear();
+    if (target_ != nullptr) {
+      PaintTimeTarget* target = target_;
+      target_ = nullptr;
+      target->setColor(color::Yellow);
+    }
+  }
+
+ private:
+  mutable PaintTimeTarget* target_ = nullptr;
+};
+
 // Verifies that a minimal Application can be constructed against an offscreen
 // display and Environment without crashing — basic API surface compiles and
 // links.
@@ -954,6 +1009,63 @@ TEST_F(RooWindowsRenderTest, PaintInvalidationSurvivesUntilNextRefresh) {
   refresh();
   EXPECT_EQ(3, animated_ptr->paintCount());
   EXPECT_EQ(QuantizeToArgb4444(color::Red), pixelAt(32, 16));
+  EXPECT_FALSE(app_.root().isDirty());
+}
+
+// A foreground paint can invalidate a sibling outside the current clip before
+// that sibling is traversed. Restoration must re-arm flags without replaying
+// the sibling's semantic invalidation hook.
+TEST_F(RooWindowsRenderTest, PaintTimeSiblingObligationSurvivesClipCleanup) {
+  auto panel = std::make_unique<OpaqueExposedPanel>(context());
+  auto target = std::make_unique<PaintTimeTarget>(context());
+  PaintTimeTarget* target_ptr = target.get();
+  auto trigger = std::make_unique<PaintTimeTrigger>(context());
+  PaintTimeTrigger* trigger_ptr = trigger.get();
+  panel->add(std::move(target), Rect(0, 0, 19, 19));
+  panel->add(std::move(trigger), Rect(20, 0, 39, 19));
+  app_.add(std::move(panel), Box(8, 8, 47, 27));
+  refresh();
+  ASSERT_EQ(target_ptr->paints, 1);
+  target_ptr->semantic_invalidations = 0;
+  trigger_ptr->arm(*target_ptr);
+  trigger_ptr->invalidateInterior();
+  refresh();
+  EXPECT_EQ(target_ptr->paints, 1);
+  EXPECT_EQ(target_ptr->semantic_invalidations, 1);
+  EXPECT_TRUE(target_ptr->isDirty());
+  EXPECT_TRUE(app_.root().isDirty());
+  EXPECT_EQ(QuantizeToArgb4444(color::Green), pixelAt(12, 12));
+  refresh();
+  EXPECT_EQ(target_ptr->paints, 2);
+  EXPECT_EQ(target_ptr->semantic_invalidations, 1);
+  EXPECT_EQ(QuantizeToArgb4444(color::Yellow), pixelAt(12, 12));
+  EXPECT_FALSE(app_.root().isDirty());
+}
+
+// When the target was visited before its sibling changed it, the same pending
+// obligation still settles on the next refresh without semantic replay.
+TEST_F(RooWindowsRenderTest, PaintTimeEarlierSiblingRemainsScheduled) {
+  auto panel = std::make_unique<OpaqueExposedPanel>(context());
+  auto trigger = std::make_unique<PaintTimeTrigger>(context());
+  PaintTimeTrigger* trigger_ptr = trigger.get();
+  auto target = std::make_unique<PaintTimeTarget>(context());
+  PaintTimeTarget* target_ptr = target.get();
+  panel->add(std::move(trigger), Rect(20, 0, 39, 19));
+  panel->add(std::move(target), Rect(0, 0, 19, 19));
+  app_.add(std::move(panel), Box(8, 8, 47, 27));
+  refresh();
+  ASSERT_EQ(target_ptr->paints, 1);
+  target_ptr->semantic_invalidations = 0;
+  trigger_ptr->arm(*target_ptr);
+  trigger_ptr->invalidateInterior();
+  refresh();
+  EXPECT_EQ(target_ptr->paints, 1);
+  EXPECT_EQ(target_ptr->semantic_invalidations, 1);
+  EXPECT_TRUE(app_.root().isDirty());
+  refresh();
+  EXPECT_EQ(target_ptr->paints, 2);
+  EXPECT_EQ(target_ptr->semantic_invalidations, 1);
+  EXPECT_EQ(QuantizeToArgb4444(color::Yellow), pixelAt(12, 12));
   EXPECT_FALSE(app_.root().isDirty());
 }
 

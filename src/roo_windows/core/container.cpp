@@ -576,6 +576,22 @@ bool Container::invalidateBeneathDescending(const Rect& rect,
   return false;
 }
 
+void Container::restorePaintObligation(const Rect& rect) {
+  const Rect clipped = Rect::Intersect(rect, maxBounds());
+  if (clipped.empty()) return;
+  markInvalidated();
+  invalid_region_ = invalid_region_.empty()
+                        ? clipped
+                        : Rect::Extent(invalid_region_, clipped);
+  for (int i = 0; i < getChildrenCount(); ++i) {
+    Widget& child = getChild(i);
+    Rect child_rect = Rect::Intersect(clipped, child.maxParentBounds());
+    if (child_rect.empty()) continue;
+    child_rect = child_rect.translate(-child.offsetLeft(), -child.offsetTop());
+    child.restorePaintObligation(child_rect);
+  }
+}
+
 void Container::markCleanDescending() {
   if (!isDirty()) return;
   markClean();
