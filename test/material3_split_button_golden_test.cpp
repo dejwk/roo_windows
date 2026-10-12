@@ -201,6 +201,50 @@ TEST(SplitButtonGolden, ForegroundFirstAvoidsIntermediatePixelWrites) {
   panel.removeLast();
 }
 
+// Verifies opening and closing the borrowed menu leave display corners outside
+// the split control and menu footprint unwritten.
+TEST(SplitButtonGolden, MenuPresentationKeepsDisplayDamageLocal) {
+  constexpr int kWidth = 240;
+  constexpr int kHeight = 160;
+  std::vector<roo::byte> raster(kWidth * kHeight * 2);
+  WriteCountingDevice device(kWidth, kHeight, raster.data());
+  roo_display::Display display(device);
+  roo_scheduler::SchedulingService scheduler;
+  Environment environment(scheduler);
+  Application app(&environment, display);
+  GoldenPanel panel(app.context());
+  app.addTaskFullScreen(panel);
+  StandardMenuItem item(StandardMenuItemInit{"Run once"});
+  MenuEntry row(app.context());
+  row.setMenuItem(item);
+  MenuGroup group(app.context());
+  group.add(row);
+  Menu menu(app.context());
+  menu.addGroup(group);
+  SplitButton button(app.context(), menu, "Run");
+  panel.add(WidgetRef(button), Rect(32, 32, 181, 71));
+  app.refresh();
+
+  device.reset();
+  ASSERT_EQ(MenuShowResult::kShown, button.showMenu());
+  app.refresh();
+  EXPECT_EQ(0, device.writesAt(0, 0));
+  EXPECT_EQ(0, device.writesAt(kWidth - 1, 0));
+  EXPECT_EQ(0, device.writesAt(0, kHeight - 1));
+  EXPECT_EQ(0, device.writesAt(kWidth - 1, kHeight - 1));
+
+  device.reset();
+  button.dismissMenu();
+  app.refresh();
+  EXPECT_EQ(0, device.writesAt(0, 0));
+  EXPECT_EQ(0, device.writesAt(kWidth - 1, 0));
+  EXPECT_EQ(0, device.writesAt(0, kHeight - 1));
+  EXPECT_EQ(0, device.writesAt(kWidth - 1, kHeight - 1));
+  panel.removeLast();
+  menu.clearGroups();
+  group.clear();
+}
+
 // Verifies moving an elevated split button restores its old shadow and matches
 // a full repaint of the new scene, including pixels outside both segments.
 TEST(SplitButtonGolden, MovingElevatedControlRestoresOldShadow) {

@@ -414,6 +414,19 @@ void MainWindow::propagateDirty(const Widget* child, const Rect& rect) {
   }
 }
 
+void MainWindow::childShown(const Widget* child) {
+  // The host itself paints no pixels. It is attached before its surface, and
+  // that surface (or a scrim) reports its own visual damage when attached.
+  if (child == &host_layer_) return;
+  Container::childShown(child);
+}
+
+void MainWindow::childHidden(const Widget* child) {
+  // Host children are detached first and have already exposed their old paint.
+  if (child == &host_layer_) return;
+  Container::childHidden(child);
+}
+
 void MainWindow::childInvalidatedRegion(const Widget* child, Rect rect) {
   rect = Rect::Intersect(rect, bounds());
   if (!rect.empty()) {

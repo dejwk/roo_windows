@@ -77,6 +77,25 @@ class FocusableWidget : public Widget {
   }
 };
 
+class PaintClipBox : public test_support::ColorBoxWidget {
+ public:
+  using ColorBoxWidget::ColorBoxWidget;
+
+  void paint(PaintContext& ctx) const override {
+    Rect clip = ctx.localClip();
+    painted_bounds_ =
+        painted_bounds_.empty() ? clip : Rect::Extent(painted_bounds_, clip);
+    ColorBoxWidget::paint(ctx);
+  }
+
+  void resetPaintedBounds() { painted_bounds_ = Rect(0, 0, -1, -1); }
+
+  Rect paintedBounds() const { return painted_bounds_; }
+
+ private:
+  mutable Rect painted_bounds_{0, 0, -1, -1};
+};
+
 class TestRegistration : public TransientPresentationRegistration {
  public:
   int detach_count = 0;
@@ -754,6 +773,39 @@ TEST_F(HostTest, TransparentBarrierPreservesUnderlyingPaint) {
   registration.finish(PresentationFinishReason::kCancel);
   app_.refresh();
   EXPECT_EQ(QuantizeToArgb4444(roo_display::color::Red), pixelAt(20, 16));
+  task_content_.removeLast();
+}
+
+// Verifies full-screen outside-hit coverage does not repaint pixels outside a
+// transparent presenter's visual footprint when it opens or closes.
+TEST_F(HostTest, TransparentBarrierLimitsPaintDamageToHostedRoot) {
+  PaintClipBox base(app_.context(), roo_display::color::Red,
+                    Dimensions(64, 48));
+  task_content_.add(WidgetRef(base), Rect(0, 0, 63, 47));
+  app_.refresh();
+  base.resetPaintedBounds();
+
+  test_support::ColorBoxWidget root(app_.context(), roo_display::color::Blue,
+                                    Dimensions(16, 16));
+  FocusScope scope;
+  TestRegistration registration;
+  ASSERT_EQ(PresentationStartResult::kStarted,
+            host_.show(registration, owner_, root, Rect(16, 12, 31, 27), scope,
+                       kTransparentReject));
+  std::vector<Widget*> path;
+  ASSERT_TRUE(app_.root().fillTouchTargetPath(60, 40, path));
+  ASSERT_FALSE(path.empty());
+  EXPECT_NE(&base, path.back());
+  EXPECT_NE(&root, path.back());
+  EXPECT_TRUE(path.back()->supportsTap());
+  app_.refresh();
+  EXPECT_TRUE(base.paintedBounds().empty());
+  EXPECT_EQ(QuantizeToArgb4444(roo_display::color::Blue), pixelAt(20, 16));
+
+  base.resetPaintedBounds();
+  registration.finish(PresentationFinishReason::kCancel);
+  app_.refresh();
+  EXPECT_EQ(Rect(16, 12, 31, 27), base.paintedBounds());
   task_content_.removeLast();
 }
 

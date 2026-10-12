@@ -130,6 +130,13 @@ class MenuOverlay final : public Container {
 
   Color background() const override;
   bool fullyCoversBoundsWithOpaqueColors() const override;
+
+  /// Reports only visible panels and their decoration as visual content.
+  Rect getInteriorBounds() const override;
+
+  /// Keeps the full-window input rectangle out of paint-damage propagation.
+  Rect maxBounds() const override { return getInteriorBounds(); }
+
   bool fillTouchTargetPath(XDim x, YDim y, std::vector<Widget*>& path) override;
   bool isFocusable() const override { return false; }
 

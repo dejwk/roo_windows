@@ -58,6 +58,19 @@ uint8_t EncodePolicy(const TransientSurfaceSpec& spec) {
 
 }  // namespace
 
+Rect TransientHostLayer::getInteriorBounds() const {
+  Rect visual(0, 0, -1, -1);
+  if (scrim_ != nullptr && scrim_->isVisible()) {
+    visual = scrim_->maxParentBounds();
+  }
+  if (root_ != nullptr && root_->isVisible()) {
+    Rect root_visual = root_->maxParentBounds();
+    if (visual.empty()) return root_visual;
+    if (!root_visual.empty()) visual = Rect::Extent(visual, root_visual);
+  }
+  return visual;
+}
+
 int TransientHostLayer::getChildrenCount() const {
   return (scrim_ != nullptr ? 1 : 0) + (root_ != nullptr ? 1 : 0);
 }

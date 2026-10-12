@@ -119,6 +119,10 @@ class TransientHostLayer : public Container {
   /// Reports that lower content remains visible through this layer.
   bool fullyCoversBoundsWithOpaqueColors() const override { return false; }
 
+  /// Limits paint damage to the hosted surface or scrim, independently of
+  /// this layer's full-window input bounds.
+  Rect getInteriorBounds() const override;
+
   /// Tests the borrowed root first and otherwise retains a host-only barrier
   /// path so lower MainWindow children are not considered.
   bool fillTouchTargetPath(XDim x, YDim y, std::vector<Widget*>& path) override;

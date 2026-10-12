@@ -433,6 +433,17 @@ Color MenuOverlay::background() const {
 
 bool MenuOverlay::fullyCoversBoundsWithOpaqueColors() const { return false; }
 
+Rect MenuOverlay::getInteriorBounds() const {
+  Rect visual(0, 0, -1, -1);
+  for (const MenuPanel* panel : panels_) {
+    if (!panel->isVisible()) continue;
+    Rect panel_visual = panel->maxParentBounds();
+    if (panel_visual.empty()) continue;
+    visual = visual.empty() ? panel_visual : Rect::Extent(visual, panel_visual);
+  }
+  return visual;
+}
+
 bool MenuOverlay::fillTouchTargetPath(XDim x, YDim y,
                                       std::vector<Widget*>& path) {
   if (!isVisible() || !isEnabled() || !bounds().contains(x, y)) return false;

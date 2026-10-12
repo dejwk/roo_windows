@@ -120,6 +120,10 @@ class MainWindow : public Container {
 
   void propagateDirty(const Widget* child, const Rect& rect) override;
 
+  void childShown(const Widget* child) override;
+
+  void childHidden(const Widget* child) override;
+
   void childInvalidatedRegion(const Widget* child, Rect rect) override;
 
   /// Paints root children with their eligible pins immediately before each
