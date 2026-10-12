@@ -68,7 +68,8 @@ AcceleratedScrollablePanel::PaintMode AcceleratedScrollablePanel::beginPaint(
     baseline_valid_ = false;
     return PaintMode::kUnavailable;
   }
-  if (!ctx.canvas().clip_box().contains(visible)) {
+  if (!ctx.canvas().clip_box().contains(visible) ||
+      !clipper.damageCovers(visible)) {
     baseline_valid_ = false;
     return PaintMode::kPartial;
   }

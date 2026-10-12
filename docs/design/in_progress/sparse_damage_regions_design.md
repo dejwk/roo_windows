@@ -537,7 +537,7 @@ memory, records completed slices.
 | P1 Damage geometry | None | Implemented | `damage_region.h/.cpp`, pixel-oracle test; `//:damage_region_test` and ASan pass, 34-byte host state. |
 | P2 Direct clip queries and prepared gaps | P1 | Implemented | `ClipperOutput` trims direct clips and prepares exact gap exclusions; `//:damage_region_render_test`, `//:paint_context_test`, and `//:masked_exclusion_test` pass. |
 | P3 Copy and certificate restrictions | P2 | Implemented | Destination-only damage restriction in `BlitPlanner`; `//:blit_plan_test`, `//:damage_region_render_test`, and `//:horizontal_page_host_render_test` pass. |
-| P4 Accelerated coverage guards | P2 | Proposed | — |
+| P4 Accelerated coverage guards | P2 | Implemented | Exact viewport coverage and per-band damage guards; `//:accelerated_scroll_state_test`, `//:background_deferral_test`, and `//:damage_region_render_test` pass. |
 | P5 Restore pending paint obligations | P0 | Proposed | — |
 | P6 Activate sparse root damage | P0–P5 | Proposed | — |
 | P7 Preserve producer footprints | P6 | Proposed | — |

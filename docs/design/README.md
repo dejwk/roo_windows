@@ -104,7 +104,7 @@ motion pauses. It does not restore paint interruption.
 
 | Design | Dependency status |
 | --- | --- |
-| [Sparse damage regions](in_progress/sparse_damage_regions_design.md) | P0–P3 characterization, geometry, clipper integration, and copy restrictions are implemented. P4–P8 renderer/resource phases remain; P9 compares native output filtering. |
+| [Sparse damage regions](in_progress/sparse_damage_regions_design.md) | P0–P4 characterization, geometry, clipper, copy, and accelerated coverage guards are implemented. P5–P8 renderer/resource phases remain; P9 compares native output filtering. |
 | [Selective accelerated redraw](in_progress/selective_accelerated_redraw_design.md) | P1 advisory budget and query are implemented. Background deferral with temporary composition lag (P2a), opt-in scrolling, guaranteed cleanup, and resource acceptance remain under development. |
 | Display runtime and cross-application input | Phases 1–6 are implemented. Explicit modal coverage and the final migration/cost audit remain proposed. |
 | Text system | `TextBlock` wrapping, justification, max-lines, ellipsis, caching, and golden coverage are implemented; shared rich paragraph layout and `RichTextBlock` remain. |

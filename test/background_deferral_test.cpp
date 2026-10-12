@@ -274,6 +274,29 @@ TEST_F(BackgroundDeferralTest, DisabledFillsCompleteAndContrastingFillsDefer) {
   EXPECT_EQ(0, device_.writes[40 * kWidth]);
 }
 
+// A skipped band outside active damage is already absent from this paint; it
+// must not become deferred cleanup debt. Covered bands retain normal advice.
+TEST_F(BackgroundDeferralTest, SparseDamageDoesNotDeferUndamagedBands) {
+  Surface surface(device_, 0, 0, display_.extents(), false, color::Blue,
+                  FillMode::kVisible, BlendingMode::kSource);
+  Canvas canvas(&surface);
+  internal::DamageRegion damage;
+  damage.add(Box(0, 16, 95, 47));
+  internal::ClipperState state;
+  Clipper clipper(state, device_, roo_time::Uptime::Now(), &damage);
+  canvas.set_out(clipper.out());
+  PaintContext ctx(canvas, clipper);
+  internal::BackgroundDeferralScope scope(clipper, display_.extents(),
+                                          display_.extents(), 0);
+  ctx.clipped(Rect(0, 48, 95, 63)).clearDeferrableBackground();
+  EXPECT_FALSE(scope.deferred());
+  EXPECT_FALSE(clipper.backgroundDeferred());
+  for (uint16_t count : device_.writes) EXPECT_EQ(count, 0);
+
+  ctx.clipped(Rect(0, 32, 95, 47)).clearDeferrableBackground();
+  EXPECT_TRUE(scope.deferred());
+}
+
 // Verifies pending overlay bounds reject entry admission but do not veto an
 // admitted fill; a later ordinary draw still composes the retained overlay.
 TEST_F(BackgroundDeferralTest,

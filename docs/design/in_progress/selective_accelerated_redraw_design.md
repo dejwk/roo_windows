@@ -187,6 +187,7 @@ of these conditions hold:
 | Condition | Reason |
 | --- | --- |
 | It lies inside the scroller's permitted viewport region. | No preserved pixels escape the opted-in surface. |
+| It is wholly covered by active sparse damage, when supplied. | An undamaged band was never scheduled for this paint and must not create cleanup debt. |
 | The resolved background is opaque. Its color can differ from the scroller's. | An explicitly offered surface fill can be deferred regardless of its palette; semantic changes force a complete paint. |
 | It is wholly in the opaque interior of every active rounded mask. | A fill feeding fractional-edge accumulation supplies composition data and must run. |
 | No active content effect applies. | Retain the existing conservative fallback for inherited/current subtree modulation. |
@@ -392,10 +393,14 @@ Descendant active content effects still use the conservative per-fill fallback.
 Descendant pending overlays do not veto skipping; their state changes reach the
 subclass through normal invalidation.
 
-Admission also requires the current damage clip to cover the permitted visible
-viewport. A partial repaint falls back to ordinary painting and leaves a full
-cleanup request pending when needed. An ancestor cannot silently narrow a
-cleanup into a band and have it reported as a complete viewport repair.
+Admission also requires both the current rectangular clip and the active sparse
+damage union, when supplied, to cover the permitted visible viewport. Envelope
+containment does not suffice: a gap inside the viewport takes the partial path.
+A partial repaint falls back to ordinary painting and leaves a full cleanup
+request pending when needed. An ancestor cannot silently narrow a cleanup into
+a band and have it reported as a complete viewport repair. The active-damage
+coverage guard landed with sparse damage P4; the window starts supplying active
+damage in sparse damage P6.
 
 ### Scope boundaries and blit safety
 

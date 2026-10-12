@@ -397,8 +397,8 @@ bool Clipper::canDeferBackground(const roo_display::Box& box,
                                  roo_display::Color background) const {
   const internal::BackgroundDeferralScope* scope = background_scope_;
   if (scope == nullptr || scope->viewport_.empty() ||
-      !scope->interior_.contains(box) || !background.isOpaque() ||
-      hasContentEffects())
+      !scope->interior_.contains(box) || !damageCovers(box) ||
+      !background.isOpaque() || hasContentEffects())
     return false;
   for (const internal::RoundedClip* mask = out_.activeRoundedClip();
        mask != nullptr; mask = mask->parent) {

@@ -138,6 +138,39 @@ TEST_F(AcceleratedScrollStateTest, PartialAndObscuredPaintsRejectAdmission) {
   EXPECT_NE(StateHarness::PaintMode::kAccelerated, panel_->beginPaint(empty));
 }
 
+// A full rectangular clip cannot establish or complete a scrolling baseline
+// when active damage leaves a hole inside the visible viewport.
+TEST_F(AcceleratedScrollStateTest, SparseDamageRequiresExactViewportCoverage) {
+  install();
+  panel_->scrollBy(0, -8);
+  Surface surface(offscreen_, 0, 0, display_.extents(), false,
+                  panel_->effectiveBackground(), FillMode::kVisible,
+                  BlendingMode::kSource);
+  Canvas canvas(&surface);
+  internal::DamageRegion with_gap;
+  with_gap.add(Box(0, 0, 95, 15));
+  with_gap.add(Box(0, 56, 95, 71));
+  ASSERT_EQ(with_gap.bounds(), display_.extents());
+  internal::ClipperState storage;
+  {
+    Clipper clipper(storage, offscreen_, roo_time::Uptime::Now(), &with_gap);
+    PaintContext ctx(canvas, clipper);
+    EXPECT_EQ(StateHarness::PaintMode::kPartial, panel_->beginPaint(ctx));
+  }
+  moveAndExpect(StateHarness::PaintMode::kComplete);
+
+  internal::DamageRegion complete;
+  complete.add(Box(-10, -10, 50, 71));
+  complete.add(Box(45, 0, 105, 81));
+  ASSERT_EQ(complete.size(), 2);
+  ASSERT_TRUE(complete.covers(display_.extents()));
+  {
+    Clipper clipper(storage, offscreen_, roo_time::Uptime::Now(), &complete);
+    PaintContext ctx(canvas, clipper);
+    EXPECT_EQ(StateHarness::PaintMode::kComplete, panel_->beginPaint(ctx));
+  }
+}
+
 // Verifies ancestor movement and clipping geometry affect admission
 // independently of the damage rectangle; an unclipped direct child keeps the
 // ancestor's clips.
