@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="490" viewBox="0 0 1080 490" role="img" aria-labelledby="title desc">
+  <title id="title">Two small damage rectangles and their compiled complement</title>
+  <desc id="desc">A 320 by 240 display contains two 10 by 10 damage rectangles. Their 300 by 220 bounding rectangle covers 66000 pixels. Three exact gap exclusions cover 65800 pixels and leave 200 pixels writable.</desc>
+  <rect width="1080" height="490" fill="white"/>
+  <g font-family="DejaVu Sans, Arial, sans-serif" fill="#172438">
+    <text x="40" y="32" font-size="23" font-weight="bold">Two distant updates on a 320 × 240 display</text>
+    <text x="40" y="58" font-size="15">Coordinates are inclusive; both blue squares are 10 × 10 pixels.</text>
+    <text x="50" y="90" font-size="18" font-weight="bold">Current bounding rectangle</text>
+    <text x="585" y="90" font-size="18" font-weight="bold">Compiled damage complement</text>
+
+    <!-- Scale is exactly 1.25 screen units per pixel in both panels. -->
+    <g transform="translate(50 110) scale(1.25)">
+      <rect width="320" height="240" fill="#fafbfc" stroke="#607089" stroke-width="1.2"/>
+      <rect x="10" y="10" width="300" height="220" fill="#dce5f2"/>
+      <rect x="10" y="10" width="10" height="10" fill="#176ab4"/>
+      <rect x="300" y="220" width="10" height="10" fill="#176ab4"/>
+      <rect x="10" y="10" width="300" height="220" fill="none" stroke="#647c9c" stroke-dasharray="4 3"/>
+    </g>
+    <text x="82" y="142" font-size="13">A: (10, 10)..(19, 19)</text>
+    <text x="230" y="383" font-size="13">B: (300, 220)..(309, 229)</text>
+    <text x="112" y="258" font-size="23" font-weight="bold">66,000 writable pixels</text>
+    <text x="132" y="284" font-size="15">300 × 220 bounding envelope</text>
+
+    <g transform="translate(585 110) scale(1.25)">
+      <rect width="320" height="240" fill="#fafbfc" stroke="#607089" stroke-width="1.2"/>
+      <!-- C minus D: three disjoint bands, with areas 2900, 60000, 2900. -->
+      <rect x="20" y="10" width="290" height="10" fill="#fff0da" stroke="#c38a35" stroke-width="0.6"/>
+      <rect x="10" y="20" width="300" height="200" fill="#fff0da" stroke="#c38a35" stroke-width="0.6"/>
+      <rect x="10" y="220" width="290" height="10" fill="#fff0da" stroke="#c38a35" stroke-width="0.6"/>
+      <rect x="10" y="10" width="10" height="10" fill="#176ab4"/>
+      <rect x="300" y="220" width="10" height="10" fill="#176ab4"/>
+      <rect x="10" y="10" width="300" height="220" fill="none" stroke="#647c9c" stroke-dasharray="4 3"/>
+    </g>
+    <rect x="628" y="225" width="315" height="83" rx="6" fill="white" fill-opacity="0.96"/>
+    <text x="650" y="252" font-size="22" font-weight="bold">200 writable pixels</text>
+    <text x="650" y="277" font-size="15">Three gap exclusions suppress</text>
+    <text x="650" y="297" font-size="15">65,800 intervening pixels.</text>
+
+    <rect x="50" y="435" width="16" height="16" fill="#176ab4"/>
+    <text x="75" y="448" font-size="14">Active damage A and B</text>
+    <rect x="325" y="435" width="16" height="16" fill="#fff0da" stroke="#c38a35"/>
+    <text x="350" y="448" font-size="14">Temporary exclusions outside damage</text>
+    <text x="50" y="476" font-size="14">One widget traversal; existing foreground and rounded exclusions still apply inside active damage.</text>
+  </g>
+</svg>
