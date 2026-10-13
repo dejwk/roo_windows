@@ -372,8 +372,13 @@ Dimensions DialogScaffold::onMeasure(WidthSpec width, HeightSpec height) {
   }
   const int16_t body_height =
       std::max<int16_t>(0, available_height - fixed_height);
-  Dimensions body = body_scroller_.measure(WidthSpec::AtMost(available_width),
-                                           HeightSpec::AtMost(body_height));
+  // The natural-size pass may wrap, but the final pass must give the scroller
+  // its actual viewport width so match-parent content fills the dialog body.
+  WidthSpec body_width = width.kind() == EXACTLY
+                             ? WidthSpec::Exactly(available_width)
+                             : WidthSpec::AtMost(available_width);
+  Dimensions body =
+      body_scroller_.measure(body_width, HeightSpec::AtMost(body_height));
   desired_width = std::max(desired_width, body.width());
   return Dimensions(
       width.resolveSize(desired_width + horizontal_padding),

@@ -274,6 +274,29 @@ class Material3DialogTest : public ::testing::Test {
   NavigationHost& navigation_ = navigation_owner_.navigation();
 };
 
+// Verifies the final basic-dialog width reaches match-parent body content,
+// rather than leaving it at the width measured during the natural-size pass.
+TEST_F(Material3DialogTest, BasicDialogExpandsMatchParentBodyToViewport) {
+  class FullWidthBody : public Widget {
+   public:
+    explicit FullWidthBody(ApplicationContext& context) : Widget(context) {}
+    Dimensions getSuggestedMinimumDimensions() const override {
+      return Dimensions(40, 400);
+    }
+    PreferredSize getPreferredSize() const override {
+      return {PreferredSize::MatchParentWidth(),
+              PreferredSize::WrapContentHeight()};
+    }
+  } body(app_.context());
+  DialogActionSpec actions[] = {{0, "OK", DialogActionRole::kAcknowledge}};
+  BasicDialog dialog(app_.context(), body, actions, 1);
+  dialog.setHeadline("Assignment");
+  ASSERT_EQ(DialogShowResult::kShown, dialog.show(owner_));
+  app_.refresh();
+  ASSERT_NE(nullptr, body.parent());
+  EXPECT_EQ(body.parent()->width(), body.width());
+}
+
 TEST_F(Material3DialogTest, ActionStripValidatesAndCopiesFixedDescriptors) {
   TestActionDelegate delegate;
   DialogActionSpec actions[] = {
