@@ -1,3 +1,15 @@
+# roo_windows 1.10.0
+
+- Added Material 3 floating action buttons, including icon-only and extended variants, with configurable sizes, colors, and expanded presentation.
+- Added docked and floating Material 3 toolbars, split buttons with anchored menus, and standard and connected button groups for actions and selection.
+- Added `DropdownButton`, a single-select control with stable sizing across choices and a menu created when opened.
+- Improved Material 3 shadows and reduced unnecessary shadow repainting during interaction. Fixed transparent menu and container repainting.
+- Preserved separate damage regions during refresh, reducing display writes for distant updates while keeping scrolling and blit copies correct.
+- Improved top app-bar title transitions and added subtitles to small top app bars. Added per-field density overrides for Material 3 text fields.
+- Expanded examples, rendering tests, and embedded performance measurements for the new controls and rendering changes.
+
+---
+
 # roo_windows 1.9.0
 
 - Added Material 3 density levels from default to −5 for buttons, text fields, and lists, with explicit list, row, and menu-chain overrides and runtime layout refresh.
