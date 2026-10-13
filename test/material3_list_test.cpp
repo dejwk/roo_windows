@@ -924,6 +924,32 @@ TEST_F(Material3ListRenderTest, NavigationRowWaitsForFinalFrameBeforeHiding) {
   EXPECT_EQ(1, invocations);
 }
 
+// Verifies quick navigation taps defer invocation until the forced final
+// frame completes, including actions that hide their own row.
+TEST_F(Material3ListRenderTest,
+       BorrowedNavigationItemWaitsForFinalFrameBeforeHiding) {
+  NavigationListItem item(context(), ic_filled_24_device_wifi_tethering(),
+                          "Open");
+  auto row = std::make_unique<ListEntry>(context());
+  row->setItem(item);
+  auto* row_ptr = row.get();
+  int invocations = 0;
+  item.setOnInvoked([&]() {
+    ++invocations;
+    row_ptr->setVisibility(Visibility::kGone);
+  });
+  app_.add(WidgetRef(std::move(row)), roo_display::Box(0, 0, 179, 55));
+  refresh();
+
+  row_ptr->onSingleTapUp(10, 10);
+  EXPECT_EQ(0, invocations);
+  refresh();
+  EXPECT_EQ(1, invocations);
+  refresh();
+  EXPECT_EQ(1, invocations);
+  row_ptr->clearItem();
+}
+
 // Verifies selection rows retain immediate state changes through their item
 // policies while navigation rows wait for the final frame.
 TEST_F(Material3ListRenderTest, SelectionRowsStillApplyQuickTapsImmediately) {

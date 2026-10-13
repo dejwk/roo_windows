@@ -414,8 +414,10 @@ class ListEntry : public Material3Container {
   /// Returns whether this row should behave as a clickable surface.
   bool isClickable() const override;
 
+  /// Uses the bound item's policy, including deferred navigation feedback.
   ClickActivationPolicy getClickActivationPolicy() const override {
-    return ClickActivationPolicy::kImmediateContinueAnimation;
+    return item_ == nullptr ? ClickActivationPolicy::kImmediateContinueAnimation
+                            : item_->getClickActivationPolicy();
   }
 
   /// Invokes the currently bound item action, if one is available.
