@@ -79,6 +79,7 @@ motion pauses. It does not restore paint interruption.
 | Application-owned physical input routing | Producer-owned `KeySource` connections, readiness-handler quiescence, bounded application-owned draining, and FLTK's `HostEventEndpoint`/SPSC handoff are implemented. |
 | Emulator native-host event injection | `roo_testing`'s fixed endpoint table, tick handoff, and shared FreeRTOS delivery task are implemented, and Roo Windows uses them for FLTK key input. The published `roo_testing` 1.3.7 and `roo_io` 2.2.5 modules require no local overrides. |
 | Paint context | Clipper/overlay integration and the widget paint-hook migration are implemented. |
+| [Sparse damage regions](implemented/sparse_damage_regions_design.md) | P0–P9 implement bounded sparse painting and precise producer footprints. Two distant 10×10 damages write 200 versus 358,800 pixels and cut ESP32-S3 median cycle time 92.21%. The native-filter comparison retains the accepted hybrid. |
 | [Sparse rounded child clipping](implemented/rounded_child_clipping_design.md) | P0, P1, and P4–P8 are complete. ESP32-S3 scrolling acceptance and released `roo_display` 3.4.0 validation pass; P2 and P3 are retired. |
 | [Unclipped children above clipped siblings](implemented/rounded_unclipped_children_design.md) | Global unclipped-over-clipped grouping, rounded-mask bypass, matching touch and invalidation order, synchronous painting, capability fast paths, examples, and target/host resource acceptance are implemented. |
 | Semantic software text input | Application-scoped active-editor selection, producer-owned emitter connections, semantic keyboard operations, teardown, and cross-application integration are implemented. |
@@ -104,7 +105,6 @@ motion pauses. It does not restore paint interruption.
 
 | Design | Dependency status |
 | --- | --- |
-| [Sparse damage regions](in_progress/sparse_damage_regions_design.md) | P0–P8 are implemented, including end-to-end sparse painting, precise producer footprints, and ESP32-S3 acceptance. Two distant 10×10 damages write 200 pixels versus 358,800 at the 800×480 target baseline, cutting median cycle time 92.21%; P9 native-filter comparison remains. |
 | [Selective accelerated redraw](in_progress/selective_accelerated_redraw_design.md) | P1 advisory budget and query are implemented. Background deferral with temporary composition lag (P2a), opt-in scrolling, guaranteed cleanup, and resource acceptance remain under development. |
 | Display runtime and cross-application input | Phases 1–6 are implemented. Explicit modal coverage and the final migration/cost audit remain proposed. |
 | Text system | `TextBlock` wrapping, justification, max-lines, ellipsis, caching, and golden coverage are implemented; shared rich paragraph layout and `RichTextBlock` remain. |

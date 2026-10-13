@@ -64,6 +64,31 @@ cc_test(
 )
 
 cc_binary(
+    name = "native_damage_filter_benchmark",
+    srcs = [
+        "benchmarks/native_damage_benchmark.cpp",
+        "benchmarks/native_damage_filter.h",
+        "benchmarks/native_damage_scenes.h",
+    ],
+    copts = ["-O2"],
+    includes = ["."],
+    linkstatic = 1,
+    tags = ["manual"],
+    deps = [":roo_windows"],
+)
+
+cc_test(
+    name = "native_damage_filter_test",
+    srcs = [
+        "benchmarks/native_damage_filter.h",
+        "test/native_damage_filter_test.cpp",
+    ],
+    includes = ["."],
+    linkstatic = 1,
+    deps = [":roo_windows", "@roo_testing//:arduino_gtest_main"],
+)
+
+cc_binary(
     name = "sparse_damage_cpu_probe",
     srcs = ["benchmarks/sparse_damage_cpu_probe.cpp"],
     copts = ["-O2"],

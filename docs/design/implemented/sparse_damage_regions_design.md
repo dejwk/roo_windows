@@ -1,11 +1,11 @@
 # Sparse damage regions
 
-Status: **in progress**. P0–P8 are implemented, including device and resource
-acceptance on the Makerfabs ESP32-S3; the isolated native-filter comparison in
-P9 remains. Synchronous painting, rounded child clipping, prepared exclusions,
-rounded scroll copying, and accelerated-scroll cleanup are existing
-prerequisites. The phase ledger below is the implementation handoff; update it
-as each phase lands.
+Status: **implemented**. P0–P9 are complete. The production hybrid passed
+device and resource acceptance on the Makerfabs ESP32-S3; the isolated P9
+comparison recommends retaining it. Synchronous painting, rounded child
+clipping, prepared exclusions, rounded scroll copying, and accelerated-scroll
+cleanup are existing prerequisites. The phase ledger records the completed
+implementation slices.
 
 Amended on 2026-10-13: use damage directly for early clip rejection and trimming,
 retain compiled gaps for initial output filtering, and compare native damage
@@ -554,7 +554,7 @@ memory, records completed slices.
 | P6 Activate sparse root damage | P0–P5 | Implemented | `MainWindow` snapshots four-box pending damage and passes it to the clipper; 200 exact writes for distant 10×10 boxes, rejected middle container, capacity/full/idle and paint-time gap tests pass in damage resource and core targets; 10 renderer regressions pass. |
 | P7 Preserve producer footprints | P6 | Implemented | Pin preflight, click spill, and press-state notifications submit old/new bounds separately; moving-pin regression writes 200 pixels with an untouched gap; producer and settlement suites pass. |
 | P8 Resource and device acceptance | P6, P7 | Implemented | [Five-pair ESP32-S3 report](measurements/sparse_damage_target_acceptance.md), [130 raw scene rows](measurements/sparse_damage_target_batches.csv), host CPU decomposition and target ABI probe; all 162 repository tests pass. Distant corners write 200 instead of 358,800 pixels and cut median cycle time 92.21%; single control +4.69%, target `MainWindow` +24 B, stack headroom ≥71.5%. |
-| P9 Native output comparison | P8 | Proposed | — |
+| P9 Native output comparison | P8 | Implemented | [Five-pair comparison](measurements/sparse_damage_native_comparison.md), [110 target rows](measurements/sparse_damage_native_target_batches.csv), [110 host rows](measurements/sparse_damage_native_host_batches.csv), and six pixel/write-oracle cases; retain the hybrid because only fragmented sparse pixels exceed 10% target improvement. All 163 repository tests pass. |
 
 P0/P1 and, after P2, P3/P4 can be delegated independently with explicit file
 ownership. Serialize edits to `BUILD`, this ledger, and the design index, or
@@ -847,9 +847,13 @@ Use one/two/four members, overlap and crossing shapes, fragmented damage,
 large background fills, sparse pixels and streamed images, plus the P8
 single-rectangle/full-frame and rounded controls. Report actual gap counts;
 the 45-fragment bound is not an assumed workload. Measure filter-only CPU,
-total refresh median/p95, writes, address commands, scratch/retained RAM,
+output-pass median/p95, writes, address commands, scratch/retained RAM,
 allocations, stack and flash on the same host and ESP32-S3 setups. Follow P8's
-batching protocol and reuse its fixtures.
+batching protocol and reuse its panel fixture. For a positive recommendation,
+also measure total refresh median/p95 with native filtering integrated into the
+P8 widget scenes. A negative decision can stop at the output pass when fewer
+than two required scenes improve by 10% there: the unchanged widget traversal
+adds common cost and cannot increase either relative improvement.
 
 **Decision criterion:** recommend a separate native-integration amendment only
 when pixels and write uniqueness match, the existing memory/stack/allocation
@@ -946,9 +950,10 @@ four members. Its changes belong mainly in `ExclusionFilter`, not in individual
 widgets. It still needs correct point tests, streamed runs, overlap-free
 rectangle emission, row batching and output-bypass guards. The initial hybrid
 keeps these tested algorithms while making widget rejection cheap. The
-[P9 comparison](#p9-compare-native-damage-output-filtering) evaluates the real
-runtime and memory benefit before a separate production integration; it does
-not assume that four members versus a loose 45-gap bound predicts the speedup.
+[P9 comparison](measurements/sparse_damage_native_comparison.md) measured
+the real runtime and memory cost. Its native prototype improves only one of the
+three required fragmented target scenes by 10%, so production integration is
+not justified by fewer descriptors alone.
 
 #### Cache a global complement for each paint
 
@@ -985,5 +990,5 @@ Potential separate improvements are a larger region capacity backed by measured
 workloads, vertical coalescing of compiled gaps, rasterizer-aware disjoint clips,
 and broader source-viewport reuse for partial scroll copies. None is required
 for the correctness or acceptance of the four-member design above. Production
-native damage filtering is a separate extension governed by P9's measured
-recommendation; the comparison itself is part of this implementation plan.
+native damage filtering remains a separate extension only if new workload
+evidence justifies revisiting P9's measured decision to retain the hybrid.
