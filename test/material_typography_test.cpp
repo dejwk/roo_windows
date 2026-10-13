@@ -13,6 +13,7 @@ void ExpectStyle(const TextStyle& style, int16_t height, int16_t tracking) {
   EXPECT_EQ(style.tracking(), style.fontOptions().trackingPx());
 }
 
+// Verifies catalog metrics and zero tracking below the 200% typography tier.
 TEST(MaterialTypography, Material3Catalog) {
 #if ROO_WINDOWS_ZOOM >= 200
   const int16_t expected_heights[] = {128, 104, 88, 80, 72, 64, 56, 48,
@@ -46,7 +47,7 @@ TEST(MaterialTypography, Material3Catalog) {
   };
   for (size_t i = 0; i < sizeof(styles) / sizeof(styles[0]); ++i) {
     const int16_t tracking =
-        ROO_WINDOWS_ZOOM >= 150 ? (i == 9 || i == 11 || i == 13 || i == 14) : 0;
+        ROO_WINDOWS_ZOOM >= 200 ? (i == 9 || i == 11 || i == 13 || i == 14) : 0;
     ExpectStyle(*styles[i], expected_heights[i], tracking);
   }
 }
