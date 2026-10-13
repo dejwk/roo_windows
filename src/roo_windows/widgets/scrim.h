@@ -36,6 +36,13 @@ class Scrim : public Widget {
   /// painting opaque pixels, so widgets beneath remain visible through it.
   void paint(PaintContext& ctx) const override { ctx.addOverlay(fill_); }
 
+  /// Registers the overlay on every traversal, including repaints triggered
+  /// only by content or animations beneath an otherwise clean scrim.
+  void paintWidgetContents(PaintContext& ctx) override {
+    paint(ctx);
+    markClean();
+  }
+
   /// Scrims do not paint direct framebuffer pixels of their own, so the
   /// generic finalization path must not exclude their bounds.
   Rect getDirectPaintExclusionBounds() const override { return Rect(); }

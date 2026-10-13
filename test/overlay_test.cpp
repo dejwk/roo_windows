@@ -1494,6 +1494,40 @@ TEST_F(RooWindowsRenderTest,
   EXPECT_EQ(expected_tint, pixelAt(20, 20));
 }
 
+// Verifies a clean scrim is registered again when underlying content repaints.
+TEST_F(RooWindowsRenderTest, CleanScrimSurvivesUnderlyingRepaint) {
+  constexpr Color kScrimColor(0x8000FF00);
+  auto back = std::make_unique<ColorBoxWidget>(context(), color::Red,
+                                               Dimensions(48, 40));
+  auto* back_ptr = back.get();
+  app_.add(std::move(back), Box(0, 0, 47, 39));
+  app_.add(std::make_unique<Scrim>(context(), kScrimColor), Box(8, 8, 39, 31));
+  refresh();
+  const Color tinted = pixelAt(20, 20);
+  back_ptr->setDirty();
+  refresh();
+  EXPECT_EQ(tinted, pixelAt(20, 20));
+  EXPECT_EQ(QuantizeToArgb4444(color::Red), pixelAt(4, 4));
+}
+
+// Verifies click feedback cannot escape a clean scrim or overwrite a surface
+// above it; foreground exclusions remain effective when overlays re-register.
+TEST_F(RooWindowsRenderTest, ClickFeedbackRespectsCleanScrimAndForeground) {
+  auto back = std::make_unique<PointOverlayBoxWidget>(context(), color::Red,
+                                                      Dimensions(48, 40));
+  auto* back_ptr = back.get();
+  app_.add(std::move(back), Box(0, 0, 47, 39));
+  app_.add(std::make_unique<Scrim>(context(), color::Green), Box(8, 8, 39, 31));
+  app_.add(std::make_unique<ColorBoxWidget>(context(), color::Blue,
+                                            Dimensions(8, 8)),
+           Box(20, 16, 27, 23));
+  refresh();
+  back_ptr->onShowPress(16, 16);
+  refresh();
+  EXPECT_EQ(QuantizeToArgb4444(color::Green), pixelAt(16, 16));
+  EXPECT_EQ(QuantizeToArgb4444(color::Blue), pixelAt(24, 20));
+}
+
 // Verifies that widget-local click-animation access only exposes the active
 // target and surfaces the target-local animation read API.
 TEST_F(RooWindowsRenderTest, WidgetGetClickAnimationReturnsOnlyActiveTarget) {
