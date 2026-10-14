@@ -443,6 +443,13 @@ bool Application::drainKeyEvents() {
   return input_router_->drainReadySources();
 }
 
+void Application::invalidateTheme(bool layout_changed) {
+  checkUiThread();
+  if (layout_changed) root().requestLayoutDescending();
+  root().invalidateDescending();
+  root().invalidateInterior();
+}
+
 void Application::refresh() {
   checkUiThread();
   window_.refresh();

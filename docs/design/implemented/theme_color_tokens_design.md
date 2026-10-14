@@ -1,5 +1,9 @@
 # Roo Windows Design-System-Independent Color Theme Design
 
+> Historical design: the owned theme sections and live framework mapping now
+> supersede the borrowed slots and copied palettes below. See
+> [Color theming](../../material3_color_theming.md) for the current API.
+
 ## Implementation status
 
 **Implemented.** The defined scope is present in the current source tree. Dependency status and any separately scoped follow-up work are recorded in the [status index](../README.md).

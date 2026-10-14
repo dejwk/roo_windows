@@ -7,6 +7,7 @@
 #include "roo_windows/core/framework_theme.h"
 #include "roo_windows/material3/color_token.h"
 #include "roo_windows/material3/component_theme.h"
+#include "roo_windows/material3/default_theme.h"
 #include "roo_windows/material3/density.h"
 
 namespace roo_windows::material3 {
@@ -123,32 +124,7 @@ struct ColorScheme {
   }
 
   constexpr roo_display::Color contentColorFor(ColorToken container) const {
-    switch (container) {
-      case ColorToken::kPrimary:
-        return onPrimary;
-      case ColorToken::kPrimaryContainer:
-        return onPrimaryContainer;
-      case ColorToken::kSecondary:
-        return onSecondary;
-      case ColorToken::kSecondaryContainer:
-        return onSecondaryContainer;
-      case ColorToken::kTertiary:
-        return onTertiary;
-      case ColorToken::kTertiaryContainer:
-        return onTertiaryContainer;
-      case ColorToken::kError:
-        return onError;
-      case ColorToken::kErrorContainer:
-        return onErrorContainer;
-      case ColorToken::kSurfaceVariant:
-        return onSurfaceVariant;
-      case ColorToken::kInverseSurface:
-        return inverseOnSurface;
-      case ColorToken::kBackground:
-        return onBackground;
-      default:
-        return onSurface;
-    }
+    return resolve(ContentColorTokenFor(container));
   }
 
   constexpr roo_display::Color accentColorFor(ColorToken container) const {
@@ -177,36 +153,89 @@ struct ColorScheme {
   }
 };
 
-// The table deliberately stores final ARGB layer colors. It permits M3's
-// state policy to remain independent of framework interaction policy.
-struct StateLayerTheme {
-  // Disabled compositing is a transformation applied to arbitrary content
-  // colors, so it remains separate from complete state-layer colors.
-  uint8_t disabledContentOpacity;
-  roo_display::Color layer[33][6];
+/// A palette-relative interaction layer. kNone explicitly disables the layer.
+struct StateLayerRule {
+  ColorToken colorToken = ColorToken::kNone;
+  uint8_t opacity = 0;
+};
 
-  constexpr roo_display::Color resolve(ColorToken container,
+/// Shared interaction rules indexed by container token and interaction state.
+struct StateLayerRules {
+  StateLayerRule layer[33][6];
+};
+
+/// A literal ARGB replacement for one interaction layer, including transparent.
+struct StateLayerOverride {
+  ColorToken container;
+  InteractionState state;
+  roo_display::Color color;
+};
+
+/// Borrows palette-independent rules and optional literal-color replacements.
+/// All borrowed storage must outlive this theme and its copies. Null rules
+/// mean no default layers. Overrides are scanned in order (first match wins);
+/// ordinary themes have none, so their lookup is constant-time.
+struct StateLayerTheme {
+  // Disabled compositing transforms arbitrary content colors separately.
+  uint8_t disabledContentOpacity = 0;
+  const StateLayerRules* rules = nullptr;
+  const StateLayerOverride* overrides = nullptr;
+  uint8_t overrideCount = 0;
+
+  /// Resolves a layer against the supplied live palette; overrides keep their
+  /// complete ARGB value, without applying the rule's opacity a second time.
+  constexpr roo_display::Color resolve(const ColorScheme& colors,
+                                       ColorToken container,
                                        InteractionState state) const {
     const uint8_t container_index = static_cast<uint8_t>(container);
     const uint8_t state_index = static_cast<uint8_t>(state);
-    if (container_index < 33 && state_index < 6) {
-      return layer[container_index][state_index];
+    if (container_index >= 33 || state_index >= 6) {
+      assert(false && "invalid Material 3 interaction token or state");
+      return roo_display::color::Transparent;
     }
-    assert(false && "invalid Material 3 interaction token or state");
-    return roo_display::color::Transparent;
+    assert(overrides != nullptr || overrideCount == 0);
+    if (overrides != nullptr) {
+      for (uint8_t i = 0; i < overrideCount; ++i) {
+        if (overrides[i].container == container &&
+            overrides[i].state == state) {
+          return overrides[i].color;
+        }
+      }
+    }
+    if (rules == nullptr) return roo_display::color::Transparent;
+    const StateLayerRule& rule = rules->layer[container_index][state_index];
+    if (rule.colorToken == ColorToken::kNone) {
+      return roo_display::color::Transparent;
+    }
+    return colors.resolve(rule.colorToken).withA(rule.opacity);
   }
 };
 
+static_assert(sizeof(StateLayerRule) == 2,
+              "Symbolic state-layer rules must remain compact.");
+
+/// Material 3 appearance data, owned by the application Theme.
 struct Material3Theme {
-  ColorScheme color;
-  StateLayerTheme state;
+  ColorScheme color = DefaultColorScheme();
+  StateLayerTheme state = DefaultStateLayerTheme();
   ComponentTheme components{};
   /// Owned application compactness, borrowed live by supported components.
   /// After mutation, requestLayoutDescending() and invalidateDescending() on
   /// every affected display/detached root, on the UI thread between frames.
   Density density = Density::kDefault;
-};
 
-FrameworkTheme MakeFrameworkTheme(const Material3Theme& material_theme);
+  /// Resolves an interaction layer using this theme's current palette.
+  constexpr roo_display::Color stateLayer(ColorToken container,
+                                          InteractionState interaction) const {
+    return state.resolve(color, container, interaction);
+  }
+
+  /// Maps a generic framework role to the current palette.
+  roo_display::Color frameworkColor(FrameworkColorRole role) const;
+
+  /// Maps a generic framework interaction to the current Material 3 policy.
+  roo_display::Color frameworkStateLayer(FrameworkColorRole role,
+                                         InteractionState interaction) const;
+};
 
 }  // namespace roo_windows::material3

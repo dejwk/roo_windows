@@ -39,7 +39,7 @@ EditorDestination::EditorDestination(ApplicationContext& context,
   content_pane_.add(text_, {gravity : kGravityMiddle, weight : 1});
   content_pane_.add(enter_, {gravity : kGravityMiddle});
   back_.setContentColor(
-      context.theme().framework.color.resolve(FrameworkColorRole::kContent));
+      context.theme().frameworkColor(FrameworkColorRole::kContent));
   back_.setOnInteractiveChange(
       [this]() { getTask()->requestBack(BackSource::kNavigationButton); });
   enter_.setOnInteractiveChange([this]() { confirm(); });

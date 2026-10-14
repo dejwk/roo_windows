@@ -26,15 +26,16 @@ void VisibilityToggle::paint(PaintContext& ctx) const {
 
 void TextField::paint(PaintContext& ctx) const {
   const Canvas& canvas = ctx.canvas();
-  const FrameworkColorScheme& colors = parent()->theme().framework.color;
+  const Theme& theme = parent()->theme();
   Color color = text_color_.a() == 0
-                    ? colors.resolve(FrameworkColorRole::kContent)
+                    ? theme.frameworkColor(FrameworkColorRole::kContent)
                     : text_color_;
-  Color highlight_color = highlight_color_.a() == 0
-                              ? colors.resolve(FrameworkColorRole::kEmphasis)
-                              : highlight_color_;
+  Color highlight_color =
+      highlight_color_.a() == 0
+          ? theme.frameworkColor(FrameworkColorRole::kEmphasis)
+          : highlight_color_;
   if (!isEdited()) {
-    highlight_color = colors.resolve(FrameworkColorRole::kContent);
+    highlight_color = theme.frameworkColor(FrameworkColorRole::kContent);
     highlight_color.set_a(0x20);
   }
   roo::string_view text = value_;

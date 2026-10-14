@@ -6,11 +6,7 @@
 #include "roo_windows/config.h"
 #include "roo_windows/core/default_theme.h"
 #include "roo_windows/core/framework_theme.h"
-
-namespace roo_windows::material3 {
-enum class ColorToken : uint8_t;
-struct Material3Theme;
-}  // namespace roo_windows::material3
+#include "roo_windows/material3/theme.h"
 
 #ifndef ROO_WINDOWS_ZOOM
 
@@ -157,24 +153,34 @@ inline const roo_display::Font& font_overline() {
   return material2::text_style_overline().font();
 }
 
+/// Application appearance, owning each supported design system's settings.
+/// Mutate fields directly, then notify each affected Application with
+/// invalidateTheme(). Keep this object alive while environments borrow it.
 struct Theme {
-  // The framework contract is owned by every application theme, independent
-  // of whether a Material 3 theme is installed.
-  FrameworkTheme framework;
+  material3::Material3Theme material3;
 
-  // Non-owning typed design-system slot. The pointed-to object must outlive
-  // this Theme and widgets that use it.
-  const material3::Material3Theme* material3_theme = nullptr;
+  /// Returns the owned Material 3 appearance settings for customization.
+  material3::Material3Theme& material3Theme() { return material3; }
 
-  bool hasMaterial3Theme() const { return material3_theme != nullptr; }
+  /// Returns the owned Material 3 appearance settings.
+  const material3::Material3Theme& material3Theme() const { return material3; }
 
-  // Precondition: hasMaterial3Theme(). This asserts in debug builds; a null
-  // slot is an application configuration error in release builds as well.
-  const material3::Material3Theme& material3Theme() const;
+  /// Resolves generic framework colors from the current Material 3 palette.
+  roo_display::Color frameworkColor(FrameworkColorRole role) const {
+    return material3.frameworkColor(role);
+  }
+
+  /// Resolves generic interaction styling from the current Material 3 policy.
+  roo_display::Color frameworkStateLayer(FrameworkColorRole role,
+                                         InteractionState state) const {
+    return material3.frameworkStateLayer(role, state);
+  }
+
+  /// Returns the current framework disabled-content opacity.
+  uint8_t disabledContentOpacity() const {
+    return material3.state.disabledContentOpacity;
+  }
 };
-
-static_assert(sizeof(decltype(Theme::material3_theme)) == sizeof(void*),
-              "A design-system theme slot must remain a pointer.");
 
 struct KeyboardColorTheme {
   roo_display::Color background;

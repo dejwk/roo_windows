@@ -53,8 +53,6 @@ class DensityResourceTest : public testing::Test {
   DensityResourceTest()
       : device_(240, 320, raster_, roo_display::Rgb565()),
         display_(device_),
-        material_(DefaultTheme().material3Theme()),
-        theme_{MakeFrameworkTheme(material_), &material_},
         environment_(scheduler_, theme_),
         app_(&environment_, display_) {}
 
@@ -71,8 +69,8 @@ class DensityResourceTest : public testing::Test {
   roo_display::OffscreenDevice<roo_display::Rgb565> device_;
   roo_display::Display display_;
   roo_scheduler::SchedulingService scheduler_;
-  Material3Theme material_;
-  Theme theme_;
+  Theme theme_ = DefaultTheme();
+  Material3Theme& material_ = theme_.material3Theme();
   Environment environment_;
   Application app_;
 };

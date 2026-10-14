@@ -46,36 +46,32 @@ MainWindow::MainWindow(Application& app, const roo_display::Box& bounds)
   invalidateDescending();
   const ApplicationContext& context = app.context();
   roo_display::internal::ColorSet color_set;
-  const FrameworkTheme& framework = context.theme().framework;
-  MaybeAddColor(color_set,
-                framework.color.resolve(FrameworkColorRole::kCanvas));
-  MaybeAddColor(color_set,
-                framework.color.resolve(FrameworkColorRole::kSurface));
-  MaybeAddColor(color_set,
-                framework.color.resolve(FrameworkColorRole::kEmphasis));
+  const Theme& theme = context.theme();
+  MaybeAddColor(color_set, theme.frameworkColor(FrameworkColorRole::kCanvas));
+  MaybeAddColor(color_set, theme.frameworkColor(FrameworkColorRole::kSurface));
+  MaybeAddColor(color_set, theme.frameworkColor(FrameworkColorRole::kEmphasis));
   MaybeAddColor(color_set, context.keyboardColorTheme().background);
   {
-    Color c = framework.interaction.resolve(FrameworkColorRole::kSurface,
-                                            InteractionState::kPressed);
-    c = AlphaBlend(framework.color.resolve(FrameworkColorRole::kSurface), c);
+    Color c = theme.frameworkStateLayer(FrameworkColorRole::kSurface,
+                                        InteractionState::kPressed);
+    c = AlphaBlend(theme.frameworkColor(FrameworkColorRole::kSurface), c);
     MaybeAddColor(color_set, c);
   }
   {
-    Color c = framework.color.resolve(FrameworkColorRole::kEmphasis);
-    c.set_a(framework.interaction.disabledContentOpacity);
-    c = AlphaBlend(framework.color.resolve(FrameworkColorRole::kSurface), c);
+    Color c = theme.frameworkColor(FrameworkColorRole::kEmphasis);
+    c.set_a(theme.disabledContentOpacity());
+    c = AlphaBlend(theme.frameworkColor(FrameworkColorRole::kSurface), c);
     MaybeAddColor(color_set, c);
   }
 
   MaybeAddColor(color_set, context.keyboardColorTheme().normalButton);
-  MaybeAddColor(color_set,
-                framework.color.resolve(FrameworkColorRole::kCritical));
+  MaybeAddColor(color_set, theme.frameworkColor(FrameworkColorRole::kCritical));
   MaybeAddColor(color_set, context.keyboardColorTheme().modifierButton);
   Color palette[color_set.size()];
   std::copy(color_set.begin(), color_set.end(), palette);
   // background_fill_buffer_.setPalette(palette, color_set.size());
   // background_fill_buffer_.setPrefilled(
-  //     framework.color.resolve(FrameworkColorRole::kCanvas));
+  //     theme.frameworkColor(FrameworkColorRole::kCanvas));
 }
 
 bool MainWindow::fillTouchTargetPath(XDim x, YDim y,
@@ -215,8 +211,8 @@ void MainWindow::paintWindow(const roo_display::Surface& s,
   preparePresentationPinsForPaint();
   if (!initialized_) {
     initialized_ = true;
-    s.drawObject(roo_display::Fill(
-        theme().framework.color.resolve(FrameworkColorRole::kCanvas)));
+    s.drawObject(
+        roo_display::Fill(theme().frameworkColor(FrameworkColorRole::kCanvas)));
   }
   if (!isDirty()) return;
   // New invalidations raised during painting belong to the next refresh.

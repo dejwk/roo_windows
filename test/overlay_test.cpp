@@ -1425,7 +1425,7 @@ TEST_F(RooWindowsRenderTest,
       front_ptr->theme().material3Theme().color.contentColorFor(parent_role);
   overlay.set_a(front_ptr->theme()
                     .material3Theme()
-                    .state.resolve(parent_role, InteractionState::kActivated)
+                    .stateLayer(parent_role, InteractionState::kActivated)
                     .a());
   Color expected = QuantizeToArgb4444(AlphaBlend(
       front_ptr->theme().material3Theme().color.resolve(parent_role), overlay));

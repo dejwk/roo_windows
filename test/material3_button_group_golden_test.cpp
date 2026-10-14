@@ -158,8 +158,8 @@ TEST(ButtonGroupGolden, ConnectedHelperSurfaces) {
         320, 160, raster.data(), {});
     roo_display::Display display(device);
     roo_scheduler::SchedulingService scheduler;
-    Material3Theme material = test_support::MakeAcceptanceTheme(dark);
-    Theme theme{MakeFrameworkTheme(material), &material};
+    Theme theme{.material3 = test_support::MakeAcceptanceTheme(dark)};
+
     Environment env(scheduler, theme);
     Application app(&env, display);
     GoldenPanel panel(app.context());
@@ -249,8 +249,9 @@ TEST(ButtonGroupGolden, ConnectedSelectionAndRestoration) {
         320, 240, raster.data(), {});
     roo_display::Display display(device);
     roo_scheduler::SchedulingService scheduler;
-    Material3Theme material = test_support::MakeAcceptanceTheme(dark);
-    Theme theme{MakeFrameworkTheme(material), &material};
+    Theme theme{.material3 = test_support::MakeAcceptanceTheme(dark)};
+    Material3Theme& material = theme.material3Theme();
+
     Environment env(scheduler, theme);
     Application app(&env, display);
     StripedPanel panel(app.context());
@@ -396,8 +397,8 @@ TEST(ButtonGroupGolden, StandardMotionRestoration) {
         320, 160, raster.data(), {});
     roo_display::Display display(device);
     roo_scheduler::SchedulingService scheduler;
-    Material3Theme material = test_support::MakeAcceptanceTheme(dark);
-    Theme theme{MakeFrameworkTheme(material), &material};
+    Theme theme{.material3 = test_support::MakeAcceptanceTheme(dark)};
+
     Environment env(scheduler, theme);
     Application app(&env, display);
     StripedPanel panel(app.context());

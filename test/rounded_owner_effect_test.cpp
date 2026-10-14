@@ -206,10 +206,7 @@ struct ReferenceNode {
 
   Color transform(Color color, int16_t x, int16_t y) const {
     if (spec.is_disabled()) {
-      color.set_a(
-          (color.a() *
-           widget->theme().framework.interaction.disabledContentOpacity) >>
-          7);
+      color.set_a((color.a() * widget->theme().disabledContentOpacity()) >> 7);
       return AlphaBlend(background, color);
     }
     if (!spec.is_area()) return color;

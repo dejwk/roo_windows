@@ -23,33 +23,33 @@ constexpr ColorToken TokenForFrameworkRole(FrameworkColorRole role) {
 
 }  // namespace
 
-FrameworkTheme MakeFrameworkTheme(const Material3Theme& material_theme) {
-  FrameworkTheme result = {
-      .color =
-          {
-              .canvas = material_theme.color.background,
-              .surface = material_theme.color.surface,
-              .content = material_theme.color.onSurface,
-              .mutedContent = material_theme.color.onSurfaceVariant,
-              .emphasis = material_theme.color.primary,
-              .outline = material_theme.color.outlineVariant,
-              .critical = material_theme.color.error,
-              .onCritical = material_theme.color.onError,
-          },
-      .interaction =
-          {
-              .disabledContentOpacity =
-                  material_theme.state.disabledContentOpacity,
-          },
-  };
-  for (uint8_t role = 0; role < 8; ++role) {
-    for (uint8_t state = 0; state < 6; ++state) {
-      result.interaction.layer[role][state] = material_theme.state.resolve(
-          TokenForFrameworkRole(static_cast<FrameworkColorRole>(role)),
-          static_cast<InteractionState>(state));
-    }
+roo_display::Color Material3Theme::frameworkColor(
+    FrameworkColorRole role) const {
+  switch (role) {
+    case FrameworkColorRole::kCanvas:
+      return color.background;
+    case FrameworkColorRole::kSurface:
+      return color.surface;
+    case FrameworkColorRole::kContent:
+      return color.onSurface;
+    case FrameworkColorRole::kMutedContent:
+      return color.onSurfaceVariant;
+    case FrameworkColorRole::kEmphasis:
+      return color.primary;
+    case FrameworkColorRole::kOutline:
+      return color.outlineVariant;
+    case FrameworkColorRole::kCritical:
+      return color.error;
+    case FrameworkColorRole::kOnCritical:
+      return color.onError;
   }
-  return result;
+  assert(false && "invalid framework color role");
+  return roo_display::color::Transparent;
+}
+
+roo_display::Color Material3Theme::frameworkStateLayer(
+    FrameworkColorRole role, InteractionState interaction) const {
+  return stateLayer(TokenForFrameworkRole(role), interaction);
 }
 
 }  // namespace roo_windows::material3

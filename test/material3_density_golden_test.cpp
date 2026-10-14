@@ -31,9 +31,10 @@ roo_display::Offscreen<roo_display::Rgb888> RenderColumn(Density density,
       width, height, raster.data(), roo_display::Rgb565());
   roo_display::Display display(device);
   roo_scheduler::SchedulingService scheduler;
-  Material3Theme material = test_support::MakeAcceptanceTheme(dark);
+  Theme theme{.material3 = test_support::MakeAcceptanceTheme(dark)};
+  Material3Theme& material = theme.material3Theme();
   material.density = density;
-  Theme theme{MakeFrameworkTheme(material), &material};
+
   Environment environment(scheduler, theme);
   Application app(&environment, display);
   std::string heading = "Density " + std::to_string(static_cast<int>(density));
@@ -120,9 +121,10 @@ std::vector<Color> RenderIconPixels(Density density, ButtonSize size) {
       width, height, raster.data(), roo_display::Rgb565());
   roo_display::Display display(device);
   roo_scheduler::SchedulingService scheduler;
-  Material3Theme material = DefaultTheme().material3Theme();
+  Theme theme = DefaultTheme();
+  Material3Theme& material = theme.material3Theme();
   material.density = density;
-  Theme theme{MakeFrameworkTheme(material), &material};
+
   Environment environment(scheduler, theme);
   Application app(&environment, display);
   Button button(app.context(), {}, ButtonVariant::kText);

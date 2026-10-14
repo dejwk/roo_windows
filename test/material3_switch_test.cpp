@@ -137,11 +137,11 @@ TEST(Material3Switch, EffectiveContainerRoleTracksState) {
 // remains the fixed primary accent.
 TEST(Material3Switch, UnselectedTrackUsesComponentTheme) {
   roo_scheduler::SchedulingService scheduler;
-  Material3Theme material = DefaultTheme().material3Theme();
+  Theme theme = DefaultTheme();
+  material3::Material3Theme& material = theme.material3Theme();
   material.components.switchControl.unselectedTrack =
       ColorToken::kSurfaceContainerLow;
-  Theme theme = DefaultTheme();
-  theme.material3_theme = &material;
+
   Environment env(scheduler, theme);
   ApplicationContext context = MakeContext(env);
   Switch sw(context, Switch::OnOffState::kOff);

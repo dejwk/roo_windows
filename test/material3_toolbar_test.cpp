@@ -398,8 +398,9 @@ TEST(Material3Toolbar, FocusActivationAndPendingDetach) {
 // and the 64 dp cross-axis floor remain fixed.
 TEST(Material3Toolbar, DensityChangesOnlyEligibleChildGeometry) {
   roo_scheduler::SchedulingService scheduler;
-  Material3Theme material = DefaultTheme().material3Theme();
-  Theme theme{MakeFrameworkTheme(material), &material};
+  Theme theme = DefaultTheme();
+  Material3Theme& material = theme.material3Theme();
+
   Environment env(scheduler, theme);
   ApplicationContext context = MakeContext(env);
   FloatingToolbar toolbar(context);

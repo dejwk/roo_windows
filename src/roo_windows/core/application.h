@@ -75,6 +75,13 @@ class Application {
   /// for a later refresh.
   void refresh();
 
+  /// Repaints this application's widget tree after shared appearance changes.
+  /// Call on the UI thread between frames. Color changes need no layout; for
+  /// density or typography changes, pass true to refresh geometry as well.
+  /// Notify every application sharing the theme. Detached roots are invalidated
+  /// when attached; independently rendered roots need their own invalidation.
+  void invalidateTheme(bool layout_changed = false);
+
   /// Returns the bootstrap environment used by this application.
   const Environment& env() const { return *env_; }
 

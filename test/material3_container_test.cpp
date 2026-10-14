@@ -45,7 +45,8 @@ TEST(Material3ContainerTest, DetachedContainerUsesFrameworkSurface) {
                              env.keyboardColorTheme());
   EmptyContainer container(context);
   EXPECT_EQ(ColorToken::kNone, container.containerRole());
-  EXPECT_EQ(env.theme().framework.color.surface, container.background());
+  EXPECT_EQ(env.theme().frameworkColor(FrameworkColorRole::kSurface),
+            container.background());
 }
 
 // Verifies inheritance uses the actual parent fill, including alpha, even when
@@ -67,9 +68,9 @@ TEST(Material3ContainerTest, NoneInheritsActualParentBackgroundAndRole) {
 // and switching back to kNone restores the parent's custom fill.
 TEST(Material3ContainerTest, OwnedRoleUsesCurrentThemeAndOverridesParentFill) {
   roo_scheduler::SchedulingService scheduler;
-  Material3Theme material = DefaultTheme().material3Theme();
   Theme theme = DefaultTheme();
-  theme.material3_theme = &material;
+  Material3Theme& material = theme.material3Theme();
+
   Environment env(scheduler, theme);
   ApplicationContext context(env.scheduler(), env.theme(),
                              env.keyboardColorTheme());

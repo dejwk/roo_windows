@@ -82,7 +82,7 @@ void ProgressBar::onLayout(bool changed, const Rect& rect) {
 void ProgressBar::paint(PaintContext& ctx) const {
   const Theme& th = theme();
   Color c = (color_ == color::Transparent
-                 ? th.framework.color.resolve(FrameworkColorRole::kEmphasis)
+                 ? th.frameworkColor(FrameworkColorRole::kEmphasis)
                  : color_);
   if (progress_ >= 0) {
     // Determinate.

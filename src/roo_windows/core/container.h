@@ -72,7 +72,7 @@ class Container : public SurfaceWidget {
   /// underlying content to show through.
   Color background() const override {
     if (parent() != nullptr) return parent()->background();
-    return theme().framework.color.resolve(FrameworkColorRole::kSurface);
+    return theme().frameworkColor(FrameworkColorRole::kSurface);
   }
 
   /// Paints the panel with all its children. If the panel isn't invalidated,

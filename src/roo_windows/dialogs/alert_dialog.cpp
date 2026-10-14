@@ -10,11 +10,11 @@ AlertDialog::AlertDialog(ApplicationContext& context, std::string title,
                        material2::text_style_body1(),
                        roo_display::kLeft | roo_display::kMiddle) {
   supporting_text_.setPadding(PaddingSize::kLarge, PaddingSize::kNone);
-  const FrameworkColorScheme& colors = context.theme().framework.color;
-  Color on_surface = colors.resolve(FrameworkColorRole::kContent);
+  const Theme& theme = context.theme();
+  Color on_surface = theme.frameworkColor(FrameworkColorRole::kContent);
   on_surface.set_a(0xB0);
-  supporting_text_.setColor(
-      AlphaBlend(colors.resolve(FrameworkColorRole::kSurface), on_surface));
+  supporting_text_.setColor(AlphaBlend(
+      theme.frameworkColor(FrameworkColorRole::kSurface), on_surface));
   setTitle(std::move(title));
 }
 

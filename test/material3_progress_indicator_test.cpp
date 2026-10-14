@@ -149,13 +149,13 @@ TEST_F(ProgressTest, PatternRestorationAndNoOp) {
 // supported acceptance zoom with both linear directions over a pattern.
 TEST_F(ProgressTest, StaticGoldens) {
   for (bool dark : {false, true}) {
-    Material3Theme material = DefaultTheme().material3Theme();
+    Theme theme = DefaultTheme();
+    Material3Theme& material = theme.material3Theme();
     if (dark) {
       material.color.primary = roo_display::Color(0xFFD0BCFF);
       material.color.secondaryContainer = roo_display::Color(0xFF4A4458);
     }
-    Theme theme = DefaultTheme();
-    theme.material3_theme = &material;
+
     Environment environment(scheduler_, theme);
     Application app(&environment, display_);
     Pattern pattern(app.context());

@@ -4,8 +4,7 @@ namespace roo_windows {
 
 struct Theme;
 
-/// Returns the framework's default Material 3 theme for compatibility.
-/// New applications can select material3::DefaultTheme() explicitly.
+/// Returns the shared immutable application defaults.
 const Theme& DefaultTheme();
 
 }  // namespace roo_windows

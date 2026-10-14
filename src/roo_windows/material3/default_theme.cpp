@@ -1,5 +1,7 @@
 #include "roo_windows/material3/default_theme.h"
 
+#include "roo_windows/material3/theme.h"
+
 namespace roo_windows::material3 {
 namespace {
 
@@ -154,76 +156,32 @@ constexpr uint8_t StateOpacity(const LegacyStateOpacity& state,
   return state.pressedOnBackground;
 }
 
-constexpr roo_display::Color StateLayerContent(const ColorScheme& color,
-                                               ColorToken token) {
-  switch (token) {
-    case ColorToken::kPrimary:
-      return color.onPrimary;
-    case ColorToken::kPrimaryContainer:
-      return color.onPrimaryContainer;
-    case ColorToken::kSecondary:
-      return color.onSecondary;
-    case ColorToken::kSecondaryContainer:
-      return color.onSecondaryContainer;
-    case ColorToken::kTertiary:
-      return color.onTertiary;
-    case ColorToken::kTertiaryContainer:
-      return color.onTertiaryContainer;
-    case ColorToken::kError:
-      return color.onError;
-    case ColorToken::kErrorContainer:
-      return color.onErrorContainer;
-    case ColorToken::kSurfaceVariant:
-      return color.onSurfaceVariant;
-    case ColorToken::kInverseSurface:
-      return color.inverseOnSurface;
-    case ColorToken::kBackground:
-      return color.onBackground;
-    default:
-      return color.onSurface;
-  }
-}
-
-// Builds the historical state-layer table for the supplied palette.
-constexpr Material3Theme BuildTheme(const ColorScheme& colors) {
+// Shared rules retain the historical opacity policy without storing palette
+// RGB.
+constexpr StateLayerRules BuildStateLayerRules() {
+  StateLayerRules result{};
   const LegacyStateOpacity legacy_state = DefaultLegacyState();
-  Material3Theme result = {
-      .color = colors,
-      .state = {},
-      .density = Density::kDefault,
-  };
-  result.state.disabledContentOpacity = legacy_state.disabled;
   for (uint8_t token = 0; token < 33; ++token) {
     for (uint8_t interaction = 0; interaction < 6; ++interaction) {
       const auto color_token = static_cast<ColorToken>(token);
       const auto state = static_cast<InteractionState>(interaction);
-      result.state.layer[token][interaction] =
-          StateLayerContent(result.color, color_token)
-              .withA(StateOpacity(legacy_state, color_token, state));
+      result.layer[token][interaction] = {
+          ContentColorTokenFor(color_token),
+          StateOpacity(legacy_state, color_token, state)};
     }
   }
   return result;
 }
 
+constexpr StateLayerRules kDefaultStateLayerRules = BuildStateLayerRules();
+
 }  // namespace
 
 ColorScheme DefaultColorScheme() { return DefaultMaterial3Colors(); }
 
-Material3Theme MakeTheme(const ColorScheme& colors) {
-  return BuildTheme(colors);
-}
-
-const Material3Theme& DefaultMaterial3Theme() {
-  static constexpr Material3Theme theme = BuildTheme(DefaultMaterial3Colors());
-  return theme;
-}
-
-const Theme& DefaultTheme() {
-  static const Theme theme = {
-      .framework = MakeFrameworkTheme(DefaultMaterial3Theme()),
-      .material3_theme = &DefaultMaterial3Theme(),
-  };
-  return theme;
+StateLayerTheme DefaultStateLayerTheme() {
+  return {.disabledContentOpacity = DefaultLegacyState().disabled,
+          .rules = &kDefaultStateLayerRules};
 }
 
 }  // namespace roo_windows::material3

@@ -323,11 +323,11 @@ TEST(Material3Button, ContainerRoleMatchesVariant) {
 // Verifies only the elevated variant reads the shared neutral button slot.
 TEST(Material3Button, ElevatedContainerUsesComponentTheme) {
   roo_scheduler::SchedulingService scheduler;
-  Material3Theme material = DefaultTheme().material3Theme();
+  Theme theme = DefaultTheme();
+  material3::Material3Theme& material = theme.material3Theme();
   material.components.button.elevatedContainer =
       ColorToken::kSurfaceContainerHigh;
-  Theme theme = DefaultTheme();
-  theme.material3_theme = &material;
+
   Environment env(scheduler, theme);
   ApplicationContext context = MakeContext(env);
   Button elevated(context, "E", ButtonVariant::kElevated);

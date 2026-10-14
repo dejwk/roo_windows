@@ -1,13 +1,6 @@
-#include <assert.h>
-
 #include "theme.h"
 
 namespace roo_windows {
-
-const material3::Material3Theme& Theme::material3Theme() const {
-  assert(material3_theme != nullptr && "Material 3 theme is not installed");
-  return *material3_theme;
-}
 
 const KeyboardColorTheme& DefaultKeyboardColorTheme() {
   static KeyboardColorTheme theme = {

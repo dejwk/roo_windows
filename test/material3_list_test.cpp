@@ -1814,12 +1814,12 @@ TEST(Material3List, ListEntryResolvesFlatSegmentedAndSelectedFills) {
 // list roles, while expressive selection retains its accent surface.
 TEST(Material3List, UsesIndependentThemedUnselectedRoles) {
   roo_scheduler::SchedulingService scheduler;
-  Material3Theme material = DefaultTheme().material3Theme();
+  Theme theme = DefaultTheme();
+  material3::Material3Theme& material = theme.material3Theme();
   material.components.list.standardContainer = ColorToken::kSurfaceContainerLow;
   material.components.list.segmentedContainer =
       ColorToken::kSurfaceContainerHigh;
-  Theme theme = DefaultTheme();
-  theme.material3_theme = &material;
+
   Environment environment(scheduler, theme);
   ApplicationContext context(environment.scheduler(), environment.theme(),
                              environment.keyboardColorTheme());

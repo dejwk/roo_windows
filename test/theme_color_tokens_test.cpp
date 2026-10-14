@@ -9,28 +9,8 @@
 namespace roo_windows {
 namespace {
 
-TEST(FrameworkColorSchemeTest, ResolvesEveryRole) {
-  const FrameworkColorScheme scheme = {
-      roo_display::Color(1), roo_display::Color(2), roo_display::Color(3),
-      roo_display::Color(4), roo_display::Color(5), roo_display::Color(6),
-      roo_display::Color(7), roo_display::Color(8)};
-  for (uint8_t i = 0; i < 8; ++i) {
-    EXPECT_EQ(roo_display::Color(i + 1),
-              scheme.resolve(static_cast<FrameworkColorRole>(i)));
-  }
-}
-
-TEST(FrameworkInteractionThemeTest, ResolvesEveryRoleAndState) {
-  FrameworkInteractionTheme interaction = {};
-  for (uint8_t role = 0; role < 8; ++role) {
-    for (uint8_t state = 0; state < 6; ++state) {
-      interaction.layer[role][state] = roo_display::Color(role * 6 + state + 1);
-      EXPECT_EQ(roo_display::Color(role * 6 + state + 1),
-                interaction.resolve(static_cast<FrameworkColorRole>(role),
-                                    static_cast<InteractionState>(state)));
-    }
-  }
-}
+static_assert(sizeof(Theme) == sizeof(material3::Material3Theme),
+              "Application themes must not duplicate framework palettes.");
 
 TEST(Material3ColorSchemeTest, ResolvesEveryToken) {
   const material3::ColorScheme scheme = {
@@ -51,17 +31,48 @@ TEST(Material3ColorSchemeTest, ResolvesEveryToken) {
   }
 }
 
-TEST(Material3StateLayerThemeTest, ResolvesEveryTokenAndState) {
-  material3::StateLayerTheme state = {};
-  for (uint8_t token = 0; token < 33; ++token) {
-    for (uint8_t interaction = 0; interaction < 6; ++interaction) {
-      const roo_display::Color color(token * 6 + interaction + 1);
-      state.layer[token][interaction] = color;
-      EXPECT_EQ(color,
-                state.resolve(static_cast<material3::ColorToken>(token),
-                              static_cast<InteractionState>(interaction)));
-    }
-  }
+// Verifies symbolic layers always read the current palette, while explicit
+// literal overrides (including transparent) take precedence and retain alpha.
+TEST(Material3StateLayerThemeTest, ResolvesLivePaletteAndLiteralOverrides) {
+  material3::Material3Theme theme;
+  const material3::StateLayerOverride overrides[] = {
+      {material3::ColorToken::kPrimary, InteractionState::kFocus,
+       roo_display::Color(0x80123456)},
+      {material3::ColorToken::kPrimary, InteractionState::kPressed,
+       roo_display::color::Transparent},
+  };
+  theme.state.overrides = overrides;
+  theme.state.overrideCount = 2;
+  theme.color.onPrimary = roo_display::Color(0xFF654321);
+  EXPECT_EQ(theme.color.onPrimary.withA(20),
+            theme.stateLayer(material3::ColorToken::kPrimary,
+                             InteractionState::kHover));
+  EXPECT_EQ(roo_display::Color(0x80123456),
+            theme.stateLayer(material3::ColorToken::kPrimary,
+                             InteractionState::kFocus));
+  EXPECT_EQ(roo_display::color::Transparent,
+            theme.stateLayer(material3::ColorToken::kPrimary,
+                             InteractionState::kPressed));
+  EXPECT_EQ(roo_display::color::Transparent,
+            material3::StateLayerTheme{}.resolve(
+                material3::DefaultColorScheme(),
+                material3::ColorToken::kSurface, InteractionState::kHover));
+}
+
+// Verifies custom symbolic rules can select a different source color, and
+// absent rules remain transparent without resolving the kNone sentinel.
+TEST(Material3StateLayerThemeTest, SupportsCustomSymbolicRules) {
+  material3::StateLayerRules rules{};
+  rules.layer[0][0] = {material3::ColorToken::kTertiary, 123};
+  material3::Material3Theme theme;
+  theme.state.rules = &rules;
+  theme.color.tertiary = roo_display::Color(0xFF123456);
+  EXPECT_EQ(theme.color.tertiary.withA(123),
+            theme.stateLayer(material3::ColorToken::kPrimary,
+                             InteractionState::kHover));
+  EXPECT_EQ(roo_display::color::Transparent,
+            theme.stateLayer(material3::ColorToken::kPrimary,
+                             InteractionState::kFocus));
 }
 
 // Verifies aggregate Material themes retain their existing color/state
@@ -72,9 +83,8 @@ TEST(Material3ThemeTest, InitializesCompactComponentSurfaceDefaults) {
   EXPECT_EQ(static_cast<size_t>(3), sizeof(material3::CardTheme));
   EXPECT_EQ(static_cast<size_t>(1), sizeof(material3::ToolbarTheme));
   EXPECT_EQ(static_cast<size_t>(29), sizeof(material3::ComponentTheme));
-  // The 29-byte component payload and one-byte density field add 32 aligned
-  // bytes to the 929-byte color/state payload (Color has 32-bit alignment).
-  EXPECT_EQ(static_cast<size_t>(960), sizeof(material3::Material3Theme));
+  // Default rules are shared; each theme retains only palette and metadata.
+  EXPECT_LE(sizeof(material3::Material3Theme), static_cast<size_t>(200));
   EXPECT_EQ(material3::ColorToken::kSurfaceContainerLow,
             material.components.card.elevatedContainer);
   EXPECT_EQ(material3::ColorToken::kSurfaceContainerHighest,
@@ -134,61 +144,92 @@ TEST(Material3ThemeTest, MakesTheDocumentedFrameworkMapping) {
   material.color.error = roo_display::Color(7);
   material.color.onError = roo_display::Color(8);
   material.state.disabledContentOpacity = 49;
-  material.state.layer[static_cast<uint8_t>(material3::ColorToken::kPrimary)]
-                      [static_cast<uint8_t>(InteractionState::kPressed)] =
-      roo_display::Color(9);
+  const material3::StateLayerOverride overrides[] = {
+      {material3::ColorToken::kPrimary, InteractionState::kPressed,
+       roo_display::Color(9)}};
+  material.state.overrides = overrides;
+  material.state.overrideCount = 1;
 
-  const FrameworkTheme framework = material3::MakeFrameworkTheme(material);
+  const Theme framework{.material3 = material};
   EXPECT_EQ(roo_display::Color(1),
-            framework.color.resolve(FrameworkColorRole::kCanvas));
+            framework.frameworkColor(FrameworkColorRole::kCanvas));
   EXPECT_EQ(roo_display::Color(2),
-            framework.color.resolve(FrameworkColorRole::kSurface));
+            framework.frameworkColor(FrameworkColorRole::kSurface));
   EXPECT_EQ(roo_display::Color(3),
-            framework.color.resolve(FrameworkColorRole::kContent));
+            framework.frameworkColor(FrameworkColorRole::kContent));
   EXPECT_EQ(roo_display::Color(4),
-            framework.color.resolve(FrameworkColorRole::kMutedContent));
+            framework.frameworkColor(FrameworkColorRole::kMutedContent));
   EXPECT_EQ(roo_display::Color(5),
-            framework.color.resolve(FrameworkColorRole::kEmphasis));
+            framework.frameworkColor(FrameworkColorRole::kEmphasis));
   EXPECT_EQ(roo_display::Color(6),
-            framework.color.resolve(FrameworkColorRole::kOutline));
+            framework.frameworkColor(FrameworkColorRole::kOutline));
   EXPECT_EQ(roo_display::Color(7),
-            framework.color.resolve(FrameworkColorRole::kCritical));
+            framework.frameworkColor(FrameworkColorRole::kCritical));
   EXPECT_EQ(roo_display::Color(8),
-            framework.color.resolve(FrameworkColorRole::kOnCritical));
-  EXPECT_EQ(49, framework.interaction.disabledContentOpacity);
+            framework.frameworkColor(FrameworkColorRole::kOnCritical));
+  EXPECT_EQ(49, framework.disabledContentOpacity());
   EXPECT_EQ(roo_display::Color(9),
-            framework.interaction.resolve(FrameworkColorRole::kEmphasis,
+            framework.frameworkStateLayer(FrameworkColorRole::kEmphasis,
                                           InteractionState::kPressed));
+}
+
+// Verifies mutable and const accessors refer to the same owned settings and
+// changes made through the accessor immediately affect framework colors.
+TEST(ThemeTest, Material3AccessorBorrowsOwnedSettings) {
+  Theme theme;
+  const Theme& const_theme = theme;
+  EXPECT_EQ(&theme.material3, &theme.material3Theme());
+  EXPECT_EQ(&theme.material3Theme(), &const_theme.material3Theme());
+  theme.material3Theme().color.primary = roo_display::Color(0xFF123456);
+  EXPECT_EQ(roo_display::Color(0xFF123456),
+            const_theme.frameworkColor(FrameworkColorRole::kEmphasis));
 }
 
 TEST(ThemeTest, DefaultThemeComposesMaterial3AndFrameworkThemes) {
   const Theme& theme = DefaultTheme();
 
-  ASSERT_TRUE(theme.hasMaterial3Theme());
   const material3::Material3Theme& material = theme.material3Theme();
-  EXPECT_EQ(material.color.background, theme.framework.color.canvas);
-  EXPECT_EQ(material.color.surface, theme.framework.color.surface);
-  EXPECT_EQ(material.color.onSurface, theme.framework.color.content);
+  EXPECT_EQ(material.color.background,
+            theme.frameworkColor(FrameworkColorRole::kCanvas));
+  EXPECT_EQ(material.color.surface,
+            theme.frameworkColor(FrameworkColorRole::kSurface));
+  EXPECT_EQ(material.color.onSurface,
+            theme.frameworkColor(FrameworkColorRole::kContent));
   EXPECT_EQ(material.color.onSurfaceVariant,
-            theme.framework.color.mutedContent);
-  EXPECT_EQ(material.color.primary, theme.framework.color.emphasis);
-  EXPECT_EQ(material.color.outlineVariant, theme.framework.color.outline);
-  EXPECT_EQ(material.color.error, theme.framework.color.critical);
-  EXPECT_EQ(material.color.onError, theme.framework.color.onCritical);
+            theme.frameworkColor(FrameworkColorRole::kMutedContent));
+  EXPECT_EQ(material.color.primary,
+            theme.frameworkColor(FrameworkColorRole::kEmphasis));
+  EXPECT_EQ(material.color.outlineVariant,
+            theme.frameworkColor(FrameworkColorRole::kOutline));
+  EXPECT_EQ(material.color.error,
+            theme.frameworkColor(FrameworkColorRole::kCritical));
+  EXPECT_EQ(material.color.onError,
+            theme.frameworkColor(FrameworkColorRole::kOnCritical));
 
   EXPECT_EQ(material.color.onPrimary.withA(20),
-            material.state.resolve(material3::ColorToken::kPrimary,
-                                   InteractionState::kHover));
+            material.stateLayer(material3::ColorToken::kPrimary,
+                                InteractionState::kHover));
   EXPECT_EQ(material.color.onSurface.withA(31),
-            material.state.resolve(material3::ColorToken::kSurface,
-                                   InteractionState::kPressed));
+            material.stateLayer(material3::ColorToken::kSurface,
+                                InteractionState::kPressed));
 }
 
-// Verifies the compatibility API borrows the exact same static defaults.
-TEST(ThemeTest, CompatibilityDefaultUsesExplicitMaterial3Default) {
-  EXPECT_EQ(&DefaultTheme(), &material3::DefaultTheme());
-  EXPECT_EQ(&DefaultTheme().material3Theme(),
-            &material3::DefaultMaterial3Theme());
+// Verifies copying the application theme owns an independent palette while
+// sharing immutable rules, and framework lookups never retain stale colors.
+TEST(ThemeTest, OwnsIndependentPaletteAndResolvesFrameworkLive) {
+  Theme original;
+  Theme copy = original;
+  copy.material3Theme().color.primary = roo_display::Color(0xFF123456);
+  copy.material3Theme().color.onPrimary = roo_display::Color(0xFFABCDEF);
+  EXPECT_NE(original.material3Theme().color.primary,
+            copy.material3Theme().color.primary);
+  EXPECT_EQ(original.material3Theme().state.rules,
+            copy.material3Theme().state.rules);
+  EXPECT_EQ(copy.material3Theme().color.primary,
+            copy.frameworkColor(FrameworkColorRole::kEmphasis));
+  EXPECT_EQ(copy.material3Theme().color.onPrimary.withA(20),
+            copy.frameworkStateLayer(FrameworkColorRole::kEmphasis,
+                                     InteractionState::kHover));
 }
 
 // Verifies construction with a custom palette derives interaction colors
@@ -198,26 +239,25 @@ TEST(Material3ThemeTest, BuildsStateLayersFromCustomPalette) {
   colors.primary = roo_display::Color(0xFF123456);
   colors.onPrimary = roo_display::Color(0xFFABCDEF);
   colors.onSurface = roo_display::Color(0xFF654321);
-  const material3::Material3Theme theme = material3::MakeTheme(colors);
+  const material3::Material3Theme theme =
+      material3::Material3Theme{.color = colors};
   EXPECT_EQ(colors.primary, theme.color.primary);
   EXPECT_EQ(colors.onPrimary.withA(20),
-            theme.state.resolve(material3::ColorToken::kPrimary,
-                                InteractionState::kHover));
+            theme.stateLayer(material3::ColorToken::kPrimary,
+                             InteractionState::kHover));
   EXPECT_EQ(colors.onSurface.withA(31),
-            theme.state.resolve(material3::ColorToken::kSurface,
-                                InteractionState::kPressed));
+            theme.stateLayer(material3::ColorToken::kSurface,
+                             InteractionState::kPressed));
   EXPECT_EQ(colors.primary,
-            material3::MakeFrameworkTheme(theme).color.emphasis);
+            theme.frameworkColor(FrameworkColorRole::kEmphasis));
   EXPECT_EQ(roo_display::Color(0xFF6750A4),
-            material3::DefaultMaterial3Theme().color.primary);
+            DefaultTheme().material3Theme().color.primary);
 }
 
 // Verifies the public factory preserves every default color and state entry.
-TEST(Material3ThemeTest, FactoryMatchesStaticDefaults) {
-  const material3::Material3Theme theme =
-      material3::MakeTheme(material3::DefaultColorScheme());
-  const material3::Material3Theme& defaults =
-      material3::DefaultMaterial3Theme();
+TEST(Material3ThemeTest, DefaultConstructionMatchesSharedDefaults) {
+  const material3::Material3Theme theme;
+  const material3::Material3Theme& defaults = DefaultTheme().material3Theme();
   EXPECT_EQ(defaults.state.disabledContentOpacity,
             theme.state.disabledContentOpacity);
   EXPECT_EQ(defaults.density, theme.density);
@@ -227,15 +267,10 @@ TEST(Material3ThemeTest, FactoryMatchesStaticDefaults) {
               theme.color.resolve(color_token));
     for (uint8_t state = 0; state < 6; ++state) {
       const auto interaction = static_cast<InteractionState>(state);
-      EXPECT_EQ(defaults.state.resolve(color_token, interaction),
-                theme.state.resolve(color_token, interaction));
+      EXPECT_EQ(defaults.stateLayer(color_token, interaction),
+                theme.stateLayer(color_token, interaction));
     }
   }
-}
-
-TEST(ThemeTest, CanBeUsedWithoutAMaterial3Slot) {
-  Theme theme = {};
-  EXPECT_FALSE(theme.hasMaterial3Theme());
 }
 
 }  // namespace

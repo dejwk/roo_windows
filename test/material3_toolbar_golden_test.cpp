@@ -22,8 +22,8 @@ roo_display::Offscreen<roo_display::Rgb888> RenderDocked(bool dark) {
       kWidth, kHeight, raster.data(), roo_display::Rgb565());
   roo_display::Display display(device);
   roo_scheduler::SchedulingService scheduler;
-  Material3Theme material = test_support::MakeAcceptanceTheme(dark);
-  Theme theme{MakeFrameworkTheme(material), &material};
+  Theme theme{.material3 = test_support::MakeAcceptanceTheme(dark)};
+
   Environment env(scheduler, theme);
   Application app(&env, display);
 
@@ -57,8 +57,8 @@ roo_display::Offscreen<roo_display::Rgb888> RenderFloating(bool dark) {
       kWidth, kHeight, raster.data(), roo_display::Rgb565());
   roo_display::Display display(device);
   roo_scheduler::SchedulingService scheduler;
-  Material3Theme material = test_support::MakeAcceptanceTheme(dark);
-  Theme theme{MakeFrameworkTheme(material), &material};
+  Theme theme{.material3 = test_support::MakeAcceptanceTheme(dark)};
+
   Environment env(scheduler, theme);
   Application app(&env, display);
 

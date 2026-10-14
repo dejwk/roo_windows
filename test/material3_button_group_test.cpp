@@ -159,8 +159,8 @@ TEST(ButtonGroupHelpers, PressGeometryInvariants) {
 class GroupFixture : public testing::Test {
  protected:
   roo_scheduler::SchedulingService scheduler;
-  Material3Theme material = DefaultTheme().material3Theme();
-  Theme theme{MakeFrameworkTheme(material), &material};
+  Theme theme = DefaultTheme();
+  Material3Theme& material = theme.material3Theme();
   Environment environment{scheduler, theme};
   ApplicationContext context{scheduler, environment.theme(),
                              environment.keyboardColorTheme()};

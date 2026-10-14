@@ -8,7 +8,7 @@ namespace roo_windows::material3::test_support {
 using roo_display::Color;
 
 // Fixed dark acceptance palette; the library's normal default remains light.
-// Rebase interaction layers while retaining their existing opacity policy.
+// Interaction layers resolve from this palette without manual rebasing.
 inline Material3Theme MakeAcceptanceTheme(bool dark) {
   Material3Theme material = DefaultTheme().material3Theme();
   if (!dark) return material;
@@ -23,47 +23,6 @@ inline Material3Theme MakeAcceptanceTheme(bool dark) {
                     Color(0xFF601410), Color(0xFF8C1D18), Color(0xFFF9DEDC),
                     Color(0xFF938F99), Color(0xFF49454F), Color(0xFFE6E0E9),
                     Color(0xFF322F35), Color(0xFF6750A4), Color(0xFFD0BCFF)};
-  for (int token = 0; token < 33; ++token) {
-    Color content = material.color.onSurface;
-    switch (static_cast<ColorToken>(token)) {
-      case ColorToken::kPrimary:
-        content = material.color.onPrimary;
-        break;
-      case ColorToken::kPrimaryContainer:
-        content = material.color.onPrimaryContainer;
-        break;
-      case ColorToken::kSecondary:
-        content = material.color.onSecondary;
-        break;
-      case ColorToken::kSecondaryContainer:
-        content = material.color.onSecondaryContainer;
-        break;
-      case ColorToken::kTertiary:
-        content = material.color.onTertiary;
-        break;
-      case ColorToken::kTertiaryContainer:
-        content = material.color.onTertiaryContainer;
-        break;
-      case ColorToken::kError:
-        content = material.color.onError;
-        break;
-      case ColorToken::kErrorContainer:
-        content = material.color.onErrorContainer;
-        break;
-      case ColorToken::kSurfaceVariant:
-        content = material.color.onSurfaceVariant;
-        break;
-      case ColorToken::kInverseSurface:
-        content = material.color.inverseOnSurface;
-        break;
-      default:
-        break;
-    }
-    for (int state = 0; state < 6; ++state) {
-      material.state.layer[token][state] =
-          content.withA(material.state.layer[token][state].a());
-    }
-  }
   return material;
 }
 

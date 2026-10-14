@@ -76,8 +76,9 @@ TEST(Material3SplitButtonGeometry, ConstrainedWidthReservesTrailingFirst) {
 // trailing width and natural horizontal spacing stable.
 TEST(Material3SplitButtonGeometry, DensityKeepsHorizontalGeometry) {
   roo_scheduler::SchedulingService scheduler;
-  Material3Theme material = DefaultTheme().material3Theme();
-  Theme theme{MakeFrameworkTheme(material), &material};
+  Theme theme = DefaultTheme();
+  Material3Theme& material = theme.material3Theme();
+
   Environment environment(scheduler, theme);
   ApplicationContext context(environment.scheduler(), environment.theme(),
                              environment.keyboardColorTheme());

@@ -38,13 +38,13 @@ TEST(Material3MenuRow, TokenTablesCoverAllVisualFamilies) {
 // list's segmented-row slot, while selected rows retain their fixed accent.
 TEST(Material3MenuRow, UsesIndependentMenuSurfaceDefaults) {
   roo_scheduler::SchedulingService scheduler;
-  Material3Theme material = DefaultTheme().material3Theme();
+  Theme theme = DefaultTheme();
+  Material3Theme& material = theme.material3Theme();
   material.components.list.segmentedContainer =
       ColorToken::kSurfaceContainerHigh;
   material.components.menu.expressiveContainer =
       ColorToken::kSurfaceContainerLow;
-  Theme theme = DefaultTheme();
-  theme.material3_theme = &material;
+
   Environment environment(scheduler, theme);
   ApplicationContext context(environment.scheduler(), environment.theme(),
                              environment.keyboardColorTheme());

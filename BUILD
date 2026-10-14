@@ -1707,3 +1707,10 @@ cc_library(
     hdrs = ["benchmarks/standalone_abi_logging_stub.h"],
     deps = [":roo_windows"],
 )
+
+cc_test(
+    name = "material3_application_theme_test",
+    srcs = ["test/material3_application_theme_test.cpp"],
+    linkstatic = 1,
+    deps = [":roo_windows", "@roo_testing//:arduino_gtest_main", "@roo_testing//roo_testing/system:manual_time_mode"],
+)

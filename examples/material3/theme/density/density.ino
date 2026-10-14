@@ -75,10 +75,9 @@ Display display(screen, touch,
                 TouchCalibration(269, 249, 3829, 3684,
                                  Orientation::LeftDown()));
 
-// This mutable storage outlives the Theme, Application, and all widgets.
-// Copying a framework Theme alone still borrows its original Material object.
-material3::Material3Theme material = DefaultTheme().material3Theme();
-Theme theme{material3::MakeFrameworkTheme(material), &material};
+// One application theme owns the Material 3 settings for every widget.
+Theme theme;
+material3::Material3Theme& material = theme.material3Theme();
 roo_scheduler::SchedulingService scheduler;
 Environment environment(scheduler, theme);
 #ifdef ROO_TESTING

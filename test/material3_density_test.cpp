@@ -25,8 +25,6 @@ class DensityTest : public testing::Test {
   DensityTest()
       : offscreen_(240, 320, raster_, roo_display::Argb4444()),
         display_(offscreen_),
-        material_(DefaultTheme().material3Theme()),
-        theme_{MakeFrameworkTheme(material_), &material_},
         env_(scheduler_, theme_),
         app_(&env_, display_) {}
   ApplicationContext& context() { return app_.context(); }
@@ -48,8 +46,8 @@ class DensityTest : public testing::Test {
   roo_display::OffscreenDevice<roo_display::Argb4444> offscreen_;
   roo_display::Display display_;
   roo_scheduler::SchedulingService scheduler_;
-  Material3Theme material_;
-  Theme theme_;
+  Theme theme_ = DefaultTheme();
+  Material3Theme& material_ = theme_.material3Theme();
   Environment env_;
   Application app_;
 };
@@ -80,7 +78,7 @@ TEST_F(DensityTest, NamedLevelsAndAggregateCompatibility) {
   for (int step = 0; step <= 5; ++step) {
     material_.density = kLevels[step];
     EXPECT_EQ(static_cast<int>(kLevels[step]), -step);
-    EXPECT_EQ(copy.material3Theme().density, kLevels[step]);
+    EXPECT_EQ(copy.material3Theme().density, Density::kDefault);
     EXPECT_EQ(checkbox.getNaturalDimensions().width(), checkbox_size.width());
     EXPECT_EQ(checkbox.getNaturalDimensions().height(), checkbox_size.height());
     EXPECT_EQ(radio.getNaturalDimensions().width(), radio_size.width());

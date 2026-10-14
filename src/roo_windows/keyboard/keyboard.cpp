@@ -323,7 +323,7 @@ class AlternativesPin final : public PresentationPin {
           {grid.xMin() + (selected % columns) * cell + (cell - 1) * 0.5f,
            grid.yMin() + (selected / columns) * height + (height - 1) * 0.5f},
           highlight_radius,
-          target_.theme().material3Theme().state.resolve(
+          target_.theme().material3Theme().stateLayer(
               material3::ColorToken::kPrimary, InteractionState::kPressed)));
     }
     for (int i = 0; i < count; ++i) {
@@ -576,7 +576,7 @@ void KeyboardWidget::paintKey(PaintContext& ctx, int row_idx, int key_idx,
     background = colorTheme().acceptButton;
   }
   if (isPressed() && active_row_ == row_idx && active_key_ == key_idx) {
-    background = AlphaBlend(background, theme().material3Theme().state.resolve(
+    background = AlphaBlend(background, theme().material3Theme().stateLayer(
                                             material3::ColorToken::kPrimary,
                                             InteractionState::kPressed));
   }

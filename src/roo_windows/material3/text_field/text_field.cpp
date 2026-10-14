@@ -301,7 +301,7 @@ void TextField::paint(PaintContext& ctx) const {
   if (!isEnabled() && !outlined) {
     fill = Opacity(colors.onSurface, 10, ancestor);
   } else if (isEnabled() && (isPressed() || isHover())) {
-    fill = AlphaBlend(fill, theme().material3Theme().state.resolve(
+    fill = AlphaBlend(fill, theme().material3Theme().stateLayer(
                                 outlined ? ColorToken::kSurface : filled_role,
                                 isPressed() ? InteractionState::kPressed
                                             : InteractionState::kHover));

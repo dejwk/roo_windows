@@ -115,7 +115,8 @@ TEST(Material3AppBar, SurfaceRolesFollowFlatAndScrolledStates) {
 // slot instead of sharing a literal role with another panel variant.
 TEST(Material3AppBar, UsesIndependentComponentThemeSlots) {
   roo_scheduler::SchedulingService scheduler;
-  Material3Theme material = DefaultTheme().material3Theme();
+  Theme theme = DefaultTheme();
+  Material3Theme& material = theme.material3Theme();
   material.components.appBar.flatContainer = ColorToken::kSurfaceContainerLow;
   material.components.appBar.scrolledContainer =
       ColorToken::kSurfaceContainerHigh;
@@ -128,8 +129,7 @@ TEST(Material3AppBar, UsesIndependentComponentThemeSlots) {
       ColorToken::kSurfaceContainerHigh;
   material.components.searchAppBar.scrolledSearchContainer =
       ColorToken::kSurface;
-  Theme theme = DefaultTheme();
-  theme.material3_theme = &material;
+
   Environment env(scheduler, theme);
   ApplicationContext context = MakeContext(env);
   TestAppBar app_bar(context);

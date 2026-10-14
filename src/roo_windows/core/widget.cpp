@@ -670,28 +670,28 @@ uint8_t Widget::getOverlayOpacity() const {
   const Theme& myTheme = theme();
   if (isHover()) {
     overlay_opacity += myTheme.material3Theme()
-                           .state.resolve(bg_role, InteractionState::kHover)
+                           .stateLayer(bg_role, InteractionState::kHover)
                            .a();
   }
   if (isFocused()) {
     overlay_opacity += myTheme.material3Theme()
-                           .state.resolve(bg_role, InteractionState::kFocus)
+                           .stateLayer(bg_role, InteractionState::kFocus)
                            .a();
   }
   if (isSelected() && useOverlayOnSelection()) {
     overlay_opacity += myTheme.material3Theme()
-                           .state.resolve(bg_role, InteractionState::kSelected)
+                           .stateLayer(bg_role, InteractionState::kSelected)
                            .a();
   }
   if (isActivated() && useOverlayOnActivation()) {
     overlay_opacity += myTheme.material3Theme()
-                           .state.resolve(bg_role, InteractionState::kActivated)
+                           .stateLayer(bg_role, InteractionState::kActivated)
                            .a();
   }
   if (isClicking() && useOverlayOnPress()) {
     uint8_t pressed_opacity =
         myTheme.material3Theme()
-            .state.resolve(bg_role, InteractionState::kPressed)
+            .stateLayer(bg_role, InteractionState::kPressed)
             .a();
     if (getClickOverlayAnimation() == ClickOverlayAnimation::kFade) {
       const ClickAnimation* animation = getClickAnimation();
@@ -702,12 +702,12 @@ uint8_t Widget::getOverlayOpacity() const {
     }
   } else if (isPressed() && useOverlayOnPress()) {
     overlay_opacity += myTheme.material3Theme()
-                           .state.resolve(bg_role, InteractionState::kPressed)
+                           .stateLayer(bg_role, InteractionState::kPressed)
                            .a();
   }
   if (isDragged()) {
     overlay_opacity += myTheme.material3Theme()
-                           .state.resolve(bg_role, InteractionState::kDragged)
+                           .stateLayer(bg_role, InteractionState::kDragged)
                            .a();
   }
   if (overlay_opacity > 255) overlay_opacity = 255;

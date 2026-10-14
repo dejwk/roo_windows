@@ -35,8 +35,7 @@ roo_display::Color getClickAnimationColor(const Widget& widget,
   Color overlay = widget.usesHighlighterColor()
                       ? material.color.accentColorFor(bg_role)
                       : material.color.contentColorFor(bg_role);
-  overlay.set_a(
-      material.state.resolve(bg_role, InteractionState::kPressed).a());
+  overlay.set_a(material.stateLayer(bg_role, InteractionState::kPressed).a());
   return overlay;
 }
 

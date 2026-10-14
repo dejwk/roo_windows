@@ -1246,10 +1246,10 @@ TEST_F(DynamicListTest, WidthAndPolicyChangesReusePreparedRows) {
 // rows and their gap surfaces after invalidation, without replacing the pool.
 TEST(DynamicListTheme, UsesUpdatedThemeAndParentBackground) {
   roo_scheduler::SchedulingService scheduler;
-  Material3Theme material = DefaultTheme().material3Theme();
-  material.components.list.segmentedContainer = ColorToken::kSurfaceContainer;
   Theme theme = DefaultTheme();
-  theme.material3_theme = &material;
+  material3::Material3Theme& material = theme.material3Theme();
+  material.components.list.segmentedContainer = ColorToken::kSurfaceContainer;
+
   Environment environment(scheduler, theme);
   roo::byte pixels[240 * 320 * 2] = {};
   roo_display::OffscreenDevice<roo_display::Argb4444> device(

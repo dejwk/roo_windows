@@ -99,8 +99,9 @@ TEST_F(DensityGeometryTest, ButtonSizeAndDensityMatrix) {
 // Verifies scaled check artwork does not impose transparent canvas height on
 // compact buttons; nominal slot width/gap stay fixed and both ink edges fit.
 TEST_F(DensityGeometryTest, CompactIconUsesPaintedFootprint) {
-  Material3Theme material = DefaultTheme().material3Theme();
-  Theme themed{MakeFrameworkTheme(material), &material};
+  Theme themed = DefaultTheme();
+  Material3Theme& material = themed.material3Theme();
+
   ApplicationContext themed_context(scheduler, themed,
                                     DefaultKeyboardColorTheme());
   const MonoIcon& icon = SCALED_ROO_ICON(filled, navigation_check);

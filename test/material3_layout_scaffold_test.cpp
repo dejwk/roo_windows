@@ -74,10 +74,10 @@ TEST(Material3LayoutScaffold, ResolvesExactScaledBreakpointBoundaries) {
 // Verifies the scaffold role follows the application-owned component slot.
 TEST(Material3LayoutScaffold, UsesThemedContainerRole) {
   roo_scheduler::SchedulingService scheduler;
-  Material3Theme material = DefaultTheme().material3Theme();
-  material.components.layoutScaffold.container = ColorToken::kSurface;
   Theme theme = DefaultTheme();
-  theme.material3_theme = &material;
+  Material3Theme& material = theme.material3Theme();
+  material.components.layoutScaffold.container = ColorToken::kSurface;
+
   Environment env(scheduler, theme);
   ApplicationContext context = MakeContext(env);
   TestLayoutScaffold scaffold(context);

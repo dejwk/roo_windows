@@ -210,11 +210,11 @@ TEST(Material3NavigationBar, PublicTypesStayWithinPhaseOneSizeBudget) {
 // application-owned navigation-bar role.
 TEST(Material3NavigationBar, UsesThemedContainerRole) {
   roo_scheduler::SchedulingService scheduler;
-  Material3Theme material = DefaultTheme().material3Theme();
+  Theme theme = DefaultTheme();
+  material3::Material3Theme& material = theme.material3Theme();
   material.components.navigationBar.container =
       ColorToken::kSurfaceContainerHigh;
-  Theme theme = DefaultTheme();
-  theme.material3_theme = &material;
+
   Environment env(scheduler, theme);
   ApplicationContext context = MakeContext(env);
   NavigationBar bar(context);

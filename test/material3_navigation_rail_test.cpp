@@ -163,13 +163,13 @@ TEST(Material3NavigationRail, PublicTypesStayWithinPhaseOneSizeBudget) {
 // Verifies collapsed and expanded persistent rails choose independent slots.
 TEST(Material3NavigationRail, UsesThemedContainerRolesForBothLayouts) {
   roo_scheduler::SchedulingService scheduler;
-  Material3Theme material = DefaultTheme().material3Theme();
+  Theme theme = DefaultTheme();
+  material3::Material3Theme& material = theme.material3Theme();
   material.components.navigationRail.collapsedContainer =
       ColorToken::kSurfaceContainerLow;
   material.components.navigationRail.expandedContainer =
       ColorToken::kSurfaceContainerHigh;
-  Theme theme = DefaultTheme();
-  theme.material3_theme = &material;
+
   Environment env(scheduler, theme);
   ApplicationContext context = MakeContext(env);
   NavigationRail rail(context);

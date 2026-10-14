@@ -26,9 +26,9 @@ void Icon::paint(PaintContext& ctx) const {
     const Theme& myTheme = theme();
     color = parent() != nullptr
                 ? parent()->defaultColor()
-                : myTheme.framework.color.resolve(FrameworkColorRole::kContent);
+                : myTheme.frameworkColor(FrameworkColorRole::kContent);
     if (isActivated() && usesHighlighterColor()) {
-      color = myTheme.framework.color.resolve(FrameworkColorRole::kEmphasis);
+      color = myTheme.frameworkColor(FrameworkColorRole::kEmphasis);
     }
   }
   if (icon_ == nullptr) {

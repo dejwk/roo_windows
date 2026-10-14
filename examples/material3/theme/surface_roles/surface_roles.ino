@@ -72,10 +72,10 @@ Display display(screen, touch,
                                  Orientation::LeftDown()));
 
 const Theme& ApplicationTheme() {
-  // Material3Theme is application-owned shared data. Widgets only borrow it,
-  // so keep this storage static (or otherwise longer lived than the app and
-  // all of its widgets).
-  static const material3::Material3Theme material = [] {
+  // Theme owns the Material3Theme data. Widgets only borrow it, so keep this
+  // storage static (or otherwise longer lived than the app and all its
+  // widgets).
+  static const Theme theme{.material3 = [] {
     // Start with all normal Material defaults, then replace only the shared
     // card surface slots this application wants to customize.
     material3::Material3Theme result = DefaultTheme().material3Theme();
@@ -117,12 +117,8 @@ const Theme& ApplicationTheme() {
     // contract is also changed deliberately; accent/error roles are for
     // instance-specific treatments with matching content colors.
     return result;
-  }();
+  }()};
 
-  // Theme keeps a non-owning pointer to `material`; MakeFrameworkTheme()
-  // separately derives the framework-level colors from the same palette.
-  static const Theme theme = {material3::MakeFrameworkTheme(material),
-                              &material};
   return theme;
 }
 

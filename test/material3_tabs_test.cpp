@@ -46,12 +46,12 @@ class TestBadgedTab : public BadgedTab {
 // Verifies a tabs strip and its children resolve the same variant slot.
 TEST(Material3TabsTheme, UsesSharedVariantSurfaceForStripAndTabs) {
   roo_scheduler::SchedulingService scheduler;
-  Material3Theme material = DefaultTheme().material3Theme();
+  Theme theme = DefaultTheme();
+  material3::Material3Theme& material = theme.material3Theme();
   material.components.tabs.primaryContainer = ColorToken::kSurfaceContainerLow;
   material.components.tabs.secondaryContainer =
       ColorToken::kSurfaceContainerHigh;
-  Theme theme = DefaultTheme();
-  theme.material3_theme = &material;
+
   Environment env(scheduler, theme);
   ApplicationContext context = MakeContext(env);
   Tabs tabs(context);
@@ -940,7 +940,7 @@ TEST_F(Material3TabsRenderTest, PrimaryFixedRowPaintsIndicatorAndDivider) {
       env_.theme().material3Theme().color.onSurface.withA(
           env_.theme()
               .material3Theme()
-              .state.resolve(ColorToken::kSurface, InteractionState::kPressed)
+              .stateLayer(ColorToken::kSurface, InteractionState::kPressed)
               .a()));
   EXPECT_EQ(QuantizeToArgb4444(pressed_indicator), pixelAt(30, Scaled(45)));
   EXPECT_EQ(

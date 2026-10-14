@@ -222,12 +222,12 @@ class TestDestination final : public Destination {
 // Verifies basic and full-screen dialogs select independent shared defaults.
 TEST(Material3DialogTheme, UsesIndependentBasicAndFullScreenSurfaceSlots) {
   roo_scheduler::SchedulingService scheduler;
-  Material3Theme material = DefaultTheme().material3Theme();
+  Theme theme = DefaultTheme();
+  Material3Theme& material = theme.material3Theme();
   material.components.dialog.basicContainer = ColorToken::kSurfaceContainerLow;
   material.components.dialog.fullScreenContainer =
       ColorToken::kSurfaceContainerHighest;
-  Theme theme = DefaultTheme();
-  theme.material3_theme = &material;
+
   Environment environment(scheduler, theme);
   ApplicationContext context(environment.scheduler(), environment.theme(),
                              environment.keyboardColorTheme());

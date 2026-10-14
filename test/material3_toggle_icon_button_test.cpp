@@ -270,11 +270,11 @@ TEST(Material3ToggleIconButton, SelectedStyleTokensAndOutlinedBorderChange) {
 // while selected variants retain their fixed accent roles.
 TEST(Material3ToggleIconButton, FilledUnselectedUsesComponentTheme) {
   roo_scheduler::SchedulingService scheduler;
-  Material3Theme material = DefaultTheme().material3Theme();
+  Theme theme = DefaultTheme();
+  material3::Material3Theme& material = theme.material3Theme();
   material.components.toggleIconButton.filledUnselectedContainer =
       ColorToken::kSurfaceContainerLow;
-  Theme theme = DefaultTheme();
-  theme.material3_theme = &material;
+
   Environment env(scheduler, theme);
   ApplicationContext context = MakeContext(env);
   ToggleIconButton button(context, ic_outlined_24_action_done(), nullptr,
