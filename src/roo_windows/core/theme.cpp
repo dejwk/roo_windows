@@ -199,20 +199,12 @@ constexpr roo_display::Color StateLayerContent(
   }
 }
 
-// TODO(roo_display): once Color's default constructor is constexpr on all
-// supported roo_display versions, replace this explicit initializer with {}.
-// Until then, Color(uint32_t) keeps the table's constant initialization valid
-// on the older C++17-compatible roo_display release.
-constexpr material3::StateLayerTheme EmptyMaterial3StateLayerTheme() {
-  return {.disabledContentOpacity = 0, .layer = {}};
-};
-
 const material3::Material3Theme& DefaultMaterial3Theme() {
   static constexpr material3::Material3Theme theme = [] {
     const LegacyStateOpacity legacy_state = DefaultLegacyState();
     material3::Material3Theme result = {
         .color = DefaultMaterial3Colors(),
-        .state = EmptyMaterial3StateLayerTheme(),
+        .state = {},
         .density = material3::Density::kDefault,
     };
     result.state.disabledContentOpacity = legacy_state.disabled;
