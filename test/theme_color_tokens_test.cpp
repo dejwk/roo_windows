@@ -3,6 +3,7 @@
 #include "gtest/gtest.h"
 #include "roo_windows/core/framework_theme.h"
 #include "roo_windows/core/theme.h"
+#include "roo_windows/material3/default_theme.h"
 #include "roo_windows/material3/theme.h"
 
 namespace roo_windows {
@@ -181,6 +182,55 @@ TEST(ThemeTest, DefaultThemeComposesMaterial3AndFrameworkThemes) {
   EXPECT_EQ(material.color.onSurface.withA(31),
             material.state.resolve(material3::ColorToken::kSurface,
                                    InteractionState::kPressed));
+}
+
+// Verifies the compatibility API borrows the exact same static defaults.
+TEST(ThemeTest, CompatibilityDefaultUsesExplicitMaterial3Default) {
+  EXPECT_EQ(&DefaultTheme(), &material3::DefaultTheme());
+  EXPECT_EQ(&DefaultTheme().material3Theme(),
+            &material3::DefaultMaterial3Theme());
+}
+
+// Verifies construction with a custom palette derives interaction colors
+// without modifying shared defaults, and projects into the framework theme.
+TEST(Material3ThemeTest, BuildsStateLayersFromCustomPalette) {
+  material3::ColorScheme colors = material3::DefaultColorScheme();
+  colors.primary = roo_display::Color(0xFF123456);
+  colors.onPrimary = roo_display::Color(0xFFABCDEF);
+  colors.onSurface = roo_display::Color(0xFF654321);
+  const material3::Material3Theme theme = material3::MakeTheme(colors);
+  EXPECT_EQ(colors.primary, theme.color.primary);
+  EXPECT_EQ(colors.onPrimary.withA(20),
+            theme.state.resolve(material3::ColorToken::kPrimary,
+                                InteractionState::kHover));
+  EXPECT_EQ(colors.onSurface.withA(31),
+            theme.state.resolve(material3::ColorToken::kSurface,
+                                InteractionState::kPressed));
+  EXPECT_EQ(colors.primary,
+            material3::MakeFrameworkTheme(theme).color.emphasis);
+  EXPECT_EQ(roo_display::Color(0xFF6750A4),
+            material3::DefaultMaterial3Theme().color.primary);
+}
+
+// Verifies the public factory preserves every default color and state entry.
+TEST(Material3ThemeTest, FactoryMatchesStaticDefaults) {
+  const material3::Material3Theme theme =
+      material3::MakeTheme(material3::DefaultColorScheme());
+  const material3::Material3Theme& defaults =
+      material3::DefaultMaterial3Theme();
+  EXPECT_EQ(defaults.state.disabledContentOpacity,
+            theme.state.disabledContentOpacity);
+  EXPECT_EQ(defaults.density, theme.density);
+  for (uint8_t token = 0; token < 33; ++token) {
+    const auto color_token = static_cast<material3::ColorToken>(token);
+    EXPECT_EQ(defaults.color.resolve(color_token),
+              theme.color.resolve(color_token));
+    for (uint8_t state = 0; state < 6; ++state) {
+      const auto interaction = static_cast<InteractionState>(state);
+      EXPECT_EQ(defaults.state.resolve(color_token, interaction),
+                theme.state.resolve(color_token, interaction));
+    }
+  }
 }
 
 TEST(ThemeTest, CanBeUsedWithoutAMaterial3Slot) {

@@ -4,6 +4,7 @@
 #include "roo_display/color/color.h"
 #include "roo_display/font/smooth_font.h"
 #include "roo_windows/config.h"
+#include "roo_windows/core/default_theme.h"
 #include "roo_windows/core/framework_theme.h"
 
 namespace roo_windows::material3 {
@@ -183,8 +184,6 @@ struct KeyboardColorTheme {
   roo_display::Color text;
 };
 
-/// Returns the framework's default Material 3 theme.
-const Theme& DefaultTheme();
 /// Returns the framework's default on-screen keyboard color theme.
 const KeyboardColorTheme& DefaultKeyboardColorTheme();
 
