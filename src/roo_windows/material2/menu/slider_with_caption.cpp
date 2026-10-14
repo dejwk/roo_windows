@@ -2,13 +2,14 @@
 
 #include "roo_windows/core/application_context.h"
 #include "roo_windows/core/theme.h"
+#include "roo_windows/material2/typography.h"
 
 namespace roo_windows::material2 {
 namespace menu {
 
 BaseSliderWithCaption::BaseSliderWithCaption(ApplicationContext& context,
                                              std::string caption)
-    : FlexLayout(context, FlexDirection::kColumn),
+    : ThemeMixin<FlexLayout>(context, FlexDirection::kColumn),
       text_section_(context),
       caption_(context, std::move(caption), material2::text_style_body1()),
       value_(context, "", material2::text_style_body1()),

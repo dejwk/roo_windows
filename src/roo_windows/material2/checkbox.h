@@ -1,20 +1,21 @@
 #pragma once
 
 #include "roo_windows/core/widget.h"
+#include "roo_windows/material2/theme_mixin.h"
 
 namespace roo_windows::material2 {
 
 /// Tri-state checkbox using the legacy (pre-Material 3) style.
 ///
 /// For new code, prefer `material3::Checkbox`.
-class Checkbox : public Widget {
+class Checkbox : public ThemeMixin<Widget> {
  public:
   /// Logical selection state exposed by the checkbox.
   enum class OnOffState : uint8_t { kOff, kIndeterminate, kOn };
 
   /// Creates a checkbox with the specified initial state.
   Checkbox(ApplicationContext& context, OnOffState state = OnOffState::kOff)
-      : Widget(context), state_(state) {}
+      : ThemeMixin<Widget>(context), state_(state) {}
 
   /// Returns true when the checkbox is in the on state.
   bool isOn() const { return state_ == OnOffState::kOn; }

@@ -10,6 +10,7 @@
 #include "roo_windows/core/transient_surface_host.h"
 #include "roo_windows/material2/button.h"
 #include "roo_windows/material2/divider.h"
+#include "roo_windows/material2/theme_mixin.h"
 #include "roo_windows/widgets/text_label.h"
 
 namespace roo_windows::material2 {
@@ -25,7 +26,7 @@ namespace roo_windows::material2 {
 ///
 /// Subclasses populate `contents_` with their specific UI. Override `onEnter`
 /// / `onExit` to react to lifecycle transitions.
-class Dialog : public VerticalLayout {
+class Dialog : public ThemeMixin<VerticalLayout> {
  public:
   typedef std::function<void(int action_idx)> CallbackFn;
 
@@ -88,7 +89,7 @@ class Dialog : public VerticalLayout {
 
   TextLabel title_;
   material2::HorizontalDivider divider1_;
-  ScrollablePanel contents_;
+  ThemeMixin<ScrollablePanel> contents_;
   material2::HorizontalDivider divider2_;
 
   /// Enters a detached presentation session before initial measurement.
@@ -146,9 +147,9 @@ class Dialog : public VerticalLayout {
     CallbackFn callback_fn_;
   };
 
-  class FullWidthPanel : public MarginsMixin<HorizontalLayout> {
+  class FullWidthPanel : public MarginsMixin<ThemeMixin<HorizontalLayout>> {
    public:
-    using Base = MarginsMixin<HorizontalLayout>;
+    using Base = MarginsMixin<ThemeMixin<HorizontalLayout>>;
     using Base::Base;
 
     void clearChildrenForDestruction() { removeAll(); }

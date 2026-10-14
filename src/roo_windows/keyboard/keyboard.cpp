@@ -17,6 +17,7 @@
 #include "roo_windows/core/surface_widget.h"
 #include "roo_windows/core/task.h"
 #include "roo_windows/decoration/decoration.h"
+#include "roo_windows/material2/typography.h"
 
 namespace roo_windows {
 
@@ -214,7 +215,7 @@ namespace {
 // With the baseline half an ascent below center, the lower extent is
 // ascent/2 - descent. Mirror that extent and add scaled clearance.
 int AlternativeRowHeight() {
-  const FontMetrics& metrics = font_body1().metrics();
+  const FontMetrics& metrics = roo_windows::material2::font_body1().metrics();
   return metrics.ascent() - 2 * metrics.descent() + Scaled(8);
 }
 
@@ -250,7 +251,8 @@ class PressHighlighterPin final : public PresentationPin {
     const Color background = target_.colorTheme().normalButton;
     char utf8[4];
     int size = roo_io::WriteUtf8Char(utf8, target_.activeRune());
-    StringViewLabel label(roo::string_view(utf8, size), font_body1(),
+    StringViewLabel label(roo::string_view(utf8, size),
+                          roo_windows::material2::font_body1(),
                           target_.colorTheme().text);
     const Offset offset =
         (kCenter | kMiddle)
@@ -336,11 +338,13 @@ class AlternativesPin final : public PresentationPin {
       char text[4];
       int bytes = roo_io::WriteUtf8Char(text, target_.alternativeRune(i));
       content.drawTiled(
-          StringViewLabel(roo::string_view(text, bytes), font_body1(),
+          StringViewLabel(roo::string_view(text, bytes),
+                          roo_windows::material2::font_body1(),
                           target_.colorTheme().text),
           box,
-          kCenter | kBaseline.toMiddle().shiftBy(
-                        font_body1().metrics().ascent() / 2));
+          kCenter |
+              kBaseline.toMiddle().shiftBy(
+                  roo_windows::material2::font_body1().metrics().ascent() / 2));
       content.addExclusion(inner);
     }
     PaintDecoration decoration;
@@ -597,7 +601,8 @@ void KeyboardWidget::paintKey(PaintContext& ctx, int row_idx, int key_idx,
       int size = roo_io::WriteUtf8Char(utf8, rune(row_idx, key_idx));
       PaintKeyContent(content,
                       StringViewLabel(roo::string_view(utf8, size),
-                                      font_body1(), colorTheme().text),
+                                      roo_windows::material2::font_body1(),
+                                      colorTheme().text),
                       bounds);
       break;
     }
@@ -608,7 +613,8 @@ void KeyboardWidget::paintKey(PaintContext& ctx, int row_idx, int key_idx,
                         length);
       PaintKeyContent(content,
                       StringViewLabel(roo::string_view(label, length),
-                                      font_button(), colorTheme().text),
+                                      roo_windows::material2::font_button(),
+                                      colorTheme().text),
                       bounds);
       break;
     }

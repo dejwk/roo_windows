@@ -9,8 +9,9 @@
 namespace roo_windows {
 namespace {
 
-static_assert(sizeof(Theme) == sizeof(material3::Material3Theme),
-              "Application themes must not duplicate framework palettes.");
+static_assert(sizeof(Theme) >= sizeof(material3::Material3Theme) +
+                                   sizeof(material2::Material2Theme),
+              "Application themes own independent system settings.");
 
 TEST(Material3ColorSchemeTest, ResolvesEveryToken) {
   const material3::ColorScheme scheme = {

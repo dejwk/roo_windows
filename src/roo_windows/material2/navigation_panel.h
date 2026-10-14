@@ -4,13 +4,14 @@
 
 #include "roo_windows/containers/stacked_layout.h"
 #include "roo_windows/material2/navigation_rail.h"
+#include "roo_windows/material2/theme_mixin.h"
 
 namespace roo_windows::material2 {
 
 class NavigationPanelTestAccess;
 
 /// Material 2 page host with a navigation rail and stacked page contents.
-class NavigationPanel : public Panel {
+class NavigationPanel : public ThemeMixin<Panel> {
  public:
   NavigationPanel(ApplicationContext& context);
 
@@ -45,7 +46,7 @@ class NavigationPanel : public Panel {
   void showPage(int index);
 
   NavigationRail rail_;
-  StackedLayout contents_;
+  ThemeMixin<StackedLayout> contents_;
   XDim rail_width_;
 };
 

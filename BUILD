@@ -1714,3 +1714,13 @@ cc_test(
     linkstatic = 1,
     deps = [":roo_windows", "@roo_testing//:arduino_gtest_main", "@roo_testing//roo_testing/system:manual_time_mode"],
 )
+
+cc_test(
+    name = "material2_theme_test",
+    srcs = ["test/material2_theme_test.cpp"],
+    linkstatic = 1,
+    deps = [
+        ":roo_windows",
+        "@roo_testing//:arduino_gtest_main",
+    ],
+)

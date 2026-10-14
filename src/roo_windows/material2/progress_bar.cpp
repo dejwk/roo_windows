@@ -81,9 +81,8 @@ void ProgressBar::onLayout(bool changed, const Rect& rect) {
 
 void ProgressBar::paint(PaintContext& ctx) const {
   const Theme& th = theme();
-  Color c = (color_ == color::Transparent
-                 ? th.frameworkColor(FrameworkColorRole::kEmphasis)
-                 : color_);
+  Color c = (color_ == color::Transparent ? th.material2Theme().color.primary
+                                          : color_);
   if (progress_ >= 0) {
     // Determinate.
     int16_t xoffset_incomplete = (uint32_t)progress_ * width() / 10000;

@@ -1,5 +1,6 @@
 #include "gtest/gtest.h"
 #include "roo_windows/core/theme.h"
+#include "roo_windows/material2/typography.h"
 #include "roo_windows/material3/typography.h"
 
 namespace roo_windows {
@@ -53,19 +54,23 @@ TEST(MaterialTypography, Material3Catalog) {
 }
 
 TEST(MaterialTypography, Material2FontHelpersRemainCompatible) {
-  EXPECT_EQ(&font_h1(), &material2::text_style_h1().font());
-  EXPECT_EQ(&font_button(), &material2::text_style_button().font());
-  EXPECT_EQ(&font_overline(), &material2::text_style_overline().font());
+  EXPECT_EQ(&roo_windows::material2::font_h1(),
+            &material2::text_style_h1().font());
+  EXPECT_EQ(&roo_windows::material2::font_button(),
+            &material2::text_style_button().font());
+  EXPECT_EQ(&roo_windows::material2::font_overline(),
+            &material2::text_style_overline().font());
 }
 
 TEST(MaterialTypography, TextStyleExposesLineBoxAndTracking) {
-  const TextStyle style(font_body1(), 3, -2);
+  const TextStyle style(roo_windows::material2::font_body1(), 3, -2);
   EXPECT_EQ(3, style.lineGap());
   EXPECT_EQ(style.font().metrics().ascent(), style.ascent());
   EXPECT_EQ(style.font().metrics().descent(), style.descent());
   EXPECT_EQ(1, style.topLeading());
   EXPECT_EQ(2, style.bottomLeading());
-  EXPECT_EQ(font_body1().metrics().ascent() + 1, style.baselineOffset());
+  EXPECT_EQ(roo_windows::material2::font_body1().metrics().ascent() + 1,
+            style.baselineOffset());
   EXPECT_EQ(-2, style.fontOptions().trackingPx());
 }
 

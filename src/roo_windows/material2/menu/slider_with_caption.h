@@ -6,6 +6,7 @@
 #include "roo_windows/containers/aligned_layout.h"
 #include "roo_windows/containers/flex_layout.h"
 #include "roo_windows/material2/slider.h"
+#include "roo_windows/material2/theme_mixin.h"
 #include "roo_windows/widgets/text_label.h"
 
 namespace roo_windows::material2 {
@@ -16,7 +17,7 @@ namespace menu {
 /// Subclasses provide `formatValue()` to render the right-aligned readout
 /// string from the slider's raw 16-bit position. Used to build settings menus
 /// where each row exposes a single numeric/enumerated knob.
-class BaseSliderWithCaption : public roo_windows::FlexLayout {
+class BaseSliderWithCaption : public ThemeMixin<FlexLayout> {
  public:
   BaseSliderWithCaption(roo_windows::ApplicationContext& context,
                         std::string caption);
@@ -42,7 +43,7 @@ class BaseSliderWithCaption : public roo_windows::FlexLayout {
   /// Renders the value readout for the supplied raw 16-bit slider position.
   virtual std::string formatValue(uint16_t value) const = 0;
 
-  roo_windows::AlignedLayout text_section_;
+  ThemeMixin<AlignedLayout> text_section_;
   roo_windows::TextLabel caption_;
   roo_windows::TextLabel value_;
   roo_windows::material2::Slider slider_;

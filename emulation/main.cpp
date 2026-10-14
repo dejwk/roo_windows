@@ -1,3 +1,5 @@
+#include "roo_windows/material2/typography.h"
+
 // *************** EMULATOR SETUP BEGIN
 
 #ifdef ROO_TESTING
@@ -109,9 +111,9 @@ class LegacySliderRow : public FlexLayout {
       : FlexLayout(env, FlexDirection::kColumn),
         header_(env, FlexDirection::kRow),
         labels_(env, FlexDirection::kColumn),
-        primary_(env, primary, font_body1()),
-        secondary_(env, secondary, font_caption()),
-        value_(env, "", font_body1()),
+        primary_(env, primary, roo_windows::material2::font_body1()),
+        secondary_(env, secondary, roo_windows::material2::font_caption()),
+        value_(env, "", roo_windows::material2::font_body1()),
         slider_(env, PosFromPercent(initial_percent)) {
     setPadding(Padding(Scaled(12), Scaled(8)));
     setGap(Scaled(8));
@@ -203,9 +205,9 @@ class SemanticSliderRow : public FlexLayout {
       : FlexLayout(env, FlexDirection::kColumn),
         header_(env, FlexDirection::kRow),
         labels_(env, FlexDirection::kColumn),
-        primary_(env, primary, font_body1()),
-        secondary_(env, secondary, font_caption()),
-        value_(env, "", font_body1()),
+        primary_(env, primary, roo_windows::material2::font_body1()),
+        secondary_(env, secondary, roo_windows::material2::font_caption()),
+        value_(env, "", roo_windows::material2::font_body1()),
         slider_(env, range, initial_value, variant, style),
         formatter_(std::move(formatter)) {
     if (label_formatter != nullptr) {
@@ -307,11 +309,11 @@ class RangeSliderRow : public FlexLayout {
       : FlexLayout(env, FlexDirection::kColumn),
         header_(env, FlexDirection::kRow),
         labels_(env, FlexDirection::kColumn),
-        primary_(env, primary, font_body1()),
-        secondary_(env, secondary, font_caption()),
-        value_(env, "", font_body1()),
+        primary_(env, primary, roo_windows::material2::font_body1()),
+        secondary_(env, secondary, roo_windows::material2::font_caption()),
+        value_(env, "", roo_windows::material2::font_body1()),
         slider_(env, range, start_value, end_value, style),
-        status_(env, "", font_caption()),
+        status_(env, "", roo_windows::material2::font_caption()),
         min_separation_(min_separation) {
     setPadding(Padding(Scaled(12), Scaled(8)));
     setGap(Scaled(8));
@@ -399,16 +401,16 @@ class SliderScreen : public SimpleScrollablePanel {
   SliderScreen(const Environment& env)
       : SimpleScrollablePanel(env),
         content_(env),
-        title_(env, "Material 3 sliders", font_body1()),
+        title_(env, "Material 3 sliders", roo_windows::material2::font_body1()),
         subtitle_(env,
                   "Compatibility, semantic, discrete, centered, and range "
                   "sliders, with custom value indicator labels.",
-                  font_caption()),
+                  roo_windows::material2::font_caption()),
         divider_(env),
         migration_(env,
                    "The first row still uses Slider(env, pos). The rest use "
                    "semantic ranges.",
-                   font_caption()),
+                   roo_windows::material2::font_caption()),
         legacy_(env, "Legacy compatibility",
                 "Normalized position constructor mapped to a percentage", 72),
         fan_speed_(
@@ -447,7 +449,7 @@ class SliderScreen : public SimpleScrollablePanel {
               "Drag a thumb to see the value indicator bubble float above it. "
               "Subclasses override formatLabel() to format their own values; "
               "kWithinBounds keeps the bubble clipped to the slider extent.",
-              font_caption()) {
+              roo_windows::material2::font_caption()) {
     content_.setPadding(Scaled(12));
     content_.setGap(Scaled(4));
 

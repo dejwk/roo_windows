@@ -3,12 +3,13 @@
 #include "roo_windows/core/display_window.h"
 #include "roo_windows/core/task.h"
 #include "roo_windows/material2/button.h"
+#include "roo_windows/material2/typography.h"
 
 namespace roo_windows::material2 {
 
 Dialog::Dialog(ApplicationContext& context,
                std::vector<std::string> button_labels)
-    : VerticalLayout(context),
+    : ThemeMixin<VerticalLayout>(context),
       title_(context, "", material2::text_style_h6()),
       divider1_(context),
       contents_(context),

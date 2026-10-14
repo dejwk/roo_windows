@@ -4,7 +4,7 @@
 #include "roo_display/ui/tile.h"
 #include "roo_icons/filled/toggle.h"
 #include "roo_windows/config.h"
-#include "roo_windows/material3/theme.h"
+#include "roo_windows/material2/theme.h"
 
 using namespace roo_display;
 
@@ -16,13 +16,13 @@ void RadioButton::onClicked() {
 }
 
 void RadioButton::paint(PaintContext& ctx) const {
-  ::roo_windows::material3::ColorToken bg_role = effectiveContainerRole();
+  ColorRole bg_role = Material2ColorRole(effectiveContainerRole());
   Color color =
       isOn()
-          ? theme().material3Theme().color.accentColorFor(bg_role)
+          ? theme().material2Theme().color.accentColorFor(bg_role)
           : AlphaBlend(
                 ctx.bgcolor(),
-                theme().material3Theme().color.contentColorFor(bg_role).withA(
+                theme().material2Theme().color.contentColorFor(bg_role).withA(
                     0x90));
   RleImage4bppxBiased<Alpha4, ProgMemPtr> img =
       isOn() ? SCALED_ROO_ICON(filled, toggle_radio_button_checked)

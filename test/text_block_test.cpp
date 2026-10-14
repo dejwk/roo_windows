@@ -9,6 +9,7 @@
 #include "roo_windows/containers/flex_layout.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/padding_mixin.h"
+#include "roo_windows/material2/typography.h"
 
 namespace roo_windows {
 namespace {

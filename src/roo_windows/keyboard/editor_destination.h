@@ -93,7 +93,17 @@ class EditorDestination : public Destination {
 
   VerticalLayout main_pane_;
   HorizontalLayout content_pane_;
-  material2::SimpleButton back_;
+  class BackButton : public material2::SimpleButton {
+   public:
+    using material2::SimpleButton::SimpleButton;
+
+   protected:
+    roo_display::Color defaultContentColor() const override {
+      return theme().material2Theme().color.onSurface;
+    }
+  };
+
+  BackButton back_;
   EditedTextField text_;
   material2::SimpleButton enter_;
   bool editing_ : 1;

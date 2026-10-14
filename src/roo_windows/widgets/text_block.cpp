@@ -503,6 +503,11 @@ void TextBlock::ensureLayout(XDim width_limit) const {
   layout_valid_ = true;
 }
 
+roo_display::Color TextBlock::defaultColor() const {
+  return parent() != nullptr ? parent()->defaultColor()
+                             : Widget::defaultColor();
+}
+
 void TextBlock::paint(PaintContext& ctx) const {
   if (width() <= 0 || height() <= 0) return;
 
@@ -512,8 +517,7 @@ void TextBlock::paint(PaintContext& ctx) const {
   ensureLayout(width_limit);
   if (layout_dims_.width() == 0 || layout_dims_.height() == 0) return;
 
-  roo_display::Color color =
-      color_.a() == 0 ? parent()->defaultColor() : color_;
+  roo_display::Color color = color_.a() == 0 ? defaultColor() : color_;
 
   ctx.drawTiled(Interior(roo_display::Box(0, 0, layout_dims_.width() - 1,
                                           layout_dims_.height() - 1),

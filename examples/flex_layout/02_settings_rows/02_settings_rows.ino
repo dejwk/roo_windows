@@ -1,3 +1,5 @@
+#include "roo_windows/material2/typography.h"
+
 // Learning goal: place legacy switches in flexible settings rows. Each click
 // keeps immediate logical state while a shared registry track moves the thumb.
 

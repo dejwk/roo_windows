@@ -8,6 +8,7 @@
 #include "roo_windows/config.h"
 #include "roo_windows/core/application.h"
 #include "roo_windows/core/task.h"
+#include "roo_windows/material2/typography.h"
 #include "roo_windows/material3/text_field/text_field.h"
 
 namespace roo_windows {
@@ -15,7 +16,7 @@ namespace roo_windows {
 EditorDestination::EditedTextField::EditedTextField(
     ApplicationContext& context, const std::string& hint,
     EditorDestination& destination)
-    : material2::TextField(context, font_body1(), hint,
+    : material2::TextField(context, roo_windows::material2::font_body1(), hint,
                            roo_display::kLeft | roo_display::kMiddle,
                            UNDERLINE),
       destination_(destination) {}
@@ -39,8 +40,6 @@ EditorDestination::EditorDestination(ApplicationContext& context,
   content_pane_.add(back_, {gravity : kGravityMiddle});
   content_pane_.add(text_, {gravity : kGravityMiddle, weight : 1});
   content_pane_.add(enter_, {gravity : kGravityMiddle});
-  back_.setContentColor(
-      context.theme().frameworkColor(FrameworkColorRole::kContent));
   back_.setOnInteractiveChange(
       [this]() { getTask()->requestBack(BackSource::kNavigationButton); });
   enter_.setOnInteractiveChange([this]() { confirm(); });

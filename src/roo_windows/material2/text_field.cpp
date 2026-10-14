@@ -19,7 +19,7 @@ using namespace roo_display;
 void VisibilityToggle::paint(PaintContext& ctx) const {
   Pictogram icon(isOn() ? SCALED_ROO_ICON(filled, action_visibility)
                         : SCALED_ROO_ICON(filled, action_visibility_off));
-  Color color = parent()->defaultColor();
+  Color color = defaultColor();
   icon.color_mode().setColor(color);
   ctx.drawTiled(icon, bounds(), kCenter | kMiddle, isInvalidated());
 }
@@ -27,15 +27,13 @@ void VisibilityToggle::paint(PaintContext& ctx) const {
 void TextField::paint(PaintContext& ctx) const {
   const Canvas& canvas = ctx.canvas();
   const Theme& theme = parent()->theme();
-  Color color = text_color_.a() == 0
-                    ? theme.frameworkColor(FrameworkColorRole::kContent)
-                    : text_color_;
-  Color highlight_color =
-      highlight_color_.a() == 0
-          ? theme.frameworkColor(FrameworkColorRole::kEmphasis)
-          : highlight_color_;
+  Color color = text_color_.a() == 0 ? theme.material2Theme().color.onSurface
+                                     : text_color_;
+  Color highlight_color = highlight_color_.a() == 0
+                              ? theme.material2Theme().color.primary
+                              : highlight_color_;
   if (!isEdited()) {
-    highlight_color = theme.frameworkColor(FrameworkColorRole::kContent);
+    highlight_color = theme.material2Theme().color.onSurface;
     highlight_color.set_a(0x20);
   }
   roo::string_view text = value_;

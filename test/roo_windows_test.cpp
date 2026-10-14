@@ -5,6 +5,7 @@
 
 #include "roo_display/shape/basic.h"
 #include "roo_windows/material2/text_field.h"
+#include "roo_windows/material2/typography.h"
 #include "roo_windows_render_test_support.h"
 
 using namespace roo_display;
@@ -89,8 +90,8 @@ class FocusableTestWidget : public Widget {
 class TextFieldDestination : public Destination {
  public:
   explicit TextFieldDestination(ApplicationContext& context)
-      : field(context, font_body1(), "", kLeft | kMiddle,
-              material2::TextField::NONE) {}
+      : field(context, roo_windows::material2::font_body1(), "",
+              kLeft | kMiddle, material2::TextField::NONE) {}
 
   Widget& getContents() override { return field; }
 

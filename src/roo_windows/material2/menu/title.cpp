@@ -2,12 +2,13 @@
 
 #include "roo_icons/outlined/navigation.h"
 #include "roo_windows/core/task.h"
+#include "roo_windows/material2/typography.h"
 
 namespace roo_windows::material2 {
 namespace menu {
 
 Title::Title(ApplicationContext& context, std::string title)
-    : FlexLayout(context, FlexDirection::kRow),
+    : ThemeMixin<FlexLayout>(context, FlexDirection::kRow),
       back_(context, SCALED_ROO_ICON(outlined, navigation_arrow_back)),
       label_(context, std::move(title), material2::text_style_h6(),
              kGravityLeft | kGravityMiddle) {

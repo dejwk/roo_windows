@@ -45,6 +45,10 @@ class TextBlock : public Widget {
   /// and alignment, including any trailing ellipsis when text is clipped.
   void paint(PaintContext& ctx) const override;
 
+  /// Returns inherited content color unless a component supplies its own
+  /// default.
+  roo_display::Color defaultColor() const override;
+
   /// Reports ink insets matching the smallest rectangle that contains the
   /// rendered glyphs, so the dirty-region tracker only repaints actual
   /// text.

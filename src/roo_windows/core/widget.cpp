@@ -663,36 +663,41 @@ void Widget::moveTo(const Rect& parent_bounds) {
   return effectiveContainerRole();
 }
 
+roo_display::Color Widget::interactionColor() const {
+  const auto& color = theme().material3Theme().color;
+  return usesHighlighterColor()
+             ? color.accentColorFor(effectiveOverlayColorRole())
+             : color.contentColorFor(effectiveOverlayColorRole());
+}
+
+uint8_t Widget::interactionOpacity(InteractionState state) const {
+  return theme()
+      .material3Theme()
+      .stateLayer(effectiveOverlayColorRole(), state)
+      .a();
+}
+
+uint8_t Widget::disabledContentOpacity() const {
+  return theme().disabledContentOpacity();
+}
+
 uint8_t Widget::getOverlayOpacity() const {
   if (getOverlayType() == OVERLAY_NONE) return 0;
-  ::roo_windows::material3::ColorToken bg_role = effectiveOverlayColorRole();
   uint16_t overlay_opacity = 0;
-  const Theme& myTheme = theme();
   if (isHover()) {
-    overlay_opacity += myTheme.material3Theme()
-                           .stateLayer(bg_role, InteractionState::kHover)
-                           .a();
+    overlay_opacity += interactionOpacity(InteractionState::kHover);
   }
   if (isFocused()) {
-    overlay_opacity += myTheme.material3Theme()
-                           .stateLayer(bg_role, InteractionState::kFocus)
-                           .a();
+    overlay_opacity += interactionOpacity(InteractionState::kFocus);
   }
   if (isSelected() && useOverlayOnSelection()) {
-    overlay_opacity += myTheme.material3Theme()
-                           .stateLayer(bg_role, InteractionState::kSelected)
-                           .a();
+    overlay_opacity += interactionOpacity(InteractionState::kSelected);
   }
   if (isActivated() && useOverlayOnActivation()) {
-    overlay_opacity += myTheme.material3Theme()
-                           .stateLayer(bg_role, InteractionState::kActivated)
-                           .a();
+    overlay_opacity += interactionOpacity(InteractionState::kActivated);
   }
   if (isClicking() && useOverlayOnPress()) {
-    uint8_t pressed_opacity =
-        myTheme.material3Theme()
-            .stateLayer(bg_role, InteractionState::kPressed)
-            .a();
+    uint8_t pressed_opacity = interactionOpacity(InteractionState::kPressed);
     if (getClickOverlayAnimation() == ClickOverlayAnimation::kFade) {
       const ClickAnimation* animation = getClickAnimation();
       float progress = animation == nullptr ? 1.0f : animation->progress();
@@ -701,14 +706,10 @@ uint8_t Widget::getOverlayOpacity() const {
       overlay_opacity += pressed_opacity;
     }
   } else if (isPressed() && useOverlayOnPress()) {
-    overlay_opacity += myTheme.material3Theme()
-                           .stateLayer(bg_role, InteractionState::kPressed)
-                           .a();
+    overlay_opacity += interactionOpacity(InteractionState::kPressed);
   }
   if (isDragged()) {
-    overlay_opacity += myTheme.material3Theme()
-                           .stateLayer(bg_role, InteractionState::kDragged)
-                           .a();
+    overlay_opacity += interactionOpacity(InteractionState::kDragged);
   }
   if (overlay_opacity > 255) overlay_opacity = 255;
   if (overlay_opacity == 0) return 0;  // roo_display::color::Transparent;

@@ -18,7 +18,7 @@ NavigationRail* NavigationRailEntry::rail() {
 }
 
 NavigationRail::NavigationRail(ApplicationContext& context)
-    : Panel(context),
+    : ThemeMixin<Panel>(context),
       alignment_(roo_display::kTop),
       active_(-1),
       divider_(context) {

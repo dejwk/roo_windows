@@ -1,6 +1,7 @@
 #include "gtest/gtest.h"
 #include "roo_windows/core/theme.h"
 #include "roo_windows/material2/text_field.h"
+#include "roo_windows/material2/typography.h"
 #include "roo_windows_render_test_support.h"
 
 namespace roo_windows {
@@ -11,7 +12,8 @@ using test_support::RooWindowsRenderTestSized;
 class TestTextField : public material2::TextField {
  public:
   explicit TestTextField(ApplicationContext& context)
-      : material2::TextField(context, font_body1(), "Type here",
+      : material2::TextField(context, roo_windows::material2::font_body1(),
+                             "Type here",
                              roo_display::kLeft | roo_display::kMiddle,
                              material2::TextField::UNDERLINE) {}
 

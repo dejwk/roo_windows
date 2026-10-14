@@ -4,7 +4,8 @@
 #include "roo_display/shape/basic.h"
 #include "roo_display/ui/text_label.h"
 #include "roo_display/ui/tile.h"
-#include "roo_windows/material3/theme.h"
+#include "roo_windows/material2/theme.h"
+#include "roo_windows/material2/typography.h"
 
 using namespace roo_display;
 
@@ -23,55 +24,46 @@ namespace {
   return ::roo_windows::material3::ColorToken::kBackground;
 }
 
-roo_display::Color ButtonOutlineColor(const Theme& theme, Button::Style style) {
-  switch (style) {
-    case Button::CONTAINED:
-      return theme.material3Theme().color.resolve(
-          ::roo_windows::material3::ColorToken::kPrimary);
-    case Button::OUTLINED:
-      return theme.material3Theme().color.resolve(
-          ::roo_windows::material3::ColorToken::kOutline);
-    case Button::TEXT:
-      return color::Transparent;
-  }
-  return color::Transparent;
-}
-
-roo_display::Color ButtonInteriorColor(const Theme& theme,
-                                       Button::Style style) {
-  return theme.material3Theme().color.resolve(ButtonContainerRole(style));
-}
-
-roo_display::Color ButtonContentColor(const Theme& theme, Button::Style style) {
-  switch (style) {
-    case Button::CONTAINED:
-      return theme.material3Theme().color.contentColorFor(
-          ::roo_windows::material3::ColorToken::kPrimary);
-    case Button::OUTLINED:
-    case Button::TEXT:
-      return theme.material3Theme().color.resolve(
-          ::roo_windows::material3::ColorToken::kPrimary);
-  }
-  return theme.material3Theme().color.resolve(
-      ::roo_windows::material3::ColorToken::kPrimary);
-}
-
 }  // namespace
 
 Button::Button(ApplicationContext& context, Style style)
-    : SurfaceWidget(context),
+    : ThemeMixin<SurfaceWidget>(context),
       style_(style),
-      outline_color_(ButtonOutlineColor(context.theme(), style)),
-      interior_color_(ButtonInteriorColor(context.theme(), style)),
+      outline_color_override_(false),
+      interior_color_override_(false),
+      outline_color_(0),
+      interior_color_(0),
       elevation_resting_(0),
       elevation_pressed_(0),
       current_elevation_(0),
-      corner_radius_(Scaled(4)) {
-  outline_color_.set_a(0x80);
-}
+      corner_radius_(Scaled(4)) {}
 
 ::roo_windows::material3::ColorToken Button::containerRole() const {
   return ButtonContainerRole(style());
+}
+
+roo_display::Color Button::getOutlineColor() const {
+  if (outline_color_override_) return outline_color_;
+  const auto& color = theme().material2Theme().color;
+  return (style() == CONTAINED  ? color.primary
+          : style() == OUTLINED ? color.outline
+                                : roo_display::color::Transparent)
+      .withA(0x80);
+}
+
+roo_display::Color Button::background() const {
+  if (interior_color_override_) return interior_color_;
+  const auto& color = theme().material2Theme().color;
+  return style() == CONTAINED ? color.primary : color.background;
+}
+
+roo_display::Color SimpleButton::contentColor() const {
+  return content_color_override_ ? content_color_ : defaultContentColor();
+}
+
+roo_display::Color SimpleButton::defaultContentColor() const {
+  const auto& color = theme().material2Theme().color;
+  return style() == CONTAINED ? color.onPrimary : color.primary;
 }
 
 void Button::notifyStateChanged(uint16_t state_diff) {
@@ -107,7 +99,7 @@ Padding SimpleButton::getPadding() const { return Padding(14, 4); }
 SimpleButton::SimpleButton(ApplicationContext& context, const MonoIcon* icon,
                            std::string label, Style style)
     : Button(context, style),
-      content_color_(ButtonContentColor(context.theme(), style)),
+      content_color_(0),
       font_(&font_button()),
       label_(std::move(label)),
       icon_(icon) {}

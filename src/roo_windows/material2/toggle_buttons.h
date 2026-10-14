@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "roo_windows/core/panel.h"
+#include "roo_windows/material2/theme_mixin.h"
 
 namespace roo_windows::material2 {
 
@@ -12,10 +13,10 @@ namespace roo_windows::material2 {
 /// Add icons through `addButton()`; at most one is active at a time, exposed
 /// via `getActive()` / `setActive()`. The group paints its own framing around
 /// the buttons rather than relying on per-button decoration.
-class ToggleButtons : public Panel {
+class ToggleButtons : public ThemeMixin<Panel> {
  public:
   ToggleButtons(ApplicationContext& context, int16_t padding = Scaled(12))
-      : Panel(context), padding_(padding), active_(-1) {}
+      : ThemeMixin<Panel>(context), padding_(padding), active_(-1) {}
 
   /// Detaches buttons before their owning member vector is destroyed.
   ~ToggleButtons() override { removeAll(); }
@@ -48,11 +49,11 @@ class ToggleButtons : public Panel {
  private:
   void notifyButtonClicked(int index);
 
-  class ToggleButton : public roo_windows::Widget {
+  class ToggleButton : public ThemeMixin<Widget> {
    public:
     ToggleButton(ApplicationContext& context, const MonoIcon& icon,
                  ToggleButtons& group, int idx)
-        : roo_windows::Widget(context), icon_(icon), group_(group), idx_(idx) {}
+        : ThemeMixin<Widget>(context), icon_(icon), group_(group), idx_(idx) {}
 
     bool useOverlayOnActivation() const override { return true; }
     bool isClickable() const override { return true; }

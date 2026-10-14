@@ -175,4 +175,45 @@ ROO_M2_STYLE(overline, ROO_M2_FONT_OVERLINE, 16 * ROO_M2_SCALE,
 #undef ROO_M2_TRACK_CAPTION
 #undef ROO_M2_TRACK_OVERLINE
 
+/// Font-only convenience accessors for the compile-time Material 2 styles.
+inline const roo_display::Font& font_h1() { return text_style_h1().font(); }
+
+inline const roo_display::Font& font_h2() { return text_style_h2().font(); }
+
+inline const roo_display::Font& font_h3() { return text_style_h3().font(); }
+
+inline const roo_display::Font& font_h4() { return text_style_h4().font(); }
+
+inline const roo_display::Font& font_h5() { return text_style_h5().font(); }
+
+inline const roo_display::Font& font_h6() { return text_style_h6().font(); }
+
+inline const roo_display::Font& font_subtitle1() {
+  return text_style_subtitle1().font();
+}
+
+inline const roo_display::Font& font_subtitle2() {
+  return text_style_subtitle2().font();
+}
+
+inline const roo_display::Font& font_body1() {
+  return text_style_body1().font();
+}
+
+inline const roo_display::Font& font_body2() {
+  return text_style_body2().font();
+}
+
+inline const roo_display::Font& font_button() {
+  return text_style_button().font();
+}
+
+inline const roo_display::Font& font_caption() {
+  return text_style_caption().font();
+}
+
+inline const roo_display::Font& font_overline() {
+  return text_style_overline().font();
+}
+
 }  // namespace roo_windows::material2

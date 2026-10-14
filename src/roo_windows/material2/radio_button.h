@@ -1,13 +1,14 @@
 #pragma once
 
 #include "roo_windows/core/widget.h"
+#include "roo_windows/material2/theme_mixin.h"
 
 namespace roo_windows::material2 {
 
 /// Single-selection radio button in the legacy (pre-Material 3) style.
 ///
 /// For new code, prefer `material3::RadioButton`.
-class RadioButton : public Widget {
+class RadioButton : public ThemeMixin<Widget> {
  public:
   /// Logical selection state exposed by the radio button.
   enum class OnOffState : uint8_t { kOff, kOn };
@@ -15,7 +16,7 @@ class RadioButton : public Widget {
   /// Creates a radio button with the specified initial state.
   explicit RadioButton(ApplicationContext& context,
                        OnOffState state = OnOffState::kOff)
-      : Widget(context), state_(state) {}
+      : ThemeMixin<Widget>(context), state_(state) {}
 
   /// Returns true when the radio button is selected.
   bool isOn() const { return state_ == OnOffState::kOn; }

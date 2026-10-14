@@ -11,6 +11,7 @@
 #include "roo_windows/core/application.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/material2/button.h"
+#include "roo_windows/material2/dialogs/alert_dialog.h"
 #include "roo_windows/material2/navigation_panel.h"
 #include "roo_windows/material3/button/button.h"
 #include "roo_windows/material3/card/flex_card.h"
@@ -221,7 +222,8 @@ class SurfaceInvalidationTest : public testing::Test {
   RecordingDevice device_{raster_.data()};
   roo_display::Display display_{device_};
   roo_scheduler::SchedulingService scheduler_;
-  Environment env_{scheduler_};
+  Theme theme_;
+  Environment env_{scheduler_, theme_};
   Application app_{&env_, display_};
 };
 
@@ -535,6 +537,65 @@ TEST_F(SurfaceInvalidationTest, Material2NavigationPanelPaintsOnce) {
   frame();
   for (int count : device_.writes) EXPECT_EQ(count, 1);
   expectMatchesFullRepaint("invalidated");
+}
+
+// Verifies a constructed M2 button follows its live palette after invalidation,
+// is unaffected by M3 palette edits, and preserves explicit fill/ink overrides.
+// Both theme refresh and dirty interaction frames settle each pixel once.
+TEST_F(SurfaceInvalidationTest, Material2ThemeChangesRepaintLiveDefaults) {
+  auto& button = addTarget<material2::SimpleButton>("A");
+  const auto initial = raster_;
+  theme_.material3Theme().color.primary = Color(0xFF123456);
+  app_.invalidateTheme();
+  frame();
+  EXPECT_EQ(initial, raster_);
+  theme_.material2Theme().color.primary = Color(0xFF246824);
+  theme_.material2Theme().color.onPrimary = Color(0xFFFFFF00);
+  app_.invalidateTheme();
+  frame();
+  EXPECT_NE(initial, raster_);
+  for (int count : device_.writes) EXPECT_LE(count, 1);
+  expectMatchesFullRepaint("palette");
+
+  theme_.material2Theme().state.colored[4] = 91;
+  button.setPressed(true);
+  frame();
+  expectInteriorOnly();
+  expectMatchesFullRepaint("pressed");
+  button.setPressed(false);
+  button.setEnabled(false);
+  theme_.material2Theme().state.disabledContentOpacity = 64;
+  app_.invalidateTheme();
+  frame();
+  for (int count : device_.writes) EXPECT_LE(count, 1);
+  expectMatchesFullRepaint("disabled");
+  button.setEnabled(true);
+  button.setInteriorColor(button.background());
+  button.setContentColor(button.contentColor());
+  frame();
+  const auto fixed = raster_;
+  theme_.material2Theme().color.primary = Color(0xFFBB2288);
+  theme_.material2Theme().color.onPrimary = Color(0xFF00FFFF);
+  app_.invalidateTheme();
+  frame();
+  EXPECT_EQ(fixed, raster_);
+}
+
+// Verifies muted alert text resolves its theme color after construction,
+// including detached presentation roots invalidated by Application.
+TEST_F(SurfaceInvalidationTest, Material2AlertSupportingTextStaysLive) {
+  Task& owner = app_.addTaskFullScreen();
+  material2::AlertDialog dialog(app_.context(), "", "Supporting text", {});
+  app_.refresh();
+  ASSERT_EQ(PresentationStartResult::kStarted, dialog.show(owner, [](int) {}));
+  frame();
+  const auto initial = raster_;
+  theme_.material2Theme().color.onSurface = Color(0xFFEE0022);
+  app_.invalidateTheme();
+  frame();
+  EXPECT_NE(initial, raster_);
+  for (int count : device_.writes) EXPECT_LE(count, 1);
+  expectMatchesFullRepaint("alert theme");
 }
 
 }  // namespace

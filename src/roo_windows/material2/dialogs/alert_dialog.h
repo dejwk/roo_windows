@@ -31,7 +31,16 @@ class AlertDialog : public Dialog {
   bool onEnter() override;
 
  private:
-  PaddingMixin<TextBlock> supporting_text_;
+  class SupportingText : public PaddingMixin<TextBlock> {
+   public:
+    using PaddingMixin<TextBlock>::PaddingMixin;
+    roo_display::Color defaultColor() const override {
+      const auto& color = theme().material2Theme().color;
+      return AlphaBlend(color.surface, color.onSurface.withA(0xB0));
+    }
+  };
+
+  SupportingText supporting_text_;
 };
 
 }  // namespace roo_windows::material2

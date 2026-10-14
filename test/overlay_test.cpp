@@ -7,6 +7,7 @@
 #include "roo_windows/material2/checkbox.h"
 #include "roo_windows/material2/radio_button.h"
 #include "roo_windows/material2/slider.h"
+#include "roo_windows/material2/typography.h"
 #include "roo_windows/material3/checkbox/checkbox.h"
 #include "roo_windows/material3/slider/slider.h"
 #include "roo_windows/widgets/icon.h"

@@ -3,6 +3,7 @@
 #include <string>
 
 #include "roo_windows/containers/flex_layout.h"
+#include "roo_windows/material2/theme_mixin.h"
 #include "roo_windows/widgets/icon.h"
 #include "roo_windows/widgets/text_label.h"
 
@@ -10,7 +11,7 @@ namespace roo_windows::material2 {
 namespace menu {
 
 // The title of the activity, with the back button.
-class Title : public roo_windows::FlexLayout {
+class Title : public ThemeMixin<FlexLayout> {
  public:
   /// Builds the title row with a back-button icon and the supplied label.
   Title(roo_windows::ApplicationContext& context, std::string title);
@@ -25,7 +26,7 @@ class Title : public roo_windows::FlexLayout {
   void setTitle(std::string title) { label_.setText(std::move(title)); }
 
  private:
-  roo_windows::Icon back_;
+  ThemeMixin<Icon> back_;
   roo_windows::TextLabel label_;
 };
 

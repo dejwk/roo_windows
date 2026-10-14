@@ -6,6 +6,7 @@
 #include "roo_windows/core/panel.h"
 #include "roo_windows/material2/divider.h"
 #include "roo_windows/material2/icon_with_caption.h"
+#include "roo_windows/material2/theme_mixin.h"
 
 namespace roo_windows::material2 {
 
@@ -53,7 +54,7 @@ class NavigationRailEntry : public material2::IconWithCaption {
 /// Owns its destinations and tracks the currently active one. Configurable
 /// label visibility (`PERSISTED`, `SELECTED`, `UNLABELED`) controls when the
 /// caption text is shown.
-class NavigationRail : public Panel {
+class NavigationRail : public ThemeMixin<Panel> {
  public:
   enum LabelVisibility { PERSISTED, SELECTED, UNLABELED };
 

@@ -1,5 +1,7 @@
 #include "roo_windows/material2/menu/basic_navigation_item.h"
 
+#include "roo_windows/material2/typography.h"
+
 namespace roo_windows::material2 {
 namespace menu {
 
@@ -8,7 +10,7 @@ BasicNavigationItem::BasicNavigationItem(ApplicationContext& context,
                                          roo::string_view text,
                                          NavigationHost& navigation,
                                          Destination& target)
-    : FlexLayout(context, FlexDirection::kRow),
+    : ThemeMixin<FlexLayout>(context, FlexDirection::kRow),
       icon_(context, icon),
       label_(context, text, material2::text_style_subtitle1()),
       navigation_(navigation),
@@ -27,7 +29,7 @@ BasicNavigationItemWithSubtext::BasicNavigationItemWithSubtext(
     ApplicationContext& context, const roo_display::Pictogram& icon,
     roo::string_view label, roo::string_view subtext,
     NavigationHost& navigation, Destination& target)
-    : FlexLayout(context, FlexDirection::kRow),
+    : ThemeMixin<FlexLayout>(context, FlexDirection::kRow),
       icon_(context, icon),
       label_(context, label, material2::text_style_subtitle1()),
       subtext_(context, subtext, material2::text_style_subtitle2()),

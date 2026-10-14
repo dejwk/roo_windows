@@ -10,6 +10,7 @@
 #include "roo_windows/core/text_input.h"
 #include "roo_windows/core/widget.h"
 #include "roo_windows/material2/text_field.h"
+#include "roo_windows/material2/typography.h"
 #include "roo_windows/material3/dialog/basic_dialog.h"
 #include "roo_windows/material3/dialog/dialog_scaffold.h"
 #include "roo_windows/material3/dialog/full_screen_dialog.h"
@@ -428,13 +429,13 @@ TEST_F(Material3DialogTest, DialogFocusStartsEmptyAndTabEntersOnEveryShow) {
 }
 
 TEST_F(Material3DialogTest, SemanticTextInputIsIsolatedToDialogBody) {
-  material2::TextField owner_field(app_.context(), font_body1(), "",
-                                   roo_display::kLeft,
-                                   material2::TextField::NONE);
+  material2::TextField owner_field(
+      app_.context(), roo_windows::material2::font_body1(), "",
+      roo_display::kLeft, material2::TextField::NONE);
   task_content_.add(WidgetRef(owner_field), Rect(0, 0, 30, 12));
-  material2::TextField dialog_field(app_.context(), font_body1(), "",
-                                    roo_display::kLeft,
-                                    material2::TextField::NONE);
+  material2::TextField dialog_field(
+      app_.context(), roo_windows::material2::font_body1(), "",
+      roo_display::kLeft, material2::TextField::NONE);
   TestScaffold dialog(app_.context(), WidgetRef(dialog_field));
   app_.refresh();
   ASSERT_EQ(DialogShowResult::kShown, dialog.show(owner_));

@@ -282,6 +282,15 @@ class Widget {
   // derived from the effective container role.
   virtual roo_display::Color defaultColor() const;
 
+  /// Returns the ink used by shared hover, press, and click effects.
+  virtual roo_display::Color interactionColor() const;
+
+  /// Returns the opacity for one shared interaction state (0..255).
+  virtual uint8_t interactionOpacity(InteractionState state) const;
+
+  /// Returns the automatic disabled-content opacity (0..128).
+  virtual uint8_t disabledContentOpacity() const;
+
   virtual ::roo_windows::material3::ColorToken effectiveContainerRole() const;
   virtual ::roo_windows::material3::ColorToken effectiveOverlayColorRole()
       const;

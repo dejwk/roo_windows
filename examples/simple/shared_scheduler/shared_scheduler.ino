@@ -1,3 +1,5 @@
+#include "roo_windows/material2/typography.h"
+
 // Learning goal: run two independent display applications on one scheduler.
 // The emulator and hardware paths both run the applications on separate
 // displays.
@@ -108,7 +110,7 @@ class SharedEditorDestination : public Destination {
  public:
   explicit SharedEditorDestination(ApplicationContext& context)
       : contents(context),
-        field(context, font_body1(), "Type here",
+        field(context, roo_windows::material2::font_body1(), "Type here",
               roo_display::kLeft | roo_display::kMiddle,
               material2::TextField::UNDERLINE) {
     contents.add(field, roo_display::kLeft | roo_display::kTop);

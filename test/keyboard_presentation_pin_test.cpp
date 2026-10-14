@@ -8,6 +8,7 @@
 #include "roo_windows/keyboard/layout/pl_pl.h"
 #include "roo_windows/material2/button.h"
 #include "roo_windows/material2/text_field.h"
+#include "roo_windows/material2/typography.h"
 #include "roo_windows_render_test_support.h"
 
 namespace roo_windows {
@@ -86,8 +87,8 @@ using test_support::RooWindowsRenderTestSized;
 class KeyboardPresentationPinTest : public RooWindowsRenderTestSized<412, 320> {
  protected:
   KeyboardPresentationPinTest()
-      : field_(context(), font_body1(), "", roo_display::kLeft,
-               material2::TextField::NONE) {}
+      : field_(context(), roo_windows::material2::font_body1(), "",
+               roo_display::kLeft, material2::TextField::NONE) {}
 
   void SetUp() override {
     app_.keyboard().setLayout(kbEngUSLayout());
@@ -198,8 +199,9 @@ class BinaryPopupTest : public KeyboardPresentationPinTest {
   Widget& keys() { return binary_.getContents(); }
 
   int popupRowHeight() const {
-    return font_body1().metrics().ascent() -
-           2 * font_body1().metrics().descent() + Scaled(8);
+    return roo_windows::material2::font_body1().metrics().ascent() -
+           2 * roo_windows::material2::font_body1().metrics().descent() +
+           Scaled(8);
   }
 
   int aWidth() const { return popupRowHeight(); }
@@ -302,7 +304,8 @@ TEST_F(BinaryPopupTest, AlternativesUseHalfAscentBaseline) {
   const int height = popupRowHeight();
   const int top = dy + 48 - Scaled(4) - 2 * height;
   const int baseline =
-      top + (height - 1) / 2 + font_body1().metrics().ascent() / 2;
+      top + (height - 1) / 2 +
+      roo_windows::material2::font_body1().metrics().ascent() / 2;
   const Color normal =
       QuantizeToArgb4444(context().keyboardColorTheme().normalButton);
   int ink_top = top + height, ink_bottom = top - 1;
@@ -315,7 +318,7 @@ TEST_F(BinaryPopupTest, AlternativesUseHalfAscentBaseline) {
     }
   }
   const roo_display::GlyphMetrics glyph =
-      font_body1().getHorizontalStringMetrics(u8"à");
+      roo_windows::material2::font_body1().getHorizontalStringMetrics(u8"à");
   EXPECT_EQ(baseline + glyph.screen_extents().yMin(), ink_top);
   EXPECT_EQ(baseline + glyph.screen_extents().yMax(), ink_bottom);
   keys().onCancel();
@@ -770,7 +773,7 @@ class LegacyKeyboardFirstRow : public Panel {
     for (int i = 0; i < 10; ++i) {
       auto button = std::make_unique<material2::SimpleButton>(
           context, std::string(1, keys[i]));
-      button->setFont(font_body1());
+      button->setFont(roo_windows::material2::font_body1());
       button->setCornerRadius(Scaled(3));
       button->setInteriorColor(context.keyboardColorTheme().normalButton);
       button->setOutlineColor(context.keyboardColorTheme().normalButton);
@@ -849,7 +852,8 @@ TEST(KeyboardPaint, TextPressAndReleaseWithEditorDamageStayLocal) {
   roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   Application app(&env, display);
-  material2::TextField field(app.context(), font_body1(), "",
+  material2::TextField field(app.context(),
+                             roo_windows::material2::font_body1(), "",
                              roo_display::kLeft, material2::TextField::NONE);
   Task& task = app.addTaskFullScreen(field);
   task.textFieldEditor().edit(&field, false);

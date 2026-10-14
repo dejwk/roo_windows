@@ -1,13 +1,14 @@
 #pragma once
 
 #include "roo_windows/core/widget.h"
+#include "roo_windows/material2/theme_mixin.h"
 
 namespace roo_windows::material2 {
 
 /// Legacy (pre-Material 3) on/off switch with animated thumb.
 ///
 /// For new code, prefer `material3::Switch`.
-class Switch : public Widget {
+class Switch : public ThemeMixin<Widget> {
  public:
   /// Logical selection state exposed by the switch.
   enum class OnOffState : uint8_t { kOff, kOn };
@@ -15,7 +16,8 @@ class Switch : public Widget {
   /// Creates a switch with the specified initial state.
   explicit Switch(ApplicationContext& context,
                   OnOffState state = OnOffState::kOff)
-      : Widget(context), state_(StateBits(state) | EndpointFraction(state)) {
+      : ThemeMixin<Widget>(context),
+        state_(StateBits(state) | EndpointFraction(state)) {
     context.presentations().observe(*this);
   }
 

@@ -7,7 +7,10 @@
 namespace roo_windows::material2 {
 
 NavigationPanel::NavigationPanel(ApplicationContext& context)
-    : Panel(context), rail_(context), contents_(context), rail_width_(0) {
+    : ThemeMixin<Panel>(context),
+      rail_(context),
+      contents_(context),
+      rail_width_(0) {
   add(rail_);
   add(contents_);
 }

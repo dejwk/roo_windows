@@ -6,6 +6,7 @@
 #include "roo_windows/core/destination.h"
 #include "roo_windows/core/widget.h"
 #include "roo_windows/material2/menu/title.h"
+#include "roo_windows/material2/theme_mixin.h"
 
 namespace roo_windows::material2 {
 namespace menu {
@@ -60,11 +61,11 @@ class Menu : public roo_windows::Destination {
     }
   };
 
-  class Pane : public roo_windows::FlexLayout {
+  class Pane : public ThemeMixin<FlexLayout> {
    public:
     explicit Pane(roo_windows::ApplicationContext& context)
-        : roo_windows::FlexLayout(context,
-                                  roo_windows::FlexDirection::kColumn) {}
+        : ThemeMixin<FlexLayout>(context, roo_windows::FlexDirection::kColumn) {
+    }
 
    private:
     roo_windows::PreferredSize getPreferredSize() const override {

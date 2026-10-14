@@ -11,6 +11,7 @@
 #include "roo_windows/core/destination.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/widget.h"
+#include "roo_windows/material2/typography.h"
 #include "roo_windows/material3/list/list.h"
 #include "roo_windows/material3/typography.h"
 #include "roo_windows/widgets/text_label.h"

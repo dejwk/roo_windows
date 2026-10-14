@@ -15,27 +15,15 @@ roo_display::Color getOverlayColor(const Widget& widget, const Canvas& canvas) {
   if (overlay_opacity == 0) {
     return roo_display::color::Transparent;
   }
-  const Theme& myTheme = widget.theme();
-  ::roo_windows::material3::ColorToken bg_role =
-      widget.effectiveOverlayColorRole();
-  const auto& material = myTheme.material3Theme();
-  Color overlay = widget.usesHighlighterColor()
-                      ? material.color.accentColorFor(bg_role)
-                      : material.color.contentColorFor(bg_role);
+  Color overlay = widget.interactionColor();
   overlay.set_a(overlay_opacity);
   return overlay;
 }
 
 roo_display::Color getClickAnimationColor(const Widget& widget,
                                           const Canvas& canvas) {
-  const Theme& myTheme = widget.theme();
-  ::roo_windows::material3::ColorToken bg_role =
-      widget.effectiveOverlayColorRole();
-  const auto& material = myTheme.material3Theme();
-  Color overlay = widget.usesHighlighterColor()
-                      ? material.color.accentColorFor(bg_role)
-                      : material.color.contentColorFor(bg_role);
-  overlay.set_a(material.stateLayer(bg_role, InteractionState::kPressed).a());
+  Color overlay = widget.interactionColor();
+  overlay.set_a(widget.interactionOpacity(InteractionState::kPressed));
   return overlay;
 }
 

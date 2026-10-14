@@ -13,6 +13,7 @@
 #include "roo_windows/core/transient_presentation.h"
 #include "roo_windows/core/widget.h"
 #include "roo_windows/material2/text_field.h"
+#include "roo_windows/material2/typography.h"
 
 namespace roo_windows {
 namespace {
@@ -79,8 +80,8 @@ class TestDestination : public Destination {
 class TextInputDestination : public Destination {
  public:
   explicit TextInputDestination(ApplicationContext& context)
-      : field(context, font_body1(), "", roo_display::kLeft,
-              material2::TextField::NONE) {}
+      : field(context, roo_windows::material2::font_body1(), "",
+              roo_display::kLeft, material2::TextField::NONE) {}
 
   Widget& getContents() override { return field; }
 

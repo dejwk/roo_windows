@@ -7,6 +7,8 @@
 #include "roo_windows/core/panel.h"
 #include "roo_windows/core/theme.h"
 #include "roo_windows/core/widget.h"
+#include "roo_windows/material2/theme_mixin.h"
+#include "roo_windows/material2/typography.h"
 
 namespace roo_windows::material2 {
 
@@ -14,7 +16,7 @@ namespace roo_windows::material2 {
 ///
 /// Used by `Destination` (navigation rail entries) and similar compound
 /// widgets. The caption font defaults to the theme's caption font.
-class IconWithCaption : public Widget {
+class IconWithCaption : public ThemeMixin<Widget> {
  public:
   IconWithCaption(ApplicationContext& context,
                   const roo_display::Pictogram& def, const std::string& caption)

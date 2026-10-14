@@ -1,13 +1,14 @@
 #pragma once
 
 #include "roo_windows/core/widget.h"
+#include "roo_windows/material2/theme_mixin.h"
 
 namespace roo_windows::material2 {
 
 /// 2-pixel horizontal rule that stretches to its parent's width.
-class HorizontalDivider : public Widget {
+class HorizontalDivider : public ThemeMixin<Widget> {
  public:
-  using Widget::Widget;
+  using ThemeMixin<Widget>::ThemeMixin;
   void paint(PaintContext& ctx) const override;
 
   Dimensions getSuggestedMinimumDimensions() const override {
@@ -23,9 +24,9 @@ class HorizontalDivider : public Widget {
 };
 
 /// 2-pixel vertical rule that stretches to its parent's height.
-class VerticalDivider : public Widget {
+class VerticalDivider : public ThemeMixin<Widget> {
  public:
-  using Widget::Widget;
+  using ThemeMixin<Widget>::ThemeMixin;
   void paint(PaintContext& ctx) const override;
 
   Dimensions getSuggestedMinimumDimensions() const override {

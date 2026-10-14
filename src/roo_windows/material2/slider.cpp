@@ -8,7 +8,7 @@
 #include "roo_windows/core/main_window.h"
 #include "roo_windows/material2/resources/circle.h"
 #include "roo_windows/material2/resources/circular_shadow.h"
-#include "roo_windows/material3/theme.h"
+#include "roo_windows/material2/theme.h"
 
 using namespace roo_display;
 
@@ -154,8 +154,8 @@ bool Slider::onKeyEvent(const KeyEvent& event) {
 
 void Slider::paint(PaintContext& ctx) const {
   const Theme& th = theme();
-  Color circleColor =
-      th.material3Theme().color.accentColorFor(effectiveContainerRole());
+  Color circleColor = th.material2Theme().color.accentColorFor(
+      Material2ColorRole(effectiveContainerRole()));
   Padding p = getPadding();
 
   int16_t range = range_from_width(width(), p);
@@ -179,7 +179,8 @@ void Slider::paint(PaintContext& ctx) const {
   auto sel = roo_display::SmoothThickLine(
       {kRadius + p.left() - 0.5f, kRadius - 0.5f},
       {xoffset - 0.5f, kRadius - 0.5f}, Scaled(6), circleColor);
-  Color unselColor = circleColor.withA(th.disabledContentOpacity());
+  Color unselColor =
+      circleColor.withA(th.material2Theme().state.disabledContentOpacity);
   auto unsel = roo_display::SmoothThickLine(
       {xoffset + 0.5f, kRadius - 0.5f},
       {parent_bounds().width() - 1 - kRadius - p.right() - 0.5f,

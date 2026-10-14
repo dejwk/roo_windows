@@ -3,6 +3,7 @@
 #include <functional>
 
 #include "gtest/gtest.h"
+#include "roo_windows/material2/typography.h"
 #include "roo_windows_render_test_support.h"
 namespace roo_windows {
 namespace {
@@ -15,7 +16,9 @@ class Target : public Widget, public internal::TextEditTarget {
   Widget& editWidget() override { return *this; }
   std::string& textBuffer() override { return buffer; }
   roo::string_view value() const override { return buffer; }
-  const roo_display::Font& textFont() const override { return font_body1(); }
+  const roo_display::Font& textFont() const override {
+    return roo_windows::material2::font_body1();
+  }
   bool obscureText() const override { return masked; }
   void notifyEditVisualChange() override { setDirty(); }
   void notifyTextChanged() override { ++changes; }
@@ -57,8 +60,8 @@ TEST_F(TextFieldTest, AbstractTargetUnicodeSelectionAndCompletion) {
 }
 // Verifies empty legacy hint does not enter editor metrics.
 TEST_F(TextFieldTest, EmptyLegacyHintDoesNotEnterEditorMetrics) {
-  material2::TextField field(context(), font_body1(), "Hint",
-                             roo_display::kLeft | roo_display::kMiddle,
+  material2::TextField field(context(), roo_windows::material2::font_body1(),
+                             "Hint", roo_display::kLeft | roo_display::kMiddle,
                              material2::TextField::UNDERLINE);
   Task& task = app_.addTaskFullScreen(field);
   auto& editor = task.textFieldEditor();
@@ -132,8 +135,8 @@ TEST_F(TextFieldTest, MaskExpiryPreservesSelectionAndFiltersControls) {
 // Verifies mask changes preserve Unicode selection, while replacing the buffer
 // clears selection and cancels the recent-glyph deadline.
 TEST_F(TextFieldTest, LegacyMaskAndBufferChangesRefreshActiveMetrics) {
-  material2::TextField field(context(), font_body1(), "Hint",
-                             roo_display::kLeft | roo_display::kMiddle,
+  material2::TextField field(context(), roo_windows::material2::font_body1(),
+                             "Hint", roo_display::kLeft | roo_display::kMiddle,
                              material2::TextField::UNDERLINE);
   Task& task = app_.addTaskFullScreen(field);
   field.setContent(u8"aé猫");

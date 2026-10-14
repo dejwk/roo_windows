@@ -8,6 +8,7 @@
 #include "roo_windows/core/panel.h"
 #include "roo_windows/core/widget.h"
 #include "roo_windows/material2/radio_button.h"
+#include "roo_windows/material2/theme_mixin.h"
 
 namespace roo_windows::material2 {
 
@@ -20,11 +21,11 @@ class RadioListModel;
 /// on/off state in sync with the current selection; clicking the radio button
 /// (or, optionally, the entire row) reports the row's index through the
 /// stored on-click callback.
-class RadioListItem : public HorizontalLayout {
+class RadioListItem : public ThemeMixin<HorizontalLayout> {
  public:
   RadioListItem(ApplicationContext& context, std::unique_ptr<Widget> item,
                 std::function<void(int idx)> on_click)
-      : HorizontalLayout(context),
+      : ThemeMixin<HorizontalLayout>(context),
         button_(context),
         item_(std::move(item)),
         on_click_(on_click) {
@@ -138,11 +139,11 @@ class RadioListModel : public ListModel {
 /// `Holder`, exposing `setModel()` / `setSelected()` / `selected()` plus an
 /// interactive-change callback. The caller supplies a prototype function that
 /// builds the per-row item widget; selection state is owned here.
-class RadioList : public Holder {
+class RadioList : public ThemeMixin<Holder> {
  public:
   RadioList(ApplicationContext& context,
             std::function<std::unique_ptr<Widget>()> prototype_fn)
-      : Holder(context),
+      : ThemeMixin<Holder>(context),
         list_model_(),
         list_(context, list_model_, [&, prototype_fn]() {
           return std::make_unique<RadioListItem>(

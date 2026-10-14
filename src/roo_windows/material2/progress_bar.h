@@ -1,6 +1,7 @@
 #pragma once
 
 #include "roo_windows/core/widget.h"
+#include "roo_windows/material2/theme_mixin.h"
 
 namespace roo_windows::material2 {
 
@@ -9,10 +10,13 @@ namespace roo_windows::material2 {
 ///
 /// Progress is stored as hundredths of a percent in `[0, 10000]`; negative
 /// values mean indeterminate, which is rendered as an animated marquee.
-class ProgressBar : public Widget {
+class ProgressBar : public ThemeMixin<Widget> {
  public:
   ProgressBar(ApplicationContext& context)
-      : Widget(context), progress_(-1), marquee_phase_ms_(0), color_(0) {
+      : ThemeMixin<Widget>(context),
+        progress_(-1),
+        marquee_phase_ms_(0),
+        color_(0) {
     context.presentations().observe(*this);
   }
 

@@ -6,6 +6,7 @@
 #include "roo_windows/config.h"
 #include "roo_windows/core/default_theme.h"
 #include "roo_windows/core/framework_theme.h"
+#include "roo_windows/material2/theme.h"
 #include "roo_windows/material3/theme.h"
 
 #ifndef ROO_WINDOWS_ZOOM
@@ -93,71 +94,20 @@ T constexpr Scaled(T in) {
 #define ROO_LANG ROO_LANG_en
 #endif
 
-// NOTE: fonts (particularly, large fonts) take up a lot of PROGMEM space, which
-// is why we resolve them at compile time here, so that only the fonts that are
-// actually referenced get compiled into the program.
-
-#include "roo_windows/material2/typography.h"
-
 namespace roo_windows {
-
-inline const roo_display::Font& font_h1() {
-  return material2::text_style_h1().font();
-}
-
-inline const roo_display::Font& font_h2() {
-  return material2::text_style_h2().font();
-}
-
-inline const roo_display::Font& font_h3() {
-  return material2::text_style_h3().font();
-}
-
-inline const roo_display::Font& font_h4() {
-  return material2::text_style_h4().font();
-}
-
-inline const roo_display::Font& font_h5() {
-  return material2::text_style_h5().font();
-}
-
-inline const roo_display::Font& font_h6() {
-  return material2::text_style_h6().font();
-}
-
-inline const roo_display::Font& font_subtitle1() {
-  return material2::text_style_subtitle1().font();
-}
-
-inline const roo_display::Font& font_subtitle2() {
-  return material2::text_style_subtitle2().font();
-}
-
-inline const roo_display::Font& font_body1() {
-  return material2::text_style_body1().font();
-}
-
-inline const roo_display::Font& font_body2() {
-  return material2::text_style_body2().font();
-}
-
-inline const roo_display::Font& font_button() {
-  return material2::text_style_button().font();
-}
-
-inline const roo_display::Font& font_caption() {
-  return material2::text_style_caption().font();
-}
-
-inline const roo_display::Font& font_overline() {
-  return material2::text_style_overline().font();
-}
 
 /// Application appearance, owning each supported design system's settings.
 /// Mutate fields directly, then notify each affected Application with
 /// invalidateTheme(). Keep this object alive while environments borrow it.
 struct Theme {
   material3::Material3Theme material3;
+  material2::Material2Theme material2;
+
+  /// Returns independently owned Material 2 appearance settings.
+  material2::Material2Theme& material2Theme() { return material2; }
+
+  /// Returns independently owned Material 2 appearance settings.
+  const material2::Material2Theme& material2Theme() const { return material2; }
 
   /// Returns the owned Material 3 appearance settings for customization.
   material3::Material3Theme& material3Theme() { return material3; }

@@ -1,5 +1,7 @@
 #include "roo_windows/material2/dialogs/alert_dialog.h"
 
+#include "roo_windows/material2/typography.h"
+
 namespace roo_windows::material2 {
 
 AlertDialog::AlertDialog(ApplicationContext& context, std::string title,
@@ -10,11 +12,6 @@ AlertDialog::AlertDialog(ApplicationContext& context, std::string title,
                        material2::text_style_body1(),
                        roo_display::kLeft | roo_display::kMiddle) {
   supporting_text_.setPadding(PaddingSize::kLarge, PaddingSize::kNone);
-  const Theme& theme = context.theme();
-  Color on_surface = theme.frameworkColor(FrameworkColorRole::kContent);
-  on_surface.set_a(0xB0);
-  supporting_text_.setColor(AlphaBlend(
-      theme.frameworkColor(FrameworkColorRole::kSurface), on_surface));
   setTitle(std::move(title));
 }
 

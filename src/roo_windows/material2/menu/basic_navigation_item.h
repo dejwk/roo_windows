@@ -6,6 +6,7 @@
 #include "roo_windows/core/application_context.h"
 #include "roo_windows/core/destination.h"
 #include "roo_windows/core/navigation_host.h"
+#include "roo_windows/material2/theme_mixin.h"
 #include "roo_windows/widgets/icon.h"
 #include "roo_windows/widgets/text_label.h"
 
@@ -15,7 +16,7 @@
 namespace roo_windows::material2 {
 namespace menu {
 
-class BasicNavigationItem : public FlexLayout {
+class BasicNavigationItem : public ThemeMixin<FlexLayout> {
  public:
   /// Builds a single-line navigation row with the supplied icon and label;
   /// clicking the row enters `target`.
@@ -34,7 +35,7 @@ class BasicNavigationItem : public FlexLayout {
   }
 
  private:
-  Icon icon_;
+  ThemeMixin<Icon> icon_;
   StringViewLabel label_;
   NavigationHost& navigation_;
   Destination& target_;
@@ -43,7 +44,7 @@ class BasicNavigationItem : public FlexLayout {
 /// Two-line navigation row: icon plus a primary label stacked above a
 /// secondary subtext line. Like `BasicNavigationItem`, clicking enters the
 /// supplied target activity.
-class BasicNavigationItemWithSubtext : public FlexLayout {
+class BasicNavigationItemWithSubtext : public ThemeMixin<FlexLayout> {
  public:
   /// Builds a navigation row with an icon, a primary label and a secondary
   /// subtext line; clicking the row enters `target`.
@@ -65,11 +66,11 @@ class BasicNavigationItemWithSubtext : public FlexLayout {
   }
 
  private:
-  Icon icon_;
+  ThemeMixin<Icon> icon_;
   StringViewLabel label_;
   StringViewLabel subtext_;
   // Destroy the borrowing layout before the labels it contains.
-  FlexLayout content_;
+  ThemeMixin<FlexLayout> content_;
   NavigationHost& navigation_;
   Destination& target_;
 };

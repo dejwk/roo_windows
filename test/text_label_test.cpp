@@ -11,6 +11,7 @@
 #include "roo_scheduler.h"
 #include "roo_windows.h"
 #include "roo_windows/containers/flex_layout.h"
+#include "roo_windows/material2/typography.h"
 
 using namespace roo_display;
 using namespace roo_windows;

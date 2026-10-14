@@ -1,3 +1,5 @@
+#include "roo_windows/material2/typography.h"
+
 // Link fixture used by the animation-registry target acceptance comparison.
 //
 // The function deliberately constructs and exercises every implemented
@@ -54,7 +56,8 @@ namespace roo_windows::test {
   material2::ProgressBar progress(context);
   progress.setIndeterminate();
 
-  material2::TextField text_field(context, font_body1(), "Value",
+  material2::TextField text_field(context, roo_windows::material2::font_body1(),
+                                  "Value",
                                   roo_display::kLeft | roo_display::kMiddle,
                                   material2::TextField::UNDERLINE);
   text_field.setContent("linked");

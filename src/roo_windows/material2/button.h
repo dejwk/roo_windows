@@ -4,38 +4,41 @@
 
 #include "roo_windows/core/border_style.h"
 #include "roo_windows/core/surface_widget.h"
+#include "roo_windows/material2/theme_mixin.h"
 
 namespace roo_windows::material2 {
 
 // Implements basic button functionality: clickability, border, elevations.
-class Button : public SurfaceWidget {
+class Button : public ThemeMixin<SurfaceWidget> {
  public:
   /// Visual style. `CONTAINED` is filled, `OUTLINED` has a stroked border
   /// over a transparent interior, `TEXT` is borderless and flat.
-  enum Style { CONTAINED, OUTLINED, TEXT };
+  enum Style : uint8_t { CONTAINED, OUTLINED, TEXT };
 
   Style style() const { return style_; }
 
   /// Overrides the fill color of the button's interior. No-op if the color
   /// is unchanged. Invalidates the interior on change.
   void setInteriorColor(roo_display::Color color) {
-    if (interior_color_ == color) return;
+    if (interior_color_override_ && interior_color_ == color) return;
     interior_color_ = color;
+    interior_color_override_ = true;
     invalidateInterior();
   }
 
-  /// Returns the cached outline color (typically only painted when
-  /// `style() == OUTLINED`).
-  roo_display::Color getOutlineColor() const override { return outline_color_; }
+  /// Returns the explicit outline color or the live theme default (typically
+  /// only painted when `style() == OUTLINED`).
+  roo_display::Color getOutlineColor() const override;
 
-  /// Returns the cached interior fill color used by the surface pipeline.
-  Color background() const override { return interior_color_; }
+  /// Returns the explicit interior fill or the live theme default.
+  Color background() const override;
 
   /// Overrides the outline color used when style() == OUTLINED. No-op if the
   /// color is unchanged. Invalidates the interior on change.
   void setOutlineColor(roo_display::Color color) {
-    if (outline_color_ == color) return;
+    if (outline_color_override_ && outline_color_ == color) return;
     outline_color_ = color;
+    outline_color_override_ = true;
     invalidateInterior();
   }
 
@@ -84,7 +87,9 @@ class Button : public SurfaceWidget {
   void notifyStateChanged(uint16_t state_diff) override;
 
  private:
-  Style style_;
+  Style style_ : 2;
+  bool outline_color_override_ : 1;
+  bool interior_color_override_ : 1;
   roo_display::Color outline_color_;
   roo_display::Color interior_color_;
 
@@ -111,14 +116,14 @@ class SimpleButton : public Button {
 
   Padding getPadding() const override;
 
-  /// Color used to draw the icon and label. Transparent means the theme's
-  /// content color for the active container role.
-  roo_display::Color contentColor() const { return content_color_; }
+  /// Color used to draw the icon and label: explicit override or live default.
+  roo_display::Color contentColor() const;
 
   /// Sets the icon/label foreground color. No-op if unchanged.
   void setContentColor(roo_display::Color color) {
-    if (content_color_ == color) return;
+    if (content_color_override_ && content_color_ == color) return;
     content_color_ = color;
+    content_color_override_ = true;
     setDirty();
   }
 
@@ -146,7 +151,12 @@ class SimpleButton : public Button {
   }
 
   /// Sets the font used to render the label. Lifetime: caller-owned.
-  void setFont(const roo_display::Font& font) { font_ = &font; }
+  void setFont(const roo_display::Font& font) {
+    if (font_ == &font) return;
+    font_ = &font;
+    requestLayout();
+    invalidateInterior();
+  }
 
   const roo_display::Font& getFont() const { return *font_; }
 
@@ -155,14 +165,19 @@ class SimpleButton : public Button {
   void paint(PaintContext& ctx) const override;
 
   /// Reports the minimum size required to contain the icon and label using
-  /// the configured font and the default Material 3 button paddings.
+  /// the configured font and the default Material 2 button paddings.
   Dimensions getSuggestedMinimumDimensions() const override;
+
+ protected:
+  /// Supplies the live default ink; explicit setContentColor() overrides it.
+  virtual roo_display::Color defaultContentColor() const;
 
  private:
   SimpleButton(ApplicationContext& context, const MonoIcon* icon,
                std::string label, Style style);
 
   roo_display::Color content_color_;
+  bool content_color_override_ = false;
   const roo_display::Font* font_;
   std::string label_;
   const MonoIcon* icon_;

@@ -7,7 +7,7 @@ namespace roo_windows::material2 {
 IconWithCaption::IconWithCaption(ApplicationContext& context,
                                  const roo_display::Pictogram& def,
                                  const std::string& caption, const Font* font)
-    : Widget(context),
+    : ThemeMixin<Widget>(context),
       icon_(&def),
       caption_(caption),
       font_(font),
@@ -28,9 +28,9 @@ void IconWithCaption::paint(PaintContext& ctx) const {
   Color color = color_;
   if (color == roo_display::color::Transparent) {
     const Theme& myTheme = theme();
-    color = myTheme.frameworkColor(FrameworkColorRole::kContent);
+    color = myTheme.material2Theme().color.onSurface;
     if (isActivated() && usesHighlighterColor()) {
-      color = myTheme.frameworkColor(FrameworkColorRole::kEmphasis);
+      color = myTheme.material2Theme().color.primary;
     }
   }
   color = AlphaBlend(canvas.bgcolor(), color);
