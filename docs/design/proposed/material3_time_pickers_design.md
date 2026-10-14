@@ -65,7 +65,7 @@ What exists today:
   already defines a dedicated digits page inside the default keyboard layout,
 - [src/roo_windows/material3/button/button.h](../../../src/roo_windows/material3/button/button.h)
   already provides Material 3 text buttons suitable for Cancel and OK actions,
-- [src/roo_windows/dialogs/dialog.h](../../../src/roo_windows/dialogs/dialog.h)
+- [src/roo_windows/material2/dialogs/dialog.h](../../../src/roo_windows/material2/dialogs/dialog.h)
   and [src/roo_windows/core/main_window.cpp](../../../src/roo_windows/core/main_window.cpp)
   already provide centered scrim-backed modal presentation for the legacy
   dialog family,
@@ -78,7 +78,7 @@ What does not exist yet:
 - no compact time-of-day value type distinct from
   [`roo_time::DateTime`](../../../../roo_time/src/roo_time.h),
 - no Material 3 modal dialog scaffold independent of the legacy
-  [`Dialog`](../../../src/roo_windows/dialogs/dialog.h) widget,
+  [`Dialog`](../../../src/roo_windows/material2/dialogs/dialog.h) widget,
 - no Material 3 icon-button family for the dial-or-input mode toggle,
 - no semantic keyboard-page selection API that lets code ask for the digits
   page without hard-coding an index,
@@ -138,7 +138,7 @@ closing on the behaviors people expect from Material time pickers.
 
 Four current repo facts directly shape the design.
 
-1. The legacy [Dialog](../../../src/roo_windows/dialogs/dialog.h) scaffold is the
+1. The legacy [Dialog](../../../src/roo_windows/material2/dialogs/dialog.h) scaffold is the
    wrong visual and structural base. It hardcodes the old title panel,
    dividers, scrollable content area, and legacy footer buttons. A Material 3
    time picker should not subclass it just to inherit scrim presentation.
@@ -369,7 +369,7 @@ composition or one child per mark on the dial.
 ### Modal Presentation
 
 `TimePickerDialog` does not subclass the legacy
-[Dialog](../../../src/roo_windows/dialogs/dialog.h).
+[Dialog](../../../src/roo_windows/material2/dialogs/dialog.h).
 
 Instead it presents the picker through a dedicated full-window popup task:
 

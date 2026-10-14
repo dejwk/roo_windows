@@ -12,8 +12,8 @@
 #include "roo_windows/core/key_source.h"
 #include "roo_windows/core/task.h"
 #include "roo_windows/core/text_input.h"
-#include "roo_windows/dialogs/dialog.h"
 #include "roo_windows/keyboard/keyboard.h"
+#include "roo_windows/material2/dialogs/dialog.h"
 #include "roo_windows/material2/text_field.h"
 
 namespace roo_windows {
@@ -125,7 +125,8 @@ class Application {
   /// deleted after completion, or immediately when admission fails.
   PresentationStartResult showAlertDialog(
       Task& interaction_owner, std::string title, std::string supporting_text,
-      std::vector<std::string> button_labels, Dialog::CallbackFn callback_fn);
+      std::vector<std::string> button_labels,
+      material2::Dialog::CallbackFn callback_fn);
 
   /// Schedules the specified function to be executed in the UI thread.
   /// Blocks until the function completes. If called from the UI thread,

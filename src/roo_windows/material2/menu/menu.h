@@ -1,13 +1,13 @@
 #pragma once
 
 #include "roo_display/core/utf8.h"
-#include "roo_windows/composites/menu/title.h"
 #include "roo_windows/containers/flex_layout.h"
 #include "roo_windows/containers/scrollable_panel.h"
 #include "roo_windows/core/destination.h"
 #include "roo_windows/core/widget.h"
+#include "roo_windows/material2/menu/title.h"
 
-namespace roo_windows {
+namespace roo_windows::material2 {
 namespace menu {
 
 // You use this class to build your own menus. Subclass it, add child widgets,
@@ -80,4 +80,4 @@ class Menu : public roo_windows::Destination {
 };
 
 }  // namespace menu
-}  // namespace roo_windows
+}  // namespace roo_windows::material2

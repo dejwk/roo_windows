@@ -59,7 +59,7 @@ There is no checked-in Material 3 drawer implementation.
 The most relevant current pieces are:
 
 - the legacy rail in
-  [src/roo_windows/containers/navigation_rail.h](../../../src/roo_windows/containers/navigation_rail.h),
+  [src/roo_windows/material2/navigation_rail.h](../../../src/roo_windows/material2/navigation_rail.h),
 - the Material 3 list substrate in
   [src/roo_windows/material3/list/list.h](../../../src/roo_windows/material3/list/list.h),
 - the shared badge helper in

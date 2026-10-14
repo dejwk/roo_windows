@@ -5,6 +5,7 @@
 #include "roo_windows.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/measure_spec.h"
+#include "roo_windows/material2/dialogs/dialog.h"
 #include "roo_windows/material2/resources/circle.h"
 #include "roo_windows/material3/slider/range_slider.h"
 #include "roo_windows/material3/slider/slider.h"
@@ -426,7 +427,7 @@ class IndicatorClipPanel final : public Panel {
   Color color_;
 };
 
-class IndicatorDialog final : public Dialog {
+class IndicatorDialog final : public material2::Dialog {
  public:
   explicit IndicatorDialog(ApplicationContext& context) : Dialog(context, {}) {}
 

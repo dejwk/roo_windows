@@ -685,7 +685,7 @@ fall out of the simple clickable model.
 
 1. Dialogs
 
-   Legacy [Dialog](../../../src/roo_windows/dialogs/dialog.h) currently
+   Legacy [Dialog](../../../src/roo_windows/material2/dialogs/dialog.h) currently
    participates in the root Back slot through its direct compatibility
    structure. P1.6b migrates it to an explicit interaction owner and presenter
    scope. New Material 3 dialogs use the same focus containment, initial focus,
@@ -727,7 +727,7 @@ Primary implementation surfaces are:
 - [src/roo_windows/core/task.h](../../../src/roo_windows/core/task.h),
 - [src/roo_windows/core/task.cpp](../../../src/roo_windows/core/task.cpp),
 - [src/roo_windows/core/navigation_host.h](../../../src/roo_windows/core/navigation_host.h),
-- and [src/roo_windows/dialogs/dialog.h](../../../src/roo_windows/dialogs/dialog.h).
+- and [src/roo_windows/material2/dialogs/dialog.h](../../../src/roo_windows/material2/dialogs/dialog.h).
 
 The integration rules are:
 

@@ -1,11 +1,11 @@
 #pragma once
 
-#include "roo_windows/dialogs/dialog.h"
-#include "roo_windows/dialogs/string_constants.h"
 #include "roo_windows/core/padding_mixin.h"
+#include "roo_windows/material2/dialogs/dialog.h"
+#include "roo_windows/material2/dialogs/string_constants.h"
 #include "roo_windows/widgets/text_block.h"
 
-namespace roo_windows {
+namespace roo_windows::material2 {
 
 /// Simple message dialog: a title, a multi-line supporting text body, and
 /// one or more dismiss buttons (defaulting to a single "OK").
@@ -34,4 +34,4 @@ class AlertDialog : public Dialog {
   PaddingMixin<TextBlock> supporting_text_;
 };
 
-}  // namespace roo_windows
+}  // namespace roo_windows::material2

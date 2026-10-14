@@ -37,13 +37,13 @@ design should now close directly on those landed APIs.
 ### Current Starting Point in `roo_windows`
 
 The current rail implementation lives in
-[src/roo_windows/containers/navigation_rail.h](../../../src/roo_windows/containers/navigation_rail.h)
+[src/roo_windows/material2/navigation_rail.h](../../../src/roo_windows/material2/navigation_rail.h)
 and
-[src/roo_windows/containers/navigation_rail.cpp](../../../src/roo_windows/containers/navigation_rail.cpp).
+[src/roo_windows/material2/navigation_rail.cpp](../../../src/roo_windows/material2/navigation_rail.cpp).
 The current higher-level consumer lives in
-[src/roo_windows/containers/navigation_panel.h](../../../src/roo_windows/containers/navigation_panel.h)
+[src/roo_windows/material2/navigation_panel.h](../../../src/roo_windows/material2/navigation_panel.h)
 and
-[src/roo_windows/containers/navigation_panel.cpp](../../../src/roo_windows/containers/navigation_panel.cpp).
+[src/roo_windows/material2/navigation_panel.cpp](../../../src/roo_windows/material2/navigation_panel.cpp).
 
 That checked-in API already establishes the migration baseline:
 
@@ -172,7 +172,7 @@ Those references imply three important local constraints:
 8. Keep the rail fixed while page content scrolls outside it; the rail itself
     is not a scrolling surface.
 9. Provide a migration path for the current
-    [NavigationPanel](../../../src/roo_windows/containers/navigation_panel.h) user of
+    [NavigationPanel](../../../src/roo_windows/material2/navigation_panel.h) user of
     the legacy rail.
 
 ### Interaction Requirements
@@ -309,11 +309,11 @@ pays for its inline badge storage and layout logic.
 The migration boundary is explicit:
 
 1. the current
-   [src/roo_windows/containers/navigation_rail.h](../../../src/roo_windows/containers/navigation_rail.h)
+   [src/roo_windows/material2/navigation_rail.h](../../../src/roo_windows/material2/navigation_rail.h)
    API stops growing,
 2. the new `material3::NavigationRail` family lands beside it,
 3. and the existing
-   [NavigationPanel](../../../src/roo_windows/containers/navigation_panel.h) becomes
+   [NavigationPanel](../../../src/roo_windows/material2/navigation_panel.h) becomes
    a follow-on adapter over the new rail once the Material 3 family is usable.
 
 ### `NavigationRail` Container
@@ -826,7 +826,7 @@ Code slice:
    `NavigationRailDestination`, `BadgedNavigationRailDestination`, and
    `NavigationRail`.
 4. Leave the legacy
-   [containers/navigation_rail.h](../../../src/roo_windows/containers/navigation_rail.h)
+   [containers/navigation_rail.h](../../../src/roo_windows/material2/navigation_rail.h)
    API untouched in this phase.
 
 Proposed commit message:
@@ -924,7 +924,7 @@ RTL-focused cases.
 Code slice:
 
 1. Refit
-   [NavigationPanel](../../../src/roo_windows/containers/navigation_panel.h) to use
+   [NavigationPanel](../../../src/roo_windows/material2/navigation_panel.h) to use
    a small adapter over the new Material 3 rail callbacks.
 2. Add a representative Material 3 example sketch under
    `examples/material3/navigation_rail/navigation_rail.ino`.

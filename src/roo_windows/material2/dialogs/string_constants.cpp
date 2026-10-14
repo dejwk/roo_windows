@@ -1,8 +1,8 @@
-#include "roo_windows/dialogs/string_constants.h"
+#include "roo_windows/material2/dialogs/string_constants.h"
 
 #include "roo_windows/config.h"
 
-namespace roo_windows {
+namespace roo_windows::material2 {
 
 #if (ROO_WINDOWS_LANG == ROO_LANG_pl)
 
@@ -26,4 +26,4 @@ const char* kStrDialogExit = "EXIT";
 
 #endif
 
-}  // namespace roo_windows
+}  // namespace roo_windows::material2

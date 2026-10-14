@@ -1,9 +1,9 @@
-#include "roo_windows/composites/menu/slider_with_caption.h"
+#include "roo_windows/material2/menu/slider_with_caption.h"
 
 #include "roo_windows/core/application_context.h"
 #include "roo_windows/core/theme.h"
 
-namespace roo_windows {
+namespace roo_windows::material2 {
 namespace menu {
 
 BaseSliderWithCaption::BaseSliderWithCaption(ApplicationContext& context,
@@ -80,4 +80,4 @@ float NumericSliderWithCaption::getValue() const {
 }
 
 }  // namespace menu
-}  // namespace roo_windows
+}  // namespace roo_windows::material2

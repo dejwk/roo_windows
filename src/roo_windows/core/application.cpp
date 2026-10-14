@@ -5,8 +5,8 @@
 #include "roo_threads.h"
 #include "roo_threads/mutex.h"
 #include "roo_threads/semaphore.h"
-#include "roo_windows/dialogs/alert_dialog.h"
 #include "roo_windows/keyboard/layout/en_us.h"
+#include "roo_windows/material2/dialogs/alert_dialog.h"
 
 namespace roo_windows {
 
@@ -488,11 +488,12 @@ Task& Application::addTaskFullScreen() {
 
 PresentationStartResult Application::showAlertDialog(
     Task& interaction_owner, std::string title, std::string supporting_text,
-    std::vector<std::string> button_labels, Dialog::CallbackFn callback_fn) {
+    std::vector<std::string> button_labels,
+    material2::Dialog::CallbackFn callback_fn) {
   checkUiThread();
-  Dialog* dialog =
-      new AlertDialog(context(), std::move(title), std::move(supporting_text),
-                      std::move(button_labels));
+  material2::Dialog* dialog = new material2::AlertDialog(
+      context(), std::move(title), std::move(supporting_text),
+      std::move(button_labels));
   PresentationStartResult result =
       dialog->show(interaction_owner, [dialog, callback_fn](int id) {
         if (callback_fn != nullptr) {

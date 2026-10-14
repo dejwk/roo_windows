@@ -73,7 +73,7 @@ Material layout decisions that shape a full application window:
    trailing regions for RTL.
 
 The closest current approximation is
-[src/roo_windows/containers/navigation_panel.h](../../../src/roo_windows/containers/navigation_panel.h).
+[src/roo_windows/material2/navigation_panel.h](../../../src/roo_windows/material2/navigation_panel.h).
 It places a legacy rail beside a stacked content area, but it is a one-off
 composition rather than a general Material layout family:
 
@@ -881,7 +881,7 @@ pay one `Item` per attached child. The item budget is one child pointer, one
 ### Migration Path for Existing Consumers
 
 The existing
-[NavigationPanel](../../../src/roo_windows/containers/navigation_panel.h) remains a
+[NavigationPanel](../../../src/roo_windows/material2/navigation_panel.h) remains a
 valid consumer-level widget until the new scaffold and Material 3 navigation
 surfaces land.
 

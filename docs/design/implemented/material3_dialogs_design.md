@@ -13,7 +13,7 @@ have a Material 3 dialog family.
 
 The gap is visible in three places:
 
-1. [src/roo_windows/dialogs/dialog.h](../../../src/roo_windows/dialogs/dialog.h)
+1. [src/roo_windows/material2/dialogs/dialog.h](../../../src/roo_windows/material2/dialogs/dialog.h)
    provides one centered scaffold with a legacy shape, a dynamic footer-button
    vector, and no distinction between basic and full-screen variants.
 2. [material3_sheets_design.md](../proposed/material3_sheets_design.md) and
@@ -38,7 +38,7 @@ The status of other prerequisites is recorded in the [status index](../README.md
 ### Current Starting Point in `roo_windows`
 
 The current dialog surface is the legacy `roo_windows::Dialog` family under
-[src/roo_windows/dialogs/](../../../src/roo_windows/dialogs/).
+[src/roo_windows/material2/dialogs/](../../../src/roo_windows/material2/dialogs/).
 
 The relevant existing seams are:
 
@@ -48,11 +48,11 @@ The relevant existing seams are:
 - [src/roo_windows/widgets/scrim.h](../../../src/roo_windows/widgets/scrim.h),
   which already provides the overlay-backed scrim widget used by the modal
   dialog path,
-- [src/roo_windows/dialogs/dialog.h](../../../src/roo_windows/dialogs/dialog.h),
+- [src/roo_windows/material2/dialogs/dialog.h](../../../src/roo_windows/material2/dialogs/dialog.h),
   which already provides a title area, a scrollable content area, and a footer
   button row,
-- [src/roo_windows/dialogs/alert_dialog.h](../../../src/roo_windows/dialogs/alert_dialog.h)
-  and [src/roo_windows/dialogs/radio_list_dialog.h](../../../src/roo_windows/dialogs/radio_list_dialog.h),
+- [src/roo_windows/material2/dialogs/alert_dialog.h](../../../src/roo_windows/material2/dialogs/alert_dialog.h)
+  and [src/roo_windows/material2/dialogs/radio_list_dialog.h](../../../src/roo_windows/material2/dialogs/radio_list_dialog.h),
   which show the two common current usage patterns,
 - [src/roo_windows/containers/scrollable_panel.h](../../../src/roo_windows/containers/scrollable_panel.h),
   which already provides `SimpleScrollablePanel` for generic vertical

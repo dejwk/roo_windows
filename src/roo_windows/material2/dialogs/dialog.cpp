@@ -4,7 +4,7 @@
 #include "roo_windows/core/task.h"
 #include "roo_windows/material2/button.h"
 
-namespace roo_windows {
+namespace roo_windows::material2 {
 
 Dialog::Dialog(ApplicationContext& context,
                std::vector<std::string> button_labels)
@@ -159,4 +159,4 @@ void Dialog::prepareForDerivedDestruction() {
   }
 }
 
-}  // namespace roo_windows
+}  // namespace roo_windows::material2

@@ -8,10 +8,12 @@
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/panel.h"
 #include "roo_windows/core/widget.h"
-#include "roo_windows/dialogs/dialog.h"
+#include "roo_windows/material2/dialogs/dialog.h"
 #include "roo_windows_render_test_support.h"
 
 namespace roo_windows {
+
+using material2::Dialog;
 namespace {
 
 class PinAnchor final : public Widget {

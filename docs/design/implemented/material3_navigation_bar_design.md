@@ -50,8 +50,8 @@ implementation.
 
 The nearest current navigation surfaces are:
 
-- [src/roo_windows/containers/navigation_rail.h](../../../src/roo_windows/containers/navigation_rail.h)
-- [src/roo_windows/containers/navigation_panel.h](../../../src/roo_windows/containers/navigation_panel.h)
+- [src/roo_windows/material2/navigation_rail.h](../../../src/roo_windows/material2/navigation_rail.h)
+- [src/roo_windows/material2/navigation_panel.h](../../../src/roo_windows/material2/navigation_panel.h)
 - [docs/material3_navigation_rail_design.md](../implemented/material3_navigation_rail_design.md)
 
 Those surfaces are useful architectural context, but they are not the right

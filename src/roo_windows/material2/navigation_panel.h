@@ -1,16 +1,15 @@
 #pragma once
 
 #include <string>
-#include <vector>
 
 #include "roo_windows/containers/stacked_layout.h"
-#include "roo_windows/material3/navigation_rail/navigation_rail.h"
+#include "roo_windows/material2/navigation_rail.h"
 
-namespace roo_windows {
+namespace roo_windows::material2 {
 
 class NavigationPanelTestAccess;
 
-/// Legacy-compatible page host backed by the Material 3 navigation rail.
+/// Material 2 page host with a navigation rail and stacked page contents.
 class NavigationPanel : public Panel {
  public:
   NavigationPanel(ApplicationContext& context);
@@ -39,30 +38,15 @@ class NavigationPanel : public Panel {
  private:
   friend class NavigationPanelTestAccess;
 
-  class PanelRail : public material3::NavigationRail {
-   public:
-    PanelRail(ApplicationContext& context, NavigationPanel& panel)
-        : material3::NavigationRail(context), panel_(panel) {}
-
-   protected:
-    void onSelectedIndexChanged(int old_index, int new_index) override;
-
-   private:
-    NavigationPanel& panel_;
-  };
-
   bool empty() const { return contents_.children().empty(); }
   size_t page_count() const { return contents_.children().size(); }
   Widget* page(int index) { return contents_.children()[index]; }
   const Widget& page(int index) const { return *contents_.children()[index]; }
   void showPage(int index);
 
-  PanelRail rail_;
+  NavigationRail rail_;
   StackedLayout contents_;
   XDim rail_width_;
-  // Material 3 destinations intentionally borrow their labels. Reserve the
-  // rail's fixed maximum once so views stay valid as pages are appended.
-  std::vector<std::string> destination_labels_;
 };
 
-}  // namespace roo_windows
+}  // namespace roo_windows::material2

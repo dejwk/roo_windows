@@ -7,7 +7,7 @@
 #include "roo_windows/material2/divider.h"
 #include "roo_windows/material2/icon_with_caption.h"
 
-namespace roo_windows {
+namespace roo_windows::material2 {
 
 class NavigationRailEntry;
 class NavigationRail;
@@ -31,6 +31,13 @@ class NavigationRailEntry : public material2::IconWithCaption {
   /// Activates this destination in its rail and invokes the user-supplied
   /// callback to switch the application's content.
   void onClicked() override;
+
+ protected:
+  /// Repaints the foreground highlight when activation changes without an
+  /// overlay.
+  void notifyStateChanged(uint16_t state_diff) override {
+    if ((state_diff & kWidgetActivated) != 0) setDirty();
+  }
 
  private:
   const NavigationRail* rail() const;
@@ -99,4 +106,4 @@ class NavigationRail : public Panel {
   std::vector<std::unique_ptr<NavigationRailEntry>> destinations_;
 };
 
-}  // namespace roo_windows
+}  // namespace roo_windows::material2

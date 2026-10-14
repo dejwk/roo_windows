@@ -6,7 +6,7 @@
 #include "roo_windows/widgets/icon.h"
 #include "roo_windows/widgets/text_label.h"
 
-namespace roo_windows {
+namespace roo_windows::material2 {
 namespace menu {
 
 // The title of the activity, with the back button.
@@ -30,4 +30,4 @@ class Title : public roo_windows::FlexLayout {
 };
 
 }  // namespace menu
-}  // namespace roo_windows
+}  // namespace roo_windows::material2

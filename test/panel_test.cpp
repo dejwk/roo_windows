@@ -6,19 +6,23 @@
 #include "roo_display/core/offscreen.h"
 #include "roo_icons/outlined/24/action.h"
 #include "roo_scheduler.h"
-#include "roo_windows/composites/menu/basic_navigation_item.h"
-#include "roo_windows/composites/radio/radio_list.h"
 #include "roo_windows/containers/flex_layout.h"
 #include "roo_windows/containers/horizontal_layout.h"
-#include "roo_windows/containers/navigation_panel.h"
-#include "roo_windows/containers/navigation_rail.h"
 #include "roo_windows/containers/vertical_layout.h"
 #include "roo_windows/core/application.h"
 #include "roo_windows/core/environment.h"
+#include "roo_windows/material2/menu/basic_navigation_item.h"
+#include "roo_windows/material2/navigation_panel.h"
+#include "roo_windows/material2/navigation_rail.h"
+#include "roo_windows/material2/radio_list.h"
 #include "roo_windows/material2/toggle_buttons.h"
 #include "roo_windows/widgets/blank.h"
 
 namespace roo_windows {
+
+using material2::NavigationPanel;
+using material2::NavigationRail;
+using material2::RadioListItem;
 namespace {
 
 class TestPanel : public Panel {
@@ -157,9 +161,10 @@ TEST(PanelLifetime, NavigationItemMembersDetachBeforeDestruction) {
   TestDestination destination(page);
   Task& task = app.addTaskFullScreen(page);
   {
-    menu::BasicNavigationItem item(app.context(), ic_outlined_24_action_done(),
-                                   "Home", task.navigation(), destination);
-    menu::BasicNavigationItemWithSubtext item_with_subtext(
+    material2::menu::BasicNavigationItem item(
+        app.context(), ic_outlined_24_action_done(), "Home", task.navigation(),
+        destination);
+    material2::menu::BasicNavigationItemWithSubtext item_with_subtext(
         app.context(), ic_outlined_24_action_done(), "Home", "Details",
         task.navigation(), destination);
   }

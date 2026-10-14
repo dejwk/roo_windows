@@ -5,7 +5,7 @@
 #include "golden_image.h"
 #include "gtest/gtest.h"
 #include "roo_windows/containers/vertical_layout.h"
-#include "roo_windows/dialogs/dialog.h"
+#include "roo_windows/material2/dialogs/dialog.h"
 #include "roo_windows/material3/dialog/basic_dialog.h"
 #include "roo_windows/material3/dialog/full_screen_dialog.h"
 #include "roo_windows/material3/list/list.h"
@@ -424,7 +424,7 @@ TEST(ProgressAcceptanceTest, BoundedWritesAndCompleteSlowRefresh) {
   app.refresh();
 }
 /// Legacy dialog that borrows indicator content for each presentation.
-class ProgressLegacyDialog : public ::roo_windows::Dialog {
+class ProgressLegacyDialog : public ::roo_windows::material2::Dialog {
  public:
   explicit ProgressLegacyDialog(ApplicationContext& context)
       : Dialog(context, {"Close"}) {}

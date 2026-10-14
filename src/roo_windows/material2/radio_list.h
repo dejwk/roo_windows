@@ -9,7 +9,7 @@
 #include "roo_windows/core/widget.h"
 #include "roo_windows/material2/radio_button.h"
 
-namespace roo_windows {
+namespace roo_windows::material2 {
 
 class RadioListModel;
 
@@ -211,4 +211,4 @@ class RadioList : public Holder {
   ListLayout list_;
 };
 
-}  // namespace roo_windows
+}  // namespace roo_windows::material2

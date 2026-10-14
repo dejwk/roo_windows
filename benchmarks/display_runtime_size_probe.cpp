@@ -12,8 +12,8 @@
 #include "roo_windows/core/transient_presentation.h"
 #include "roo_windows/core/transient_surface_host.h"
 #include "roo_windows/core/widget_ref.h"
-#include "roo_windows/dialogs/dialog.h"
 #include "roo_windows/keyboard/keyboard.h"
+#include "roo_windows/material2/dialogs/dialog.h"
 #include "roo_windows/material2/text_field.h"
 
 #define ROO_WINDOWS_SIZE_PROBE(type, name) \
@@ -38,7 +38,7 @@ ROO_WINDOWS_SIZE_PROBE(roo_windows::KeyEvent, key_event);
 ROO_WINDOWS_SIZE_PROBE(roo_windows::TransientPresentationSlot,
                        transient_presentation_slot);
 ROO_WINDOWS_SIZE_PROBE(roo_windows::PresentationPin, presentation_pin);
-ROO_WINDOWS_SIZE_PROBE(roo_windows::Dialog, dialog);
+ROO_WINDOWS_SIZE_PROBE(roo_windows::material2::Dialog, dialog);
 ROO_WINDOWS_SIZE_PROBE(roo_windows::internal::TransientSourceGeometry,
                        transient_source_geometry);
 ROO_WINDOWS_SIZE_PROBE(roo_windows::internal::TransientHostLayer,

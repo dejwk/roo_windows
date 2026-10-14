@@ -12,7 +12,7 @@
 #include "roo_windows/material2/divider.h"
 #include "roo_windows/widgets/text_label.h"
 
-namespace roo_windows {
+namespace roo_windows::material2 {
 
 /// Modal dialog base class.
 ///
@@ -185,4 +185,4 @@ class Dialog : public VerticalLayout {
   Registration registration_;
 };
 
-}  // namespace roo_windows
+}  // namespace roo_windows::material2

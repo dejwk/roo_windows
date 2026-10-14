@@ -1,6 +1,6 @@
-#include "roo_windows/composites/menu/basic_navigation_item.h"
+#include "roo_windows/material2/menu/basic_navigation_item.h"
 
-namespace roo_windows {
+namespace roo_windows::material2 {
 namespace menu {
 
 BasicNavigationItem::BasicNavigationItem(ApplicationContext& context,
@@ -48,4 +48,4 @@ BasicNavigationItemWithSubtext::BasicNavigationItemWithSubtext(
 }
 
 }  // namespace menu
-}  // namespace roo_windows
+}  // namespace roo_windows::material2

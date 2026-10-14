@@ -8,7 +8,7 @@
 #include "roo_windows/material2/slider.h"
 #include "roo_windows/widgets/text_label.h"
 
-namespace roo_windows {
+namespace roo_windows::material2 {
 namespace menu {
 
 /// Vertical menu row containing a caption, a value readout, and a slider.
@@ -83,4 +83,4 @@ class NumericSliderWithCaption : public BaseSliderWithCaption {
 };
 
 }  // namespace menu
-}  // namespace roo_windows
+}  // namespace roo_windows::material2

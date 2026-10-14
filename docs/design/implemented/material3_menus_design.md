@@ -48,7 +48,7 @@ The relevant implemented pieces are:
   detach-before-completion ordering,
 - [`MainWindow`](../../../src/roo_windows/core/main_window.h), which owns regular,
   popup, scrim, and dialog paint layers,
-- the legacy [`Dialog`](../../../src/roo_windows/dialogs/dialog.h), which already
+- the legacy [`Dialog`](../../../src/roo_windows/material2/dialogs/dialog.h), which already
   uses the transient slot and attaches its surface and scrim directly to
   `MainWindow`,
 - [`FocusManager`](../../../src/roo_windows/core/focus_manager.h), which provides

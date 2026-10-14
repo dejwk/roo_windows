@@ -1,10 +1,10 @@
 #pragma once
 
-#include "roo_windows/composites/radio/radio_list.h"
-#include "roo_windows/dialogs/dialog.h"
-#include "roo_windows/dialogs/string_constants.h"
+#include "roo_windows/material2/dialogs/dialog.h"
+#include "roo_windows/material2/dialogs/string_constants.h"
+#include "roo_windows/material2/radio_list.h"
 
-namespace roo_windows {
+namespace roo_windows::material2 {
 
 /// Dialog that wraps a `RadioList` so the user can pick exactly one item from
 /// a model.
@@ -74,7 +74,7 @@ class RadioListDialog : public Dialog {
     });
   }
 
-  roo_windows::RadioList list_;
+  RadioList list_;
 };
 
-}  // namespace roo_windows
+}  // namespace roo_windows::material2

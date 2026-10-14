@@ -1,4 +1,4 @@
-#include "roo_windows/dialogs/dialog.h"
+#include "roo_windows/material2/dialogs/dialog.h"
 
 #include "gtest/gtest.h"
 #include "roo_display.h"
@@ -9,6 +9,8 @@
 #include "roo_windows/core/widget.h"
 
 namespace roo_windows {
+
+using material2::Dialog;
 namespace {
 
 class TestContent final : public Widget {

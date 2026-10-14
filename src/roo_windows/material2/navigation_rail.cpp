@@ -1,8 +1,8 @@
-#include "roo_windows/containers/navigation_rail.h"
+#include "roo_windows/material2/navigation_rail.h"
 
 #include "roo_windows/config.h"
 
-namespace roo_windows {
+namespace roo_windows::material2 {
 
 void NavigationRailEntry::onClicked() {
   if (rail()->setActive(idx_)) activator_();
@@ -82,4 +82,4 @@ bool NavigationRail::onKeyEvent(const KeyEvent& event) {
   return focusManager().moveFocusDirection(*this, direction);
 }
 
-}  // namespace roo_windows
+}  // namespace roo_windows::material2

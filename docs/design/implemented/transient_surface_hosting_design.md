@@ -141,7 +141,7 @@ The proposal builds on these existing contracts:
   detach-before-completion through a presenter-owned registration.
 - [`MainWindow`](../../../src/roo_windows/core/main_window.h) owns regular task,
   popup-task, legacy dialog, scrim, and presentation-pin layers.
-- Legacy [`Dialog`](../../../src/roo_windows/dialogs/dialog.h) uses the shared
+- Legacy [`Dialog`](../../../src/roo_windows/material2/dialogs/dialog.h) uses the shared
   slot but still attaches itself and the scrim through dialog-specific
   `MainWindow` state.
 - [`FocusManager`](../../../src/roo_windows/core/focus_manager.h) tracks focused

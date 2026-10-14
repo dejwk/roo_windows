@@ -12,7 +12,7 @@
 // Clickable option with single-line text label and an optional icon.
 // Note: the text label is expected to be a constant.
 
-namespace roo_windows {
+namespace roo_windows::material2 {
 namespace menu {
 
 class BasicNavigationItem : public FlexLayout {
@@ -75,4 +75,4 @@ class BasicNavigationItemWithSubtext : public FlexLayout {
 };
 
 }  // namespace menu
-}  // namespace roo_windows
+}  // namespace roo_windows::material2

@@ -1,9 +1,9 @@
-#include "roo_windows/composites/menu/title.h"
+#include "roo_windows/material2/menu/title.h"
 
 #include "roo_icons/outlined/navigation.h"
 #include "roo_windows/core/task.h"
 
-namespace roo_windows {
+namespace roo_windows::material2 {
 namespace menu {
 
 Title::Title(ApplicationContext& context, std::string title)
@@ -22,4 +22,4 @@ Title::Title(ApplicationContext& context, std::string title)
 }
 
 }  // namespace menu
-}  // namespace roo_windows
+}  // namespace roo_windows::material2

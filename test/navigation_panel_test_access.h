@@ -1,15 +1,19 @@
 #pragma once
 
-#include "roo_windows/containers/navigation_panel.h"
+#include "roo_windows/material2/navigation_panel.h"
 
-namespace roo_windows {
+namespace roo_windows::material2 {
 
-/// Test-only access to the Material 3 rail adapter inside NavigationPanel.
+/// Test-only access to the Material 2 rail inside NavigationPanel.
 class NavigationPanelTestAccess {
  public:
+  static const NavigationRail& rail(const NavigationPanel& panel) {
+    return panel.rail_;
+  }
+
   static void selectRailDestination(NavigationPanel& panel, int index) {
-    panel.rail_.setSelectedIndex(index);
+    panel.rail_.children()[index + 1]->onClicked();
   }
 };
 
-}  // namespace roo_windows
+}  // namespace roo_windows::material2

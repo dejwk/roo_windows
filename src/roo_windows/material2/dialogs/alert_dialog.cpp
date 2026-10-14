@@ -1,6 +1,6 @@
-#include "roo_windows/dialogs/alert_dialog.h"
+#include "roo_windows/material2/dialogs/alert_dialog.h"
 
-namespace roo_windows {
+namespace roo_windows::material2 {
 
 AlertDialog::AlertDialog(ApplicationContext& context, std::string title,
                          std::string supporting_text,
@@ -29,4 +29,4 @@ bool AlertDialog::onEnter() {
   return true;
 }
 
-}  // namespace roo_windows
+}  // namespace roo_windows::material2

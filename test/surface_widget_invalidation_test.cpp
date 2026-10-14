@@ -11,6 +11,7 @@
 #include "roo_windows/core/application.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/material2/button.h"
+#include "roo_windows/material2/navigation_panel.h"
 #include "roo_windows/material3/button/button.h"
 #include "roo_windows/material3/card/flex_card.h"
 #include "roo_windows/material3/fab/fab.h"
@@ -496,6 +497,44 @@ TEST_F(SurfaceInvalidationTest, ContainerInteriorIncludesChildOverflow) {
   frame();
   EXPECT_GT(writesOutside(kTargetBounds), 0);
   expectMatchesFullRepaint();
+}
+
+// Verifies the M2 rail/page composition settles pixels once on initial, dirty,
+// selection-change, and invalidated frames, with incremental output matching
+// a complete repaint.
+TEST_F(SurfaceInvalidationTest, Material2NavigationPanelPaintsOnce) {
+  // Finish display initialization before counting the composition's first
+  // frame.
+  app_.refresh();
+  auto panel = std::make_unique<material2::NavigationPanel>(app_.context());
+  material2::NavigationPanel& target = *panel;
+  panel->addPage(ic_outlined_24_action_done(), "Home",
+                 std::make_unique<MutableSurface>(app_.context()));
+  auto second = std::make_unique<MutableSurface>(app_.context());
+  second->setColor(Color(0xFFABCDEF));
+  panel->addPage(ic_outlined_24_action_bookmark(), "Inbox", std::move(second));
+  app_.add(std::move(panel), Rect(0, 0, kWidth - 1, kHeight - 1).asBox());
+  frame();
+  for (int count : device_.writes) EXPECT_EQ(count, 1);
+  expectMatchesFullRepaint("initial");
+
+  const auto& rail =
+      static_cast<const material2::NavigationRail&>(*target.children()[0]);
+  rail.children()[1]->setDirty();
+  frame();
+  EXPECT_GT(writesOutside(Rect(0, 0, -1, -1)), 0);
+  for (int count : device_.writes) EXPECT_LE(count, 1);
+  expectMatchesFullRepaint("dirty");
+
+  target.setActive(1);
+  frame();
+  for (int count : device_.writes) EXPECT_LE(count, 1);
+  expectMatchesFullRepaint("selection");
+
+  target.invalidateInterior();
+  frame();
+  for (int count : device_.writes) EXPECT_EQ(count, 1);
+  expectMatchesFullRepaint("invalidated");
 }
 
 }  // namespace
