@@ -242,17 +242,17 @@ class ApplicationTextInput {
     active_editor_ = nullptr;
   }
 
-  void activate(TextFieldEditor& editor) {
+  void activate(material2::TextFieldEditor& editor) {
     checkUiThread();
     if (active_editor_ == &editor) return;
-    TextFieldEditor* old_editor = active_editor_;
+    material2::TextFieldEditor* old_editor = active_editor_;
     // Publish first: a completion callback may activate a third editor or
     // detach the incoming field. Its decision must not be overwritten here.
     active_editor_ = &editor;
     if (old_editor != nullptr) old_editor->cancel();
   }
 
-  void deactivate(TextFieldEditor& editor) {
+  void deactivate(material2::TextFieldEditor& editor) {
     if (app_.state_ != Application::State::kStopping) checkUiThread();
     if (active_editor_ == &editor) active_editor_ = nullptr;
   }
@@ -266,7 +266,7 @@ class ApplicationTextInput {
     if (active_editor_ != nullptr) active_editor_->cancel();
   }
 
-  bool isActiveEditor(const TextFieldEditor& editor) const {
+  bool isActiveEditor(const material2::TextFieldEditor& editor) const {
     return active_editor_ == &editor;
   }
 
@@ -319,7 +319,7 @@ class ApplicationTextInput {
 
   Application& app_;
   TextInputEmitter* head_ = nullptr;
-  TextFieldEditor* active_editor_ = nullptr;
+  material2::TextFieldEditor* active_editor_ = nullptr;
 };
 
 /// Marks the interval in which Application::tick() owns UI dispatch.
@@ -558,11 +558,11 @@ bool Application::performTextInputAction(TextInputAction action) {
   return text_input_->performAction(action);
 }
 
-void Application::activateTextInput(TextFieldEditor& editor) {
+void Application::activateTextInput(material2::TextFieldEditor& editor) {
   text_input_->activate(editor);
 }
 
-void Application::deactivateTextInput(TextFieldEditor& editor) {
+void Application::deactivateTextInput(material2::TextFieldEditor& editor) {
   text_input_->deactivate(editor);
 }
 

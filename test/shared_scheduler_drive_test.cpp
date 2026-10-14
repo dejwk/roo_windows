@@ -6,7 +6,7 @@
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/navigation_host.h"
 #include "roo_windows/core/panel.h"
-#include "roo_windows/widgets/text_field.h"
+#include "roo_windows/material2/text_field.h"
 
 namespace roo_windows {
 namespace {
@@ -31,11 +31,12 @@ class OneKeySource final : public KeySource {
 class TextInputDestination final : public Destination {
  public:
   explicit TextInputDestination(ApplicationContext& context)
-      : field(context, font_body1(), "", roo_display::kLeft, TextField::NONE) {}
+      : field(context, font_body1(), "", roo_display::kLeft,
+              material2::TextField::NONE) {}
 
   Widget& getContents() override { return field; }
 
-  TextField field;
+  material2::TextField field;
 };
 
 TEST(SharedSchedulerDrive, StartedApplicationsEachReceiveTheirCallback) {

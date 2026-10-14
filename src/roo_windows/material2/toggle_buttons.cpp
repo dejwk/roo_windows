@@ -1,9 +1,9 @@
-#include "roo_windows/widgets/toggle_buttons.h"
+#include "roo_windows/material2/toggle_buttons.h"
 
 #include "roo_display/shape/basic.h"
 #include "roo_display/ui/tile.h"
 
-namespace roo_windows {
+namespace roo_windows::material2 {
 
 using namespace roo_display;
 
@@ -96,4 +96,4 @@ void ToggleButtons::ToggleButton::paint(PaintContext& ctx) const {
   canvas.fillRect(0, height() - 2, width() - 1, height() - 1, external_border);
 }
 
-}  // namespace roo_windows
+}  // namespace roo_windows::material2

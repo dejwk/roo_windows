@@ -5,14 +5,14 @@
 #include "roo_windows/core/animation_registry.h"
 #include "roo_windows/core/application_context.h"
 #include "roo_windows/core/widget.h"
+#include "roo_windows/material2/progress_bar.h"
+#include "roo_windows/material2/switch.h"
+#include "roo_windows/material2/text_field.h"
 #include "roo_windows/material3/button/toggle_icon_button.h"
 #include "roo_windows/material3/list/list.h"
 #include "roo_windows/material3/snackbar/snackbar.h"
 #include "roo_windows/material3/switch/switch.h"
 #include "roo_windows/material3/tabs/tabs.h"
-#include "roo_windows/widgets/progress_bar.h"
-#include "roo_windows/widgets/switch.h"
-#include "roo_windows/widgets/text_field.h"
 
 namespace roo_windows::test {
 
@@ -60,13 +60,14 @@ ROO_WINDOWS_ANIMATION_SIZE_PROBE(roo_windows::SimpleScrollablePanel,
                                  simple_scrollable_panel);
 ROO_WINDOWS_ANIMATION_SIZE_PROBE(roo_windows::material3::Switch,
                                  material3_switch);
-ROO_WINDOWS_ANIMATION_SIZE_PROBE(roo_windows::Switch, legacy_switch);
+ROO_WINDOWS_ANIMATION_SIZE_PROBE(roo_windows::material2::Switch, legacy_switch);
 ROO_WINDOWS_ANIMATION_SIZE_PROBE(roo_windows::material3::ToggleIconButton,
                                  toggle_icon_button);
-ROO_WINDOWS_ANIMATION_SIZE_PROBE(roo_windows::ProgressBar, legacy_progress_bar);
-ROO_WINDOWS_ANIMATION_SIZE_PROBE(roo_windows::TextFieldEditor,
+ROO_WINDOWS_ANIMATION_SIZE_PROBE(roo_windows::material2::ProgressBar,
+                                 legacy_progress_bar);
+ROO_WINDOWS_ANIMATION_SIZE_PROBE(roo_windows::material2::TextFieldEditor,
                                  text_field_editor);
-ROO_WINDOWS_ANIMATION_SIZE_PROBE(roo_windows::TextField, text_field);
+ROO_WINDOWS_ANIMATION_SIZE_PROBE(roo_windows::material2::TextField, text_field);
 ROO_WINDOWS_ANIMATION_SIZE_PROBE(roo_windows::material3::SnackbarPresenter,
                                  snackbar_presenter);
 ROO_WINDOWS_ANIMATION_SIZE_PROBE(roo_windows::material3::SnackbarHost,

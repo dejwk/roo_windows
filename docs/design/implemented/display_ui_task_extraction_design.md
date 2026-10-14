@@ -23,7 +23,7 @@ making navigation mandatory or adding state to every widget.
 
 The current [`Application`](../../../src/roo_windows/core/application.h) owns
 one [`FocusManager`](../../../src/roo_windows/core/focus_manager.h), one
-[`TextFieldEditor`](../../../src/roo_windows/widgets/text_field.h), one optional
+[`TextFieldEditor`](../../../src/roo_windows/material2/text_field.h), one optional
 [`KeySource`](../../../src/roo_windows/core/key_source.h), and one keyboard
 activation record. Every widget reaches the focus manager through
 [`ApplicationContext`](../../../src/roo_windows/core/application_context.h).

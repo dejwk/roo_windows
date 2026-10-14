@@ -1,4 +1,4 @@
-#include "roo_windows/widgets/radio_button.h"
+#include "roo_windows/material2/checkbox.h"
 
 #include "roo_display/image/image.h"
 #include "roo_display/ui/tile.h"
@@ -8,31 +8,34 @@
 
 using namespace roo_display;
 
-namespace roo_windows {
+namespace roo_windows::material2 {
 
-void RadioButton::onClicked() {
+void Checkbox::onClicked() {
   toggle();
   Widget::onClicked();
 }
 
-void RadioButton::paint(PaintContext& ctx) const {
+void Checkbox::paint(PaintContext& ctx) const {
+  OnOffState state = onOffState();
   ::roo_windows::material3::ColorToken bg_role = effectiveContainerRole();
   Color color =
-      isOn()
+      state == OnOffState::kOn
           ? theme().material3Theme().color.accentColorFor(bg_role)
           : AlphaBlend(
                 ctx.bgcolor(),
                 theme().material3Theme().color.contentColorFor(bg_role).withA(
                     0x90));
   RleImage4bppxBiased<Alpha4, ProgMemPtr> img =
-      isOn() ? SCALED_ROO_ICON(filled, toggle_radio_button_checked)
-             : SCALED_ROO_ICON(filled, toggle_radio_button_unchecked);
+      state == OnOffState::kOn ? SCALED_ROO_ICON(filled, toggle_check_box)
+      : state == OnOffState::kOff
+          ? SCALED_ROO_ICON(filled, toggle_check_box_outline_blank)
+          : SCALED_ROO_ICON(filled, toggle_indeterminate_check_box);
   img.color_mode().setColor(color);
   ctx.drawTiled(img, bounds(), kCenter | kMiddle, isInvalidated());
 }
 
-Dimensions RadioButton::getSuggestedMinimumDimensions() const {
+Dimensions Checkbox::getSuggestedMinimumDimensions() const {
   return Dimensions(ROO_WINDOWS_ICON_SIZE, ROO_WINDOWS_ICON_SIZE);
 }
 
-}  // namespace roo_windows
+}  // namespace roo_windows::material2

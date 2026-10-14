@@ -5,11 +5,11 @@
 #include "roo_windows/containers/horizontal_layout.h"
 #include "roo_windows/containers/scrollable_panel.h"
 #include "roo_windows/containers/vertical_layout.h"
+#include "roo_windows/core/margins_mixin.h"
 #include "roo_windows/core/panel.h"
 #include "roo_windows/core/transient_surface_host.h"
-#include "roo_windows/core/margins_mixin.h"
-#include "roo_windows/widgets/button.h"
-#include "roo_windows/widgets/divider.h"
+#include "roo_windows/material2/button.h"
+#include "roo_windows/material2/divider.h"
 #include "roo_windows/widgets/text_label.h"
 
 namespace roo_windows {
@@ -58,13 +58,15 @@ class Dialog : public VerticalLayout {
   /// Returns the number of footer buttons.
   int button_count() const { return buttons_.size(); }
   /// Returns the footer button at `idx`.
-  SimpleButton& button(int idx) { return buttons_[idx]; }
-  const SimpleButton& button(int idx) const { return buttons_[idx]; }
+  material2::SimpleButton& button(int idx) { return buttons_[idx]; }
+  const material2::SimpleButton& button(int idx) const { return buttons_[idx]; }
 
   /// Returns the last (typically affirmative) footer button.
-  SimpleButton& last_button() { return buttons_[button_count() - 1]; }
+  material2::SimpleButton& last_button() {
+    return buttons_[button_count() - 1];
+  }
 
-  const SimpleButton& last_button() const {
+  const material2::SimpleButton& last_button() const {
     return buttons_[button_count() - 1];
   }
 
@@ -85,9 +87,9 @@ class Dialog : public VerticalLayout {
   void actionTaken(int id);
 
   TextLabel title_;
-  HorizontalDivider divider1_;
+  material2::HorizontalDivider divider1_;
   ScrollablePanel contents_;
-  HorizontalDivider divider2_;
+  material2::HorizontalDivider divider2_;
 
   /// Enters a detached presentation session before initial measurement.
   ///
@@ -172,7 +174,7 @@ class Dialog : public VerticalLayout {
 
   FullWidthPanel title_panel_;
   FullWidthPanel button_panel_;
-  std::vector<SimpleButton> buttons_;
+  std::vector<material2::SimpleButton> buttons_;
   CallbackFn callback_fn_;
   int result_ = -1;
   Widget* presentation_content_ = nullptr;

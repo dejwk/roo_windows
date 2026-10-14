@@ -84,8 +84,8 @@ void initDisplay() {
 // *************** EXAMPLE STARTS HERE
 
 #include "roo_windows/containers/aligned_layout.h"
+#include "roo_windows/material2/button.h"
 #include "roo_windows/material3/dialog/basic_dialog.h"
-#include "roo_windows/widgets/button.h"
 
 roo_scheduler::SchedulingService scheduler;
 Environment env(scheduler);
@@ -117,7 +117,7 @@ class MyPane : public AlignedLayout {
   static constexpr material3::DialogActionSpec kOkAction{
       0, "OK", material3::DialogActionRole::kAcknowledge};
 
-  SimpleButton button_;
+  material2::SimpleButton button_;
   material3::AlertDialog alert_;
 };
 

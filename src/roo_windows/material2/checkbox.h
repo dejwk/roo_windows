@@ -2,7 +2,7 @@
 
 #include "roo_windows/core/widget.h"
 
-namespace roo_windows {
+namespace roo_windows::material2 {
 
 /// Tri-state checkbox using the legacy (pre-Material 3) style.
 ///
@@ -68,4 +68,4 @@ class Checkbox : public Widget {
   OnOffState state_;
 };
 
-}  // namespace roo_windows
+}  // namespace roo_windows::material2

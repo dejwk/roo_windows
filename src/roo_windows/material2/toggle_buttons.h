@@ -5,7 +5,7 @@
 
 #include "roo_windows/core/panel.h"
 
-namespace roo_windows {
+namespace roo_windows::material2 {
 
 /// Mutually-exclusive group of icon-only push buttons (segmented control).
 ///
@@ -99,4 +99,4 @@ class ToggleButtons : public Panel {
   std::vector<std::unique_ptr<ToggleButton>> buttons_;
 };
 
-}  // namespace roo_windows
+}  // namespace roo_windows::material2

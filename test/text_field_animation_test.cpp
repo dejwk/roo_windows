@@ -1,6 +1,6 @@
 #include "gtest/gtest.h"
 #include "roo_windows/core/theme.h"
-#include "roo_windows/widgets/text_field.h"
+#include "roo_windows/material2/text_field.h"
 #include "roo_windows_render_test_support.h"
 
 namespace roo_windows {
@@ -8,20 +8,19 @@ namespace {
 
 using test_support::RooWindowsRenderTestSized;
 
-class TestTextField : public TextField {
+class TestTextField : public material2::TextField {
  public:
   explicit TestTextField(ApplicationContext& context)
-      : TextField(context, font_body1(), "Type here",
-                  roo_display::kLeft | roo_display::kMiddle,
-                  TextField::UNDERLINE) {}
+      : material2::TextField(context, font_body1(), "Type here",
+                             roo_display::kLeft | roo_display::kMiddle,
+                             material2::TextField::UNDERLINE) {}
 
   bool caretActive() const {
     return context().animations().contains(*this, kCaret);
   }
 
   AnimationStatus seekCaret(int64_t millis) {
-    return context().animations().seek(*this, kCaret,
-                                       roo_time::Millis(millis));
+    return context().animations().seek(*this, kCaret, roo_time::Millis(millis));
   }
 
   int caretFrameCount() const { return caret_frame_count_; }
@@ -30,7 +29,7 @@ class TestTextField : public TextField {
   void onAnimationFrame(AnimationTag tag,
                         const AnimationSample& sample) override {
     if (tag == kCaret) ++caret_frame_count_;
-    TextField::onAnimationFrame(tag, sample);
+    material2::TextField::onAnimationFrame(tag, sample);
   }
 
  private:
@@ -52,8 +51,7 @@ class TextFieldAnimationTest : public RooWindowsRenderTestSized<180, 48> {
     auto field = std::make_unique<TestTextField>(context());
     TestTextField* field_ptr = field.get();
     fields_.push_back(std::move(field));
-    Task& task = app_.addTask(*field_ptr,
-                              roo_display::Box(4, y, 175, y + 27));
+    Task& task = app_.addTask(*field_ptr, roo_display::Box(4, y, 175, y + 27));
     tasks_.push_back(&task);
     return AddedField{field_ptr, &task};
   }
@@ -86,7 +84,7 @@ TEST_F(TextFieldAnimationTest, MissedBoundariesUseElapsedParity) {
 TEST_F(TextFieldAnimationTest, EditingRestartsAtVisiblePhaseZero) {
   AddedField added = AddField();
   refresh();
-  TextFieldEditor& editor = added.task->textFieldEditor();
+  material2::TextFieldEditor& editor = added.task->textFieldEditor();
   editor.edit(added.field, false);
   refresh();
   ASSERT_EQ(AnimationStatus::kOk, added.field->seekCaret(500));
@@ -143,7 +141,7 @@ TEST_F(TextFieldAnimationTest, DestroyingTargetClearsEditorAndTrack) {
   refresh();
   ASSERT_TRUE(added.field->requestFocus());
   ASSERT_TRUE(added.field->caretActive());
-  const TextField* former_address = added.field;
+  const material2::TextField* former_address = added.field;
 
   added.task->navigation().clear();
   fields_.erase(fields_.begin());

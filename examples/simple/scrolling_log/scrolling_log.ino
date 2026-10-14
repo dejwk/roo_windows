@@ -79,8 +79,8 @@ void InitDisplay() {
 #include "roo_windows/containers/accelerated_scrollable_panel.h"
 #include "roo_windows/containers/aligned_layout.h"
 #include "roo_windows/containers/flex_layout.h"
+#include "roo_windows/material2/button.h"
 #include "roo_windows/material3/typography.h"
-#include "roo_windows/widgets/button.h"
 #include "roo_windows/widgets/text_label.h"
 
 using namespace roo_windows;
@@ -165,8 +165,8 @@ class ScrollComparison : public FlexLayout {
       : FlexLayout(context, FlexDirection::kColumn),
         complete_(context, std::make_unique<LogRows>(context)),
         accelerated_(context, std::make_unique<LogRows>(context)),
-        complete_button_(context, "Complete", Button::TEXT),
-        accelerated_button_(context, "Accelerated", Button::TEXT),
+        complete_button_(context, "Complete", material2::Button::TEXT),
+        accelerated_button_(context, "Accelerated", material2::Button::TEXT),
         controls_(context, FlexDirection::kRow),
         viewport_(context),
         mode_(context, "Complete redraw", material3::text_style_body_small()) {
@@ -204,8 +204,8 @@ class ScrollComparison : public FlexLayout {
   // detaches them while they are still alive.
   SimpleScrollablePanel complete_;
   AcceleratedScrollablePanel accelerated_;
-  SimpleButton complete_button_;
-  SimpleButton accelerated_button_;
+  material2::SimpleButton complete_button_;
+  material2::SimpleButton accelerated_button_;
   FlexLayout controls_;
   RoundedViewport viewport_;
   TextLabel mode_;

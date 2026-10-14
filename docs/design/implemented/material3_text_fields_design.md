@@ -59,7 +59,7 @@ model.
 As of the 2026-09-12 review, no Material 3 text-field family has landed.
 The existing prerequisites are:
 
-- [widgets/text_field.h](../../../src/roo_windows/widgets/text_field.h) defines
+- [material2/text_field.h](../../../src/roo_windows/material2/text_field.h) defines
   the legacy `roo_windows::TextField` (there is no `widgets` namespace). It
   accepts `ApplicationContext&`, font, hint and alignment; it no longer accepts
   a constructor-injected editor. It owns its value and hint strings.
@@ -697,7 +697,7 @@ should be settled once per pass.
 The migration plan is additive and non-breaking.
 
 1. Land `material3::TextField` and `material3::SecureTextField` beside the
-   legacy [widgets/text_field.h](../../../src/roo_windows/widgets/text_field.h)
+   legacy [material2/text_field.h](../../../src/roo_windows/material2/text_field.h)
    API.
 2. Generalize `TextFieldEditor` so both the legacy and Material 3 fields can
    use the same editing core.
@@ -838,7 +838,7 @@ Code slice:
 4. Preserve `Task::textFieldEditor()` and existing application input routing.
 5. Add font options, mutation notifications, widget lifetime access and the
    required UTF-8/remeasurement/scroll corrections to the shared seam.
-6. Keep the legacy [widgets/text_field.h](../../../src/roo_windows/widgets/text_field.h)
+6. Keep the legacy [material2/text_field.h](../../../src/roo_windows/material2/text_field.h)
    behavior unchanged from a caller perspective.
 
 Proposed commit message:

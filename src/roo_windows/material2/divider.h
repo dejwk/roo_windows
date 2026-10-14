@@ -2,7 +2,7 @@
 
 #include "roo_windows/core/widget.h"
 
-namespace roo_windows {
+namespace roo_windows::material2 {
 
 /// 2-pixel horizontal rule that stretches to its parent's width.
 class HorizontalDivider : public Widget {
@@ -42,4 +42,4 @@ class VerticalDivider : public Widget {
   }
 };
 
-}  // namespace roo_windows
+}  // namespace roo_windows::material2

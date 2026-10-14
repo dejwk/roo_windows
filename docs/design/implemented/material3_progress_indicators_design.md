@@ -21,7 +21,7 @@ service rather than introduce another timer-owning component family.
 
 Use the [glossary](../glossary.md) for widget/surface/task terminology and the
 [animation survey](../../animation_framework_survey.md) for existing mechanisms.
-The [legacy ProgressBar](../../../src/roo_windows/widgets/progress_bar.h) retains
+The [legacy ProgressBar](../../../src/roo_windows/material2/progress_bar.h) retains
 its integer/sentinel API; this new family is independent. Its separate clock
 migration is covered by Phase 12 of the animation design, including the change
 from global-uptime marquee phase to per-presentation phase.

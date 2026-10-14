@@ -1,5 +1,5 @@
 
-#include "roo_windows/widgets/text_field.h"
+#include "roo_windows/material2/text_field.h"
 
 #include <algorithm>
 
@@ -12,7 +12,7 @@
 #include "roo_windows/core/task.h"
 #include "roo_windows/internal/single_line_text.h"
 
-namespace roo_windows {
+namespace roo_windows::material2 {
 
 using namespace roo_display;
 
@@ -612,9 +612,9 @@ bool TextField::onKeyEvent(const KeyEvent& event) {
   }
 }
 
-}  // namespace roo_windows
+}  // namespace roo_windows::material2
 
-namespace roo_windows {
+namespace roo_windows::material2 {
 void TextFieldEditor::refreshMetrics() {
   if (target_ == nullptr) return;
   int16_t cursor = cursor_position_, begin = selection_begin_,
@@ -635,4 +635,4 @@ void TextFieldEditor::ensureCursorVisible(int16_t width) {
   if (caret + draw_xoffset_ > width - 2) draw_xoffset_ = width - 2 - caret;
   if (caret + draw_xoffset_ < 0) draw_xoffset_ = -caret;
 }
-}  // namespace roo_windows
+}  // namespace roo_windows::material2

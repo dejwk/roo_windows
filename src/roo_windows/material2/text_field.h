@@ -12,9 +12,8 @@
 #include "roo_windows/internal/text_edit_target.h"
 #include "roo_windows/keyboard/keyboard.h"
 
-namespace roo_windows {
+namespace roo_windows::material2 {
 
-class Application;
 class TextField;
 
 static constexpr roo_time::Duration kCursorBlinkInterval =
@@ -387,4 +386,4 @@ class TextField : public Widget, public internal::TextEditTarget {
   bool editable_;
 };
 
-}  // namespace roo_windows
+}  // namespace roo_windows::material2

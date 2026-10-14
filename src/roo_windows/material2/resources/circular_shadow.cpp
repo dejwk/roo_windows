@@ -1,8 +1,8 @@
-#include "roo_windows/widgets/resources/circular_shadow.h"
+#include "roo_windows/material2/resources/circular_shadow.h"
 
 #include "roo_display/color/named.h"
 
-namespace roo_windows {
+namespace roo_windows::material2 {
 
 using namespace roo_display;
 
@@ -164,4 +164,4 @@ const Pictogram& circular_shadow_48() {
   return value;
 }
 
-}  // namespace roo_windows
+}  // namespace roo_windows::material2

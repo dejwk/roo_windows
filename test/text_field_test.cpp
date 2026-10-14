@@ -1,4 +1,4 @@
-#include "roo_windows/widgets/text_field.h"
+#include "roo_windows/material2/text_field.h"
 
 #include <functional>
 
@@ -57,9 +57,9 @@ TEST_F(TextFieldTest, AbstractTargetUnicodeSelectionAndCompletion) {
 }
 // Verifies empty legacy hint does not enter editor metrics.
 TEST_F(TextFieldTest, EmptyLegacyHintDoesNotEnterEditorMetrics) {
-  TextField field(context(), font_body1(), "Hint",
-                  roo_display::kLeft | roo_display::kMiddle,
-                  TextField::UNDERLINE);
+  material2::TextField field(context(), font_body1(), "Hint",
+                             roo_display::kLeft | roo_display::kMiddle,
+                             material2::TextField::UNDERLINE);
   Task& task = app_.addTaskFullScreen(field);
   auto& editor = task.textFieldEditor();
   editor.edit(&field, false);
@@ -132,9 +132,9 @@ TEST_F(TextFieldTest, MaskExpiryPreservesSelectionAndFiltersControls) {
 // Verifies mask changes preserve Unicode selection, while replacing the buffer
 // clears selection and cancels the recent-glyph deadline.
 TEST_F(TextFieldTest, LegacyMaskAndBufferChangesRefreshActiveMetrics) {
-  TextField field(context(), font_body1(), "Hint",
-                  roo_display::kLeft | roo_display::kMiddle,
-                  TextField::UNDERLINE);
+  material2::TextField field(context(), font_body1(), "Hint",
+                             roo_display::kLeft | roo_display::kMiddle,
+                             material2::TextField::UNDERLINE);
   Task& task = app_.addTaskFullScreen(field);
   field.setContent(u8"aé猫");
   auto& editor = task.textFieldEditor();

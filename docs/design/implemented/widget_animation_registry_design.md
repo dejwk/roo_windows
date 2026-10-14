@@ -402,10 +402,10 @@ phases below specify removal work and validation.
 | [Tabs](../../../src/roo_windows/material3/tabs/tabs.cpp) | Value fraction for all indicator edges; retain geometry | Phase 6 |
 | [SimpleScrollablePanel](../../../src/roo_windows/containers/scrollable_panel.cpp) | Custom time; retain existing physics and one-shot scrollbar hiding | Phases 7–8 |
 | ScrollableTabs | Independent custom-time scroll and value indicator channels | Phase 9 |
-| [Material switch](../../../src/roo_windows/material3/switch/switch.cpp), [legacy switch](../../../src/roo_windows/widgets/switch.cpp) | Value thumb motion; click feedback stays separate | Phase 10 |
+| [Material switch](../../../src/roo_windows/material3/switch/switch.cpp), [legacy switch](../../../src/roo_windows/material2/switch.cpp) | Value thumb motion; click feedback stays separate | Phase 10 |
 | [ToggleIconButton](../../../src/roo_windows/material3/button/toggle_icon_button.cpp) | Value selection morph; click-driven morph remains | Phase 11 |
-| [Legacy ProgressBar](../../../src/roo_windows/widgets/progress_bar.cpp) | Custom-time repeating phase; retain integer/sentinel API | Phase 12 |
-| [TextFieldEditor/TextField](../../../src/roo_windows/widgets/text_field.cpp) | Slow custom-time caret; retain editor binding and password-mask deadline | Phase 13 |
+| [Legacy ProgressBar](../../../src/roo_windows/material2/progress_bar.cpp) | Custom-time repeating phase; retain integer/sentinel API | Phase 12 |
+| [TextFieldEditor/TextField](../../../src/roo_windows/material2/text_field.cpp) | Slow custom-time caret; retain editor binding and password-mask deadline | Phase 13 |
 | [SnackbarHost/Presenter](../../../src/roo_windows/material3/snackbar/snackbar.cpp) | Value entry/exit; retain request queue and semantic timeout | Phases 14–15 |
 | [Material progress indicators](material3_progress_indicators_design.md) | Custom-time Material waveforms | P2.3, three component commits already specified in that design; required before P2.3 closes |
 

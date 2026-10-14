@@ -9,14 +9,14 @@
 #include "roo_windows/containers/horizontal_page_host.h"
 #include "roo_windows/containers/scrollable_panel.h"
 #include "roo_windows/core/theme.h"
+#include "roo_windows/material2/progress_bar.h"
+#include "roo_windows/material2/switch.h"
+#include "roo_windows/material2/text_field.h"
 #include "roo_windows/material3/button/toggle_icon_button.h"
 #include "roo_windows/material3/list/list.h"
 #include "roo_windows/material3/snackbar/snackbar.h"
 #include "roo_windows/material3/switch/switch.h"
 #include "roo_windows/material3/tabs/tabs.h"
-#include "roo_windows/widgets/progress_bar.h"
-#include "roo_windows/widgets/switch.h"
-#include "roo_windows/widgets/text_field.h"
 
 namespace roo_windows::test {
 
@@ -45,18 +45,18 @@ namespace roo_windows::test {
 
   material3::Switch material_switch(context);
   material_switch.setOn();
-  Switch legacy_switch(context);
+  material2::Switch legacy_switch(context);
   legacy_switch.setOn();
 
   material3::ToggleIconButton toggle(context, ic_outlined_24_action_done());
   toggle.setSelected(true);
 
-  ProgressBar progress(context);
+  material2::ProgressBar progress(context);
   progress.setIndeterminate();
 
-  TextField text_field(context, font_body1(), "Value",
-                       roo_display::kLeft | roo_display::kMiddle,
-                       TextField::UNDERLINE);
+  material2::TextField text_field(context, font_body1(), "Value",
+                                  roo_display::kLeft | roo_display::kMiddle,
+                                  material2::TextField::UNDERLINE);
   text_field.setContent("linked");
 
   material3::SnackbarHost snackbar(context);

@@ -1,6 +1,7 @@
+#include "roo_windows/material2/progress_bar.h"
+
 #include "gtest/gtest.h"
 #include "roo_scheduler.h"
-#include "roo_windows/widgets/progress_bar.h"
 #include "roo_windows_render_test_support.h"
 
 namespace roo_windows {
@@ -9,9 +10,9 @@ namespace {
 using test_support::ColorBoxWidget;
 using test_support::RooWindowsRenderTestSized;
 
-class TestProgressBar : public ProgressBar {
+class TestProgressBar : public material2::ProgressBar {
  public:
-  using ProgressBar::ProgressBar;
+  using material2::ProgressBar::ProgressBar;
 
   bool marqueeActive() const {
     return context().animations().contains(*this, kMarquee);
@@ -29,8 +30,7 @@ class ProgressBarAnimationTest : public RooWindowsRenderTestSized<120, 20> {
  protected:
   TestProgressBar* AddProgressBar() {
     auto backdrop = std::make_unique<ColorBoxWidget>(
-        context(), roo_display::Color(0xFFEEE8DC),
-        Dimensions(kWidth, kHeight));
+        context(), roo_display::Color(0xFFEEE8DC), Dimensions(kWidth, kHeight));
     app_.add(std::move(backdrop),
              roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
     auto progress = std::make_unique<TestProgressBar>(context());

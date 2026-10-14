@@ -83,8 +83,8 @@ void initDisplay() {
 
 #include "roo_icons/filled/24/action.h"
 #include "roo_windows/containers/vertical_layout.h"
+#include "roo_windows/material2/button.h"
 #include "roo_windows/material3/dialog/basic_dialog.h"
-#include "roo_windows/widgets/button.h"
 
 roo_scheduler::SchedulingService scheduler;
 Environment env(scheduler);
@@ -92,9 +92,9 @@ Application app(&env, display);
 
 // Fixed spacing can be customized with virtual overrides, without storing
 // padding and margins in every button instance.
-class SpaciousButton : public SimpleButton {
+class SpaciousButton : public material2::SimpleButton {
  public:
-  using SimpleButton::SimpleButton;
+  using material2::SimpleButton::SimpleButton;
 
   /// Adds extra space around the label and icon.
   Padding getPadding() const override { return Padding(PaddingSize::kLarge); }
@@ -109,11 +109,12 @@ class MyPane : public VerticalLayout {
  public:
   MyPane(ApplicationContext& context)
       : VerticalLayout(context),
-        button1_(context, "Contained text", Button::CONTAINED),
+        button1_(context, "Contained text", material2::Button::CONTAINED),
         button2_(context, SCALED_ROO_ICON(filled, action_arrow_circle_right),
-                 "Outlined combo", Button::OUTLINED),
-        button3_(context, SCALED_ROO_ICON(filled, action_done), Button::TEXT),
-        button4_(context, "Custom", Button::OUTLINED),
+                 "Outlined combo", material2::Button::OUTLINED),
+        button3_(context, SCALED_ROO_ICON(filled, action_done),
+                 material2::Button::TEXT),
+        button4_(context, "Custom", material2::Button::OUTLINED),
         alert_(context, "Notification", "", &kOkAction, 1) {
     button4_.setInteriorColor(roo_display::color::Beige);
     button4_.setOutlineColor(roo_display::color::DeepPink);
@@ -149,9 +150,9 @@ class MyPane : public VerticalLayout {
   static constexpr material3::DialogActionSpec kOkAction{
       0, "OK", material3::DialogActionRole::kAcknowledge};
 
-  SimpleButton button1_;
-  SimpleButton button2_;
-  SimpleButton button3_;
+  material2::SimpleButton button1_;
+  material2::SimpleButton button2_;
+  material2::SimpleButton button3_;
   SpaciousButton button4_;
   material3::AlertDialog alert_;
 };

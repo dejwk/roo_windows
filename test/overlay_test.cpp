@@ -4,13 +4,13 @@
 #include "roo_windows/core/overlay_spec.h"
 #include "roo_windows/core/press_overlay.h"
 #include "roo_windows/core/theme.h"
+#include "roo_windows/material2/checkbox.h"
+#include "roo_windows/material2/radio_button.h"
+#include "roo_windows/material2/slider.h"
 #include "roo_windows/material3/checkbox/checkbox.h"
 #include "roo_windows/material3/slider/slider.h"
-#include "roo_windows/widgets/checkbox.h"
 #include "roo_windows/widgets/icon.h"
-#include "roo_windows/widgets/radio_button.h"
 #include "roo_windows/widgets/scrim.h"
-#include "roo_windows/widgets/slider.h"
 #include "roo_windows/widgets/text_label.h"
 #include "roo_windows_render_test_support.h"
 
@@ -417,7 +417,7 @@ class ExampleSliderScreen : public SimpleScrollablePanel {
     setContents(content_);
   }
 
-  HorizontalDivider& divider() { return divider_; }
+  material2::HorizontalDivider& divider() { return divider_; }
   material3::Slider& slider() { return media_.slider(); }
   FullWidthColumnWidget& content() { return content_; }
   ExampleSliderRow& media() { return media_; }
@@ -426,7 +426,7 @@ class ExampleSliderScreen : public SimpleScrollablePanel {
   FullWidthColumnWidget content_;
   TextLabel title_;
   TextLabel subtitle_;
-  HorizontalDivider divider_;
+  material2::HorizontalDivider divider_;
   TextLabel summary_;
   ExampleSliderRow media_;
 };
@@ -449,9 +449,9 @@ TEST(PressOverlay, WideTopStripCrossingCenterIsNotUniformTransparent) {
 // touch targets (checkbox, radio, slider, icon) default to POINT overlays
 // while surface-like clickable widgets default to AREA overlays.
 TEST_F(RooWindowsRenderTest, OverlayPolicyDefaultsFollowWidgetHierarchy) {
-  Checkbox checkbox(context());
-  RadioButton radio(context());
-  Slider slider(context());
+  material2::Checkbox checkbox(context());
+  material2::RadioButton radio(context());
+  material2::Slider slider(context());
   Icon idle_icon(context());
   ClickableSurfaceBoxWidget surface(context(), color::Blue, Dimensions(18, 18));
 
@@ -535,8 +535,8 @@ TEST(OverlaySpecSize, RemainsWithinOneWordOfPressOverlayState) {
 // and parent coordinate spaces.
 TEST_F(RooWindowsRenderTest,
        PointInteractionBoundsFollowLocalAndParentCoordinates) {
-  auto checkbox = std::make_unique<Checkbox>(context());
-  Checkbox* checkbox_ptr = checkbox.get();
+  auto checkbox = std::make_unique<material2::Checkbox>(context());
+  material2::Checkbox* checkbox_ptr = checkbox.get();
   app_.add(std::move(checkbox), Box(20, 12, 37, 29));
 
   // kPointOverlayDiameter is Scaled(40); at default zoom 100 the halo extends
@@ -826,8 +826,8 @@ TEST_F(
   FullWidthColumnWidget* content_ptr = content.get();
   content_ptr->setPadding(Padding(12));
 
-  auto divider = std::make_unique<HorizontalDivider>(context());
-  HorizontalDivider* divider_ptr = divider.get();
+  auto divider = std::make_unique<material2::HorizontalDivider>(context());
+  material2::HorizontalDivider* divider_ptr = divider.get();
   content_ptr->add(std::move(divider), {.flex_grow = 0, .flex_shrink = 0});
 
   auto panel =
@@ -1342,8 +1342,8 @@ TEST_F(
 // on all sides, and setActivated(false) collapses them back to the layout
 // rect.
 TEST_F(RooWindowsRenderTest, PointOverlayBoundsExpandOnlyWhileOverlayIsActive) {
-  auto checkbox = std::make_unique<Checkbox>(context());
-  Checkbox* checkbox_ptr = checkbox.get();
+  auto checkbox = std::make_unique<material2::Checkbox>(context());
+  material2::Checkbox* checkbox_ptr = checkbox.get();
   app_.add(std::move(checkbox), Box(20, 12, 37, 29));
 
   EXPECT_FALSE(checkbox_ptr->hasTransientPaintOverflow());

@@ -1,4 +1,4 @@
-#include "roo_windows/widgets/slider.h"
+#include "roo_windows/material2/slider.h"
 
 #include "roo_display/composition/streamable_stack.h"
 #include "roo_display/image/image.h"
@@ -6,13 +6,13 @@
 #include "roo_display/ui/tile.h"
 #include "roo_windows/core/container.h"
 #include "roo_windows/core/main_window.h"
+#include "roo_windows/material2/resources/circle.h"
+#include "roo_windows/material2/resources/circular_shadow.h"
 #include "roo_windows/material3/theme.h"
-#include "roo_windows/widgets/resources/circle.h"
-#include "roo_windows/widgets/resources/circular_shadow.h"
 
 using namespace roo_display;
 
-namespace roo_windows {
+namespace roo_windows::material2 {
 
 namespace {
 static constexpr int kRadius = Scaled(12);
@@ -219,4 +219,4 @@ void Slider::onCancel() {
   is_dragging_ = false;
 }
 
-}  // namespace roo_windows
+}  // namespace roo_windows::material2

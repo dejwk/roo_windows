@@ -13,7 +13,9 @@ class ApplicationTextInput;
 class MainWindow;
 class Scrim;
 class Task;
+namespace material2 {
 class TextFieldEditor;
+}
 
 /// Selects the barrier paint behind a hosted transient surface.
 enum class TransientBarrierPaint : uint8_t { kTransparent, kScrim };
@@ -223,7 +225,7 @@ class TransientSurfaceHost {
   bool isInteractionOwner(const Task& task) const;
 
   /// Applies owner and hosted-subtree semantic-editor containment.
-  bool allowsSemanticTextInput(const TextFieldEditor& editor) const;
+  bool allowsSemanticTextInput(const material2::TextFieldEditor& editor) const;
 
   /// Delivers a pending outside action after terminal gesture dispatch.
   void flushPendingOutsideInteraction();

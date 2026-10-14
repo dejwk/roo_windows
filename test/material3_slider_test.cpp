@@ -5,13 +5,13 @@
 #include "roo_windows.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/measure_spec.h"
+#include "roo_windows/material2/resources/circle.h"
 #include "roo_windows/material3/slider/range_slider.h"
 #include "roo_windows/material3/slider/slider.h"
 #include "roo_windows/material3/slider/slider_internal.h"
 #include "roo_windows/material3/slider/slider_paint_internal.h"
 #include "roo_windows/material3/slider/slider_size_internal.h"
 #include "roo_windows/material3/slider/value_indicator.h"
-#include "roo_windows/widgets/resources/circle.h"
 
 namespace roo_windows {
 namespace material3 {
@@ -871,7 +871,7 @@ TEST_F(Material3SliderRenderTest, MediumStandardInsetIconPaintsWhenConfigured) {
   SliderStyle style{};
   style.size = SliderSize::kMedium;
 
-  const roo_display::Pictogram* icon = &circle_24();
+  const roo_display::Pictogram* icon = &material2::circle_24();
 
   auto slider = std::make_unique<SliderWithInsetIcon>(
       context(), SliderRange{0.0f, 100.0f}, 50.0f, SliderVariant::kStandard,
@@ -893,7 +893,7 @@ TEST_F(Material3SliderRenderTest, SmallSliderIgnoresInsetIcon) {
   SliderStyle style{};
   style.size = SliderSize::kSmall;
 
-  const roo_display::Pictogram* icon = &circle_24();
+  const roo_display::Pictogram* icon = &material2::circle_24();
 
   auto slider = std::make_unique<SliderWithInsetIcon>(
       context(), SliderRange{0.0f, 100.0f}, 50.0f, SliderVariant::kStandard,
@@ -913,7 +913,7 @@ TEST_F(Material3SliderRenderTest, InsetIconJumpsPastHandleAtMinimumValue) {
   SliderStyle style{};
   style.size = SliderSize::kMedium;
 
-  const roo_display::Pictogram* icon = &circle_24();
+  const roo_display::Pictogram* icon = &material2::circle_24();
 
   auto slider = std::make_unique<SliderWithInsetIcon>(
       context(), SliderRange{0.0f, 100.0f}, 0.0f, SliderVariant::kStandard,
@@ -951,7 +951,7 @@ TEST_F(Material3SliderRenderTest, InactiveSideInsetIconPaintsWhenConfigured) {
   SliderStyle style{};
   style.size = SliderSize::kMedium;
 
-  const roo_display::Pictogram* icon = &circle_24();
+  const roo_display::Pictogram* icon = &material2::circle_24();
   SliderInsetIconAnchor anchor = SliderInsetIconAnchor::kEnd;
 
   auto slider = std::make_unique<SliderWithInsetIcon>(
@@ -979,7 +979,7 @@ TEST_F(Material3SliderRenderTest,
   SliderStyle style{};
   style.size = SliderSize::kMedium;
 
-  const roo_display::Pictogram* icon = &circle_24();
+  const roo_display::Pictogram* icon = &material2::circle_24();
   SliderInsetIconAnchor anchor = SliderInsetIconAnchor::kEnd;
 
   auto slider = std::make_unique<SliderWithInsetIcon>(
@@ -1022,7 +1022,7 @@ TEST_F(Material3SliderRenderTest,
   style.size = SliderSize::kMedium;
   style.tick_mode = SliderTickMode::kShowTicks;
 
-  const roo_display::Pictogram* icon = &circle_24();
+  const roo_display::Pictogram* icon = &material2::circle_24();
 
   auto slider = std::make_unique<SliderWithInsetIcon>(
       context(), SliderRange{0.0f, 1.0f, 0.25f}, 0.5f, SliderVariant::kStandard,
@@ -1062,7 +1062,7 @@ TEST_F(Material3SliderRenderTest,
   style.size = SliderSize::kMedium;
   style.tick_mode = SliderTickMode::kShowTicks;
 
-  const roo_display::Pictogram* icon = &circle_24();
+  const roo_display::Pictogram* icon = &material2::circle_24();
   SliderInsetIconAnchor anchor = SliderInsetIconAnchor::kEnd;
 
   auto slider = std::make_unique<SliderWithInsetIcon>(
@@ -1107,7 +1107,7 @@ TEST_F(Material3SliderRenderTest,
   SliderStyle style{};
   style.size = SliderSize::kMedium;
 
-  const roo_display::Pictogram* icon = &circle_24();
+  const roo_display::Pictogram* icon = &material2::circle_24();
 
   auto slider = std::make_unique<SliderWithInsetIcon>(
       context(), SliderRange{0.0f, 100.0f}, 0.0f, SliderVariant::kStandard,
@@ -1170,7 +1170,7 @@ TEST_F(Material3SliderRenderTest,
   SliderStyle style{};
   style.size = SliderSize::kMedium;
 
-  const roo_display::Pictogram* icon = &circle_24();
+  const roo_display::Pictogram* icon = &material2::circle_24();
 
   auto slider = std::make_unique<ContentPaintSliderWithInsetIcon>(
       context(), SliderRange{0.0f, 100.0f}, 50.0f, SliderVariant::kStandard,
@@ -1215,7 +1215,7 @@ TEST_F(Material3SliderRenderTest,
   SliderStyle style{};
   style.size = SliderSize::kMedium;
 
-  const roo_display::Pictogram* icon = &circle_24();
+  const roo_display::Pictogram* icon = &material2::circle_24();
 
   auto slider = std::make_unique<SliderWithInsetIcon>(
       context(), SliderRange{0.0f, 100.0f, 5.0f}, 5.0f,

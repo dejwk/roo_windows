@@ -56,7 +56,7 @@ What exists today:
 
 - [src/roo_windows/core/application.h](../../../src/roo_windows/core/application.h)
   already owns one shared [`Keyboard`](../../../src/roo_windows/keyboard/keyboard.h)
-  and one shared legacy [`TextFieldEditor`](../../../src/roo_windows/widgets/text_field.h),
+  and one shared legacy [`TextFieldEditor`](../../../src/roo_windows/material2/text_field.h),
 - [src/roo_windows/core/application.cpp](../../../src/roo_windows/core/application.cpp)
   already keeps that keyboard alive in its own popup task from application
   startup, so it can appear above other UI without allocating a new task each
@@ -145,7 +145,7 @@ Four current repo facts directly shape the design.
 2. The shared [Keyboard](../../../src/roo_windows/keyboard/keyboard.h) is already
    alive in a popup task, so the picker can reuse it for numeric input without
    creating another keyboard subsystem.
-3. The current legacy [TextFieldEditor](../../../src/roo_windows/widgets/text_field.h)
+3. The current legacy [TextFieldEditor](../../../src/roo_windows/material2/text_field.h)
    is still specialized to the old text-field widget type. Time-picker input
    does not need that machinery anyway because it edits only one active
    two-digit segment at a time.
@@ -503,7 +503,7 @@ precision.
 
 Input mode reuses the existing shared
 [Keyboard](../../../src/roo_windows/keyboard/keyboard.h), but it does not reuse the
-legacy [TextFieldEditor](../../../src/roo_windows/widgets/text_field.h).
+legacy [TextFieldEditor](../../../src/roo_windows/material2/text_field.h).
 
 That is a deliberate split.
 

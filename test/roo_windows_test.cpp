@@ -4,7 +4,7 @@
 #include <type_traits>
 
 #include "roo_display/shape/basic.h"
-#include "roo_windows/widgets/text_field.h"
+#include "roo_windows/material2/text_field.h"
 #include "roo_windows_render_test_support.h"
 
 using namespace roo_display;
@@ -89,11 +89,12 @@ class FocusableTestWidget : public Widget {
 class TextFieldDestination : public Destination {
  public:
   explicit TextFieldDestination(ApplicationContext& context)
-      : field(context, font_body1(), "", kLeft | kMiddle, TextField::NONE) {}
+      : field(context, font_body1(), "", kLeft | kMiddle,
+              material2::TextField::NONE) {}
 
   Widget& getContents() override { return field; }
 
-  TextField field;
+  material2::TextField field;
 };
 
 class SloppyTouchSpyWidget : public Widget {
@@ -370,7 +371,7 @@ TEST(Windows, TextFieldEditsFromHardwareKeys) {
   TextFieldDestination destination(app.context());
   navigation.push(destination);
   app.refresh();
-  TextField& field = destination.field;
+  material2::TextField& field = destination.field;
 
   ASSERT_TRUE(field.requestFocus());
   EXPECT_TRUE(field.onKeyEvent({KeyPhase::kDown, KeyCode::kCharacter, 0, 'A'}));

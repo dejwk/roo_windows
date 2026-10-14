@@ -15,8 +15,9 @@ namespace roo_windows {
 EditorDestination::EditedTextField::EditedTextField(
     ApplicationContext& context, const std::string& hint,
     EditorDestination& destination)
-    : TextField(context, font_body1(), hint,
-                roo_display::kLeft | roo_display::kMiddle, UNDERLINE),
+    : material2::TextField(context, font_body1(), hint,
+                           roo_display::kLeft | roo_display::kMiddle,
+                           UNDERLINE),
       destination_(destination) {}
 
 void EditorDestination::EditedTextField::onEditFinished(bool confirmed) {
@@ -28,7 +29,7 @@ EditorDestination::EditorDestination(ApplicationContext& context,
     : main_pane_(context),
       content_pane_(context),
       back_(context, SCALED_ROO_ICON(outlined, navigation_arrow_back),
-            Button::TEXT),
+            material2::Button::TEXT),
       text_(context, hint, *this),
       enter_(context, SCALED_ROO_ICON(outlined, navigation_check)),
       editing_(false),
@@ -102,7 +103,7 @@ void EditorDestination::triggerEdit(
   }
 }
 
-void EditorDestination::triggerEditField(TextField& field) {
+void EditorDestination::triggerEditField(material2::TextField& field) {
   Task* task = field.getTask();
   CHECK(task != nullptr);
   triggerEdit(

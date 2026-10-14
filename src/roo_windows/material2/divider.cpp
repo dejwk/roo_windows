@@ -1,9 +1,9 @@
-#include "roo_windows/widgets/divider.h"
+#include "roo_windows/material2/divider.h"
 
 #include "roo_display.h"
 #include "roo_display/shape/basic.h"
 
-namespace roo_windows {
+namespace roo_windows::material2 {
 
 void HorizontalDivider::paint(PaintContext& ctx) const {
   if (!isInvalidated()) return;
@@ -25,4 +25,4 @@ void VerticalDivider::paint(PaintContext& ctx) const {
   ctx.drawVLine(rect.xMax(), rect.yMin(), rect.yMax(), color);
 }
 
-}  // namespace roo_windows
+}  // namespace roo_windows::material2

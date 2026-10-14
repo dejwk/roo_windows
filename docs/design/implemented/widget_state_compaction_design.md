@@ -50,13 +50,13 @@ Before this migration the base class owned:
 The generic toggle API was protected on `Widget`, but the nearby usage
 surface is small and concrete:
 
-- [widgets/checkbox.h](../../../src/roo_windows/widgets/checkbox.h)
-- [widgets/radio_button.h](../../../src/roo_windows/widgets/radio_button.h)
-- [widgets/switch.h](../../../src/roo_windows/widgets/switch.h)
+- [material2/checkbox.h](../../../src/roo_windows/material2/checkbox.h)
+- [material2/radio_button.h](../../../src/roo_windows/material2/radio_button.h)
+- [material2/switch.h](../../../src/roo_windows/material2/switch.h)
 - [material3/checkbox/checkbox.h](../../../src/roo_windows/material3/checkbox/checkbox.h)
 - [material3/radio_button/radio_button.h](../../../src/roo_windows/material3/radio_button/radio_button.h)
 - [material3/switch/switch.h](../../../src/roo_windows/material3/switch/switch.h)
-- [widgets/text_field.h](../../../src/roo_windows/widgets/text_field.h)
+- [material2/text_field.h](../../../src/roo_windows/material2/text_field.h)
   (`VisibilityToggle`)
 
 `kWidgetError` was not consumed outside the base definition.

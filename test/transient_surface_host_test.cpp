@@ -14,7 +14,7 @@
 #include "roo_windows/core/panel.h"
 #include "roo_windows/core/text_input.h"
 #include "roo_windows/core/widget.h"
-#include "roo_windows/widgets/text_field.h"
+#include "roo_windows/material2/text_field.h"
 #include "roo_windows_render_test_support.h"
 
 namespace roo_windows {
@@ -1068,17 +1068,20 @@ TEST_F(HostTest, DeclinedHostedBackDoesNotReachTaskFallback) {
 // Verifies semantic input requires both the interaction-owner editor and a
 // live editor target physically inside the hosted root.
 TEST_F(HostTest, SemanticTextInputIsContainedByHostedRoot) {
-  TextField owner_field(app_.context(), font_body1(), "", roo_display::kLeft,
-                        TextField::NONE);
+  material2::TextField owner_field(app_.context(), font_body1(), "",
+                                   roo_display::kLeft,
+                                   material2::TextField::NONE);
   task_content_.add(WidgetRef(owner_field), Rect(0, 0, 30, 12));
   auxiliary_task_content_ = std::make_unique<TestPanel>(app_.context());
-  TextField other_field(app_.context(), font_body1(), "", roo_display::kLeft,
-                        TextField::NONE);
+  material2::TextField other_field(app_.context(), font_body1(), "",
+                                   roo_display::kLeft,
+                                   material2::TextField::NONE);
   auxiliary_task_content_->add(WidgetRef(other_field), Rect(0, 0, 30, 12));
   app_.addTaskFullScreen(*auxiliary_task_content_);
   TestPanel root(app_.context());
-  TextField presenter_field(app_.context(), font_body1(), "",
-                            roo_display::kLeft, TextField::NONE);
+  material2::TextField presenter_field(app_.context(), font_body1(), "",
+                                       roo_display::kLeft,
+                                       material2::TextField::NONE);
   root.add(WidgetRef(presenter_field), Rect(0, 0, 30, 12));
   root.preferred_ = &presenter_field;
   FocusScope scope;

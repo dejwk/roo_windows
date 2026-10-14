@@ -53,7 +53,7 @@ Before this migration:
   `getOnInteractiveChange() != nullptr` as their default clickability test.
 - A small number of widgets retain `const Environment&` because they create
   child widgets later, for example
-  [toggle_buttons.h](../../../src/roo_windows/widgets/toggle_buttons.h),
+  [toggle_buttons.h](../../../src/roo_windows/material2/toggle_buttons.h),
   [navigation_panel.h](../../../src/roo_windows/containers/navigation_panel.h), and
   [navigation_rail.h](../../../src/roo_windows/containers/navigation_rail.h).
 - Some widgets also cache scheduler access pulled from `Environment`, for

@@ -6,7 +6,7 @@ namespace roo_windows {
 
 void NavigationRailEntry::onClicked() {
   if (rail()->setActive(idx_)) activator_();
-  IconWithCaption::onClicked();
+  material2::IconWithCaption::onClicked();
 }
 
 const NavigationRail* NavigationRailEntry::rail() const {

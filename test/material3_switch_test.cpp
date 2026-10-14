@@ -6,8 +6,8 @@
 #include "roo_windows/core/application_context.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/panel.h"
+#include "roo_windows/material2/switch.h"
 #include "roo_windows/material3/switch/switch.h"
-#include "roo_windows/widgets/switch.h"
 #include "roo_windows_render_test_support.h"
 
 namespace roo_windows {
@@ -65,9 +65,9 @@ class TestMaterialSwitch : public Switch {
   }
 };
 
-class TestLegacySwitch : public ::roo_windows::Switch {
+class TestLegacySwitch : public ::roo_windows::material2::Switch {
  public:
-  using ::roo_windows::Switch::Switch;
+  using ::roo_windows::material2::Switch::Switch;
 
   bool thumbAnimationActive() const {
     return context().animations().contains(*this, kThumb);
@@ -333,7 +333,7 @@ TEST_F(SwitchAnimationTest, DetachedLegacySwitchSnapsWithoutResume) {
 // record (budgeted at 128 bytes in the animation-registry design).
 TEST(Material3Switch, RegistryMigrationKeepsCompactIdleState) {
   EXPECT_LE(sizeof(Switch), sizeof(Widget) + 2 * sizeof(void*) + 8U);
-  EXPECT_LE(sizeof(::roo_windows::Switch), sizeof(Widget) + 8U);
+  EXPECT_LE(sizeof(::roo_windows::material2::Switch), sizeof(Widget) + 8U);
 }
 
 }  // namespace

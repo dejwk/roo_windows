@@ -10,12 +10,12 @@
 #include "roo_testing/system/timer.h"
 #include "roo_windows/core/application.h"
 #include "roo_windows/core/environment.h"
+#include "roo_windows/material2/button.h"
 #include "roo_windows/material3/button/button.h"
 #include "roo_windows/material3/card/flex_card.h"
 #include "roo_windows/material3/fab/fab.h"
 #include "roo_windows/material3/menu/menu_surface.h"
 #include "roo_windows/material3/utilities/dropdown_button.h"
-#include "roo_windows/widgets/button.h"
 
 namespace roo_windows {
 namespace {
@@ -146,9 +146,10 @@ class MutableSurface : public SurfaceWidget {
   uint8_t elevation_ = 6;
 };
 
-class LegacyButton : public Button {
+class LegacyButton : public material2::Button {
  public:
-  explicit LegacyButton(ApplicationContext& context) : Button(context) {}
+  explicit LegacyButton(ApplicationContext& context)
+      : material2::Button(context) {}
 
   Dimensions getSuggestedMinimumDimensions() const override { return {56, 56}; }
 

@@ -1,6 +1,5 @@
 // Target-ABI probe only. Inspect these named symbols with nm; this translation
 // unit intentionally has no executable behavior.
-#include "roo_windows/keyboard/keyboard.h"
 #include "roo_windows/core/application.h"
 #include "roo_windows/core/application_context.h"
 #include "roo_windows/core/focus_manager.h"
@@ -14,7 +13,8 @@
 #include "roo_windows/core/transient_surface_host.h"
 #include "roo_windows/core/widget_ref.h"
 #include "roo_windows/dialogs/dialog.h"
-#include "roo_windows/widgets/text_field.h"
+#include "roo_windows/keyboard/keyboard.h"
+#include "roo_windows/material2/text_field.h"
 
 #define ROO_WINDOWS_SIZE_PROBE(type, name) \
   [[gnu::used]] unsigned char roo_windows_sizeof_##name[sizeof(type)] = {}
@@ -26,11 +26,12 @@ ROO_WINDOWS_SIZE_PROBE(roo_windows::TouchSensor, touch_sensor);
 ROO_WINDOWS_SIZE_PROBE(roo_windows::GestureDetector, gesture_detector);
 ROO_WINDOWS_SIZE_PROBE(roo_windows::FocusManager, focus_manager);
 ROO_WINDOWS_SIZE_PROBE(roo_windows::FocusScope, focus_scope);
-ROO_WINDOWS_SIZE_PROBE(roo_windows::TextFieldEditor, text_field_editor);
+ROO_WINDOWS_SIZE_PROBE(roo_windows::material2::TextFieldEditor,
+                       text_field_editor);
 ROO_WINDOWS_SIZE_PROBE(roo_windows::Keyboard, keyboard);
 ROO_WINDOWS_SIZE_PROBE(roo_windows::TaskPanel, task_panel);
 ROO_WINDOWS_SIZE_PROBE(roo_windows::Task, task);
-ROO_WINDOWS_SIZE_PROBE(roo_windows::TextField, text_field);
+ROO_WINDOWS_SIZE_PROBE(roo_windows::material2::TextField, text_field);
 ROO_WINDOWS_SIZE_PROBE(roo_windows::KeySource, key_source);
 ROO_WINDOWS_SIZE_PROBE(roo_windows::WidgetRef, widget_ref);
 ROO_WINDOWS_SIZE_PROBE(roo_windows::KeyEvent, key_event);

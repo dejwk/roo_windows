@@ -5,7 +5,7 @@
 #include "roo_display/ui/string_printer.h"
 #include "roo_windows/containers/aligned_layout.h"
 #include "roo_windows/containers/flex_layout.h"
-#include "roo_windows/widgets/slider.h"
+#include "roo_windows/material2/slider.h"
 #include "roo_windows/widgets/text_label.h"
 
 namespace roo_windows {
@@ -34,7 +34,9 @@ class BaseSliderWithCaption : public roo_windows::FlexLayout {
 
   /// Returns the row's outer margins; subclasses may override to tighten or
   /// expand the vertical rhythm.
-  virtual Margins getMargins() const { return Margins::Vertical(MarginSize::k8dp); }
+  virtual Margins getMargins() const {
+    return Margins::Vertical(MarginSize::k8dp);
+  }
 
  protected:
   /// Renders the value readout for the supplied raw 16-bit slider position.
@@ -43,7 +45,7 @@ class BaseSliderWithCaption : public roo_windows::FlexLayout {
   roo_windows::AlignedLayout text_section_;
   roo_windows::TextLabel caption_;
   roo_windows::TextLabel value_;
-  roo_windows::Slider slider_;
+  roo_windows::material2::Slider slider_;
 };
 
 /// Concrete `BaseSliderWithCaption` that maps the slider position to a float

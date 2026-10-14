@@ -348,7 +348,7 @@ bool TransientSurfaceHost::isInteractionOwner(const Task& task) const {
 }
 
 bool TransientSurfaceHost::allowsSemanticTextInput(
-    const TextFieldEditor& editor) const {
+    const material2::TextFieldEditor& editor) const {
   if (!isActive()) return true;
   if (!isInputEnabled()) return false;
   Task* owner = window_.host_layer_.owner_;

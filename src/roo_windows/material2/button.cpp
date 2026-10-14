@@ -8,7 +8,7 @@
 
 using namespace roo_display;
 
-namespace roo_windows {
+namespace roo_windows::material2 {
 
 namespace {
 
@@ -189,4 +189,4 @@ void SimpleButton::paint(PaintContext& ctx) const {
   }
 }
 
-}  // namespace roo_windows
+}  // namespace roo_windows::material2

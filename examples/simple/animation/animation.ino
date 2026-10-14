@@ -88,9 +88,9 @@ void initDisplay() {
 #include "roo_icons/filled/action.h"
 #include "roo_icons/filled/alert.h"
 #include "roo_logging.h"
+#include "roo_windows/material2/progress_bar.h"
 #include "roo_windows/widgets/icon.h"
 #include "roo_windows/widgets/image.h"
-#include "roo_windows/widgets/progress_bar.h"
 
 roo_scheduler::SchedulingService scheduler;
 Environment env(scheduler);
@@ -282,7 +282,7 @@ class MyPane : public VerticalLayout {
 
   AnimatedArc arc_;
   GhostImage ghost_;
-  ProgressBar progress_;
+  material2::ProgressBar progress_;
 
   // The warning icon demonstrates a container-owned animation channel.
   Icon warning_icon_;

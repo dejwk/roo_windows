@@ -13,8 +13,8 @@
 #include "roo_windows/containers/aligned_layout.h"
 #include "roo_windows/containers/blit_cache_container.h"
 #include "roo_windows/containers/flex_layout.h"
+#include "roo_windows/material2/button.h"
 #include "roo_windows/material3/typography.h"
-#include "roo_windows/widgets/button.h"
 #include "roo_windows/widgets/text_label.h"
 
 namespace roo_windows {
@@ -988,11 +988,11 @@ struct SwitchingLogWorld {
     auto controls =
         std::make_unique<FlexLayout>(app.context(), FlexDirection::kRow);
     control_row = controls.get();
-    controls->add(
-        std::make_unique<SimpleButton>(app.context(), "Complete", Button::TEXT),
-        {.flex_grow = 1});
-    auto mode_button = std::make_unique<SimpleButton>(
-        app.context(), "Accelerated", Button::TEXT);
+    controls->add(std::make_unique<material2::SimpleButton>(
+                      app.context(), "Complete", material2::Button::TEXT),
+                  {.flex_grow = 1});
+    auto mode_button = std::make_unique<material2::SimpleButton>(
+        app.context(), "Accelerated", material2::Button::TEXT);
     accelerated_button = mode_button.get();
     accelerated_button->setOnInteractiveChange(
         [this]() { updateSelection(true); });
@@ -1052,7 +1052,7 @@ struct SwitchingLogWorld {
   AcceleratedScrollablePanel* accelerated;
   TextLabel* mode;
   FlexLayout* control_row;
-  SimpleButton* accelerated_button;
+  material2::SimpleButton* accelerated_button;
 };
 
 // Verifies changing the comparison caption and revealing an accelerated log

@@ -87,9 +87,9 @@ void initDisplay() {
 
 #include "roo_icons/filled/24/device.h"
 #include "roo_windows/containers/flex_layout.h"
-#include "roo_windows/widgets/divider.h"
+#include "roo_windows/material2/divider.h"
+#include "roo_windows/material2/switch.h"
 #include "roo_windows/widgets/icon.h"
-#include "roo_windows/widgets/switch.h"
 #include "roo_windows/widgets/text_label.h"
 
 class SettingRow : public FlexLayout {
@@ -102,8 +102,8 @@ class SettingRow : public FlexLayout {
         labels_(context, FlexDirection::kColumn),
         primary_(context, primary, material2::text_style_body1()),
         secondary_(context, secondary, material2::text_style_caption()),
-        toggle_(context, initial_on ? Switch::OnOffState::kOn
-                                    : Switch::OnOffState::kOff) {
+        toggle_(context, initial_on ? material2::Switch::OnOffState::kOn
+                                    : material2::Switch::OnOffState::kOff) {
     setAlignItems(AlignItems::kCenter);
     setPadding(Padding(Scaled(12), Scaled(8)));
     setGap(Scaled(12));
@@ -120,7 +120,7 @@ class SettingRow : public FlexLayout {
   FlexLayout labels_;
   TextLabel primary_;
   TextLabel secondary_;
-  Switch toggle_;
+  material2::Switch toggle_;
 };
 
 class SettingsScreen : public FlexLayout {
@@ -144,9 +144,9 @@ class SettingsScreen : public FlexLayout {
 
  private:
   SettingRow wifi_;
-  HorizontalDivider div1_;
+  material2::HorizontalDivider div1_;
   SettingRow bt_;
-  HorizontalDivider div2_;
+  material2::HorizontalDivider div2_;
   SettingRow brightness_;
 };
 

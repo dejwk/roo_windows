@@ -28,7 +28,7 @@ The current widget family is:
   mutable single-line label;
 - [`TextBlock`](../../../src/roo_windows/widgets/text_block.h), an owning
   single-style paragraph widget; and
-- [`TextField`](../../../src/roo_windows/widgets/text_field.h), a single-line
+- [`TextField`](../../../src/roo_windows/material2/text_field.h), a single-line
   editor backed by one shared `TextFieldEditor`.
 
 `TextBlock` already defaults to word wrapping and supports explicit newlines,

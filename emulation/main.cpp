@@ -85,9 +85,9 @@ void initDisplay() {
 
 #include "roo_windows/containers/flex_layout.h"
 #include "roo_windows/containers/scrollable_panel.h"
+#include "roo_windows/material2/divider.h"
 #include "roo_windows/material3/slider/range_slider.h"
 #include "roo_windows/material3/slider/slider.h"
-#include "roo_windows/widgets/divider.h"
 #include "roo_windows/widgets/text_label.h"
 
 namespace {
@@ -468,13 +468,13 @@ class SliderScreen : public SimpleScrollablePanel {
   FullWidthColumn content_;
   TextLabel title_;
   TextLabel subtitle_;
-  HorizontalDivider divider_;
+  material2::HorizontalDivider divider_;
   TextLabel migration_;
   LegacySliderRow legacy_;
   SemanticSliderRow fan_speed_;
   SemanticSliderRow balance_;
   RangeSliderRow quiet_hours_;
-  HorizontalDivider footer_divider_;
+  material2::HorizontalDivider footer_divider_;
   TextLabel note_;
 };
 

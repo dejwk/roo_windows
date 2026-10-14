@@ -269,7 +269,8 @@ TEST_F(KeyboardAvoidanceTest, ExtractedSecureFieldRemainsMasked) {
   ASSERT_EQ(2u, task.navigation().depth());
   Widget* editor = task.textFieldEditor().editedWidget();
   ASSERT_NE(nullptr, editor);
-  EXPECT_TRUE(static_cast<roo_windows::TextField*>(editor)->obscureText());
+  EXPECT_TRUE(
+      static_cast<roo_windows::material2::TextField*>(editor)->obscureText());
   task.textFieldEditor().enter();
   EXPECT_EQ("secret", field.text());
   task.navigation().clear();
@@ -329,7 +330,8 @@ TEST_F(KeyboardAvoidanceTest, ExplicitEditorDestinationRoundTrip) {
   refresh();
   Widget* target = task.textFieldEditor().editedWidget();
   ASSERT_NE(nullptr, target);
-  EXPECT_EQ("New hint", static_cast<roo_windows::TextField*>(target)->hint());
+  EXPECT_EQ("New hint",
+            static_cast<roo_windows::material2::TextField*>(target)->hint());
   task.textFieldEditor().enter();
   EXPECT_EQ(1, completions);
   EXPECT_EQ("before", result);

@@ -4,8 +4,8 @@
 
 #include "roo_display/ui/alignment.h"
 #include "roo_windows/core/panel.h"
-#include "roo_windows/widgets/divider.h"
-#include "roo_windows/widgets/icon_with_caption.h"
+#include "roo_windows/material2/divider.h"
+#include "roo_windows/material2/icon_with_caption.h"
 
 namespace roo_windows {
 
@@ -14,12 +14,12 @@ class NavigationRail;
 
 /// One entry inside a `NavigationRail`: an icon-with-caption that activates a
 /// caller-supplied callback when clicked.
-class NavigationRailEntry : public IconWithCaption {
+class NavigationRailEntry : public material2::IconWithCaption {
  public:
   NavigationRailEntry(ApplicationContext& context,
                       const roo_display::Pictogram& icon, std::string text,
                       int idx, std::function<void()> activator)
-      : IconWithCaption(context, std::move(icon), std::move(text)),
+      : material2::IconWithCaption(context, std::move(icon), std::move(text)),
         idx_(idx),
         activator_(std::move(activator)) {}
 
@@ -94,7 +94,7 @@ class NavigationRail : public Panel {
   roo_display::VAlign alignment_;
   LabelVisibility label_visibility_;
   int active_;
-  VerticalDivider divider_;
+  material2::VerticalDivider divider_;
 
   std::vector<std::unique_ptr<NavigationRailEntry>> destinations_;
 };

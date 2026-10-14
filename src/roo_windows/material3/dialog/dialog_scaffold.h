@@ -9,10 +9,10 @@
 #include "roo_windows/core/focus_manager.h"
 #include "roo_windows/core/layout_direction.h"
 #include "roo_windows/core/transient_surface_host.h"
+#include "roo_windows/material2/divider.h"
 #include "roo_windows/material3/button/button.h"
 #include "roo_windows/material3/container.h"
 #include "roo_windows/material3/dialog/dialog_types.h"
-#include "roo_windows/widgets/divider.h"
 #include "roo_windows/widgets/text_block.h"
 
 namespace roo_windows::material3::internal {
@@ -140,9 +140,9 @@ class DialogScaffold : public Material3Container {
   DialogScaffoldVariant variant_;
   LayoutDirection direction_ = LayoutDirection::kLeftToRight;
   TextBlock title_;
-  HorizontalDivider top_divider_;
+  material2::HorizontalDivider top_divider_;
   DialogBodyScroller body_scroller_;
-  HorizontalDivider bottom_divider_;
+  material2::HorizontalDivider bottom_divider_;
   Widget* body_ = nullptr;
   Widget* chrome_[2] = {nullptr, nullptr};
   const MonoIcon* icon_ = nullptr;

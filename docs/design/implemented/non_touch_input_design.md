@@ -79,8 +79,8 @@ When this design was proposed in 2026-07:
   and [src/roo_windows/core/main_window.cpp](../../../src/roo_windows/core/main_window.cpp)
   already defined the active-layer routing boundaries for tasks, popups, and
   dialogs, but only for touch.
-- [src/roo_windows/widgets/text_field.h](../../../src/roo_windows/widgets/text_field.h)
-  and [src/roo_windows/widgets/text_field.cpp](../../../src/roo_windows/widgets/text_field.cpp)
+- [src/roo_windows/material2/text_field.h](../../../src/roo_windows/material2/text_field.h)
+  and [src/roo_windows/material2/text_field.cpp](../../../src/roo_windows/material2/text_field.cpp)
   contained a shared `TextFieldEditor` and `KeyboardListener`, but they were
   wired to the on-screen [keyboard/keyboard.h](../../../src/roo_windows/keyboard/keyboard.h)
   surface, not to a hardware keyboard source.
@@ -631,7 +631,7 @@ Sliders and similar controls need more than primary activation.
 
 Affected surfaces include:
 
-- [src/roo_windows/widgets/slider.h](../../../src/roo_windows/widgets/slider.h),
+- [src/roo_windows/material2/slider.h](../../../src/roo_windows/material2/slider.h),
 - [src/roo_windows/material3/slider/slider.h](../../../src/roo_windows/material3/slider/slider.h),
 - [src/roo_windows/material3/slider/range_slider.h](../../../src/roo_windows/material3/slider/range_slider.h),
 - and scroll containers such as

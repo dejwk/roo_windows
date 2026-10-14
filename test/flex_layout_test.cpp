@@ -5,8 +5,8 @@
 #include "roo_windows/containers/scrollable_panel.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/widget.h"
+#include "roo_windows/material2/divider.h"
 #include "roo_windows/material3/slider/slider.h"
-#include "roo_windows/widgets/divider.h"
 
 namespace roo_windows {
 namespace {
@@ -121,7 +121,7 @@ TEST(FlexLayout, PaddedColumnShrinksMatchParentWidthChildren) {
   TestFlexLayout parent(context, FlexDirection::kColumn);
   parent.setPadding(Padding(12));
 
-  HorizontalDivider divider(context);
+  material2::HorizontalDivider divider(context);
   material3::Slider slider(context, material3::SliderRange{}, 0.5f);
 
   parent.add(divider, {.flex_grow = 0, .flex_shrink = 0});
@@ -154,8 +154,8 @@ TEST(FlexLayout,
   TestFullWidthFlexLayout* content_ptr = content.get();
   content_ptr->setPadding(Padding(12));
 
-  auto divider = std::make_unique<HorizontalDivider>(context);
-  HorizontalDivider* divider_ptr = divider.get();
+  auto divider = std::make_unique<material2::HorizontalDivider>(context);
+  material2::HorizontalDivider* divider_ptr = divider.get();
   auto slider = std::make_unique<material3::Slider>(
       context, material3::SliderRange{}, 0.5f);
   material3::Slider* slider_ptr = slider.get();
@@ -195,8 +195,8 @@ TEST(FlexLayout,
   TestFullWidthFlexLayout* content_ptr = content.get();
   content_ptr->setPadding(Padding(12));
 
-  auto divider = std::make_unique<HorizontalDivider>(context);
-  HorizontalDivider* divider_ptr = divider.get();
+  auto divider = std::make_unique<material2::HorizontalDivider>(context);
+  material2::HorizontalDivider* divider_ptr = divider.get();
   auto slider = std::make_unique<material3::Slider>(
       context, material3::SliderRange{}, 0.5f);
   material3::Slider* slider_ptr = slider.get();
@@ -236,8 +236,8 @@ TEST(FlexLayout,
   TestFullWidthFlexLayout* content_ptr = content.get();
   content_ptr->setPadding(Padding(12));
 
-  auto divider = std::make_unique<HorizontalDivider>(context);
-  HorizontalDivider* divider_ptr = divider.get();
+  auto divider = std::make_unique<material2::HorizontalDivider>(context);
+  material2::HorizontalDivider* divider_ptr = divider.get();
   auto slider = std::make_unique<material3::Slider>(
       context, material3::SliderRange{}, 0.5f);
   material3::Slider* slider_ptr = slider.get();
@@ -287,8 +287,8 @@ TEST(FlexLayout, SliderExampleNestedColumnsHaveCorrectPadding) {
   TestFullWidthFlexLayout* content_ptr = content.get();
   content_ptr->setPadding(Padding(12));
 
-  auto top_divider = std::make_unique<HorizontalDivider>(context);
-  HorizontalDivider* top_divider_ptr = top_divider.get();
+  auto top_divider = std::make_unique<material2::HorizontalDivider>(context);
+  material2::HorizontalDivider* top_divider_ptr = top_divider.get();
   content_ptr->add(std::move(top_divider), {.flex_grow = 0, .flex_shrink = 0});
 
   // Three nested column FlexLayouts (like SliderRow), each with its own
@@ -307,8 +307,8 @@ TEST(FlexLayout, SliderExampleNestedColumnsHaveCorrectPadding) {
     content_ptr->add(std::move(row), {.flex_grow = 0, .flex_shrink = 0});
   }
 
-  auto footer_divider = std::make_unique<HorizontalDivider>(context);
-  HorizontalDivider* footer_divider_ptr = footer_divider.get();
+  auto footer_divider = std::make_unique<material2::HorizontalDivider>(context);
+  material2::HorizontalDivider* footer_divider_ptr = footer_divider.get();
   content_ptr->add(std::move(footer_divider),
                    {.flex_grow = 0, .flex_shrink = 0});
 

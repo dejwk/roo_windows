@@ -96,7 +96,7 @@ void initDisplays() {
 #include "roo_windows/containers/aligned_layout.h"
 #include "roo_windows/core/destination.h"
 #include "roo_windows/core/navigation_host.h"
-#include "roo_windows/widgets/text_field.h"
+#include "roo_windows/material2/text_field.h"
 #include "roo_windows/widgets/text_label.h"
 
 using namespace roo_windows;
@@ -109,14 +109,15 @@ class SharedEditorDestination : public Destination {
   explicit SharedEditorDestination(ApplicationContext& context)
       : contents(context),
         field(context, font_body1(), "Type here",
-              roo_display::kLeft | roo_display::kMiddle, TextField::UNDERLINE) {
+              roo_display::kLeft | roo_display::kMiddle,
+              material2::TextField::UNDERLINE) {
     contents.add(field, roo_display::kLeft | roo_display::kTop);
   }
 
   Widget& getContents() override { return contents; }
 
   AlignedLayout contents;
-  TextField field;
+  material2::TextField field;
 };
 
 #ifdef ROO_TESTING

@@ -1,10 +1,10 @@
-#include "roo_windows/widgets/progress_bar.h"
+#include "roo_windows/material2/progress_bar.h"
 
 #include "roo_display/shape/basic.h"
 
 using namespace roo_display;
 
-namespace roo_windows {
+namespace roo_windows::material2 {
 
 namespace {
 
@@ -125,4 +125,4 @@ Dimensions ProgressBar::getSuggestedMinimumDimensions() const {
   return Dimensions(Scaled(20), Scaled(4));
 }
 
-}  // namespace roo_windows
+}  // namespace roo_windows::material2

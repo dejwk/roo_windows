@@ -11,8 +11,8 @@
 #include "roo_windows/core/panel.h"
 #include "roo_windows/core/transient_presentation.h"
 #include "roo_windows/core/widget.h"
+#include "roo_windows/material2/text_field.h"
 #include "roo_windows/material3/tabs/tabs.h"
-#include "roo_windows/widgets/text_field.h"
 
 namespace roo_windows {
 namespace {
@@ -139,7 +139,8 @@ class BackPresentation final : public TransientPresentationRegistration {
 class TextFieldDestination : public Destination {
  public:
   explicit TextFieldDestination(ApplicationContext& context)
-      : field(context, font_body1(), "", roo_display::kLeft, TextField::NONE) {}
+      : field(context, font_body1(), "", roo_display::kLeft,
+              material2::TextField::NONE) {}
 
   Widget& getContents() override { return field; }
   BackResult onBackRequested(BackSource source) override {
@@ -148,7 +149,7 @@ class TextFieldDestination : public Destination {
     return BackResult::kUnhandled;
   }
 
-  TextField field;
+  material2::TextField field;
   int request_count = 0;
   BackSource last_source = BackSource::kProgrammatic;
 };

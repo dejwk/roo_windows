@@ -8,7 +8,7 @@
 #include "roo_windows/core/theme.h"
 #include "roo_windows/core/widget.h"
 
-namespace roo_windows {
+namespace roo_windows::material2 {
 
 /// Icon stacked above a short text caption.
 ///
@@ -74,4 +74,4 @@ class IconWithCaption : public Widget {
   int16_t lo_border_;
 };
 
-}  // namespace roo_windows
+}  // namespace roo_windows::material2

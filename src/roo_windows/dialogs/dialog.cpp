@@ -2,7 +2,7 @@
 
 #include "roo_windows/core/display_window.h"
 #include "roo_windows/core/task.h"
-#include "roo_windows/widgets/button.h"
+#include "roo_windows/material2/button.h"
 
 namespace roo_windows {
 
@@ -34,7 +34,7 @@ Dialog::Dialog(ApplicationContext& context,
   buttons_.reserve(button_labels.size());
   int i = 0;
   for (std::string& label : button_labels) {
-    buttons_.emplace_back(context, std::move(label), Button::TEXT);
+    buttons_.emplace_back(context, std::move(label), material2::Button::TEXT);
     buttons_.back().setOnInteractiveChange([this, i]() { actionTaken(i); });
     button_panel_.add(buttons_.back());
     ++i;

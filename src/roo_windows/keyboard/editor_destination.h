@@ -7,8 +7,8 @@
 #include "roo_windows/containers/vertical_layout.h"
 #include "roo_windows/core/destination.h"
 #include "roo_windows/core/navigation_host.h"
-#include "roo_windows/widgets/button.h"
-#include "roo_windows/widgets/text_field.h"
+#include "roo_windows/material2/button.h"
+#include "roo_windows/material2/text_field.h"
 
 namespace roo_windows {
 namespace material3 {
@@ -59,13 +59,13 @@ class EditorDestination : public Destination {
   /// Preserves masking and uses the field's task navigation and placeholder.
   /// The field must be attached and outlive this destination's navigation
   /// membership. The same admission and threading rules as triggerEdit apply.
-  void triggerEditField(TextField& field);
+  void triggerEditField(material2::TextField& field);
 
  private:
   friend class material3::TextField;
 
   /// Forwards keyboard confirmation to the containing destination.
-  class EditedTextField : public TextField {
+  class EditedTextField : public material2::TextField {
    public:
     /// Creates the compact editor using @p context and placeholder @p hint,
     /// forwarding confirmation to the borrowed @p destination.
@@ -93,9 +93,9 @@ class EditorDestination : public Destination {
 
   VerticalLayout main_pane_;
   HorizontalLayout content_pane_;
-  SimpleButton back_;
+  material2::SimpleButton back_;
   EditedTextField text_;
-  SimpleButton enter_;
+  material2::SimpleButton enter_;
   bool editing_ : 1;
   bool confirmed_ : 1;
   bool completing_ : 1;

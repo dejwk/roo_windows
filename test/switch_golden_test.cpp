@@ -4,8 +4,8 @@
 #include "roo_display/core/offscreen.h"
 #include "roo_scheduler.h"
 #include "roo_windows.h"
+#include "roo_windows/material2/switch.h"
 #include "roo_windows/material3/switch/switch.h"
-#include "roo_windows/widgets/switch.h"
 
 namespace roo_windows {
 namespace {
@@ -47,9 +47,9 @@ class SwitchGoldenTest : public testing::Test {
     auto material_off = std::make_unique<material3::Switch>(app.context());
     auto material_on = std::make_unique<material3::Switch>(app.context());
     material3::Switch* material_on_ptr = material_on.get();
-    auto legacy_off = std::make_unique<Switch>(app.context());
-    auto legacy_on = std::make_unique<Switch>(app.context());
-    Switch* legacy_on_ptr = legacy_on.get();
+    auto legacy_off = std::make_unique<material2::Switch>(app.context());
+    auto legacy_on = std::make_unique<material2::Switch>(app.context());
+    material2::Switch* legacy_on_ptr = legacy_on.get();
 
     if (!animate_on) {
       material_on->setOn();

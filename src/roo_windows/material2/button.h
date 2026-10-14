@@ -5,7 +5,7 @@
 #include "roo_windows/core/border_style.h"
 #include "roo_windows/core/surface_widget.h"
 
-namespace roo_windows {
+namespace roo_windows::material2 {
 
 // Implements basic button functionality: clickability, border, elevations.
 class Button : public SurfaceWidget {
@@ -168,4 +168,4 @@ class SimpleButton : public Button {
   const MonoIcon* icon_;
 };
 
-}  // namespace roo_windows
+}  // namespace roo_windows::material2

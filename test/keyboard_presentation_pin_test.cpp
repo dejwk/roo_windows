@@ -6,8 +6,8 @@
 #include "roo_windows/keyboard/layout/accent_demo.h"
 #include "roo_windows/keyboard/layout/en_us.h"
 #include "roo_windows/keyboard/layout/pl_pl.h"
-#include "roo_windows/widgets/button.h"
-#include "roo_windows/widgets/text_field.h"
+#include "roo_windows/material2/button.h"
+#include "roo_windows/material2/text_field.h"
 #include "roo_windows_render_test_support.h"
 
 namespace roo_windows {
@@ -87,7 +87,7 @@ class KeyboardPresentationPinTest : public RooWindowsRenderTestSized<412, 320> {
  protected:
   KeyboardPresentationPinTest()
       : field_(context(), font_body1(), "", roo_display::kLeft,
-               TextField::NONE) {}
+               material2::TextField::NONE) {}
 
   void SetUp() override {
     app_.keyboard().setLayout(kbEngUSLayout());
@@ -116,7 +116,7 @@ class KeyboardPresentationPinTest : public RooWindowsRenderTestSized<412, 320> {
     scheduler_.executeEligibleTasksUpToNow();
   }
 
-  TextField field_;
+  material2::TextField field_;
   Task* task_ = nullptr;
 };
 
@@ -768,8 +768,8 @@ class LegacyKeyboardFirstRow : public Panel {
   LegacyKeyboardFirstRow(ApplicationContext& context, const char* keys)
       : Panel(context) {
     for (int i = 0; i < 10; ++i) {
-      auto button =
-          std::make_unique<SimpleButton>(context, std::string(1, keys[i]));
+      auto button = std::make_unique<material2::SimpleButton>(
+          context, std::string(1, keys[i]));
       button->setFont(font_body1());
       button->setCornerRadius(Scaled(3));
       button->setInteriorColor(context.keyboardColorTheme().normalButton);
@@ -849,8 +849,8 @@ TEST(KeyboardPaint, TextPressAndReleaseWithEditorDamageStayLocal) {
   roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   Application app(&env, display);
-  TextField field(app.context(), font_body1(), "", roo_display::kLeft,
-                  TextField::NONE);
+  material2::TextField field(app.context(), font_body1(), "",
+                             roo_display::kLeft, material2::TextField::NONE);
   Task& task = app.addTaskFullScreen(field);
   task.textFieldEditor().edit(&field, false);
   app.keyboard().show();

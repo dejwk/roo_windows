@@ -14,7 +14,7 @@
 #include "roo_windows/core/text_input.h"
 #include "roo_windows/dialogs/dialog.h"
 #include "roo_windows/keyboard/keyboard.h"
-#include "roo_windows/widgets/text_field.h"
+#include "roo_windows/material2/text_field.h"
 
 namespace roo_windows {
 
@@ -178,7 +178,7 @@ class Application {
   friend class ClickAnimation;
   friend class KeySource;
   friend class TextInputEmitter;
-  friend class TextFieldEditor;
+  friend class material2::TextFieldEditor;
   friend class TransientPresentationSlot;
   friend class TickerGuard;
 
@@ -207,8 +207,8 @@ class Application {
   bool commitTextInputRune(uint32_t rune);
   bool deleteTextInputBackward();
   bool performTextInputAction(TextInputAction action);
-  void activateTextInput(TextFieldEditor& editor);
-  void deactivateTextInput(TextFieldEditor& editor);
+  void activateTextInput(material2::TextFieldEditor& editor);
+  void deactivateTextInput(material2::TextFieldEditor& editor);
   void setTextEditorKeyboardVisibility(bool visible);
   Widget* activeTextEditorWidget() const;
   void dismissTextEditor();

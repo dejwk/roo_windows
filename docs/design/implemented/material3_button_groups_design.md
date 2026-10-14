@@ -20,7 +20,7 @@ label or icon entries, coordinated geometry, and bounded embedded costs.
 A device can offer a Day / Week / Month view selector or a row of related
 capture actions. Applications currently assemble independent buttons and
 selection callbacks, or use the icon-only, pre-Material-3
-[`ToggleButtons`](../../../src/roo_windows/widgets/toggle_buttons.h).
+[`ToggleButtons`](../../../src/roo_windows/material2/toggle_buttons.h).
 Neither approach supplies connected corner geometry or coordinated press
 expansion. A component should keep those rules consistent without adding
 group-specific fields to every standalone button.

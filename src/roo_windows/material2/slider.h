@@ -2,7 +2,7 @@
 
 #include "roo_windows/core/widget.h"
 
-namespace roo_windows {
+namespace roo_windows::material2 {
 
 /// Legacy (pre-Material 3) horizontal slider widget.
 ///
@@ -71,4 +71,4 @@ class Slider : public Widget {
   bool is_dragging_;
 };
 
-}  // namespace roo_windows
+}  // namespace roo_windows::material2

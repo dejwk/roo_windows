@@ -83,21 +83,29 @@ void initDisplay() {
 // Example 3: Wrapping chip bar
 
 #include "roo_windows/containers/flex_layout.h"
-#include "roo_windows/widgets/button.h"
+#include "roo_windows/material2/button.h"
 
 class ChipBar : public FlexLayout {
  public:
   ChipBar(ApplicationContext& context)
       : FlexLayout(context, FlexDirection::kRow),
         chips_{
-            SimpleButton(context, "All", Button::OUTLINED),
-            SimpleButton(context, "Nearby", Button::OUTLINED),
-            SimpleButton(context, "Open now", Button::OUTLINED),
-            SimpleButton(context, "Top rated", Button::OUTLINED),
-            SimpleButton(context, "Price", Button::OUTLINED),
-            SimpleButton(context, "Food", Button::OUTLINED),
-            SimpleButton(context, "Hotels", Button::OUTLINED),
-            SimpleButton(context, "Activities", Button::OUTLINED),
+            material2::SimpleButton(context, "All",
+                                    material2::Button::OUTLINED),
+            material2::SimpleButton(context, "Nearby",
+                                    material2::Button::OUTLINED),
+            material2::SimpleButton(context, "Open now",
+                                    material2::Button::OUTLINED),
+            material2::SimpleButton(context, "Top rated",
+                                    material2::Button::OUTLINED),
+            material2::SimpleButton(context, "Price",
+                                    material2::Button::OUTLINED),
+            material2::SimpleButton(context, "Food",
+                                    material2::Button::OUTLINED),
+            material2::SimpleButton(context, "Hotels",
+                                    material2::Button::OUTLINED),
+            material2::SimpleButton(context, "Activities",
+                                    material2::Button::OUTLINED),
         } {
     setFlexWrap(FlexWrap::kWrap);
     setJustifyContent(JustifyContent::kFlexStart);
@@ -113,7 +121,7 @@ class ChipBar : public FlexLayout {
   }
 
  private:
-  SimpleButton chips_[8];
+  material2::SimpleButton chips_[8];
 };
 
 roo_scheduler::SchedulingService scheduler;

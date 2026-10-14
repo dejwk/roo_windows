@@ -79,7 +79,7 @@ void initDisplay() {
 
 #include "roo_windows/containers/flex_layout.h"
 #include "roo_windows/containers/horizontal_page_host.h"
-#include "roo_windows/widgets/button.h"
+#include "roo_windows/material2/button.h"
 
 namespace {
 
@@ -106,8 +106,8 @@ class HorizontalPageHostDemo : public FlexLayout {
       : FlexLayout(context, FlexDirection::kColumn),
         host_(context),
         controls_(context, FlexDirection::kRow),
-        prev_(context, "Prev", Button::TEXT),
-        next_(context, "Next", Button::TEXT) {
+        prev_(context, "Prev", material2::Button::TEXT),
+        next_(context, "Next", material2::Button::TEXT) {
     setGap(Scaled(8));
     controls_.setGap(Scaled(8));
 
@@ -139,8 +139,8 @@ class HorizontalPageHostDemo : public FlexLayout {
  private:
   HorizontalPageHost host_;
   FlexLayout controls_;
-  SimpleButton prev_;
-  SimpleButton next_;
+  material2::SimpleButton prev_;
+  material2::SimpleButton next_;
 };
 
 }  // namespace

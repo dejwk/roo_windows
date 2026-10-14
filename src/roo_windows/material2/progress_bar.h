@@ -2,7 +2,7 @@
 
 #include "roo_windows/core/widget.h"
 
-namespace roo_windows {
+namespace roo_windows::material2 {
 
 /// Horizontal progress indicator supporting determinate and indeterminate
 /// modes.
@@ -68,4 +68,4 @@ class ProgressBar : public Widget {
   roo_display::Color color_;
 };
 
-}  // namespace roo_windows
+}  // namespace roo_windows::material2

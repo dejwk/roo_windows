@@ -2,7 +2,7 @@
 
 using namespace roo_display;
 
-namespace roo_windows {
+namespace roo_windows::material2 {
 
 IconWithCaption::IconWithCaption(ApplicationContext& context,
                                  const roo_display::Pictogram& def,
@@ -65,4 +65,4 @@ Dimensions IconWithCaption::getSuggestedMinimumDimensions() const {
       icon_->anchorExtents().height() + font_->metrics().maxHeight());
 }
 
-}  // namespace roo_windows
+}  // namespace roo_windows::material2

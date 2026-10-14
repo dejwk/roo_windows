@@ -4,13 +4,13 @@
 #include "roo_display/internal/raw_streamable_overlay.h"
 #include "roo_display/ui/tile.h"
 #include "roo_time.h"
+#include "roo_windows/material2/resources/circle.h"
+#include "roo_windows/material2/resources/circular_shadow.h"
 #include "roo_windows/material3/theme.h"
-#include "roo_windows/widgets/resources/circle.h"
-#include "roo_windows/widgets/resources/circular_shadow.h"
 
 using namespace roo_display;
 
-namespace roo_windows {
+namespace roo_windows::material2 {
 
 namespace {
 
@@ -231,4 +231,4 @@ const ::roo_display::Pictogram& slider_48() {
 
 }  // namespace
 
-}  // namespace roo_windows
+}  // namespace roo_windows::material2

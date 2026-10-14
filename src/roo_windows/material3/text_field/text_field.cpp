@@ -359,7 +359,7 @@ void TextField::paint(PaintContext& ctx) const {
       int16_t offset = 0;
       bool recent = false;
       if (isEdited()) {
-        const TextFieldEditor& editor = getTask()->textFieldEditor();
+        const material2::TextFieldEditor& editor = getTask()->textFieldEditor();
         auto advance = [&](int pos) {
           return pos == 0 ? 0 : editor.glyphs()[pos - 1].advance();
         };
@@ -631,7 +631,7 @@ bool TextField::onKeyEvent(const KeyEvent& event) {
   if (activation && (flags_ & kActivationKey)) {
     return true;
   }
-  TextFieldEditor& editor = getTask()->textFieldEditor();
+  material2::TextFieldEditor& editor = getTask()->textFieldEditor();
   bool shift = event.modifiers & kKeyModifierShift;
   switch (event.code) {
     case KeyCode::kCharacter:

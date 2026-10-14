@@ -2,7 +2,7 @@
 
 #include "roo_windows/core/widget.h"
 
-namespace roo_windows {
+namespace roo_windows::material2 {
 
 /// Legacy (pre-Material 3) on/off switch with animated thumb.
 ///
@@ -15,8 +15,7 @@ class Switch : public Widget {
   /// Creates a switch with the specified initial state.
   explicit Switch(ApplicationContext& context,
                   OnOffState state = OnOffState::kOff)
-      : Widget(context),
-        state_(StateBits(state) | EndpointFraction(state)) {
+      : Widget(context), state_(StateBits(state) | EndpointFraction(state)) {
     context.presentations().observe(*this);
   }
 
@@ -102,4 +101,4 @@ class Switch : public Widget {
   uint16_t state_;
 };
 
-}  // namespace roo_windows
+}  // namespace roo_windows::material2

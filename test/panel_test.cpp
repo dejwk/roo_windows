@@ -15,8 +15,8 @@
 #include "roo_windows/containers/vertical_layout.h"
 #include "roo_windows/core/application.h"
 #include "roo_windows/core/environment.h"
+#include "roo_windows/material2/toggle_buttons.h"
 #include "roo_windows/widgets/blank.h"
-#include "roo_windows/widgets/toggle_buttons.h"
 
 namespace roo_windows {
 namespace {
@@ -117,7 +117,7 @@ TEST(PanelLifetime, CompositeMembersDetachBeforeDestruction) {
   }
   EXPECT_EQ(destructions, 1);
   {
-    ToggleButtons buttons(context);
+    material2::ToggleButtons buttons(context);
     buttons.addButton(icon);
     buttons.addButton(icon);
   }

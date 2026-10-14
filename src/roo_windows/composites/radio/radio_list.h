@@ -7,7 +7,7 @@
 #include "roo_windows/core/margins_mixin.h"
 #include "roo_windows/core/panel.h"
 #include "roo_windows/core/widget.h"
-#include "roo_windows/widgets/radio_button.h"
+#include "roo_windows/material2/radio_button.h"
 
 namespace roo_windows {
 
@@ -73,7 +73,7 @@ class RadioListItem : public HorizontalLayout {
   }
 
   int idx_;
-  MarginsMixin<RadioButton> button_;
+  MarginsMixin<material2::RadioButton> button_;
   std::unique_ptr<Widget> item_;
   std::function<void(int idx)> on_click_;
 };
