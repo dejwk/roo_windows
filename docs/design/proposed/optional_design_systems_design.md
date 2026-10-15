@@ -78,7 +78,8 @@ component roles or color scheme.
 ## Design Overview
 
 Introduce **resolved surface appearance**: a temporary value containing the
-foreground, accent ink, six interaction opacities, and disabled-content opacity
+foreground, resolved interaction ink, six interaction opacities, and
+disabled-content opacity
 appropriate to a surface. It contains neither tokens nor a system identifier.
 It is computed from live theme settings and is never cached in each widget.
 Background geometry and alpha composition remain in the existing `background()`
@@ -128,12 +129,27 @@ algorithm for choosing a contrasting foreground.
 
 The default `defaultColor()` reads the surface foreground. Existing explicit
 widget color setters retain their current sentinel or override semantics.
-`usesHighlighterColor()` selects accent rather than foreground for interaction
-ink. Default interaction hooks read `interactionAppearance()`; this inherits
+`interactionColor()` reads the resolved interaction ink; core does not choose
+between foreground and accent colors. Default interaction hooks read
+`interactionAppearance()`; this inherits
 parent surface appearance for point overlays and local surface appearance for
 other overlays. State-specific component overrides continue to take precedence.
 Disabled-content opacity comes from the component's surface appearance.
 Existing subtree effect application, clipping, and pixel ownership are unchanged.
+
+Remove `usesHighlighterColor()` from core. Material2 keeps accent/highlighter
+selection within its own controls and theme helpers. Material3 resolves each
+component's state-layer ink from its own roles and state. Its current users of
+`usesHighlighterColor()` (FABs, toggle icon buttons, and button-group entries)
+migrate to resolved interaction hooks. A system-local helper can retain the
+name where useful, but generic widgets neither expose nor interpret it.
+Generic `Icon` activation styling must also use resolved appearance; preserve
+Material2 navigation highlighting in its system-specific control.
+
+The two colors represent separate rendering purposes, not interchangeable
+palette candidates. They can be equal, but changing content ink does not
+implicitly change interaction ink. Generic descendants inherit both resolved
+values without selecting an accent policy.
 
 System controls that draw their own content resolve their own component colors
 and settings. An unfilled control interacting with an ancestor's surface uses
@@ -255,7 +271,7 @@ when implemented. The new value is a rendering contract, not stored widget state
 ```cpp
 struct SurfaceAppearance {
   roo_display::Color foreground;
-  roo_display::Color accent;
+  roo_display::Color interaction_color;
   uint8_t interaction_opacity[6];  // Existing InteractionState order.
   uint8_t disabled_content_opacity;  // Existing 0..128 scale.
 };
@@ -266,7 +282,7 @@ class Widget {
   virtual SurfaceAppearance interactionAppearance() const;
   // Keep existing defaultColor(), interactionColor(), interactionOpacity(),
   // disabledContentOpacity(), background(), and effectiveBackground() names.
-  // No new appearance fields.
+  // No usesHighlighterColor() in core and no new appearance fields.
 };
 
 struct Theme {
@@ -325,8 +341,9 @@ Proposed commit message:
 
 Add `SurfaceAppearance` and the two hooks, initially resolving existing roles.
 Route generic content and interaction rendering through them. Keep background
-composition and role APIs temporarily. Add a generic forwarding example and
-hook tests; run overlay, surface invalidation, and material3 container tests.
+composition, role APIs, and the legacy highlighter hook temporarily. Resolve
+its result into interaction ink at the migration adapter, never into an accent
+field in the new contract. Add a generic forwarding example and hook tests; run overlay, surface invalidation, and material3 container tests.
 Check the phase 1 resource gates.
 
 Proposed commit message:
@@ -339,8 +356,10 @@ Proposed commit message:
 ### Phase 3: localize Material3 role resolution
 
 Migrate Material3 component surfaces and special consumers listed above to the
-resolved contract. Retain component-local roles and names. Update container,
-tabs, navigation, and button-group tests and relevant examples. Require unchanged
+resolved contract, including the Material3 highlighter-hook consumers. Resolve
+their state-layer ink locally while retaining component-local roles and names.
+Update container, tabs, navigation, FAB, toggle icon button, and button-group
+tests and relevant examples. Require unchanged
 same-system goldens and the phase 1 gates before moving on.
 
 Proposed commit message:
@@ -353,8 +372,11 @@ Proposed commit message:
 ### Phase 4: remove core tokens and the Material2 bridge
 
 Add independent framework defaults, migrate Material2 to its own boundaries,
-and remove core role declarations and `Material2ColorRole`. Update generic
-helpers and all remaining callers. Add a mixed-system example and documentation
+and remove core role declarations, `Material2ColorRole`, and core
+`usesHighlighterColor()`. Keep Material2 accent selection system-local and
+remove the generic Icon highlighter dependency. Update generic helpers and all
+remaining callers. Test that differing foreground and interaction colors are
+inherited independently, including Material2 navigation activation. Add a mixed-system example and documentation
 for root customization and cross-system inheritance. Validate independent live
 updates, overrides, reparenting, and detached roots; run the full library suite
 and frontend integration build. Verify the resource gates.
@@ -431,7 +453,7 @@ requirement while retaining tokens where their meaning belongs.
 
 #### Inherit only a background color
 
-A color alone cannot recover foreground, accent, and interaction policy;
+A color alone cannot recover foreground, interaction ink, and interaction policy;
 equal RGB values can represent distinct roles. Background inheritance remains
 separate from the resolved appearance defined above.
 
