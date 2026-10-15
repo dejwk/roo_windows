@@ -1366,10 +1366,10 @@ TEST_F(RooWindowsRenderTest, PointOverlayBoundsExpandOnlyWhileOverlayIsActive) {
             checkbox_ptr->getParentTransientPaintBounds());
 }
 
-// Verifies that deactivating a point overlay invalidates and restores the
+// Verifies that unfocusing a point overlay invalidates and restores the
 // background pixels outside the widget's logical bounds (where the halo
 // previously painted), while pixels inside the widget also revert to their
-// pre-activation color.
+// pre-focus color.
 TEST_F(RooWindowsRenderTest,
        PointOverlayInvalidationRestoresBackgroundOutsideLogicalBounds) {
   auto back = std::make_unique<ColorBoxWidget>(context(), color::Red,
@@ -1387,13 +1387,13 @@ TEST_F(RooWindowsRenderTest,
   EXPECT_EQ(QuantizeToArgb4444(color::Red), background_pixel);
   EXPECT_EQ(QuantizeToArgb4444(color::Blue), center_background_pixel);
 
-  front_ptr->setActivated(true);
+  front_ptr->setFocused(true);
   refresh();
   Color overlay_pixel = pixelAt(12, 20);
   EXPECT_NE(QuantizeToArgb4444(color::Red), overlay_pixel);
   EXPECT_NE(center_background_pixel, pixelAt(28, 20));
 
-  front_ptr->setActivated(false);
+  front_ptr->setFocused(false);
   refresh();
   EXPECT_EQ(QuantizeToArgb4444(color::Red), pixelAt(12, 20));
   EXPECT_EQ(center_background_pixel, pixelAt(28, 20));
@@ -1419,14 +1419,14 @@ TEST_F(RooWindowsRenderTest,
 
   refresh();
 
-  front_ptr->setActivated(true);
+  front_ptr->setFocused(true);
   refresh();
 
   Color overlay =
       front_ptr->theme().material3Theme().color.contentColorFor(parent_role);
   overlay.set_a(front_ptr->theme()
                     .material3Theme()
-                    .stateLayer(parent_role, InteractionState::kActivated)
+                    .stateLayer(parent_role, InteractionState::kFocus)
                     .a());
   Color expected = QuantizeToArgb4444(AlphaBlend(
       front_ptr->theme().material3Theme().color.resolve(parent_role), overlay));
@@ -1758,11 +1758,11 @@ TEST_F(RooWindowsRenderTest, PointOverlayCanTintFlexOwnedGapSpace) {
 
   Color gap_background_pixel = pixelAt(gap_x, gap_y);
 
-  front_ptr->setActivated(true);
+  front_ptr->setFocused(true);
   refresh();
   EXPECT_NE(gap_background_pixel, pixelAt(gap_x, gap_y));
 
-  front_ptr->setActivated(false);
+  front_ptr->setFocused(false);
   refresh();
   EXPECT_EQ(gap_background_pixel, pixelAt(gap_x, gap_y));
 }
@@ -1802,11 +1802,11 @@ TEST_F(RooWindowsRenderTest,
   Color outside_background_pixel = pixelAt(overflow_x, overflow_y);
   EXPECT_EQ(QuantizeToArgb4444(color::Red), outside_background_pixel);
 
-  front_ptr->setActivated(true);
+  front_ptr->setFocused(true);
   refresh();
   EXPECT_NE(outside_background_pixel, pixelAt(overflow_x, overflow_y));
 
-  front_ptr->setActivated(false);
+  front_ptr->setFocused(false);
   refresh();
   EXPECT_EQ(outside_background_pixel, pixelAt(overflow_x, overflow_y));
 }

@@ -139,10 +139,7 @@ static_assert(std::is_move_constructible<Theme>::value);
 // component/density/interaction settings while framework colors resolve live.
 TEST(Material3ApplicationThemeTest, PreservesIdentityAndCustomPolicy) {
   Material3Theme material;
-  const StateLayerOverride overrides[] = {
-      {ColorToken::kPrimary, InteractionState::kPressed, Color(0x80123456)}};
-  material.state.overrides = overrides;
-  material.state.overrideCount = 1;
+  material.state.pressed = 128;
   material.state.disabledContentOpacity = 17;
   material.components.card.filledContainer = ColorToken::kTertiary;
   material.density = Density::kMinus2;
@@ -158,15 +155,14 @@ TEST(Material3ApplicationThemeTest, PreservesIdentityAndCustomPolicy) {
   EXPECT_EQ(m3, &theme->material3Theme());
   EXPECT_EQ(ColorToken::kTertiary, m3->components.card.filledContainer);
   EXPECT_EQ(Density::kMinus2, m3->density);
-  EXPECT_EQ(material.state.rules, m3->state.rules);
-  EXPECT_EQ(overrides, m3->state.overrides);
+  EXPECT_EQ(128, m3->state.pressed);
   EXPECT_EQ(17, theme->disabledContentOpacity());
   EXPECT_EQ(colors.primary,
             theme->frameworkColor(FrameworkColorRole::kEmphasis));
   EXPECT_EQ(colors.onPrimary.withA(20),
             theme->frameworkStateLayer(FrameworkColorRole::kEmphasis,
                                        InteractionState::kHover));
-  EXPECT_EQ(Color(0x80123456),
+  EXPECT_EQ(colors.onPrimary.withA(128),
             theme->frameworkStateLayer(FrameworkColorRole::kEmphasis,
                                        InteractionState::kPressed));
 }

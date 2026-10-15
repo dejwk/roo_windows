@@ -50,13 +50,13 @@ TEST(Material2Theme, PreservesLegacyDefaults) {
   EXPECT_EQ(previous.color.outline, material.color.outline);
   EXPECT_EQ(previous.state.disabledContentOpacity,
             material.state.disabledContentOpacity);
+  const uint8_t neutral[] = {10, 31, 20, 31, 31, 20};
+  const uint8_t colored[] = {20, 61, 41, 61, 61, 41};
   for (unsigned i = 0; i < 6; ++i) {
     const auto state = static_cast<InteractionState>(i);
-    EXPECT_EQ(
-        previous.stateLayer(material3::ColorToken::kBackground, state).a(),
-        material.state.opacity(ColorRole::kBackground, state));
-    EXPECT_EQ(previous.stateLayer(material3::ColorToken::kPrimary, state).a(),
-              material.state.opacity(ColorRole::kPrimary, state));
+    EXPECT_EQ(neutral[i],
+              material.state.opacity(ColorRole::kBackground, state));
+    EXPECT_EQ(colored[i], material.state.opacity(ColorRole::kPrimary, state));
   }
   for (unsigned token_index = 0; token_index < 33; ++token_index) {
     const auto token = static_cast<material3::ColorToken>(token_index);
@@ -67,7 +67,7 @@ TEST(Material2Theme, PreservesLegacyDefaults) {
               material.color.accentColorFor(role));
     for (unsigned i = 0; i < 6; ++i) {
       const auto state = static_cast<InteractionState>(i);
-      EXPECT_EQ(previous.stateLayer(token, state).a(),
+      EXPECT_EQ(role >= ColorRole::kPrimary ? colored[i] : neutral[i],
                 material.state.opacity(role, state));
     }
   }

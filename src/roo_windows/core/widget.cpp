@@ -671,10 +671,7 @@ roo_display::Color Widget::interactionColor() const {
 }
 
 uint8_t Widget::interactionOpacity(InteractionState state) const {
-  return theme()
-      .material3Theme()
-      .stateLayer(effectiveOverlayColorRole(), state)
-      .a();
+  return theme().material3Theme().state.opacity(state);
 }
 
 uint8_t Widget::disabledContentOpacity() const {

@@ -32,48 +32,44 @@ TEST(Material3ColorSchemeTest, ResolvesEveryToken) {
   }
 }
 
-// Verifies symbolic layers always read the current palette, while explicit
-// literal overrides (including transparent) take precedence and retain alpha.
-TEST(Material3StateLayerThemeTest, ResolvesLivePaletteAndLiteralOverrides) {
+// Verifies the official state opacities are independent of every container
+// token and selection/activation do not introduce generic state layers.
+TEST(Material3StateLayerThemeTest, UsesSystemStateOpacities) {
   material3::Material3Theme theme;
-  const material3::StateLayerOverride overrides[] = {
-      {material3::ColorToken::kPrimary, InteractionState::kFocus,
-       roo_display::Color(0x80123456)},
-      {material3::ColorToken::kPrimary, InteractionState::kPressed,
-       roo_display::color::Transparent},
-  };
-  theme.state.overrides = overrides;
-  theme.state.overrideCount = 2;
+  const uint8_t expected[] = {20, 26, 0, 0, 26, 41};
+  static_assert(sizeof(material3::StateLayerTheme) == 5);
+  for (uint8_t token = 0; token < 33; ++token) {
+    const auto container = static_cast<material3::ColorToken>(token);
+    for (uint8_t i = 0; i < 6; ++i) {
+      const auto state = static_cast<InteractionState>(i);
+      EXPECT_EQ(expected[i], theme.stateLayer(container, state).a());
+    }
+  }
+  EXPECT_EQ(49, theme.state.disabledContentOpacity);
+}
+
+// Verifies palette and opacity edits are live, copies own their settings,
+// and zero opacity disables a layer without borrowed override storage.
+TEST(Material3StateLayerThemeTest, ResolvesLivePaletteAndOwnedOpacities) {
+  material3::Material3Theme original;
+  material3::Material3Theme theme = original;
   theme.color.onPrimary = roo_display::Color(0xFF654321);
-  EXPECT_EQ(theme.color.onPrimary.withA(20),
+  theme.state.hover = 73;
+  theme.state.pressed = 0;
+  EXPECT_EQ(theme.color.onPrimary.withA(73),
             theme.stateLayer(material3::ColorToken::kPrimary,
                              InteractionState::kHover));
-  EXPECT_EQ(roo_display::Color(0x80123456),
-            theme.stateLayer(material3::ColorToken::kPrimary,
-                             InteractionState::kFocus));
+  EXPECT_EQ(theme.color.onSurface.withA(73),
+            theme.stateLayer(material3::ColorToken::kSurface,
+                             InteractionState::kHover));
   EXPECT_EQ(roo_display::color::Transparent,
             theme.stateLayer(material3::ColorToken::kPrimary,
                              InteractionState::kPressed));
-  EXPECT_EQ(roo_display::color::Transparent,
-            material3::StateLayerTheme{}.resolve(
-                material3::DefaultColorScheme(),
-                material3::ColorToken::kSurface, InteractionState::kHover));
-}
-
-// Verifies custom symbolic rules can select a different source color, and
-// absent rules remain transparent without resolving the kNone sentinel.
-TEST(Material3StateLayerThemeTest, SupportsCustomSymbolicRules) {
-  material3::StateLayerRules rules{};
-  rules.layer[0][0] = {material3::ColorToken::kTertiary, 123};
-  material3::Material3Theme theme;
-  theme.state.rules = &rules;
-  theme.color.tertiary = roo_display::Color(0xFF123456);
-  EXPECT_EQ(theme.color.tertiary.withA(123),
-            theme.stateLayer(material3::ColorToken::kPrimary,
-                             InteractionState::kHover));
-  EXPECT_EQ(roo_display::color::Transparent,
-            theme.stateLayer(material3::ColorToken::kPrimary,
-                             InteractionState::kFocus));
+  EXPECT_EQ(
+      roo_display::color::Transparent,
+      theme.stateLayer(material3::ColorToken::kNone, InteractionState::kHover));
+  EXPECT_EQ(20, original.state.hover);
+  EXPECT_EQ(26, original.state.pressed);
 }
 
 // Verifies aggregate Material themes retain their existing color/state
@@ -84,7 +80,7 @@ TEST(Material3ThemeTest, InitializesCompactComponentSurfaceDefaults) {
   EXPECT_EQ(static_cast<size_t>(3), sizeof(material3::CardTheme));
   EXPECT_EQ(static_cast<size_t>(1), sizeof(material3::ToolbarTheme));
   EXPECT_EQ(static_cast<size_t>(29), sizeof(material3::ComponentTheme));
-  // Default rules are shared; each theme retains only palette and metadata.
+  // Each theme owns its compact palette, state, and component settings.
   EXPECT_LE(sizeof(material3::Material3Theme), static_cast<size_t>(200));
   EXPECT_EQ(material3::ColorToken::kSurfaceContainerLow,
             material.components.card.elevatedContainer);
@@ -145,11 +141,7 @@ TEST(Material3ThemeTest, MakesTheDocumentedFrameworkMapping) {
   material.color.error = roo_display::Color(7);
   material.color.onError = roo_display::Color(8);
   material.state.disabledContentOpacity = 49;
-  const material3::StateLayerOverride overrides[] = {
-      {material3::ColorToken::kPrimary, InteractionState::kPressed,
-       roo_display::Color(9)}};
-  material.state.overrides = overrides;
-  material.state.overrideCount = 1;
+  material.state.pressed = 87;
 
   const Theme framework{.material3 = material};
   EXPECT_EQ(roo_display::Color(1),
@@ -169,7 +161,7 @@ TEST(Material3ThemeTest, MakesTheDocumentedFrameworkMapping) {
   EXPECT_EQ(roo_display::Color(8),
             framework.frameworkColor(FrameworkColorRole::kOnCritical));
   EXPECT_EQ(49, framework.disabledContentOpacity());
-  EXPECT_EQ(roo_display::Color(9),
+  EXPECT_EQ(material.color.onPrimary.withA(87),
             framework.frameworkStateLayer(FrameworkColorRole::kEmphasis,
                                           InteractionState::kPressed));
 }
@@ -210,13 +202,13 @@ TEST(ThemeTest, DefaultThemeComposesMaterial3AndFrameworkThemes) {
   EXPECT_EQ(material.color.onPrimary.withA(20),
             material.stateLayer(material3::ColorToken::kPrimary,
                                 InteractionState::kHover));
-  EXPECT_EQ(material.color.onSurface.withA(31),
+  EXPECT_EQ(material.color.onSurface.withA(26),
             material.stateLayer(material3::ColorToken::kSurface,
                                 InteractionState::kPressed));
 }
 
 // Verifies copying the application theme owns an independent palette while
-// sharing immutable rules, and framework lookups never retain stale colors.
+// owning state settings, and framework lookups never retain stale colors.
 TEST(ThemeTest, OwnsIndependentPaletteAndResolvesFrameworkLive) {
   Theme original;
   Theme copy = original;
@@ -224,8 +216,8 @@ TEST(ThemeTest, OwnsIndependentPaletteAndResolvesFrameworkLive) {
   copy.material3Theme().color.onPrimary = roo_display::Color(0xFFABCDEF);
   EXPECT_NE(original.material3Theme().color.primary,
             copy.material3Theme().color.primary);
-  EXPECT_EQ(original.material3Theme().state.rules,
-            copy.material3Theme().state.rules);
+  copy.material3Theme().state.pressed = 63;
+  EXPECT_EQ(26, original.material3Theme().state.pressed);
   EXPECT_EQ(copy.material3Theme().color.primary,
             copy.frameworkColor(FrameworkColorRole::kEmphasis));
   EXPECT_EQ(copy.material3Theme().color.onPrimary.withA(20),
@@ -246,7 +238,7 @@ TEST(Material3ThemeTest, BuildsStateLayersFromCustomPalette) {
   EXPECT_EQ(colors.onPrimary.withA(20),
             theme.stateLayer(material3::ColorToken::kPrimary,
                              InteractionState::kHover));
-  EXPECT_EQ(colors.onSurface.withA(31),
+  EXPECT_EQ(colors.onSurface.withA(26),
             theme.stateLayer(material3::ColorToken::kSurface,
                              InteractionState::kPressed));
   EXPECT_EQ(colors.primary,

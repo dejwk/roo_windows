@@ -64,8 +64,9 @@ component roles or color scheme.
    source files or headers installed.
 2. An application must be able to combine systems and customize their settings
    independently. Installing one palette must not mutate another implicitly.
-3. Preserve existing same-system appearance, component states, explicit color
-   and font overrides, and theme invalidation behavior.
+3. Preserve same-system component behavior, explicit color and font overrides,
+   and theme invalidation. Use the corrected Material3 state defaults below
+   rather than freezing historical opacity values.
 4. Define how generic descendants and components from another system inherit
    appearance, including point interactions and detached presentation roots.
 5. Preserve accessor and field names unless removing a dependency requires a
@@ -243,6 +244,31 @@ With it disabled, hardware input and application-provided semantic editors
 continue to work, and core has no keyboard source dependency. Move the legacy
 editor/keyboard installation into the enabled integration rather than requiring
 Material2 from every `Task`.
+
+### Material3 state-layer defaults
+
+Material3 now owns four state opacities, independent of container color: hover
+8%, focus 10%, pressed 10%, and dragged 16%. These follow the generated
+[Compose v0_210 system tokens](https://raw.githubusercontent.com/androidx/androidx/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/StateTokens.kt)
+and [Android 34.0.0 system tokens](https://raw.githubusercontent.com/material-components/material-components-android/master/lib/java/com/google/android/material/resources/res/values/tokens.xml),
+checked on 2026-10-15. Rounded to 0..255 alpha, the values are 20, 26, 26,
+and 41. Disabled-content opacity remains separate at 38%, encoded as 49 on the
+renderer’s 0..128 scale.
+
+The full color-token-by-state matrix and borrowed override tables are removed.
+`state.opacity(interaction)` resolves alpha independently;
+`stateLayer(container, interaction)` combines it with live palette content ink.
+The four opacity fields are owned values and can be customized directly, for
+example `theme.material3Theme().state.pressed = 26`. Component-specific ink
+belongs in component resolution, not a global matrix. Selection and activation
+return zero generic state-layer opacity; components express their persistent
+states through their own appearance. Material2 retains its independent policy.
+
+This correction is a prerequisite to the planned inheritance refactor. The
+same-system preservation and golden gates below use these corrected defaults,
+not the earlier container-dependent opacity policy. This change does not alter
+core's existing simultaneous-state accumulation or animation timing; revising
+that composition policy requires separate rendering coverage.
 
 ### Resource model
 

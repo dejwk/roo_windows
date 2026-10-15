@@ -17,14 +17,13 @@ app.invalidateTheme();
 ```
 
 Assign a complete `material3::ColorScheme` to `theme.material3Theme().color` to switch
-palettes. Component roles, density and interaction rules live beside `color`
+palettes. Component roles, density and interaction opacities live beside `color`
 in the same `material3::Material3Theme` section. Defaults work without a factory.
 
 The application borrows the theme, so keep it at a stable address and alive
 longer than the environment and widgets. Copying a theme copies its palettes
-and settings; the copy does not borrow the original palette. Immutable
-interaction rules are shared. Custom rule/override storage is borrowed and
-must outlive every theme that refers to it.
+and settings, including interaction opacities; the copy does not borrow the
+original palette or state settings.
 
 ## Repainting
 
@@ -51,21 +50,40 @@ Future supported systems can add named sections to the application theme.
 When another system is introduced, framework-default selection can become an
 explicit setting. Today Material 3 supplies those defaults.
 
-## Interaction rules
+## Interaction opacities
 
-`theme.material3Theme().stateLayer(container, state)` resolves a two-byte rule
-(source color token plus opacity) against the current palette. The shared
-33-by-6 default table occupies 396 bytes. No resolved RGB table is retained in
-each theme, and no additional per-widget storage is needed.
+Material 3 uses one opacity per transient state, independent of container color.
+The defaults follow the generated
+[Compose v0_210 state tokens](https://raw.githubusercontent.com/androidx/androidx/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/StateTokens.kt)
+and [Android 34.0.0 state tokens](https://raw.githubusercontent.com/material-components/material-components-android/master/lib/java/com/google/android/material/resources/res/values/tokens.xml):
 
-For custom symbolic policy, copy `*theme.material3Theme().state.rules` into
-application-owned `material3::StateLayerRules`, edit its entries, and set the
-rules pointer to that storage. `ColorToken::kNone` disables a layer.
+| Field | Opacity | Rounded 0..255 alpha |
+| --- | --- | --- |
+| `hover` | 8% | 20 |
+| `focus` | 10% | 26 |
+| `pressed` | 10% | 26 |
+| `dragged` | 16% | 41 |
 
-Literal ARGB exceptions use `StateLayerOverride` storage and
-`state.overrideCount`. The first matching container/state wins, including a
-transparent override. Its alpha is final. Overrides are scanned linearly;
-default themes have none and resolve in constant time.
+Customize these owned values directly, then invalidate the theme:
+
+```cpp
+theme.material3Theme().state.hover = 20;
+theme.material3Theme().state.pressed = 26;
+app.invalidateTheme();
+```
+
+`state.opacity(interaction)` returns alpha without resolving a palette color.
+`stateLayer(container, interaction)` applies it to the live content color for
+that container. Zero opacity or `ColorToken::kNone` produces a transparent layer.
+Selected and activated states add no generic Material 3 layer; components
+express persistent selection through their own colors and indicators.
+
+`disabledContentOpacity` remains separate, with default 49 (38%) on the existing
+0..128 disabled-content scale. The entire state settings object occupies five
+bytes, with no matrix, borrowed rule storage, or per-widget state.
+Material2 keeps its independently owned settings. This simplification changes
+Material3 defaults; it does not change animation timing or the renderer's
+existing accumulation of simultaneous interactions.
 
 ## Migration
 
@@ -76,3 +94,6 @@ default themes have none and resolve in constant time.
 - `MakeFrameworkTheme()` and the stored framework projection are removed.
 - `MakeTheme()` and M3 default-theme accessors are replaced by default
   construction. `roo_windows::DefaultTheme()` remains a shared immutable option.
+- `StateLayerRules`, `StateLayerOverride`, and their borrowed pointers are
+  removed. Customize the four state opacity fields; implement component-specific
+  interaction ink in the widget's `interactionColor()` override.

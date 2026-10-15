@@ -153,66 +153,37 @@ struct ColorScheme {
   }
 };
 
-/// A palette-relative interaction layer. kNone explicitly disables the layer.
-struct StateLayerRule {
-  ColorToken colorToken = ColorToken::kNone;
-  uint8_t opacity = 0;
-};
-
-/// Shared interaction rules indexed by container token and interaction state.
-struct StateLayerRules {
-  StateLayerRule layer[33][6];
-};
-
-/// A literal ARGB replacement for one interaction layer, including transparent.
-struct StateLayerOverride {
-  ColorToken container;
-  InteractionState state;
-  roo_display::Color color;
-};
-
-/// Borrows palette-independent rules and optional literal-color replacements.
-/// All borrowed storage must outlive this theme and its copies. Null rules
-/// mean no default layers. Overrides are scanned in order (first match wins);
-/// ordinary themes have none, so their lookup is constant-time.
+/// Owned Material 3 state-layer opacities, independent of container color.
+/// Defaults follow md.sys.state (Compose v0_210 / Android tokens 34.0.0).
+/// Layer opacities use 0..255 alpha, rounded from 8%, 10%, 10%, and 16%.
 struct StateLayerTheme {
-  // Disabled compositing transforms arbitrary content colors separately.
-  uint8_t disabledContentOpacity = 0;
-  const StateLayerRules* rules = nullptr;
-  const StateLayerOverride* overrides = nullptr;
-  uint8_t overrideCount = 0;
+  uint8_t hover = 20;
+  uint8_t focus = 26;
+  uint8_t pressed = 26;
+  uint8_t dragged = 41;
+  /// Disabled content uses the renderer's separate 0..128 scale (38%).
+  uint8_t disabledContentOpacity = 49;
 
-  /// Resolves a layer against the supplied live palette; overrides keep their
-  /// complete ARGB value, without applying the rule's opacity a second time.
-  constexpr roo_display::Color resolve(const ColorScheme& colors,
-                                       ColorToken container,
-                                       InteractionState state) const {
-    const uint8_t container_index = static_cast<uint8_t>(container);
-    const uint8_t state_index = static_cast<uint8_t>(state);
-    if (container_index >= 33 || state_index >= 6) {
-      assert(false && "invalid Material 3 interaction token or state");
-      return roo_display::color::Transparent;
+  /// Returns transient interaction opacity. Selection and activation are
+  /// component appearance, not additional Material 3 state layers.
+  constexpr uint8_t opacity(InteractionState state) const {
+    switch (state) {
+      case InteractionState::kHover:
+        return hover;
+      case InteractionState::kFocus:
+        return focus;
+      case InteractionState::kPressed:
+        return pressed;
+      case InteractionState::kDragged:
+        return dragged;
+      case InteractionState::kSelected:
+      case InteractionState::kActivated:
+        return 0;
     }
-    assert(overrides != nullptr || overrideCount == 0);
-    if (overrides != nullptr) {
-      for (uint8_t i = 0; i < overrideCount; ++i) {
-        if (overrides[i].container == container &&
-            overrides[i].state == state) {
-          return overrides[i].color;
-        }
-      }
-    }
-    if (rules == nullptr) return roo_display::color::Transparent;
-    const StateLayerRule& rule = rules->layer[container_index][state_index];
-    if (rule.colorToken == ColorToken::kNone) {
-      return roo_display::color::Transparent;
-    }
-    return colors.resolve(rule.colorToken).withA(rule.opacity);
+    assert(false && "invalid Material 3 interaction state");
+    return 0;
   }
 };
-
-static_assert(sizeof(StateLayerRule) == 2,
-              "Symbolic state-layer rules must remain compact.");
 
 /// Material 3 appearance data, owned by the application Theme.
 struct Material3Theme {
@@ -227,7 +198,11 @@ struct Material3Theme {
   /// Resolves an interaction layer using this theme's current palette.
   constexpr roo_display::Color stateLayer(ColorToken container,
                                           InteractionState interaction) const {
-    return state.resolve(color, container, interaction);
+    const uint8_t opacity = state.opacity(interaction);
+    if (opacity == 0 || container == ColorToken::kNone) {
+      return roo_display::color::Transparent;
+    }
+    return color.contentColorFor(container).withA(opacity);
   }
 
   /// Maps a generic framework role to the current palette.
