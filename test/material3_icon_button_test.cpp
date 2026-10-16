@@ -7,10 +7,47 @@
 #include "roo_windows/core/click_animation.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/material3/button/icon_button.h"
+#include "roo_windows/material3/button/internal/icon_appearance.h"
 
 namespace roo_windows {
 namespace material3 {
 namespace {
+
+// Verifies selected and unselected icon content keeps a distinct semantic ink
+// for every style, independent of the inherited container role.
+TEST(Material3IconInkContract, ToggleStylesKeepStateSpecificContent) {
+  Theme theme;
+  ColorScheme& colors = theme.material3Theme().color;
+  colors.onSurfaceVariant = roo_display::Color(0xFF102030);
+  colors.onSecondaryContainer = roo_display::Color(0xFF203040);
+  colors.primary = roo_display::Color(0xFF304050);
+  colors.onPrimary = roo_display::Color(0xFF405060);
+  colors.onSecondary = roo_display::Color(0xFF506070);
+  colors.inverseOnSurface = roo_display::Color(0xFF607080);
+
+  EXPECT_EQ(colors.onSurfaceVariant,
+            internal::ResolveToggleIconContentColor(
+                theme, IconButtonStyle::kStandard, true, false));
+  EXPECT_EQ(colors.primary, internal::ResolveToggleIconContentColor(
+                                theme, IconButtonStyle::kStandard, true, true));
+  EXPECT_EQ(colors.onSurfaceVariant,
+            internal::ResolveToggleIconContentColor(
+                theme, IconButtonStyle::kFilled, true, false));
+  EXPECT_EQ(colors.onPrimary, internal::ResolveToggleIconContentColor(
+                                  theme, IconButtonStyle::kFilled, true, true));
+  EXPECT_EQ(colors.onSecondaryContainer,
+            internal::ResolveToggleIconContentColor(
+                theme, IconButtonStyle::kFilledTonal, true, false));
+  EXPECT_EQ(colors.onSecondary,
+            internal::ResolveToggleIconContentColor(
+                theme, IconButtonStyle::kFilledTonal, true, true));
+  EXPECT_EQ(colors.onSurfaceVariant,
+            internal::ResolveToggleIconContentColor(
+                theme, IconButtonStyle::kOutlined, true, false));
+  EXPECT_EQ(colors.inverseOnSurface,
+            internal::ResolveToggleIconContentColor(
+                theme, IconButtonStyle::kOutlined, true, true));
+}
 
 ApplicationContext MakeContext(Environment& env) {
   return ApplicationContext(env.scheduler(), env.theme(),

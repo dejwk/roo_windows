@@ -1,9 +1,11 @@
 # Optional design systems and resolved appearance inheritance
 
 Status: proposed. Material2 isolation, independent system palettes, and the
-simplified Material3 state opacities are implemented prerequisites. None of the
-phases below is marked complete. Revised 2026-10-16 around a shared application
-look and feel rather than independent interaction policies per design system.
+simplified Material3 state opacities are implemented prerequisites. Phase 1
+characterization is recorded in the
+[boundary audit](optional_design_systems_phase1_audit.md). Later phases remain
+proposed. Revised 2026-10-16 around a shared application look and feel rather
+than independent interaction policies per design system.
 
 ## Objective
 
@@ -683,6 +685,12 @@ Each phase is one reviewable commit with its own tests and documentation.
 The stashed earlier stage 3 is reference material, not a patch to apply wholesale.
 
 ### Phase 1: document vocabulary and characterize the boundaries
+
+The [Phase 1 boundary audit](optional_design_systems_phase1_audit.md) records
+the role inventory, pinned component sources, current versus intended feedback,
+test vectors, target ABI sizes, and host paint fixture results. Existing and new
+component regressions cover current appearance; tests for intended interaction
+pixels join the phase that changes that renderer or component.
 
 Add the responsibility/state vocabulary to the glossary. Inventory role consumers,
 component-specific feedback and explicit overrides. Include persistent-layer

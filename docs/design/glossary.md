@@ -4,6 +4,61 @@ This glossary defines terms shared by Roo Windows design documents. Component
 documents should link here instead of assigning a different meaning to the
 same term.
 
+## Appearance and Interaction
+
+### Framework capability
+
+A reusable mechanism supplied by core, such as layout, input routing, clipping,
+state flags, click feedback, animation scheduling, or painting. A capability
+does not choose a component's shape, color, or response to an action. See the
+[optional design systems proposal](proposed/optional_design_systems_design.md#common-vocabulary-and-responsibility).
+
+### Application look and feel
+
+Defaults shared by components in one application, including interaction
+strength and click feedback timing. The application theme owns these defaults;
+individual design systems own their component palettes and typography. A
+component can override a default when its own behavior requires it.
+
+### Appearance boundary
+
+A surface that supplies background and readable foreground/accent defaults to
+its descendants. Generic layouts forward these values. A component that owns a
+new surface resolves its own palette roles at that boundary; an unfilled control
+can use the inherited colors.
+
+### Transient interaction
+
+Hover, focus, press, or drag that can request a temporary feedback layer. Core
+tracks these flags and provides the rendering path; the component chooses which
+interactions apply and their ink and region.
+
+### Persistent component state
+
+Selection, checking, expansion, or activation that continues after a pointer
+interaction ends. Components express it through their own fill, indicator,
+outline, icon, or other appearance. A persistent state does not itself imply a
+generic transient layer. Availability is separate: disabled controls suppress
+transient feedback and use a disabled content treatment.
+
+### Interaction layer and press effect
+
+A non-press interaction layer covers the component's chosen region during hover,
+focus, or drag. A press effect may reveal through a ripple or fade. They are
+separate contributions: the press effect composites over the non-press layer,
+and persistent component appearance is below both. See the
+[feedback composition design](proposed/optional_design_systems_design.md#interaction-states-and-combination).
+
+### Shared spacing vocabulary
+
+[`Scaled()`](../../src/roo_windows/core/theme.h),
+[`PaddingSize` and `Padding`](../../src/roo_windows/core/padding.h), and
+[`Margins`](../../src/roo_windows/core/margins.h) are framework mechanisms for
+scaled dimensions and layout spacing. Material 3
+[`Density`](../../src/roo_windows/material3/density.h) is a separate component
+geometry choice; sharing the spacing mechanisms does not make component
+dimensions identical across systems.
+
 ## Ownership and Lifetime
 
 ### Adopted object

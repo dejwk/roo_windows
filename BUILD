@@ -43,6 +43,17 @@ cc_test(
     ],
 )
 
+# Phase 1 optional-design-systems paint-depth and resource baseline.
+cc_test(
+    name = "optional_design_systems_resource_test",
+    srcs = ["test/optional_design_systems_resource_test.cpp"],
+    linkstatic = 1,
+    deps = [
+        ":roo_windows",
+        "@roo_testing//:arduino_gtest_main",
+    ],
+)
+
 cc_test(
     name = "damage_region_resource_test",
     srcs = ["test/damage_region_resource_test.cpp"],

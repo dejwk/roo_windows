@@ -9,7 +9,9 @@
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/measure_spec.h"
 #include "roo_windows/material3/button/button.h"
+#include "roo_windows/material3/button/internal/button_appearance.h"
 #include "roo_windows/material3/button/internal/button_geometry.h"
+#include "roo_windows/material3/button/internal/button_group_appearance.h"
 #include "roo_windows/material3/internal/elevation.h"
 #include "roo_windows/material3/typography.h"
 
@@ -18,6 +20,64 @@ namespace material3 {
 namespace {
 
 using roo_display::Color;
+
+// Verifies the five button variants keep their distinct content roles. These
+// colors are the later interaction-ink migration's component-owned baseline.
+TEST(Material3ButtonInkContract, VariantContentRolesRemainDistinct) {
+  Theme theme;
+  material3::ColorScheme& colors = theme.material3Theme().color;
+  colors.primary = Color(0xFF102030);
+  colors.onPrimary = Color(0xFF203040);
+  colors.onSecondaryContainer = Color(0xFF304050);
+  colors.onSurfaceVariant = Color(0xFF405060);
+
+  EXPECT_EQ(colors.primary,
+            internal::ResolveButtonAppearance(theme, ButtonVariant::kText, true)
+                .content);
+  EXPECT_EQ(colors.onPrimary, internal::ResolveButtonAppearance(
+                                  theme, ButtonVariant::kFilled, true)
+                                  .content);
+  EXPECT_EQ(colors.onSecondaryContainer,
+            internal::ResolveButtonAppearance(theme,
+                                              ButtonVariant::kFilledTonal, true)
+                .content);
+  EXPECT_EQ(colors.onSurfaceVariant, internal::ResolveButtonAppearance(
+                                         theme, ButtonVariant::kOutlined, true)
+                                         .content);
+  EXPECT_EQ(colors.primary, internal::ResolveButtonAppearance(
+                                theme, ButtonVariant::kElevated, true)
+                                .content);
+}
+
+// Verifies connected entries retain their own selected and unselected content
+// roles instead of copying the group container role into interaction ink.
+TEST(Material3ButtonInkContract, ConnectedSelectionKeepsDistinctContent) {
+  Theme theme;
+  ColorScheme& colors = theme.material3Theme().color;
+  colors.onPrimary = Color(0xFF102030);
+  colors.onSurfaceVariant = Color(0xFF203040);
+  colors.onSecondary = Color(0xFF304050);
+  colors.onSecondaryContainer = Color(0xFF405060);
+  colors.inverseOnSurface = Color(0xFF506070);
+  colors.primary = Color(0xFF607080);
+
+  const internal::GroupStyle styles[] = {
+      internal::GroupStyle::kFilled, internal::GroupStyle::kFilledTonal,
+      internal::GroupStyle::kOutlined, internal::GroupStyle::kElevated};
+  const Color selected[] = {colors.onPrimary, colors.onSecondary,
+                            colors.inverseOnSurface, colors.onPrimary};
+  const Color unselected[] = {colors.onSurfaceVariant,
+                              colors.onSecondaryContainer,
+                              colors.onSurfaceVariant, colors.primary};
+  for (int i = 0; i < 4; ++i) {
+    EXPECT_EQ(selected[i],
+              internal::ResolveConnectedAppearance(theme, styles[i], true, true)
+                  .content);
+    EXPECT_EQ(unselected[i], internal::ResolveConnectedAppearance(
+                                 theme, styles[i], false, true)
+                                 .content);
+  }
+}
 
 roo_display::Color QuantizeToArgb4444(roo_display::Color color) {
   roo_display::Argb4444 mode;
