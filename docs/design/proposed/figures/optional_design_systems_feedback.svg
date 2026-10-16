@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="300" viewBox="0 0 760 300" role="img" aria-labelledby="title desc">
+  <title id="title">Feedback composition for one widget</title>
+  <desc id="desc">Component appearance receives one non-press layer and an independent press effect. Non-press coverage remains outside the ripple. Each final pixel is emitted once.</desc>
+  <rect width="760" height="300" fill="white"/>
+  <g font-family="sans-serif" fill="#202124" font-size="16">
+    <text x="24" y="30" font-size="20">Conceptual composition order for one widget</text>
+    <rect x="24" y="55" width="220" height="100" rx="8" fill="#f5f5f5" stroke="#555"/>
+    <text x="40" y="82" font-weight="bold">Component appearance</text>
+    <text x="40" y="108">Fill, content, outline,</text>
+    <text x="40" y="132">persistent selection</text>
+    <path d="M250 105 H270 M262 99 L270 105 L262 111" fill="none" stroke="#555" stroke-width="2"/>
+    <rect x="278" y="55" width="210" height="100" rx="8" fill="#f5f5f5" stroke="#555"/>
+    <text x="294" y="82" font-weight="bold">Non-press layer</text>
+    <text x="294" y="108">One winner:</text>
+    <text x="294" y="132">drag, focus, hover</text>
+    <path d="M494 105 H514 M506 99 L514 105 L506 111" fill="none" stroke="#555" stroke-width="2"/>
+    <rect x="522" y="55" width="214" height="100" rx="8" fill="#f5f5f5" stroke="#555"/>
+    <text x="538" y="82" font-weight="bold">Press effect</text>
+    <text x="538" y="108">Pressed opacity once,</text>
+    <text x="538" y="132">within reveal coverage</text>
+    <text x="24" y="194">Outside the ripple: component appearance + non-press layer.</text>
+    <text x="24" y="222">Inside the ripple: press color composites over both.</text>
+    <text x="24" y="266">Logical layers compose before output; write each final pixel once.</text>
+  </g>
+</svg>

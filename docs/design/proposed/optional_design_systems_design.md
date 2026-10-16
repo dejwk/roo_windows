@@ -41,6 +41,11 @@ terminology. Relevant current APIs are:
 - [SurfaceWidget](../../../src/roo_windows/core/surface_widget.h) introduces a
   role through `containerRole()` and separately resolves alpha-composited
   backgrounds. A role is semantic information, not a pixel color.
+- [OverlaySpec](../../../src/roo_windows/core/overlay_spec.cpp) already
+  alpha-composites a pressed ripple over the widget's overlay color. The overlay
+  query first sums simultaneous-state opacities, including pressed; the ripple
+  can therefore apply pressed twice. During expansion it folds the base into the
+  ripple and clears the separate base, restricting both to the ripple coverage.
 - [Material2 ThemeMixin](../../../src/roo_windows/material2/theme_mixin.h)
   maps those role identities to its independently owned palette and state
   settings. It does not read Material3 palette values.
@@ -54,7 +59,11 @@ terminology. Relevant current APIs are:
 - [Application](../../../src/roo_windows/core/application.h) owns the software
   keyboard and exposes a Material2 alert convenience method.
   [Task](../../../src/roo_windows/core/task.h) owns a Material2 text-field
-  editor. These are additional obstacles to a core-only build.
+  editor shared by Material2 and Material3 text fields. Its caret, selection,
+  and input functionality is needed even without the software keyboard.
+- [Material3 dialog scaffolding](../../../src/roo_windows/material3/dialog/dialog_scaffold.h)
+  embeds Material2 horizontal dividers. Optional installation also requires
+  replacing this direct component dependency with Material3 dividers.
 - The root [Bazel target](../../../BUILD) currently collects all sources.
   Linker removal of unused code does not prove header or source independence.
 
@@ -107,6 +116,11 @@ its descendants. A generic layout forwards these defaults. A system component
 establishing its own surface resolves appropriate colors from its system theme.
 A borrowed unfilled control uses the inherited foreground/accent where it has
 no stronger semantic requirement.
+
+Feedback has three contributions: component appearance (including persistent
+selection), one non-press interaction layer, and one press effect. The press
+ripple composites over the non-press layer without replacing that layer or
+adding a second full-area pressed tint.
 
 The accent is readable emphasis ink on that surface, not necessarily the raw
 application primary color. Core carries it but does not decide when it replaces
@@ -186,21 +200,72 @@ opacity distinction. Preserve a widget-local override hook for demonstrated
 exceptions; do not add a second global matrix or a registry of exceptions.
 A component using no overlay continues to draw none regardless of these values.
 
-For shared feedback on a single widget, choose one eligible transient state in
-this priority order: dragged, pressed/clicking, focused, hovered. Do not sum
-opacities. Eligibility includes the widget's feedback suppression hooks. A
-zero-opacity winning state remains transparent; it does not expose a lower
-priority state. On release or cancellation, recompute the winner from remaining
-states. Persistent flags contribute no generic layer.
+Resolve one **non-press layer** from eligible dragged, focused, and hovered
+states, in that priority order. Do not sum those opacities. A zero-opacity winner
+stays transparent rather than exposing a lower-priority state. This deterministic
+priority is application policy: it avoids retaining interaction-order history on
+widgets. Compose instead selects the most recently started non-press interaction
+that remains active. Reproducing that rule would require remembering, for example,
+whether hover began before or after focus; the existing Boolean state flags do
+not encode it. Accept this bounded difference: use only the existing flags, with
+no per-widget history, timestamps, order code, or side registry. When the winner
+ends, recompute from the remaining active states. Press is not in this contest.
 
-A click ripple/fade uses the pressed state's ink and opacity. Its existing reveal
-progress modulates that one effect. Suppress the same widget's lower-priority
-base state layer during the click reveal; do not apply the pressed opacity both
-as a full-area layer and as a ripple. An active drag suppresses the visual click
-effect without cancelling its semantic-delivery bookkeeping. Existing ancestor
-subtree effects remain distinct from arbitration of a single widget's states.
-This priority is the application's chosen framework policy, not a claim that all
-Material releases and platforms use an identical arbitration implementation.
+Resolve the **press effect** independently, using pressed ink and opacity once.
+During ripple reveal, restrict it to the revealed region; during fade reveal,
+modulate its opacity by the existing progress. Exclude pressed from the non-press
+query and never add a second full-area pressed tint. Press-suppression hooks
+suppress only this contribution. Keep the non-press layer underneath the ripple
+and outside its expanding boundary. Drag participates in non-press arbitration;
+click cancellation remains owned by existing gesture/input handling.
+
+Compose in this order: component appearance, non-press layer, press effect.
+Source-over composite the effect colors, retaining the renderer's existing
+coverage-preserving tint application to content, clipping, and ancestor-effect
+contracts. Resolve final pixels in one write, including point halos and deferred
+contributors. With the same ink and normalized alphas $a_b$ (non-press) and $a_p$
+(press), combined alpha is $a_p + a_b(1-a_p)$, not $a_b+a_p$. Different inks require
+compositing the colors too; one summed opacity and one ink are insufficient.
+
+![Feedback composition order](figures/optional_design_systems_feedback.svg)
+
+The official [Compose implementation](https://raw.githubusercontent.com/androidx/androidx/androidx-main/compose/material/material-ripple/src/commonMain/kotlin/androidx/compose/material/ripple/Ripple.kt)
+separates a non-press layer from press ripples; [Material Web](https://raw.githubusercontent.com/material-components/material-web/main/ripple/internal/_ripple.scss)
+also separates hover and pressed effects. The
+[Material3 internal ripple at AndroidX c4b0af2](https://android.googlesource.com/platform/frameworks/support/+/c4b0af2cf608b0ee1d5542627f3c1358bbd956ac/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/internal/ripple/Ripple.kt)
+likewise handles press separately and selects one remaining non-press interaction.
+These implementations support simultaneous press and non-press feedback, not
+one winner across all four states. Use the shared Compose opacity-ripple path
+above as the composition-order baseline; phase 1 pins its exact revision.
+Adopt that separation without importing either platform's full motion behavior.
+
+Preserve the existing controller's admission, reveal curve, final-frame settlement,
+and activation-delivery timing. An early release can retain its press effect
+until existing settlement completes. A press held after reveal completes retains
+one full-region pressed contribution at unchanged opacity. Explicitly remove the
+current drop from a stronger ripple to a paler held state: reaching full
+expansion alone must not reduce the tint. The reference
+[Compose ripple animation](https://raw.githubusercontent.com/androidx/androidx/androidx-main/compose/material/material-ripple/src/commonMain/kotlin/androidx/compose/material/ripple/RippleAnimation.kt)
+finishes its entrance and waits for a finish signal before fading out; expansion
+completion itself does not start that fade. Once neither a click reveal nor a
+held press remains, remove only the press effect, leaving current non-press feedback
+and component appearance. Cancellation follows existing settlement rules. No new
+release fade or hover/focus transition animation is introduced. Ink follows live
+component state, including selection changes, without restarting reveal.
+Terminal painting must settle the controller even when opacity is zero or
+feedback is suppressed; visual eligibility must not strand semantic delivery.
+
+Persistent selected/activated flags remain, but request no automatic framework
+tint. Components can still paint a persistent tint, fill, icon, outline, or
+indicator. An automatic extra layer would shade components that already express
+selection. Before removing Material2's selected/activated opacity entries,
+migrate `ToggleButtons` to a component-owned active surface: use a local
+foreground tint of 31/255 over the inherited background, with transient effects
+composited above it. Its internal button becomes a `SurfaceWidget`, adds no style
+fields, and forwards inherited foreground/accent when the pair is introduced.
+Preserve explicit styling overrides. Every other persistent-layer consumer must
+receive an explicit replacement in the same phase; selection must remain visible
+without hover or focus.
 
 Move the existing shared click duration and default ripple/fade choice into
 `FrameworkTheme::interaction`, retaining their current defaults. Existing
@@ -267,28 +332,46 @@ than reconstructing it from inherited container tokens. Directly painted effects
 (text fields and keyboard feedback included) use the common opacity policy too.
 
 The state-aware hook accommodates component tokens that distinguish hover,
-focus, and pressed ink. The rendering pipeline must request the winning state's
-color, including pressed ink for click animation, rather than choosing one
-color and then varying only alpha. Component compliance is audited in phase 1;
-existing golden images are evidence of current output, not specification proof.
+focus, and pressed ink. Request the winning non-press state's color and the
+pressed color separately, rather than choosing one ink and varying only alpha.
+Component compliance is audited in phase 1; existing golden images are evidence
+of current output, not specification proof.
 
 ### Theme ownership and explicit coordination
 
-Add `FrameworkTheme` in `core/framework_theme.h`. It owns the existing eight
-framework root color roles, shared state settings, disabled-content default,
-and shared click defaults. Root foreground uses content, root accent uses
-emphasis, and root background uses canvas. Rich root roles are not inherited as
-a palette; `SurfaceColors` remains a pair.
+Add `FrameworkTheme` in `core/framework_theme.h`. It owns five framework root
+colors, shared state settings, disabled-content default, and shared click
+defaults. Retain these existing `FrameworkColorRole` names:
 
-Preserve `frameworkColor()`, `frameworkStateLayer()`, and
-`disabledContentOpacity()` as forwarding helpers where useful. The state-layer
-helper combines the requested framework ink with common opacity; it does not
-reconstruct a Material3 container role. Preserve system fields/accessors and
-independent palettes. Removing their duplicated state members is intentional.
+| Role | Framework responsibility | Coordinated Material3 source |
+| --- | --- | --- |
+| `kCanvas` | Main-window background restoration | `background` |
+| `kSurface` | Detached/root generic container fill | `surface` |
+| `kContent` | Root inherited foreground | `onSurface` |
+| `kEmphasis` | Root inherited accent | `primary` |
+| `kOutline` | Generic surface outline default | `outlineVariant` |
+
+Keep canvas and surface distinct to preserve existing rendering responsibilities.
+Generic icons and scrollbars use inherited foreground; components choose accent
+where appropriate. Root content/emphasis provide the fallback pair. The five
+roles are not an inherited palette; `SurfaceColors` remains a pair.
+
+Remove `kMutedContent`, `kCritical`, and `kOnCritical` from the framework API and
+storage. They have no current rendering consumer: the critical-color read is
+only in MainWindow's unused palette preparation. Delete that entire preparation
+block and its unused helper/dependencies. Error and secondary-content roles
+remain in system palettes for components that need them.
+
+Preserve `frameworkColor()` and `disabledContentOpacity()` as forwarding helpers.
+Remove `frameworkStateLayer()` from core and Material3 after deleting the unused
+palette preparation and migrating tests/examples; it has no remaining production
+caller. Resolve component ink and opacity separately through widget hooks.
+Preserve system fields/accessors and independent palettes. Removing their
+duplicated state members is intentional.
 
 Provide `ApplyCoordinatedMaterial3Palette(Theme&, const material3::ColorScheme&)`
 in a Material3 integration header/target. It assigns the Material3 palette,
-copies its existing framework-role mapping into framework root colors, and,
+copies the five mappings above into framework root colors, and,
 when Material2 is enabled, copies all currently matching Material2 color fields
 by name. It changes no interaction settings, component roles, density, fonts,
 or explicit widget overrides. The name denotes the application-wide operation;
@@ -334,23 +417,66 @@ Document how to omit the disabled directories physically. This is optional
 installation within the existing package; separate published packages are
 outside this proposal.
 
+### Material3 dividers
+
+Material3 dialogs currently borrow Material2 dividers, whose two-tone rendering
+and palette lookup belong to that system. Add public
+`material3::HorizontalDivider` and `material3::VerticalDivider` in
+`material3/divider/divider.h` with implementation in the matching `.cpp`.
+Both derive directly from `Widget`: they paint separator ink over the inherited
+surface, introduce no appearance boundary, and depend on no Material2 code.
+
+Use the Material3 divider defaults: `color.outlineVariant` and 1 dp thickness,
+following the official [divider tokens](https://raw.githubusercontent.com/androidx/androidx/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/DividerTokens.kt).
+Phase 1 pins these tokens alongside the component baseline. Resolve the color
+from the live Material3 theme. Convert thickness with the existing `Scaled()`
+geometry scale and clamp to at least one physical pixel; Material3 compactness
+settings do not change the stroke. Draw one uniform stripe. Horizontal dividers
+stretch in width; vertical dividers stretch in height. Their preferred cross-axis
+size is the resolved thickness, with zero built-in padding or margins. Existing
+layout padding and margins express full-width and inset placement.
+
+Provide virtual `dividerColor()` and `dividerThickness()` hooks for application
+subclasses; the latter returns a positive physical-pixel thickness. These hooks
+add no retained divider fields. A changed color requires paint invalidation;
+a changed thickness also requires layout. Paint through `PaintContext` so the
+stripe composes with the inherited background and effects in one write per pixel.
+
+Replace both divider members in the Material3 dialog scaffold. Its measurement
+and placement must use the divider thickness rather than hard-coded two-pixel
+rectangles. Preserve its scroll-dependent visibility and content insets. Existing
+Material2 dividers retain their own implementation and appearance.
+
 ### Remaining application dependencies
 
-Move `Application::showAlertDialog` to a Material2 free helper, preserving its
-owned-dialog cleanup and presentation result behavior. Move the legacy
-`TextFieldEditor` adapter into Material2; generic task/application input routing
-uses the existing system-neutral text-input contracts. Remove concrete editor
-members, overloads, and friends from core instead of conditionalizing their
-runtime semantics.
+Remove `Application::showAlertDialog` and its Material2 includes from core's
+public API, without a forwarding member or a system-neutral alert factory.
+Despite its location, this utility constructs a concrete Material2 alert and
+exposes a Material2 callback type. Preserve the convenience as
+`material2::ShowAlertDialog(Task&, ...)` beside `material2::AlertDialog`, retaining
+its title, supporting text, button labels, callback, and `PresentationStartResult`
+contracts. Obtain the application/context from the task, retain UI-thread
+validation, and preserve cleanup after completion, failed admission, and teardown.
+Applications can instead own and show a `material2::AlertDialog` or
+`material3::AlertDialog` directly. Application does not select a dialog style.
+
+Extract the shared engine currently named `material2::TextFieldEditor` into a
+system-neutral module. Retain one task-owned engine and the existing
+`internal::TextEditTarget` contract for both systems. Caret/selection metrics,
+scrolling, masking, and hardware/semantic input must work without Material2 or
+the software keyboard. Migrate core members, overloads, and friends to the neutral
+engine and keep concrete field adapters in their systems. The producer-side
+`TextInputEmitter` alone does not replace this shared consumer engine.
 
 Make the built-in software keyboard an optional integration, selected by
 `ROO_WINDOWS_ENABLE_SOFTWARE_KEYBOARD` (defaulting to the Material2 switch).
 It requires Material2 until its controls are separately redesigned; reject
 keyboard-enabled/Material2-disabled builds. Retain `keyboard()` when enabled.
-With it disabled, hardware input and application-provided semantic editors
-continue to work, and core has no keyboard source dependency. Move the legacy
-editor/keyboard installation into the enabled integration rather than requiring
-Material2 from every `Task`.
+Move keyboard installation and compact `EditorDestination` presentation into
+that integration. With it disabled, fields edit in place through the neutral
+engine, hardware/semantic input continues to work, and core has no keyboard
+source dependency. Material3 text-field painting and editing must compile with
+both Material2 and the keyboard physically absent.
 
 ### Resource model
 
@@ -358,7 +484,10 @@ Material2 from every `Task`.
 There are no opacity arrays or retained style fields on widgets. Shared state
 settings occupy four opacity bytes plus the disabled-content byte; click settings
 live once per theme, with active-click snapshots only in the existing shared
-controller. Measure exact alignment and controller deltas on the target ABI.
+controller. Retain both non-press and press colors in transient paint state;
+update OverlaySpec and point/area/deferred composition instead of folding the
+base into ripple coverage. Measure paint-stack/arena high-water deltas, alignment,
+and controller deltas on the target ABI; add no Widget instance fields.
 
 For a query through `d` generic ancestors, color resolution takes at most `d`
 virtual forwards plus a constant-size palette resolution. Across `n` widgets,
@@ -367,7 +496,7 @@ The existing role walk has the same depth dependence. Resolve the pair once per
 use site, not once per field. Interaction opacity lookup is constant-time and
 does not walk the ancestor chain.
 
-Framework colors add 32 bytes per theme plus common settings and alignment;
+Framework colors add 20 bytes per theme plus common settings and alignment;
 removing both systems' duplicate state settings offsets part of that cost.
 Disabled systems remove their entire theme member. Additional virtual slots
 have shared flash cost but require no extra per-instance vptr. Phase 1 establishes
@@ -379,6 +508,10 @@ Illustrative final signatures; implementation adds full public documentation.
 Existing enum spellings remain unless their contract changes.
 
 ```cpp
+enum class FrameworkColorRole : uint8_t {
+  kCanvas, kSurface, kContent, kEmphasis, kOutline
+};
+
 struct SurfaceColors {
   roo_display::Color foreground;
   roo_display::Color accent;
@@ -390,7 +523,7 @@ struct StateLayerTheme {  // Core, owned once by FrameworkTheme.
   uint8_t pressed = 26;
   uint8_t dragged = 41;
   uint8_t disabledContentOpacity = 49;  // Separate 0..128 scale.
-  uint8_t opacity(InteractionState state) const;
+  uint8_t opacity(InteractionState state) const;  // Selected/activated return 0.
 };
 
 class Widget {
@@ -399,8 +532,11 @@ class Widget {
   virtual roo_display::Color interactionColor(InteractionState state) const;
   virtual uint8_t interactionOpacity(InteractionState state) const;
   // Preserve defaultColor(), disabledContentOpacity(), background(),
-  // effectiveBackground(), and existing feedback/activation-policy hooks.
-  // No core effectiveContainerRole(), usesHighlighterColor(), or style fields.
+  // effectiveBackground(), press-feedback and activation-delivery hooks.
+  // getOverlayOpacity() resolves only the winning non-press layer;
+  // the renderer resolves press separately through interactionOpacity().
+  // No core role inheritance, highlighter policy, persistent-layer hooks,
+  // or retained style fields. Selection/activation state flags remain.
 };
 
 struct Theme {
@@ -446,7 +582,9 @@ The stashed earlier stage 3 is reference material, not a patch to apply wholesal
 ### Phase 1: document vocabulary and characterize the boundaries
 
 Add the responsibility/state vocabulary to the glossary. Inventory role consumers,
-component-specific feedback and explicit overrides. Audit interaction ink against
+component-specific feedback and explicit overrides. Include persistent-layer
+consumers, shared editing, framework-color callers, and both stages of current
+ripple composition. Audit interaction ink and effect composition against
 versioned official component tokens/implementations: record a source revision,
 variant/selection/error/interaction mapping, current behavior, and intended change
 for each migrated component. This audit is a bounded research step: pin one
@@ -473,42 +611,61 @@ Proposed commit message:
 
 ### Phase 2: share interaction defaults across systems
 
-Add framework root/default ownership and move interaction opacities and generic
-disabled opacity into it. Migrate both systems, direct state-layer callers, and
-keyboard feedback; remove duplicated state tables/settings and the palette-only
-Material3 state-layer helper. Keep existing role-based ink temporarily. Add an
-example changing one hover/press setting for both systems. Validate live updates,
-independent palette edits, and disabled composition without double fading.
+Add the five framework root colors and common interaction/disabled opacities.
+Remove MainWindow's unused palette preparation, the three unused framework roles,
+and `frameworkStateLayer()`. Migrate both systems, direct painters, and keyboard
+feedback; remove duplicate state settings and Material3's palette-only state-layer
+helper. Keep role-based ink temporarily. In this same commit, implement the
+component-owned active surface for ToggleButtons and replacements for every
+inventoried persistent-layer consumer, then remove obsolete generic
+selection/activation-overlay hooks. Preserve logical state flags.
+
+Add the shared hover/press example and test five-role defaults/mapping, absence
+of removed-role callers, live updates, independent palettes, and disabled
+composition. Test selected appearance without hover/focus, then with hover,
+focus, press, and disabled state; removing settings must not erase selection.
 
 Proposed commit message:
 
 > Optional design systems, phase 2: share application interaction defaults.
 >
-> Move state opacities into the framework theme and migrate both systems and
-> direct painters while preserving independently owned palettes.
+> Own five root colors and shared opacities in the framework theme, remove
+> unused palette plumbing, and migrate persistent selection into components
+> while preserving independently owned system palettes.
 
 ### Phase 3: specify feedback arbitration and shared click defaults
 
 Move click duration/default reveal into framework settings. Add the state-aware
-color hook with a temporary adapter to current ink selection. Implement the
-priority and click-layer suppression contract above, including active-animation
-snapshots. Document the behavior in click examples. Test simultaneous states,
-release/cancel restoration, zero opacity, drag during click, ripple/fade paths,
-and all existing activation-delivery policies. Validate dirty/full equivalence,
-single-write painting, and controller/CPU costs.
+color hook with a temporary adapter to current ink selection. Resolve one
+non-press layer and an independent press effect, including active-click snapshots.
+Remove pressed from the base query and composite both colors as specified above.
+Update OverlaySpec, point/area/custom feedback consumers, and deferred snapshots
+to retain non-press coverage outside the ripple.
+
+Document composition and settlement in click examples. Test non-press arbitration,
+overlap with pressed, different inks, zero opacity, drag, and ripple/fade paths.
+Check pixels inside/outside reveal, full expansion while held, early release,
+cancellation, and post-settlement selection/hover/focus. Include a pressed-only
+case proving pressed contributes exactly once and that a pixel already fully
+inside the ripple retains its tint across reveal completion while still held.
+Test both hover-then-focus and focus-then-hover: the fixed priority must produce
+the same winner, restore remaining feedback on exit, and use no retained history.
+Exercise every activation-delivery policy, including suppressed feedback. Validate dirty/full equivalence,
+single-write painting, transient paint memory, controller size, and CPU costs.
 
 Proposed commit message:
 
 > Optional design systems, phase 3: unify transient feedback composition.
 >
-> Resolve one eligible interaction state with state-specific ink and shared
-> click defaults without changing semantic activation policies.
+> Composite an independent pressed effect over one non-press layer, with
+> state-specific ink and shared click defaults, preserving activation policies
+> and existing reveal/settlement timing.
 
 ### Phase 4: introduce inherited foreground and accent
 
 Add `SurfaceColors`, forwarding through generic layouts and resolving at system
 surface boundaries. Keep old role declarations temporarily for remaining callers.
-Migrate generic labels/icons to the pair while preserving explicit overrides.
+Migrate generic labels/icons and scrollbar ink to the pair, preserving overrides.
 Add the borrowed-checkbox example from the overview and tests for distinct colors,
 transparent backgrounds, detached roots, reparenting, and live surface changes.
 Verify resource gates and document accent as surface-relative emphasis ink.
@@ -554,50 +711,85 @@ Proposed commit message:
 > Add explicit value-copy palette installation and a mixed-system example,
 > preserving independent theme ownership and shared interaction settings.
 
-### Phase 7: extract Material2 application conveniences
+### Phase 7: add Material3 dividers and remove dialog borrowing
 
-Move the alert helper and legacy editor adapter out of core and make software
-keyboard integration optional as described above. Update consumers and input
-examples. Validate alert cleanup and failed presentation, editor teardown,
-keyboard visibility, hardware input and cross-task routing, including a
-keyboard-disabled build.
+Implement the two Material3 divider widgets and override hooks specified above,
+then replace the dialog scaffold's Material2 members and fixed two-pixel geometry.
+Add a focused example showing horizontal section separators and a vertical
+separator between adjacent panes, with inset placement supplied by the layout.
+Document the defaults, subclass overrides, and invalidation requirements.
+
+Test both orientations, measurement and placement, light/dark and live palette
+changes, color/thickness overrides, minimum one-pixel thickness at 75% zoom,
+and dirty/full repaint equivalence with single-write rendering. Cover dialog
+scroll-boundary visibility and update dialog goldens for the intentional divider
+appearance change. Verify the new divider headers/sources and dialog scaffold
+have no Material2 dependency; phase 9 compiles them with Material2 physically
+absent. Record target-ABI sizes and confirm the default divider adds no fields
+beyond `Widget`.
 
 Proposed commit message:
 
-> Optional design systems, phase 7: isolate legacy application integrations.
+> Optional design systems, phase 7: add Material3 dividers for independent dialogs.
 >
-> Move Material2 alert/editor conveniences out of core and make the built-in
-> keyboard optional while preserving generic semantic input routing.
+> Add horizontal and vertical Material3 dividers with live outline-variant ink
+> and scaled one-dp thickness, migrate dialog scaffolding, and cover layout,
+> theme updates, rendering, and a divider example.
 
-### Phase 8: enforce optional installation
+### Phase 8: isolate application conveniences and shared editing
+
+Remove Application's alert member and add the explicit Material2 free helper.
+Extract the neutral editing engine and migrate both systems' fields and core
+routing. Make keyboard/compact-editor presentation optional as specified above.
+Update consumers and input examples, including direct system-specific alerts.
+
+Validate alert completion cleanup, failed admission and teardown; editor caret,
+selection, masking, replacement and teardown; keyboard visibility; hardware and
+semantic input; and cross-task routing. Include a keyboard-disabled build and,
+once phase 9 enables switches, a Material3-only editing fixture with Material2
+and keyboard files absent. Verify no core public alert signature or Material2
+editor type remains.
+
+Proposed commit message:
+
+> Optional design systems, phase 8: isolate legacy application integrations.
+>
+> Remove the core alert convenience, preserve it in Material2, extract the
+> editing engine shared by both systems, and make keyboard presentation optional
+> while preserving hardware and semantic input.
+
+### Phase 9: enforce optional installation
 
 Add system switches, conditional theme composition, integration dependencies,
 and build partitions. Document Bazel/Arduino configuration with core-only,
 Material2-only, Material3-only, and mixed examples. Compile/link all four with
-disabled directories physically excluded from fixtures. Verify build inputs,
-invalid flag combinations, and the coordinated helper's conditional dependencies.
+disabled directories physically excluded from fixtures, including Material3
+dividers, dialogs, and editable text fields in the Material3-only build.
+Verify build inputs, invalid flag combinations, and the coordinated helper's
+conditional dependencies.
 Run the full default suite and affected frontend/companion builds serially with
 persistent Bazel storage and existing limits. Record final resource comparisons.
 
 Proposed commit message:
 
-> Optional design systems, phase 8: build without unused design systems.
+> Optional design systems, phase 9: build without unused design systems.
 >
 > Select theme and source dependencies consistently, with physical-absence
 > coverage and examples for each supported system combination.
 
 ## Testing Plan
 
-Use focused theme, overlay, container, component, dialog, keyboard and click
-lifecycle targets as each phase lands. Existing starting points include
+Use focused theme, overlay, container, component, divider, dialog, keyboard and
+click lifecycle targets as each phase lands. Existing starting points include
 `//:theme_color_tokens_test`, `//:material2_theme_test`,
 `//:material3_container_test`, `//:surface_widget_invalidation_test`, and
 `//:overlay_test`. Rename token-specific tests only when their subject is removed.
 
 Acceptance covers shared live feedback settings, component-specific ink,
 borrowed-widget adaptation, explicit overrides, palette coordination without
-aliasing, interaction arbitration, and optional-installation builds. Retain
-single-write rendering and dirty/full repaint equivalence. Review intended
+aliasing, non-press arbitration, press composition, persistent selection, and
+optional-installation builds. Retain single-write rendering and dirty/full
+repaint equivalence. Review intended
 golden changes against the recorded component contracts, not historical output
 alone. Apply the resource gates from phase 1. Run Bazel builds serially and keep
 all Bazel storage off RAM-backed `/tmp`.
@@ -625,6 +817,27 @@ Feature switches change ABI and must agree across the application and libraries.
 This preserves each system's historical shading but makes borrowed controls feel
 unrelated. Shared defaults meet the motivating use case while local component
 hooks preserve necessary exceptions.
+
+#### Collapse every interaction into one winning layer
+
+One layer is cheap, but replacing hover/focus with press reveal erases feedback
+outside the expanding ripple and cannot compose different inks. Keep one
+non-press winner and one pressed effect. Composite their colors instead of
+summing alpha or applying pressed twice.
+
+#### Retain interaction order on every widget
+
+Compose's most-recent-active rule distinguishes interaction sequences with the
+same current flags. Matching that distinction requires additional retained
+ordering information. For this embedded framework, keep the documented fixed
+non-press priority and existing flags; do not add widget state or a registry for
+that difference. Press still composites independently as in the references.
+
+#### Retain unused framework semantic colors
+
+Muted-content and error roles belong in component palettes where needed. Five
+core defaults cover current generic consumers without speculative storage or
+retaining an unused palette-preparation path.
 
 #### Derive all interaction ink from the parent or a highlighter flag
 
