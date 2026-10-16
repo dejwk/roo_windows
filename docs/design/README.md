@@ -115,7 +115,7 @@ motion pauses. It does not restore paint interruption.
 
 | Design | Dependency status |
 | --- | --- |
-| [Optional design systems and resolved appearance inheritance](proposed/optional_design_systems_design.md) | Independent Material2/Material3 theme ownership is implemented. Core token removal, resolved cross-system inheritance, and optional installation remain proposed. |
+| [Optional design systems and resolved appearance inheritance](proposed/optional_design_systems_design.md) | Independent system palettes and simplified Material3 opacities are implemented. Shared application feedback, inherited foreground/accent, explicit palette coordination, and optional installation remain proposed. |
 | Display runtime Phase 7 task-bounded transient coverage | Phase 6 input is implemented. Phase 7 is reconciled as task-bounded attachment of the one shared window host layer, retaining one active-presentation authority and explicit interaction owner; the extension remains unimplemented. |
 | Display runtime Phase 8 migration and cost audit | Phases 2–6 and the shared display-wide host are implemented. Task-bounded coverage in Phase 7 remains proposed; final migration documentation, resource audit, and hardware validation belong to Phase 8. |
 | Interaction overlay reveal | Point and area ripples, widget-local click animation, paint context, and the navigation bar's component-local fade are implemented; shared fade reveal and paint-owned overlay policy are not. |

@@ -1,23 +1,29 @@
 # Optional design systems and resolved appearance inheritance
 
-Status: proposed. Material2 isolation and independently owned theme settings
-are implemented prerequisites; none of the phases below is marked complete.
+Status: proposed. Material2 isolation, independent system palettes, and the
+simplified Material3 state opacities are implemented prerequisites. None of the
+phases below is marked complete. Revised 2026-10-16 around a shared application
+look and feel rather than independent interaction policies per design system.
 
 ## Objective
 
-Allow core-only, Material2-only, Material3-only, and mixed-system applications
-without making core widget inheritance depend on either system's color tokens.
+Let applications borrow components from other design systems while maintaining
+a common look and feel, with no mandatory Material2 or Material3 dependency in
+core widget inheritance or core-only builds.
 
 ## Motivation
 
-An application can now customize Material2 independently of Material3, but a
-Material2 button still translates an inherited Material3 token before choosing
-its foreground and interaction styling. Removing Material3 from that build
-therefore fails even when the application uses no Material3 widgets.
+A predominantly Material3 application can need a legacy Material2 control that
+has no suitable local equivalent. That control should adapt to its surrounding
+surface and share the application's interaction strength and feedback timing.
+It should not acquire a different hover or press policy merely because its
+implementation lives in another design-system directory.
 
-Resolve the visual information needed by generic descendants at the component
-that owns the appearance. Keep system-specific roles within their system, and
-make build selection determine which system themes and components are present.
+Today independent palettes solve ownership, but container-role inheritance still
+speaks Material3 and interaction settings differ by system. Define the common
+framework vocabulary and application defaults first. Keep component shapes,
+semantic palettes, typography, and choices of framework behavior in their
+respective design systems.
 
 ## Background
 
@@ -60,151 +66,252 @@ component roles or color scheme.
 
 ## Requirements
 
-1. Generic layouts and rendering must work without either design system's
+1. Borrowed widgets must adopt common interaction defaults and surrounding
+   colors where their component semantics permit it.
+2. Core layouts, rendering, and input must work without either design system's
    source files or headers installed.
-2. An application must be able to combine systems and customize their settings
-   independently. Installing one palette must not mutate another implicitly.
-3. Preserve same-system component behavior, explicit color and font overrides,
-   and theme invalidation. Use the corrected Material3 state defaults below
-   rather than freezing historical opacity values.
-4. Define how generic descendants and components from another system inherit
-   appearance, including point interactions and detached presentation roots.
-5. Preserve accessor and field names unless removing a dependency requires a
-   change. Do not introduce compatibility aliases solely for this migration.
-6. Avoid theme copies, heap allocations, or additional policy pointers in every
-   widget. Measure target-ABI size and paint cost before accepting the migration.
-7. Keep disabled-system configuration consistent across every translation unit.
-   Unsupported component use must fail at compile time.
+3. System palettes remain independently owned. Coordinating them must be an
+   explicit operation; editing one palette must not silently mutate another.
+4. Preserve explicit color/font overrides, component behavior, and invalidation
+   contracts. Historical interaction shading is not a compatibility requirement.
+5. Define transient interaction, persistent component state, disabled treatment,
+   and simultaneous-state behavior independently of design systems.
+6. Distinguish framework capabilities, application defaults, and component
+   choices, including layout, gestures, animation, spacing, and decoration.
+7. Preserve existing field/accessor names unless the semantic change or removal
+   of a dependency requires changing them. Avoid compatibility aliases.
+8. Add no retained palette copies, policy pointers, or allocation to each widget.
+   Measure target-ABI size and paint cost.
+9. Apply feature switches consistently across translation units. Use of a
+   disabled system must fail at compile time.
 
 ## Design Overview
 
-Introduce **resolved surface appearance**: a temporary value containing the
-foreground, resolved interaction ink, six interaction opacities, and
-disabled-content opacity
-appropriate to a surface. It contains neither tokens nor a system identifier.
-It is computed from live theme settings and is never cached in each widget.
-Background geometry and alpha composition remain in the existing `background()`
-and `effectiveBackground()` APIs.
+The **framework vocabulary** is the set of rendering, layout, input, and
+feedback mechanisms available to components. It does not prescribe the visual
+style of a particular component.
 
-An **appearance boundary** is a widget that supplies resolved appearance for
-its descendants. A system surface establishes a boundary from its own theme;
-a generic layout forwards its parent's appearance. A component's interaction
-appearance can differ from its descendant appearance, as it does today for
-selected indicators and point interactions.
+The **application look and feel** is the set of common defaults owned once by
+`Theme::framework`. Interaction opacities and default click feedback belong here,
+not in each system theme. Components use those defaults unless a concrete
+component requirement justifies a local override.
 
-Material3 retains roles in component-local helpers. Generic descendants receive
-resolved appearance rather than interpreting those roles. Material2 establishes
-its own boundaries and removes its Material3 role-identity bridge.
+An **inherited color style** supplies background, foreground, and accent for a
+surface. Background remains the existing resolved/composited background query;
+a new temporary `SurfaceColors` value carries only foreground and accent.
+There is no per-widget style storage, system identifier, interaction-opacity
+array, or inherited interaction-color field.
 
-`Theme` remains a concrete bag of supported themes. An independently owned
-framework theme supplies core defaults. Build-wide feature switches omit
-unselected system members, accessors, headers, and sources. This satisfies
-optional installation without adding a runtime registry or heap ownership.
+An **appearance boundary** is a widget supplying foreground/accent defaults for
+its descendants. A generic layout forwards these defaults. A system component
+establishing its own surface resolves appropriate colors from its system theme.
+A borrowed unfilled control uses the inherited foreground/accent where it has
+no stronger semantic requirement.
 
-For example, a Material3 primary card supplies `onPrimary` to a generic label
-through an intervening generic layout. A contained Material2 button in that
-layout supplies its own `primary` fill and `onPrimary` foreground to its own
-label. Changing the Material3 palette updates the card and generic label;
-changing the Material2 palette updates the button. No theme synchronizes with
-another.
+The accent is readable emphasis ink on that surface, not necessarily the raw
+application primary color. Core carries it but does not decide when it replaces
+foreground. Each component chooses its content and interaction ink, including
+choices that depend on selection, error, or the particular interaction state.
 
-The illustration shows inheritance relationships, not paint ordering:
+`Theme` stays a concrete bag of supported system themes plus the common framework
+settings. Explicit palette coordination creates consistent defaults across that
+bag without introducing live projections. Build switches omit unused systems.
+
+For example, a Material3 surface supplies its foreground and accent through a
+generic layout to a borrowed Material2 checkbox. The checkbox uses foreground
+when inactive and accent when checked, and uses the same hover opacity as the
+neighboring Material3 control. A contained Material2 button instead creates a
+surface from its own, explicitly coordinated palette. Its shape and typography
+remain Material2 unless the application overrides them.
+
+The illustration shows inheritance and shared policy, not paint ordering:
 
 ```mermaid
 flowchart TD
-  A[Material3 card: resolves primary surface] --> B[Generic layout: forwards appearance]
-  B --> C[Generic label: inherits card foreground]
-  B --> D[Material2 contained button: resolves its own surface]
-  D --> E[Button content: uses Material2 foreground]
+  T[Application framework: shared interaction policy] --> M3[Material3 control]
+  T --> M2[Borrowed Material2 control]
+  S[Material3 surface: background, foreground, accent] --> L[Generic layout]
+  L --> M3
+  L --> M2
+  M2 --> C[Own surface only when the component needs one]
 ```
 
 ## Design Details
 
-### Inheritance and component policy
+### Common vocabulary and responsibility
 
-`Widget::surfaceAppearance()` returns the parent's resolved value, or framework
-root defaults when detached. A system widget with an explicit surface resolves
-its local role and overrides this hook. A plain `SurfaceWidget` continues to
-inherit appearance: an arbitrary background override does not imply an
-algorithm for choosing a contrasting foreground.
+Use the existing framework types rather than inventing a parallel component
+framework. The following division is authoritative:
 
-The default `defaultColor()` reads the surface foreground. Existing explicit
-widget color setters retain their current sentinel or override semantics.
-`interactionColor()` reads the resolved interaction ink; core does not choose
-between foreground and accent colors. Default interaction hooks read
-`interactionAppearance()`; this inherits
-parent surface appearance for point overlays and local surface appearance for
-other overlays. State-specific component overrides continue to take precedence.
-Disabled-content opacity comes from the component's surface appearance.
-Existing subtree effect application, clipping, and pixel ownership are unchanged.
+| Area | Framework capability / application default | Component responsibility |
+| --- | --- | --- |
+| State | Hover, focus, press, drag; persistent selection/activation; availability | Which states apply and what they mean for the control |
+| State layers | Resolved ink, opacity, region, clipping, and composition; shared opacity defaults | Ink per interaction, region geometry, and whether to draw a layer |
+| Click feedback | Existing ripple/fade reveal, point/area/custom/no overlay, shared duration and default reveal | Boundedness, focus point, special reveal or no feedback |
+| Activation | Existing six `ClickActivationPolicy` choices and delivery lifecycle | When the action must execute; visual theme changes do not alter action timing |
+| Gestures | Existing tap/click, long-press and drag recognition, axis/claim arbitration, cancellation | Which gestures participate and their semantic actions |
+| Layout | Generic row/column, flex, stacked/grid, measurement, alignment and scrolling mechanisms | Composition and component minimum-size requirements |
+| Spacing | Existing scaled dimensions, `PaddingSize`, `Padding`, and `Margins` vocabulary | Padding/margin choices and system-specific density rules |
+| Shadows/decorations | Elevation rendering, borders, clipping, overflow and decoration primitives | Elevation, outline, shape and decoration selection |
+| Animation | Shared scheduling, click lifecycle and animation primitives | Shape morphing, indicators and component-specific transitions |
+| Colors and text | Root/inherited color style, generic text rendering and explicit overrides | Semantic palette roles, typography catalogs, and component color selection |
 
-Remove `usesHighlighterColor()` from core. Material2 keeps accent/highlighter
-selection within its own controls and theme helpers. Material3 resolves each
-component's state-layer ink from its own roles and state. Its current users of
-`usesHighlighterColor()` (FABs, toggle icon buttons, and button-group entries)
-migrate to resolved interaction hooks. A system-local helper can retain the
-name where useful, but generic widgets neither expose nor interpret it.
-Generic `Icon` activation styling must also use resolved appearance; preserve
-Material2 navigation highlighting in its system-specific control.
+The existing spacing scale is shared; this proposal does not add another runtime
+spacing scale or merge Material3 density into it. Document the distinction in the
+[glossary](../glossary.md) and link the existing APIs. A shared mechanism does not
+imply that every widget uses it or uses identical geometry.
 
-The two colors represent separate rendering purposes, not interchangeable
-palette candidates. They can be equal, but changing content ink does not
-implicitly change interaction ink. Generic descendants inherit both resolved
-values without selecting an accent policy.
+### Interaction states and combination
 
-System controls that draw their own content resolve their own component colors
-and settings. An unfilled control interacting with an ancestor's surface uses
-that surface's resolved interaction appearance, even across systems. This is
-visual inheritance from the actual surface, not projection of one stored theme
-into another. A control needing its own interaction policy overrides the hook.
+Separate three categories without mechanically renaming existing state flags:
 
-This deliberately ends the current cross-system reinterpretation of a
-Material3 role through Material2's palette. With independently customized
-palettes, that reinterpretation can select ink unrelated to the surface being
-painted. Existing same-system output is preserved; mixed-system tests establish
-the new boundary contract explicitly.
+- Transient interactions: hovered, focused, pressed, dragged. These can request
+  a state layer.
+- Persistent component states: selected, checked, expanded, activated. Components
+  express them through fills, icons, outlines, indicators, or other styling.
+  They do not automatically request an extra generic state layer.
+- Availability: enabled/disabled. Disabled controls suppress transient feedback
+  and use the disabled treatment described below.
 
-### Roles that do more than select a foreground
+`FrameworkTheme::state` owns hover, focus, pressed and dragged opacity. Default
+values are 20, 26, 26 and 41 on the 0..255 alpha scale (8%, 10%, 10%, 16%). These
+are the implemented Material3 defaults, adopted as application defaults even in
+core-only builds. Their values are not a dependency on Material3 types or files.
+The token provenance is recorded in the
+[color-theming guide](../../material3_color_theming.md#interaction-opacities).
 
-Keep `containerRole()` and other role helpers within Material3 classes where
-useful, without making them core virtuals. Do not infer roles by comparing RGB
-values: different roles can have the same color.
+`interactionOpacity(state)` defaults to this common policy for every system.
+Remove the duplicate Material2/Material3 state storage and neutral/colored
+opacity distinction. Preserve a widget-local override hook for demonstrated
+exceptions; do not add a second global matrix or a registry of exceptions.
+A component using no overlay continues to draw none regardless of these values.
 
-- Tabs and their entries share resolved surface appearance. An entry needing
-  the parent's fill uses its effective background rather than resolving a
-  parent token again. Explicit tab component roles remain in Material3.
-- Unselected navigation indicators inherit parent interaction appearance;
-  selected indicators resolve the secondary-container appearance locally.
-- Checkbox, radio, switch, and slider state transitions resolve their current
-  local role into appearance. Point overlays retain their parent-surface rule.
-- Button-group entries keep their existing variant/state role selection inside
-  Material3 and expose the result through the interaction hook.
+For shared feedback on a single widget, choose one eligible transient state in
+this priority order: dragged, pressed/clicking, focused, hovered. Do not sum
+opacities. Eligibility includes the widget's feedback suppression hooks. A
+zero-opacity winning state remains transparent; it does not expose a lower
+priority state. On release or cancellation, recompute the winner from remaining
+states. Persistent flags contribute no generic layer.
 
-Audit all role overrides and consumers before removing the core declarations.
-Component role setters and theme slots that are already local keep their names.
+A click ripple/fade uses the pressed state's ink and opacity. Its existing reveal
+progress modulates that one effect. Suppress the same widget's lower-priority
+base state layer during the click reveal; do not apply the pressed opacity both
+as a full-area layer and as a ripple. An active drag suppresses the visual click
+effect without cancelling its semantic-delivery bookkeeping. Existing ancestor
+subtree effects remain distinct from arbitration of a single widget's states.
+This priority is the application's chosen framework policy, not a claim that all
+Material releases and platforms use an identical arbitration implementation.
 
-### Live themes and ownership
+Move the existing shared click duration and default ripple/fade choice into
+`FrameworkTheme::interaction`, retaining their current defaults. Existing
+component overrides keep precedence. A running click samples its duration and
+reveal choice at admission using its single existing controller, so theme edits
+do not restart it or alter delivery ordering; later clicks use the new defaults.
+Keep frame scheduling limits and activation policy independent of appearance.
+There is no automatic new animation for hover/focus transitions in this scope.
 
-`Theme`, environments, and application contexts keep their existing borrowing
-lifetimes. Callers mutate theme settings between UI frames and call
-`Application::invalidateTheme()` on each affected application. No generation
-counter, subscription list, or per-widget resolved cache is added.
+### Disabled treatment
 
-A detached presentation root uses framework defaults unless its component
-establishes an appearance boundary. Components requiring an originating
-surface's styling use their existing presentation-owner relationship to query
-live appearance; do not retain a copied palette across frames. Reparenting
-changes inherited appearance on the next paint through existing invalidation.
+Keep disabled treatment separate from transient layers. The framework owns the
+default disabled-content opacity (49 on the existing 0..128 scale). Generic
+content can use the existing subtree fade. Components with distinct disabled
+container, outline, and label colors resolve those locally and avoid applying
+the generic fade a second time. A shared disabled-content default does not mean
+that all disabled visual parts have the same opacity or color.
 
-### Framework settings and optional systems
+### Inherited colors and appearance boundaries
 
-Add `FrameworkTheme` in `core/framework_theme.h`, owning the existing eight
-framework color roles and root interaction defaults. Preserve `frameworkColor`,
-`frameworkStateLayer`, and `disabledContentOpacity` as forwarding helpers on
-`Theme`, now forwarding to `framework` rather than Material3. Initialize its
-values to today's default output using independent constants. Custom Material3
-settings no longer implicitly customize generic root defaults; migration docs
-show explicit framework customization.
+`Widget::surfaceColors()` forwards the parent's foreground/accent, falling back
+to framework root colors when detached. `defaultColor()` reads the foreground.
+`background()` and `effectiveBackground()` retain their existing surface and
+alpha-composition semantics; do not add a duplicate stored background field to
+the inherited value.
+
+A Material3 surface translates its own semantic role into foreground and accent
+appropriate to that surface. On colored surfaces those can be equal; on neutral
+surfaces they commonly differ. A plain background-color override does not infer
+new foreground/accent values from RGB or attempt automatic contrast correction.
+Applications needing a different pair provide an appearance boundary override.
+
+Generic text and icons use inherited foreground unless explicitly overridden.
+Borrowed Material2 checkbox/radio/switch/slider content uses inherited accent
+for active affordances and foreground for ordinary content. Material2 navigation
+activation chooses accent in its own component code. Remove `usesHighlighterColor()`
+from core: having an accent color does not imply a universal highlighter policy.
+Preserve existing explicit color/font override semantics.
+
+A component creating its own filled surface selects background and readable
+content from its system palette, and publishes a corresponding pair to its
+children. Three inherited colors do not replace error, inverse, container,
+outline, or other semantic palette roles. Nor do they force a borrowed widget
+to adopt another system's shape or typography.
+
+### Interaction ink is component-specific and state-aware
+
+Change the hook to `interactionColor(InteractionState state)`. The generic
+fallback is foreground for the affected surface: parent surface for a point
+halo, local surface for an area overlay. This is a fallback for generic/custom
+widgets, not a Material3 component policy.
+
+Material3 components resolve interaction ink from their own variant, component
+state, and interaction. In particular, the paint region being on the parent's
+surface does not require taking the parent's content color. A checkbox can use
+accent/primary ink for a halo on a neutral parent. Persistent selection can
+change the ink for a later hover without adding a selected-state overlay.
+
+Keep Material3 `containerRole()` helpers local where useful. Remove core role
+inheritance and the Material2 translation bridge. Tabs inherit background via
+the existing background query and foreground/accent via `surfaceColors()`;
+navigation and button-group entries resolve their own state-layer ink rather
+than reconstructing it from inherited container tokens. Directly painted effects
+(text fields and keyboard feedback included) use the common opacity policy too.
+
+The state-aware hook accommodates component tokens that distinguish hover,
+focus, and pressed ink. The rendering pipeline must request the winning state's
+color, including pressed ink for click animation, rather than choosing one
+color and then varying only alpha. Component compliance is audited in phase 1;
+existing golden images are evidence of current output, not specification proof.
+
+### Theme ownership and explicit coordination
+
+Add `FrameworkTheme` in `core/framework_theme.h`. It owns the existing eight
+framework root color roles, shared state settings, disabled-content default,
+and shared click defaults. Root foreground uses content, root accent uses
+emphasis, and root background uses canvas. Rich root roles are not inherited as
+a palette; `SurfaceColors` remains a pair.
+
+Preserve `frameworkColor()`, `frameworkStateLayer()`, and
+`disabledContentOpacity()` as forwarding helpers where useful. The state-layer
+helper combines the requested framework ink with common opacity; it does not
+reconstruct a Material3 container role. Preserve system fields/accessors and
+independent palettes. Removing their duplicated state members is intentional.
+
+Provide `ApplyCoordinatedMaterial3Palette(Theme&, const material3::ColorScheme&)`
+in a Material3 integration header/target. It assigns the Material3 palette,
+copies its existing framework-role mapping into framework root colors, and,
+when Material2 is enabled, copies all currently matching Material2 color fields
+by name. It changes no interaction settings, component roles, density, fonts,
+or explicit widget overrides. The name denotes the application-wide operation;
+ordinary assignment to `.material3Theme().color` continues to affect only that
+palette. The helper performs no invalidation itself.
+
+This supplies a concrete path for a predominantly Material3 app to coordinate
+borrowed filled widgets as well as unfilled ones. It is an explicit value copy,
+not a live projection. Reapply it when deliberately installing another coordinated
+palette; direct subsequent edits remain independent. The helper compiles with
+Material3 alone and excludes all Material2 includes/code when Material2 is off.
+Core-only and Material2-only applications customize their available themes
+directly; no Material3 conversion is required to construct defaults.
+
+Applications mutate themes between UI frames and call `invalidateTheme()` on
+each affected application. Environments retain their existing borrowing
+lifetimes. Reparenting resolves the new inherited pair on the next paint;
+no per-widget cache, subscription list, or generation counter is added.
+Detached roots use framework root colors unless their component establishes
+its own boundary. Existing presentation-owner relationships can supply live
+originating-surface colors where that is the component's specified behavior.
+
+### Optional systems and remaining application dependencies
 
 Use build-wide `ROO_WINDOWS_ENABLE_MATERIAL2` and
 `ROO_WINDOWS_ENABLE_MATERIAL3`, each defaulting to 1. Both must be 0 or 1.
@@ -245,81 +352,66 @@ continue to work, and core has no keyboard source dependency. Move the legacy
 editor/keyboard installation into the enabled integration rather than requiring
 Material2 from every `Task`.
 
-### Material3 state-layer defaults
-
-Material3 now owns four state opacities, independent of container color: hover
-8%, focus 10%, pressed 10%, and dragged 16%. These follow the generated
-[Compose v0_210 system tokens](https://raw.githubusercontent.com/androidx/androidx/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/StateTokens.kt)
-and [Android 34.0.0 system tokens](https://raw.githubusercontent.com/material-components/material-components-android/master/lib/java/com/google/android/material/resources/res/values/tokens.xml),
-checked on 2026-10-15. Rounded to 0..255 alpha, the values are 20, 26, 26,
-and 41. Disabled-content opacity remains separate at 38%, encoded as 49 on the
-renderer’s 0..128 scale.
-
-The full color-token-by-state matrix and borrowed override tables are removed.
-`state.opacity(interaction)` resolves alpha independently;
-`stateLayer(container, interaction)` combines it with live palette content ink.
-The four opacity fields are owned values and can be customized directly, for
-example `theme.material3Theme().state.pressed = 26`. Component-specific ink
-belongs in component resolution, not a global matrix. Selection and activation
-return zero generic state-layer opacity; components express their persistent
-states through their own appearance. Material2 retains its independent policy.
-
-This correction is a prerequisite to the planned inheritance refactor. The
-same-system preservation and golden gates below use these corrected defaults,
-not the earlier container-dependent opacity policy. This change does not alter
-core's existing simultaneous-state accumulation or animation timing; revising
-that composition policy requires separate rendering coverage.
-
 ### Resource model
 
-The appearance value has two four-byte colors and seven opacity bytes: a
-15-byte payload, normally 16 bytes after alignment. It is returned temporarily;
-there is no added instance field in `Widget` or `SurfaceWidget`. Extra virtual
-slots have shared flash cost; no extra per-instance vptr is required.
+`SurfaceColors` contains two four-byte colors: eight bytes of transient payload.
+There are no opacity arrays or retained style fields on widgets. Shared state
+settings occupy four opacity bytes plus the disabled-content byte; click settings
+live once per theme, with active-click snapshots only in the existing shared
+controller. Measure exact alignment and controller deltas on the target ABI.
 
-For a query through `d` generic ancestors, resolution costs at most `d` virtual
-forwards plus one constant-size palette resolution. Across `n` widgets the
-worst-case work is O(n*d), and O(n²) for a chain whose depth grows with `n`.
-The current role walk has the same depth dependence. Resolve once per use site
-rather than once per appearance field; do not add a retained cache to hide
-repeated queries.
+For a query through `d` generic ancestors, color resolution takes at most `d`
+virtual forwards plus a constant-size palette resolution. Across `n` widgets,
+worst-case work is O(n*d), reaching O(n²) for a chain whose depth grows with `n`.
+The existing role walk has the same depth dependence. Resolve the pair once per
+use site, not once per field. Interaction opacity lookup is constant-time and
+does not walk the ancestor chain.
 
-The framework color payload adds 32 bytes per `Theme`, plus root interaction
-settings and alignment. Disabled systems remove their entire theme member.
-Exact ABI sizes and linked code deltas are acceptance measurements, not portable
-promises. Phase 1 defines the size and CPU gates.
+Framework colors add 32 bytes per theme plus common settings and alignment;
+removing both systems' duplicate state settings offsets part of that cost.
+Disabled systems remove their entire theme member. Additional virtual slots
+have shared flash cost but require no extra per-instance vptr. Phase 1 establishes
+target-ABI and CPU gates; exact linked-size deltas are measured, not assumed.
 
 ## Proposed API
 
-Illustrative final signatures; public declarations receive full Doxygen comments
-when implemented. The new value is a rendering contract, not stored widget state.
+Illustrative final signatures; implementation adds full public documentation.
+Existing enum spellings remain unless their contract changes.
 
 ```cpp
-struct SurfaceAppearance {
+struct SurfaceColors {
   roo_display::Color foreground;
-  roo_display::Color interaction_color;
-  uint8_t interaction_opacity[6];  // Existing InteractionState order.
-  uint8_t disabled_content_opacity;  // Existing 0..128 scale.
+  roo_display::Color accent;
+};
+
+struct StateLayerTheme {  // Core, owned once by FrameworkTheme.
+  uint8_t hover = 20;
+  uint8_t focus = 26;
+  uint8_t pressed = 26;
+  uint8_t dragged = 41;
+  uint8_t disabledContentOpacity = 49;  // Separate 0..128 scale.
+  uint8_t opacity(InteractionState state) const;
 };
 
 class Widget {
  public:
-  virtual SurfaceAppearance surfaceAppearance() const;
-  virtual SurfaceAppearance interactionAppearance() const;
-  // Keep existing defaultColor(), interactionColor(), interactionOpacity(),
-  // disabledContentOpacity(), background(), and effectiveBackground() names.
-  // No usesHighlighterColor() in core and no new appearance fields.
+  virtual SurfaceColors surfaceColors() const;
+  virtual roo_display::Color interactionColor(InteractionState state) const;
+  virtual uint8_t interactionOpacity(InteractionState state) const;
+  // Preserve defaultColor(), disabledContentOpacity(), background(),
+  // effectiveBackground(), and existing feedback/activation-policy hooks.
+  // No core effectiveContainerRole(), usesHighlighterColor(), or style fields.
 };
 
 struct Theme {
-  FrameworkTheme framework;
+  FrameworkTheme framework;  // Root colors, state, and click defaults by value.
 #if ROO_WINDOWS_ENABLE_MATERIAL2
-  material2::Material2Theme material2;
+  material2::Material2Theme material2;  // No duplicate state policy.
   material2::Material2Theme& material2Theme();
   const material2::Material2Theme& material2Theme() const;
 #endif
 #if ROO_WINDOWS_ENABLE_MATERIAL3
-  material3::Material3Theme material3;
+  material3::Material3Theme material3;  // No duplicate state policy.
   material3::Material3Theme& material3Theme();
   const material3::Material3Theme& material3Theme() const;
 #endif
@@ -327,186 +419,250 @@ struct Theme {
 };
 ```
 
-Each phase installs working implementations with its entry points. During the
-migration, resolved hooks can delegate to the old role path until their system
-is migrated; there are no exposed unimplemented stubs or silent fallbacks for
-a disabled system.
+Representative application use after migration:
+
+```cpp
+Theme theme = DefaultTheme();
+ApplyCoordinatedMaterial3Palette(theme, palette);  // Explicit palette copies.
+theme.framework.state.hover = 20;                // Shared across systems.
+// Pass theme to Environment as today; after later edits:
+app.invalidateTheme();
+```
+
+Delete `Material3Theme::stateLayer()` once its callers migrate: without owning
+state policy it would need an implicit framework dependency. Callers resolve
+component ink and obtain opacity through the widget or framework instead.
+During migration, adapters can resolve existing roles, but every new hook ships
+with a working implementation. No unimplemented public stubs are introduced.
 
 ## Implementation Plan
 
 Authoring references: [C++ instructions](../../../.github/instructions/general-cpp-code-authoring-instructions.md),
 [widget instructions](../../../.github/instructions/roo-windows-widget-authoring.instructions.md),
 and [example instructions](../../../.github/instructions/embedded-example-authoring.instructions.md).
-Each phase is one reviewable commit, including its tests and documentation.
+Each phase is one reviewable commit with its own tests and documentation.
 The stashed earlier stage 3 is reference material, not a patch to apply wholesale.
 
-### Phase 1: characterize inheritance and cost
+### Phase 1: document vocabulary and characterize the boundaries
 
-Record all core token consumers and freeze same-system behavior, including tabs,
-selected navigation indicators, point overlays, disabled subtrees, and explicit
-overrides. Add mixed-system fixtures to expose existing reinterpretation before
-changing it. Document which assertions will deliberately change in phase 4.
+Add the responsibility/state vocabulary to the glossary. Inventory role consumers,
+component-specific feedback and explicit overrides. Audit interaction ink against
+versioned official component tokens/implementations: record a source revision,
+variant/selection/error/interaction mapping, current behavior, and intended change
+for each migrated component. This audit is a bounded research step: pin one
+AndroidX source commit for the primary component baseline, use versioned Material
+Web tokens only for components absent from that baseline, and record each fallback.
+Its exit criterion is a complete, cited mapping for every shipped Material3
+component that paints interaction feedback, with expected test values and all
+revision conflicts resolved in favor of the primary baseline. Add regression
+cases for each mapping; do not freeze known mismatches as compatibility requirements.
 
-Record target-ABI widget/theme sizes and host paint timings for 100 widgets at
-depths 1, 8, and 32, using repeated runs and median time. Acceptance for subsequent
-phases: no widget-instance size increase, no appearance-resolution allocations,
-and no more than 10% median paint-time regression on any fixture. Exceeding the
-CPU gate requires eliminating redundant resolution before proceeding, not adding
-per-widget caches. Record linked-size deltas without claiming a universal byte
-budget. Validate the characterization targets and store measurement commands
-and results beside this design.
-
-Proposed commit message:
-
-> Optional design systems, phase 1: characterize inherited appearance.
->
-> Record role consumers, rendering baselines, and resource measurements for the
-> optional design systems design, including the intended mixed-system boundary.
-
-### Phase 2: introduce resolved hooks
-
-Add `SurfaceAppearance` and the two hooks, initially resolving existing roles.
-Route generic content and interaction rendering through them. Keep background
-composition, role APIs, and the legacy highlighter hook temporarily. Resolve
-its result into interaction ink at the migration adapter, never into an accent
-field in the new contract. Add a generic forwarding example and hook tests; run overlay, surface invalidation, and material3 container tests.
-Check the phase 1 resource gates.
+Measure target-ABI sizes and median paint time for 100 widgets at depths 1, 8,
+and 32. Later phases must add no widget-instance state or resolution allocations
+and stay within 10% of baseline median paint time for each fixture. Failures
+require removing redundant work before proceeding, not adding per-widget caches.
+Record controller/theme size and linked-code deltas. Validate characterization
+and document intentional baseline changes.
 
 Proposed commit message:
 
-> Optional design systems, phase 2: expose resolved surface appearance.
+> Optional design systems, phase 1: define shared styling responsibilities.
 >
-> Route generic foreground and interaction rendering through live resolved hooks
-> while retaining the existing role implementation during migration.
+> Document the common vocabulary, audit component interaction ink, and record
+> mixed-system rendering and resource baselines for the revised design.
 
-### Phase 3: localize Material3 role resolution
+### Phase 2: share interaction defaults across systems
 
-Migrate Material3 component surfaces and special consumers listed above to the
-resolved contract, including the Material3 highlighter-hook consumers. Resolve
-their state-layer ink locally while retaining component-local roles and names.
-Update container, tabs, navigation, FAB, toggle icon button, and button-group
-tests and relevant examples. Require unchanged
-same-system goldens and the phase 1 gates before moving on.
+Add framework root/default ownership and move interaction opacities and generic
+disabled opacity into it. Migrate both systems, direct state-layer callers, and
+keyboard feedback; remove duplicated state tables/settings and the palette-only
+Material3 state-layer helper. Keep existing role-based ink temporarily. Add an
+example changing one hover/press setting for both systems. Validate live updates,
+independent palette edits, and disabled composition without double fading.
 
 Proposed commit message:
 
-> Optional design systems, phase 3: resolve Material3 roles at component boundaries.
+> Optional design systems, phase 2: share application interaction defaults.
 >
-> Keep Material3 token selection inside its components and expose resolved
-> descendant and interaction appearance, including tabs and navigation states.
+> Move state opacities into the framework theme and migrate both systems and
+> direct painters while preserving independently owned palettes.
 
-### Phase 4: remove core tokens and the Material2 bridge
+### Phase 3: specify feedback arbitration and shared click defaults
 
-Add independent framework defaults, migrate Material2 to its own boundaries,
-and remove core role declarations, `Material2ColorRole`, and core
-`usesHighlighterColor()`. Keep Material2 accent selection system-local and
-remove the generic Icon highlighter dependency. Update generic helpers and all
-remaining callers. Test that differing foreground and interaction colors are
-inherited independently, including Material2 navigation activation. Add a mixed-system example and documentation
-for root customization and cross-system inheritance. Validate independent live
-updates, overrides, reparenting, and detached roots; run the full library suite
-and frontend integration build. Verify the resource gates.
+Move click duration/default reveal into framework settings. Add the state-aware
+color hook with a temporary adapter to current ink selection. Implement the
+priority and click-layer suppression contract above, including active-animation
+snapshots. Document the behavior in click examples. Test simultaneous states,
+release/cancel restoration, zero opacity, drag during click, ripple/fade paths,
+and all existing activation-delivery policies. Validate dirty/full equivalence,
+single-write painting, and controller/CPU costs.
 
 Proposed commit message:
 
-> Optional design systems, phase 4: remove core color-token dependencies.
+> Optional design systems, phase 3: unify transient feedback composition.
 >
-> Introduce framework defaults, remove the Material2 role bridge, and establish
-> resolved appearance inheritance across generic and mixed-system subtrees.
+> Resolve one eligible interaction state with state-specific ink and shared
+> click defaults without changing semantic activation policies.
 
-### Phase 5: extract Material2 application conveniences
+### Phase 4: introduce inherited foreground and accent
 
-Move the alert helper and legacy text-editor adapter out of core. Make software
-keyboard integration optional as specified above. Update existing consumers and
-input examples in this commit. Validate alert ownership, failed presentation,
-keyboard visibility, hardware input, editor teardown, and cross-task routing
-using existing dialog and keyboard/input tests plus a keyboard-disabled build.
+Add `SurfaceColors`, forwarding through generic layouts and resolving at system
+surface boundaries. Keep old role declarations temporarily for remaining callers.
+Migrate generic labels/icons to the pair while preserving explicit overrides.
+Add the borrowed-checkbox example from the overview and tests for distinct colors,
+transparent backgrounds, detached roots, reparenting, and live surface changes.
+Verify resource gates and document accent as surface-relative emphasis ink.
 
 Proposed commit message:
 
-> Optional design systems, phase 5: isolate legacy application integrations.
+> Optional design systems, phase 4: inherit surface foreground and accent.
 >
-> Move Material2 alert and editor conveniences out of core and make the built-in
-> keyboard optional while retaining generic semantic input routing.
+> Expose a compact resolved color pair through generic layouts and system
+> surfaces, with borrowed-widget and explicit-override coverage.
 
-### Phase 6: enforce optional installation
+### Phase 5: localize component styling and remove core role inheritance
 
-Add the system switches, conditional theme composition, and build partitions.
-Update Bazel and Arduino configuration documentation and provide core-only,
-Material2-only, Material3-only, and mixed build examples. Compile and link all
-four with disabled directories excluded from the test fixture, not just unused.
-Check dependency inputs and verify invalid flag combinations fail clearly.
-Run the full default suite and affected application builds serially, using
-persistent Bazel storage and existing resource limits. Record final size and
-paint-time comparisons against phase 1.
+Migrate Material3 component interaction colors to the phase 1 mappings and the
+state-aware hook. Migrate Material2 content/accent choices to inherited colors
+where appropriate and retain local palette resolution for owned surfaces.
+Update tabs, navigation, button groups, and other role consumers. Remove core
+role APIs, `Material2ColorRole`, and `usesHighlighterColor()` from core. Update
+relevant examples and goldens after reviewing intended changes. Validate
+component states, mixed-system nesting, no ancestor-role leakage into component
+ink, and phase 1 resource gates; run the full library suite.
 
 Proposed commit message:
 
-> Optional design systems, phase 6: support builds without unused systems.
+> Optional design systems, phase 5: resolve component styling without core tokens.
 >
-> Select theme members and source groups consistently across builds, with
-> installation-absence coverage and examples for all four system combinations.
+> Implement component-specific interaction ink and borrowed-widget color
+> adaptation, removing core role inheritance and highlighter selection.
+
+### Phase 6: coordinate application palettes explicitly
+
+Add the coordinated Material3 palette helper and its root/M2 mappings specified
+above. Add a Material3 application example borrowing Material2 controls, including
+a contained button, and demonstrate live palette replacement. Test every copied
+field, independent later edits, unchanged shared interaction settings and explicit
+overrides, and Material3-only use. Update the color-theming guide with migration
+from system `.state` settings to `theme.framework.state`.
+
+Proposed commit message:
+
+> Optional design systems, phase 6: coordinate palettes for borrowed components.
+>
+> Add explicit value-copy palette installation and a mixed-system example,
+> preserving independent theme ownership and shared interaction settings.
+
+### Phase 7: extract Material2 application conveniences
+
+Move the alert helper and legacy editor adapter out of core and make software
+keyboard integration optional as described above. Update consumers and input
+examples. Validate alert cleanup and failed presentation, editor teardown,
+keyboard visibility, hardware input and cross-task routing, including a
+keyboard-disabled build.
+
+Proposed commit message:
+
+> Optional design systems, phase 7: isolate legacy application integrations.
+>
+> Move Material2 alert/editor conveniences out of core and make the built-in
+> keyboard optional while preserving generic semantic input routing.
+
+### Phase 8: enforce optional installation
+
+Add system switches, conditional theme composition, integration dependencies,
+and build partitions. Document Bazel/Arduino configuration with core-only,
+Material2-only, Material3-only, and mixed examples. Compile/link all four with
+disabled directories physically excluded from fixtures. Verify build inputs,
+invalid flag combinations, and the coordinated helper's conditional dependencies.
+Run the full default suite and affected frontend/companion builds serially with
+persistent Bazel storage and existing limits. Record final resource comparisons.
+
+Proposed commit message:
+
+> Optional design systems, phase 8: build without unused design systems.
+>
+> Select theme and source dependencies consistently, with physical-absence
+> coverage and examples for each supported system combination.
 
 ## Testing Plan
 
-Use focused targets as each phase lands, including
-`//:material3_container_test`, `//:material2_theme_test`,
-`//:surface_widget_invalidation_test`, `//:theme_color_tokens_test`, and existing
-component, overlay, dialog, and keyboard tests. Rename token-specific tests only
-where their subject is removed. Preserve dirty/full repaint equivalence and
-single-write rendering checks.
+Use focused theme, overlay, container, component, dialog, keyboard and click
+lifecycle targets as each phase lands. Existing starting points include
+`//:theme_color_tokens_test`, `//:material2_theme_test`,
+`//:material3_container_test`, `//:surface_widget_invalidation_test`, and
+`//:overlay_test`. Rename token-specific tests only when their subject is removed.
 
-The final acceptance combines unchanged same-system goldens, explicit
-mixed-system behavior, independent palette mutation, compile/link coverage with
-system files absent, target-ABI size evidence, and the phase 1 CPU/allocation
-gates. Builds run serially; Bazel outputs and caches stay off RAM-backed `/tmp`.
+Acceptance covers shared live feedback settings, component-specific ink,
+borrowed-widget adaptation, explicit overrides, palette coordination without
+aliasing, interaction arbitration, and optional-installation builds. Retain
+single-write rendering and dirty/full repaint equivalence. Review intended
+golden changes against the recorded component contracts, not historical output
+alone. Apply the resource gates from phase 1. Run Bazel builds serially and keep
+all Bazel storage off RAM-backed `/tmp`.
 
 ## Caveats
 
-Changing a Material3 theme will no longer change independent framework root
-settings. Cross-system role reinterpretation is replaced by resolved inheritance.
-Both changes require migration notes and tests; neither is hidden as a mechanical
-rename. Uniform feature switches affect ABI and must be identical throughout an
-application and its linked libraries.
+Shared opacity and feedback arbitration intentionally change Material2 appearance
+and simultaneous-state rendering. Palette coordination adapts colors but does
+not convert widget geometry or typography. A borrowed widget remains recognizably
+its own component where those choices matter.
+
+A supplied accent is not guaranteed to contrast with an arbitrary application
+background override; the surface owner must supply an appropriate pair. Component
+roles can require more colors than the inherited pair, especially for filled,
+error, disabled, and inverse surfaces.
+
+Core root colors are independently owned. Directly editing Material3 no longer
+implicitly changes framework roots; coordinated installation is explicit.
+Feature switches change ABI and must agree across the application and libraries.
 
 ### Rejected Alternatives
 
-#### Keep Material3 tokens as a shared core vocabulary
+#### Independent default interaction policies per system
 
-This preserves existing code with little churn, but requires Material3 headers
-and semantics even for unrelated systems. The resolved contract removes that
-requirement while retaining tokens where their meaning belongs.
+This preserves each system's historical shading but makes borrowed controls feel
+unrelated. Shared defaults meet the motivating use case while local component
+hooks preserve necessary exceptions.
 
-#### Inherit only a background color
+#### Derive all interaction ink from the parent or a highlighter flag
 
-A color alone cannot recover foreground, interaction ink, and interaction policy;
-equal RGB values can represent distinct roles. Background inheritance remains
-separate from the resolved appearance defined above.
+This is compact but cannot represent component/state-specific ink. Carry accent
+as an inherited color and let components choose when to use it; use the
+state-aware hook for resolved interaction ink.
 
-#### Make Material3Theme implement Material2Theme
+#### Replace every system palette with three colors
 
-A shared object couples ownership and mutation and cannot represent independently
-customized systems. The concrete bag preserves independent value ownership.
+The small inherited vocabulary supports ordinary content and active affordances,
+but cannot express the semantic combinations needed by richer components.
+Independent palettes plus explicit coordination preserve those distinctions.
 
-#### Runtime registry or per-widget policy pointers
+#### Keep Material3 roles in core or infer roles from RGB
 
-These support arbitrary plugins but add lookup, lifetime, or instance-state
-costs without a current requirement. A known set of systems and build-wide
-selection meet the stated installation and mixed-widget needs.
+The former prevents optional installation; the latter is ambiguous when two
+roles have the same color. Resolve roles at component boundaries instead.
+
+#### Make Material3Theme implement Material2Theme or project it live
+
+That couples ownership and mutation. Explicit copies coordinate palette
+installation while allowing later independent customization.
+
+#### Runtime registries or per-widget policy pointers
+
+The supported systems are known at build time. A concrete theme bag and virtual
+resolution hooks meet the requirements without additional instance state or
+runtime registration machinery.
 
 #### Rely on linker garbage collection
 
-It saves unused code but does not remove includes, compilation requirements,
-or theme members. Physical-absence build fixtures enforce the stronger contract.
+It removes unused code but cannot prove source/header independence or remove
+unused theme members. Physical-absence fixtures enforce the installation contract.
 
 ## Future Work
 
-An explicit cross-system conversion helper can copy compatible colors from a
-Material3 scheme into a Material2 `ColorScheme` by value. It belongs in an
-integration target requiring both systems, not in either standalone theme.
-The caller assigns the result and invalidates affected applications; subsequent
-palette mutations stay independent. This helper is outside the six required
-phases and should receive its own mapping design and tests before implementation.
-
-Separately published system packages, runtime plugin discovery, and a
-Material2-free built-in software keyboard are also outside this proposal.
+Separate published packages, runtime plugins, additional palette-coordination
+adapters, a Material2-free software keyboard, and a runtime common spacing scale
+are outside this proposal. Component-specific shape and typography adapters can
+be added for demonstrated borrowing needs; they are not required to share the
+framework interaction policy or inherited colors.
