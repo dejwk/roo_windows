@@ -61,6 +61,15 @@ terminology. Relevant current APIs are:
   [Task](../../../src/roo_windows/core/task.h) owns a Material2 text-field
   editor shared by Material2 and Material3 text fields. Its caret, selection,
   and input functionality is needed even without the software keyboard.
+- [EditorDestination](../../../src/roo_windows/keyboard/editor_destination.cpp)
+  presents an M2 text field and back/confirm buttons, including when opened by
+  an M3 field. It holds the draft and commits on confirmation after removal
+  from navigation. The keyboard is hosted separately in an application-owned
+  task; the destination does not contain it.
+- [KeyboardWidget](../../../src/roo_windows/keyboard/keyboard.cpp) already draws
+  all keys in one `SurfaceWidget`, using `KeyboardColorTheme`. Its direct styling
+  dependencies on M2 typography helpers and M3 pressed-state colors prevent
+  independent installation; it does not need replacement M3 key widgets.
 - [Material3 dialog scaffolding](../../../src/roo_windows/material3/dialog/dialog_scaffold.h)
   embeds Material2 horizontal dividers. Optional installation also requires
   replacing this direct component dependency with Material3 dividers.
@@ -93,6 +102,9 @@ component roles or color scheme.
    Measure target-ABI size and paint cost.
 9. Apply feature switches consistently across translation units. Use of a
    disabled system must fail at compile time.
+10. Each system's extracted editor must retain that system's appearance while
+    sharing editing semantics and the application keyboard. Software keyboard
+    availability must be independent of which design systems are installed.
 
 ## Design Overview
 
@@ -130,6 +142,16 @@ choices that depend on selection, error, or the particular interaction state.
 `Theme` stays a concrete bag of supported system themes plus the common framework
 settings. Explicit palette coordination creates consistent defaults across that
 bag without introducing live projections. Build switches omit unused systems.
+
+Editing has three separate responsibilities: a task-owned neutral engine handles
+text input and caret/selection behavior; each system supplies its own editor
+**destination**, the navigation screen holding a temporary draft; and one
+optional application-owned keyboard produces semantic input for the active
+editor. The destinations share draft completion and navigation lifecycle logic,
+while their fields, actions, and appearance belong to their respective systems.
+For example, an M3 field that cannot fit above the keyboard opens an M3 editor
+and uses the same keyboard as an M2 field. The detailed ownership and build
+contracts are in [Editing and keyboard integration](#editing-and-keyboard-integration).
 
 For example, a Material3 surface supplies its foreground and accent through a
 generic layout to a borrowed Material2 checkbox. The checkbox uses foreground
@@ -404,8 +426,12 @@ enabled. `DefaultTheme()` remains the same immutable default entry point in
 all configurations, including neither system enabled.
 
 Split Bazel source groups into core, Material2, Material3, and optional software
-keyboard libraries. The public aggregate selects enabled groups and propagates
-consistent feature definitions. There must be no dependency cycle through
+keyboard libraries. System-specific editor destination sources belong to their
+system's integration group and are selected only when both that system and the
+software keyboard are enabled. The keyboard library depends on neither system;
+all eight combinations of the three Boolean switches are supported. The public
+aggregate selects enabled groups and propagates consistent feature definitions.
+There must be no dependency cycle through
 core's default-theme implementation. Header-only system theme value types can
 be included by configured theme composition without pulling component sources
 into core. A disabled system's files must not appear in that build's inputs.
@@ -460,6 +486,8 @@ validation, and preserve cleanup after completion, failed admission, and teardow
 Applications can instead own and show a `material2::AlertDialog` or
 `material3::AlertDialog` directly. Application does not select a dialog style.
 
+### Editing and keyboard integration
+
 Extract the shared engine currently named `material2::TextFieldEditor` into a
 system-neutral module. Retain one task-owned engine and the existing
 `internal::TextEditTarget` contract for both systems. Caret/selection metrics,
@@ -468,15 +496,80 @@ the software keyboard. Migrate core members, overloads, and friends to the neutr
 engine and keep concrete field adapters in their systems. The producer-side
 `TextInputEmitter` alone does not replace this shared consumer engine.
 
-Make the built-in software keyboard an optional integration, selected by
-`ROO_WINDOWS_ENABLE_SOFTWARE_KEYBOARD` (defaulting to the Material2 switch).
-It requires Material2 until its controls are separately redesigned; reject
-keyboard-enabled/Material2-disabled builds. Retain `keyboard()` when enabled.
-Move keyboard installation and compact `EditorDestination` presentation into
-that integration. With it disabled, fields edit in place through the neutral
+#### Independent system keyboard
+
+Select the built-in keyboard with `ROO_WINDOWS_ENABLE_SOFTWARE_KEYBOARD`, a
+build-wide Boolean defaulting to 1 independently of the system switches. Retain
+`Application::keyboard()` when enabled. Move keyboard installation into this
+optional integration. With it disabled, fields edit in place through the neutral
 engine, hardware/semantic input continues to work, and core has no keyboard
-source dependency. Material3 text-field painting and editing must compile with
-both Material2 and the keyboard physically absent.
+source dependency. Both systems' fields must compile with the other system and
+the keyboard physically absent. With both systems disabled, the keyboard can
+still deliver semantic input to a custom `internal::TextEditTarget`.
+
+Keep the existing single-widget key renderer, layouts, repeat/alternative-key
+behavior, and independent `KeyboardColorTheme`. Replace M2 font helpers with
+keyboard-local functions selecting the same font assets, sizes, and zoom behavior
+from the font library directly; do not copy the M2 typography catalog. Use the
+keyboard theme's `text` color for pressed ink and framework pressed opacity for
+both keys and alternative-key feedback. This removes direct M3 palette access
+and adds no color or font fields to each key or widget. The keyboard retains
+its own system appearance regardless of the active field's design system.
+
+The application continues to own one keyboard and its separate task. Opening
+an editor destination activates its field through the shared engine, which
+routes keyboard input to that field. Do not reparent the keyboard into the
+destination, construct one keyboard per destination, or change keyboard hosting.
+Switching editors must preserve existing routing and visibility semantics.
+
+#### System-specific editor destinations
+
+Replace the neutral-named public `EditorDestination` with
+`material2::EditorDestination` and `material3::EditorDestination`, in each
+system's `editor_destination/editor_destination.h` and matching `.cpp`.
+No compatibility alias keeps M2 presentation in the keyboard module.
+
+| Responsibility | M2 destination | M3 destination |
+| --- | --- | --- |
+| Draft field | Existing underlined M2 field | Filled M3 field |
+| Back and confirm actions | M2 buttons | M3 icon buttons |
+| Appearance and measurement | M2 palette, typography, and dimensions | M3 palette, typography, shapes, and density |
+| Editing and completion | Shared neutral engine and destination lifecycle | Same engine and lifecycle |
+| Software input | Shared application keyboard | Same keyboard instance |
+
+Retain the simple back/field/confirm row. Each destination measures its own
+controls within the viewport available above the keyboard. Keep the original
+field's label/hint and obscure-text setting when creating the draft. Confirm copies
+the draft back; Back cancels without modifying the original. Keyboard confirmation
+and the visible confirm action use the same completion path.
+
+Extract a small internal destination base alongside neutral editing support,
+compiled only with keyboard integration. It owns the existing editing,
+confirmation, and completion guards and callback lifecycle; concrete destinations
+own their controls and typed source-field adapters. Keep the draft in the editor
+field, without an additional retained string in the base. Share navigation
+admission, removal, and completion ordering instead of duplicating that fragile
+logic. Preserve cleanup on failed admission, source destruction, and application
+teardown. Recheck the source after any user callback that can destroy it, and
+deliver completion only after the destination leaves navigation history.
+
+Replace `ApplicationContext::editorDestination()` and its non-allocating query
+with typed `material2EditorDestination()` / `material3EditorDestination()` and
+matching `...IfPresent()` accessors, present only when the corresponding system
+and keyboard are enabled. Each lazily owns one destination, reused on later
+visits. Concrete construction lives in the corresponding system integration;
+neutral editing and keyboard sources include neither system's destination.
+Preserve the existing refusal to start another extracted edit while a destination
+is attached or completing, applying the guard across both cached destinations.
+Use their existing lifecycle flags; add no registry or state to ordinary widgets.
+
+Field adapters select their own system's destination directly. Move extraction
+eligibility and source-lifetime integration out of the current M2-backed shared
+class. Preserve automatic extraction for M3 fields and explicit extraction for
+M2 fields. The destination's own field starts editing through an internal
+in-place entry point that still requests the keyboard but skips extraction.
+This prevents another extraction attempt on a small viewport without disabling
+software input or adding a persistent flag to every field.
 
 ### Resource model
 
@@ -501,6 +594,16 @@ removing both systems' duplicate state settings offsets part of that cost.
 Disabled systems remove their entire theme member. Additional virtual slots
 have shared flash cost but require no extra per-instance vptr. Phase 1 establishes
 target-ABI and CPU gates; exact linked-size deltas are measured, not assumed.
+
+Editing retains one engine per task and one keyboard per application when
+configured. Destination ownership uses one pointer per enabled system when the
+keyboard is enabled: a mixed build adds one pointer over the current single
+slot. Destination objects allocate only on first use and remain cached; after
+both systems have been used, a mixed application retains both sets of controls,
+but only the active destination holds draft content. Clearing a string can retain
+its capacity. No second keyboard or per-key widget allocation is introduced.
+Measure idle and post-use context/destination heap costs separately in phase 10,
+including retained draft capacity; disabled integrations add no ownership slots.
 
 ## Proposed API
 
@@ -724,7 +827,7 @@ changes, color/thickness overrides, minimum one-pixel thickness at 75% zoom,
 and dirty/full repaint equivalence with single-write rendering. Cover dialog
 scroll-boundary visibility and update dialog goldens for the intentional divider
 appearance change. Verify the new divider headers/sources and dialog scaffold
-have no Material2 dependency; phase 9 compiles them with Material2 physically
+have no Material2 dependency; phase 11 compiles them with Material2 physically
 absent. Record target-ABI sizes and confirm the default divider adds no fields
 beyond `Widget`.
 
@@ -740,42 +843,95 @@ Proposed commit message:
 
 Remove Application's alert member and add the explicit Material2 free helper.
 Extract the neutral editing engine and migrate both systems' fields and core
-routing. Make keyboard/compact-editor presentation optional as specified above.
-Update consumers and input examples, including direct system-specific alerts.
+routing. Preserve the current destination and keyboard behavior during this
+extraction. Update input documentation and direct system-specific alert examples.
 
 Validate alert completion cleanup, failed admission and teardown; editor caret,
-selection, masking, replacement and teardown; keyboard visibility; hardware and
-semantic input; and cross-task routing. Include a keyboard-disabled build and,
-once phase 9 enables switches, a Material3-only editing fixture with Material2
-and keyboard files absent. Verify no core public alert signature or Material2
-editor type remains.
+selection, masking, replacement and teardown; hardware and semantic input; and
+cross-task routing. Verify no core public alert signature or Material2 editor
+engine type remains. Keep existing keyboard/editor tests passing.
 
 Proposed commit message:
 
 > Optional design systems, phase 8: isolate legacy application integrations.
 >
-> Remove the core alert convenience, preserve it in Material2, extract the
-> editing engine shared by both systems, and make keyboard presentation optional
-> while preserving hardware and semantic input.
+> Remove the core alert convenience, preserve it in Material2, and extract the
+> editing engine shared by both systems while preserving input and completion.
 
-### Phase 9: enforce optional installation
+### Phase 9: make the system keyboard independently optional
+
+Remove the keyboard's M2 typography and M3 palette dependencies as specified in
+[Editing and keyboard integration](#editing-and-keyboard-integration). Add its
+independent feature switch and guard installation, ownership, accessors, and
+presentation paths. Keep one application-hosted keyboard and existing semantic
+routing. Add a keyboard-disabled input example and configuration documentation;
+when disabled, both systems edit in place and omit destination ownership.
+
+Test visibility, routing, cancellation, repeat, alternative keys, zoom-dependent
+font metrics, and keyboard-theme ink with shared pressed opacity. Review the
+intentional feedback-color change and verify dirty/full repaint equivalence.
+Audit keyboard sources for direct system includes and palette/font access,
+and test keyboard-disabled hardware/semantic editing. Core theme composition
+still includes both systems at this phase; phase 11 verifies their physical
+absence after system switches land.
+
+Proposed commit message:
+
+> Optional design systems, phase 9: make the keyboard independent of M2 and M3.
+>
+> Retain the shared keyboard renderer and input routing, remove system styling
+> dependencies, and make keyboard installation independently configurable.
+
+### Phase 10: provide matching editor destinations for both systems
+
+Move existing M2 presentation into `material2::EditorDestination`, add the M3
+filled-field/icon-button presentation, and share the internal destination
+lifecycle. Replace the context's single accessor/slot with conditional typed lazy
+accessors. Migrate explicit M2 callers and automatic M3 extraction, preserving
+source lifetime and completion semantics. Add the internal in-place editing path
+for destination fields. Remove the old keyboard-module destination and its API.
+
+Add focused examples for editing a setting through each system's destination,
+using the same application keyboard, plus migration documentation. Test draft
+commit/cancel, masking, keyboard and button confirmation, failed admission,
+source destruction (including from a value-change callback), teardown, and
+refusal of overlapping extracted edits across systems. Exercise a viewport too
+small for the original field, verifying matching presentation and no nested
+extraction from the destination field. Test switching between M2 and M3 editors
+with one keyboard and correct active-target routing. Cover light/dark, density,
+zoom, and live theme changes in destination rendering. Record lazy allocation,
+retained draft capacity, and context/control sizes against the resource model;
+ordinary widget/field sizes must not grow for extraction policy.
+
+Proposed commit message:
+
+> Optional design systems, phase 10: add system-specific editor destinations.
+>
+> Share draft completion and navigation lifecycle across M2 and M3 editor
+> presentations, with typed lazy ownership and one application keyboard.
+
+### Phase 11: enforce optional installation
 
 Add system switches, conditional theme composition, integration dependencies,
 and build partitions. Document Bazel/Arduino configuration with core-only,
-Material2-only, Material3-only, and mixed examples. Compile/link all four with
-disabled directories physically excluded from fixtures, including Material3
-dividers, dialogs, and editable text fields in the Material3-only build.
-Verify build inputs, invalid flag combinations, and the coordinated helper's
-conditional dependencies.
+Material2-only, Material3-only, and mixed examples. Compile/link all eight
+combinations of system and keyboard switches, with disabled directories
+physically excluded. Cover M3 dividers, dialogs, editable text fields, and the
+M3 editor destination with M2 absent; cover the equivalent M2 editor with M3
+absent. With the keyboard disabled, exclude both destinations and keyboard files
+while exercising in-place hardware/semantic editing. With neither system enabled
+and keyboard enabled, route input to a minimal neutral edit target.
+Verify build inputs, reject non-Boolean switch values, and check coordinated
+palette helper and destination accessor availability in each configuration.
 Run the full default suite and affected frontend/companion builds serially with
 persistent Bazel storage and existing limits. Record final resource comparisons.
 
 Proposed commit message:
 
-> Optional design systems, phase 9: build without unused design systems.
+> Optional design systems, phase 11: build without unused design systems.
 >
-> Select theme and source dependencies consistently, with physical-absence
-> coverage and examples for each supported system combination.
+> Select theme, destination, and keyboard dependencies consistently, with
+> physical-absence coverage for every supported feature combination.
 
 ## Testing Plan
 
@@ -788,8 +944,10 @@ click lifecycle targets as each phase lands. Existing starting points include
 Acceptance covers shared live feedback settings, component-specific ink,
 borrowed-widget adaptation, explicit overrides, palette coordination without
 aliasing, non-press arbitration, press composition, persistent selection, and
-optional-installation builds. Retain single-write rendering and dirty/full
-repaint equivalence. Review intended
+optional-installation builds. Include matching editor presentation, shared
+completion/lifetime semantics, one-keyboard routing, and independent keyboard
+configuration across the feature matrix. Retain single-write rendering and
+dirty/full repaint equivalence. Review intended
 golden changes against the recorded component contracts, not historical output
 alone. Apply the resource gates from phase 1. Run Bazel builds serially and keep
 all Bazel storage off RAM-backed `/tmp`.
@@ -867,6 +1025,15 @@ The supported systems are known at build time. A concrete theme bag and virtual
 resolution hooks meet the requirements without additional instance state or
 runtime registration machinery.
 
+#### Keep one M2 editor destination or duplicate keyboards per system
+
+One M2 destination reuses the existing UI, but makes extracted M3 editing depend
+on M2 and changes its appearance. Separate system presentations preserve the
+field's design system; sharing their lifecycle avoids duplicated completion and
+lifetime logic. Per-system keyboards would duplicate controls and routing without
+serving that requirement. Keep the separate application keyboard host described
+in [Editing and keyboard integration](#editing-and-keyboard-integration).
+
 #### Rely on linker garbage collection
 
 It removes unused code but cannot prove source/header independence or remove
@@ -875,7 +1042,7 @@ unused theme members. Physical-absence fixtures enforce the installation contrac
 ## Future Work
 
 Separate published packages, runtime plugins, additional palette-coordination
-adapters, a Material2-free software keyboard, and a runtime common spacing scale
-are outside this proposal. Component-specific shape and typography adapters can
-be added for demonstrated borrowing needs; they are not required to share the
+adapters, alternate keyboard hosting inside destinations, and a runtime common
+spacing scale are outside this proposal. Component-specific shape and typography
+adapters can be added for demonstrated borrowing needs; they are not required to share the
 framework interaction policy or inherited colors.
