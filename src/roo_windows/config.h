@@ -2,6 +2,16 @@
 
 #include "roo_locale.h"
 
+/// Includes Material 2 in Theme and coordinated palette installation.
+/// Set consistently across translation units. Currently supports isolated
+/// palette builds; full-library component exclusion is not yet implemented.
+#ifndef ROO_WINDOWS_ENABLE_MATERIAL2
+#define ROO_WINDOWS_ENABLE_MATERIAL2 1
+#endif
+#if ROO_WINDOWS_ENABLE_MATERIAL2 != 0 && ROO_WINDOWS_ENABLE_MATERIAL2 != 1
+#error "ROO_WINDOWS_ENABLE_MATERIAL2 must be 0 or 1"
+#endif
+
 /// Enables framebuffer-backed scroll reuse for the `ScrollablePanel` alias.
 ///
 /// Set this globally to 1 only when the selected display keeps a framebuffer

@@ -26,6 +26,67 @@ longer than the environment and widgets. Copying a theme copies its palettes
 and settings, including interaction opacities; the copy does not borrow the
 original palette or state settings.
 
+## Coordinating borrowed components
+
+Use the explicit palette installer when a Material 3 application borrows
+Material 2 controls:
+
+```cpp
+#include "roo_windows/material3/palette.h"
+
+// On the UI thread between frames:
+auto colors = roo_windows::material3::DefaultColorScheme();
+colors.primary = roo_display::Color(0xFF865000);
+roo_windows::ApplyCoordinatedMaterial3Palette(theme, colors);
+app.invalidateTheme();
+```
+
+The installer copies the complete Material 3 palette, every matching Material 2
+color field by name when enabled, and these framework roots:
+
+| Framework field | Material 3 source |
+| --- | --- |
+| `canvas` | `background` |
+| `surface` | `surface` |
+| `content` | `onSurface` |
+| `emphasis` | `primary` |
+| `outline` | `outlineVariant` |
+
+Each section owns its values. Subsequent edits to the input palette or either
+system's palette remain independent. To coordinate again after editing the
+owned M3 palette, call
+`ApplyCoordinatedMaterial3Palette(theme, theme.material3Theme().color)`.
+Direct assignment to `theme.material3Theme().color` updates only M3.
+
+Installation preserves shared state opacities, click settings, component role
+slots, density, fonts, and explicit widget overrides. It does not invalidate
+applications: call `invalidateTheme()` on each application sharing the theme.
+It allocates no memory and installs no live bindings.
+
+The [coordinated palette example](../examples/material3/theme/coordinated_palette/coordinated_palette.ino)
+switches palettes live with an M3 button, an M2 checkbox, and an M2 contained
+button. The checkbox inherits the framework surface pair through a generic
+layout; the contained button resolves its independently owned M2 colors.
+
+The palette integration supports `ROO_WINDOWS_ENABLE_MATERIAL2=0`, set
+consistently across translation units. Its isolated test target omits M2
+headers. Full-library source exclusion is still scheduled for Phase 11 of the
+optional design systems proposal; this flag alone does not yet make the full
+widget library build without M2.
+
+### Migrating shared interaction settings
+
+Replace `theme.material2Theme().state` and `theme.material3Theme().state`
+with `theme.framework.state`. Hover, focus, pressed, dragged, and disabled-content
+opacities now belong to the application. Shared click defaults live in
+`theme.framework.click`. Palette replacement leaves both settings intact:
+
+```cpp
+theme.framework.state.pressed = 24;
+theme.framework.click.reveal = roo_windows::ClickOverlayAnimation::kFade;
+app.invalidateTheme();
+```
+
 ## Repainting
 
 After color or appearance changes, call `app.invalidateTheme()` on every

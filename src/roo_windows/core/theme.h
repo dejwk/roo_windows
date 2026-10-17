@@ -6,7 +6,9 @@
 #include "roo_windows/config.h"
 #include "roo_windows/core/default_theme.h"
 #include "roo_windows/core/framework_theme.h"
+#if ROO_WINDOWS_ENABLE_MATERIAL2
 #include "roo_windows/material2/theme.h"
+#endif
 #include "roo_windows/material3/theme.h"
 
 #ifndef ROO_WINDOWS_ZOOM
@@ -102,6 +104,7 @@ namespace roo_windows {
 struct Theme {
   FrameworkTheme framework;
   material3::Material3Theme material3;
+#if ROO_WINDOWS_ENABLE_MATERIAL2
   material2::Material2Theme material2;
 
   /// Returns independently owned Material 2 appearance settings.
@@ -109,6 +112,8 @@ struct Theme {
 
   /// Returns independently owned Material 2 appearance settings.
   const material2::Material2Theme& material2Theme() const { return material2; }
+
+#endif
 
   /// Returns the owned Material 3 appearance settings for customization.
   material3::Material3Theme& material3Theme() { return material3; }

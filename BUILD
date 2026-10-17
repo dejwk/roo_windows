@@ -9,7 +9,7 @@ cc_library(
             "src/**/*.cpp",
             "src/**/*.h",
         ],
-        exclude = ["test/**"],
+        exclude = ["test/**", "src/roo_windows/material3/palette.cpp"],
     ),
     defines = [
         #                 "MLOG_roo_windows_layout=1"
@@ -19,6 +19,7 @@ cc_library(
     ],
     visibility = ["//visibility:public"],
     deps = [
+        ":material3_palette",
         "@roo_collections",
         "@roo_display",
         "@roo_fonts_basic",
@@ -1746,6 +1747,63 @@ cc_test(
 cc_test(
     name = "component_interaction_ink_test",
     srcs = ["test/component_interaction_ink_test.cpp"],
+    linkstatic = 1,
+    deps = [":roo_windows", "@roo_testing//:arduino_gtest_main"],
+)
+
+_PALETTE_HEADERS = [
+    "src/roo_windows/config.h",
+    "src/roo_windows/core/default_theme.h",
+    "src/roo_windows/core/framework_theme.h",
+    "src/roo_windows/core/theme.h",
+    "src/roo_windows/material3/color_token.h",
+    "src/roo_windows/material3/component_theme.h",
+    "src/roo_windows/material3/default_theme.h",
+    "src/roo_windows/material3/density.h",
+    "src/roo_windows/material3/theme.h",
+    "src/roo_windows/material3/palette.h",
+]
+
+cc_library(
+    name = "material3_palette",
+    srcs = ["src/roo_windows/material3/palette.cpp"],
+    hdrs = _PALETTE_HEADERS + ["src/roo_windows/material2/theme.h"],
+    includes = ["src"],
+    visibility = ["//visibility:public"],
+    deps = ["@roo_display", "@roo_locale"],
+)
+
+# Isolated palette integration: M2 is absent from this target's inputs.
+cc_library(
+    name = "material3_palette_only",
+    srcs = ["src/roo_windows/material3/palette.cpp"],
+    hdrs = _PALETTE_HEADERS,
+    defines = ["ROO_WINDOWS_ENABLE_MATERIAL2=0"],
+    includes = ["src"],
+    testonly = True,
+    deps = ["@roo_display", "@roo_locale"],
+)
+
+cc_test(
+    name = "coordinated_palette_test",
+    srcs = ["test/coordinated_palette_test.cpp"],
+    linkstatic = 1,
+    deps = [":roo_windows", "@roo_testing//:arduino_gtest_main"],
+)
+
+cc_test(
+    name = "coordinated_palette_material3_only_test",
+    srcs = [
+        "test/coordinated_palette_test.cpp",
+        "src/roo_windows/material3/default_theme.cpp",
+    ],
+    linkstatic = 1,
+    deps = [":material3_palette_only", "@roo_testing//:arduino_gtest_main"],
+)
+
+cc_test(
+    name = "coordinated_palette_widget_test",
+    srcs = ["test/coordinated_palette_widget_test.cpp", "test/roo_windows_render_test_support.h"],
     linkstatic = 1,
     deps = [":roo_windows", "@roo_testing//:arduino_gtest_main"],
 )

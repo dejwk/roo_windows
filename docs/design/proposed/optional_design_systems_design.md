@@ -3,8 +3,9 @@
 Status: proposed. Material2 isolation, independent system palettes, and the
 simplified Material3 state opacities are implemented prerequisites. Phase 1
 characterization is recorded in the
-[boundary audit](optional_design_systems_phase1_audit.md). Phases 2–5 implement
-shared feedback, inherited surface colors, and local component styling. Later
+[boundary audit](optional_design_systems_phase1_audit.md). Phases 2–6 implement
+shared feedback, inherited surface colors, local component styling, and explicit
+coordinated palette installation. Later
 phases remain proposed. Revised 2026-10-16 around a shared application look and
 feel rather than independent interaction policies per design system.
 
@@ -892,6 +893,18 @@ a contained button, and demonstrate live palette replacement. Test every copied
 field, independent later edits, unchanged shared interaction settings and explicit
 overrides, and Material3-only use. Update the color-theming guide with migration
 from system `.state` settings to `theme.framework.state`.
+
+Implemented by `material3/palette.h` and `palette.cpp`. The helper copies values
+without allocation or invalidation; the coordinated-palette example explicitly
+invalidates its application after each replacement. Focused tests cover all M3
+and matching M2 fields, root mappings, independent edits and reapplication,
+interaction/component settings, explicit widget colors and fonts, and live
+repainting of a borrowed contained button.
+
+An isolated palette target compiles and tests with
+`ROO_WINDOWS_ENABLE_MATERIAL2=0` and no M2 headers in its inputs. This phase guards
+the M2 theme section and palette integration only; full-library optional source
+selection remains Phase 11.
 
 Proposed commit message:
 
