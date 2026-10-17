@@ -298,10 +298,11 @@ receive an explicit replacement in the same phase; selection must remain visible
 without hover or focus.
 
 Move the existing shared click duration and default ripple/fade choice into
-`FrameworkTheme::interaction`, retaining their current defaults. Existing
-component overrides keep precedence. A running click samples its duration and
-reveal choice at admission using its single existing controller, so theme edits
-do not restart it or alter delivery ordering; later clicks use the new defaults.
+`FrameworkTheme::click` (`durationMillis` and `reveal`), retaining their current
+defaults. Existing component overrides keep precedence. A running click samples
+its duration and reveal choice at admission using its single existing controller,
+so theme edits do not restart it or alter delivery ordering; later clicks use the
+new defaults.
 Keep frame scheduling limits and activation policy independent of appearance.
 There is no automatic new animation for hover/focus transitions in this scope.
 

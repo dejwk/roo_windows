@@ -10,28 +10,21 @@ namespace roo_windows {
 
 namespace {
 
-roo_display::Color getTransientOverlayColor(const Widget& widget) {
+roo_display::Color NonPressOverlayColor(const Widget& widget) {
   uint8_t overlay_opacity = widget.getOverlayOpacity();
   if (overlay_opacity == 0) {
     return roo_display::color::Transparent;
   }
-  Color overlay = widget.interactionColor();
+  Color overlay = widget.interactionColor(widget.nonPressOverlayState());
   overlay.set_a(overlay_opacity);
   return overlay;
 }
 
-roo_display::Color getOverlayColor(const Widget& widget) {
-  Color component = widget.componentOverlayColor();
-  Color transient = getTransientOverlayColor(widget);
-  if (component.a() == 0) return transient;
-  if (transient.a() == 0) return component;
-  return AlphaBlend(component, transient);
-}
-
-roo_display::Color getClickAnimationColor(const Widget& widget,
-                                          const Canvas& canvas) {
-  Color overlay = widget.interactionColor();
-  overlay.set_a(widget.interactionOpacity(InteractionState::kPressed));
+roo_display::Color PressOverlayColor(const Widget& widget, float progress) {
+  if (!widget.useOverlayOnPress()) return roo_display::color::Transparent;
+  Color overlay = widget.interactionColor(InteractionState::kPressed);
+  overlay.set_a(static_cast<uint8_t>(
+      widget.interactionOpacity(InteractionState::kPressed) * progress));
   return overlay;
 }
 
@@ -82,9 +75,16 @@ OverlaySpec::OverlaySpec(Widget& widget, const Canvas& canvas)
   }
   if (widget.getOverlayType() == Widget::OVERLAY_NONE) {
     base_overlay_ = roo_display::color::Transparent;
+    if (widget.isClicking()) {
+      is_modded_ = true;
+      const ClickAnimation* animation = widget.getClickAnimation();
+      click_animation_in_progress_ =
+          animation != nullptr && animation->progress() < 1.0f;
+    }
     return;
   }
-  base_overlay_ = getOverlayColor(widget);
+  base_overlay_ =
+      AlphaBlend(widget.componentOverlayColor(), NonPressOverlayColor(widget));
   is_modded_ = (base_overlay_.a() != 0);
   Widget::OverlayType overlay_type = widget.getOverlayType();
   switch (overlay_type) {
@@ -102,24 +102,19 @@ OverlaySpec::OverlaySpec(Widget& widget, const Canvas& canvas)
       break;
   }
 
-  // If click_animation is true, we need to redraw the overlay.
-  bool click_animation = ((widget.state_ & kWidgetClicking) != 0);
-  if (click_animation) {
+  if (widget.isClicking()) {
     is_modded_ = true;
-    float click_progress = 1.0f;
-    int16_t click_x = 0;
-    int16_t click_y = 0;
-    const ClickAnimation* active_click_animation = widget.getClickAnimation();
-    click_animation_in_progress_ =
-        active_click_animation != nullptr &&
-        (click_progress = active_click_animation->progress()) < 1.0f;
-    if (active_click_animation != nullptr) {
-      click_x = active_click_animation->xCenter();
-      click_y = active_click_animation->yCenter();
-    }
+    const ClickAnimation* animation = widget.getClickAnimation();
+    const float click_progress =
+        animation == nullptr ? 1.0f : animation->progress();
+    const ClickOverlayAnimation reveal = animation == nullptr
+                                             ? widget.getClickOverlayAnimation()
+                                             : animation->reveal();
+    click_animation_in_progress_ = click_progress < 1.0f;
     if (click_animation_in_progress_ &&
-        widget.getClickOverlayAnimation() ==
-            Widget::ClickOverlayAnimation::kRipple) {
+        reveal == ClickOverlayAnimation::kRipple) {
+      const int16_t click_x = animation->xCenter();
+      const int16_t click_y = animation->yCenter();
       Rect anim_bounds = widget.bounds();
       if (is_point()) {
         anim_bounds = widget.getInteractionBounds();
@@ -130,15 +125,12 @@ OverlaySpec::OverlaySpec(Widget& widget, const Canvas& canvas)
       int16_t y = click_y + canvas.dy();
       int16_t r =
           animation_radius(anim_bounds, click_x, click_y, click_progress);
-      roo_display::Color click_animation_overlay =
-          AlphaBlend(getTransientOverlayColor(widget),
-                     getClickAnimationColor(widget, canvas));
-      base_overlay_ = widget.componentOverlayColor();
-      press_overlay_spec_.enabled = true;
+      Color press_color = PressOverlayColor(widget, 1.0f);
+      press_overlay_spec_.enabled = press_color.a() != 0;
       press_overlay_spec_.center_x = x;
       press_overlay_spec_.center_y = y;
       press_overlay_spec_.radius = r;
-      press_overlay_spec_.color = click_animation_overlay;
+      press_overlay_spec_.color = press_color;
 
       if (is_point()) {
         roo_display::FpPoint focus = widget.getPointOverlayFocus();
@@ -149,17 +141,16 @@ OverlaySpec::OverlaySpec(Widget& widget, const Canvas& canvas)
         press_overlay_spec_.clip_circle_center_x = dx + focus.x;
         press_overlay_spec_.clip_circle_center_y = dy + focus.y;
         press_overlay_spec_.clip_circle_radius = kPointOverlayDiameter * 0.5f;
-      } else {
-        press_overlay_spec_.clipped_to_circle = false;
       }
-    } else if (widget.getClickOverlayAnimation() ==
-               Widget::ClickOverlayAnimation::kRipple) {
-      // Full rect click overlay - just apply on top of the overlay as
-      // calculated so far.
-      press_overlay_spec_.enabled = false;
+    } else {
+      const float progress =
+          reveal == ClickOverlayAnimation::kFade ? click_progress : 1.0f;
       base_overlay_ =
-          AlphaBlend(base_overlay_, getClickAnimationColor(widget, canvas));
+          AlphaBlend(base_overlay_, PressOverlayColor(widget, progress));
     }
+  } else if (widget.isPressed()) {
+    base_overlay_ = AlphaBlend(base_overlay_, PressOverlayColor(widget, 1.0f));
+    is_modded_ = base_overlay_.a() != 0;
   }
 }
 

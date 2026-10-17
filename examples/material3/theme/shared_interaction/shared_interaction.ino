@@ -1,5 +1,5 @@
-// Learning goal: one framework hover/press policy affects Material 2 and
-// Material 3 buttons, while each system keeps its own palette and ink.
+// Learning goal: one framework policy controls hover, press, and click timing
+// for Material 2 and Material 3 buttons while each keeps its own palette.
 
 #ifdef ROO_TESTING
 #include "roo_testing/devices/display/ili9341/ili9341spi.h"
@@ -87,9 +87,13 @@ void setup() {
   SPI.begin(4, 5, 6);
   display.enableTurbo();
   display.init();
-  // Move the pointer over each button, then press it. Both read these values.
+  // Move the pointer over each button, then press and hold it. Hover stays
+  // visible outside the expanding ripple; the full press tint remains while
+  // held, and release settles back to hover before the pointer leaves.
   theme.framework.state.hover = 38;
   theme.framework.state.pressed = 64;
+  // Each click captures this duration when its press begins.
+  theme.framework.click.durationMillis = 300;
   app.start();
   scheduler.run();
 }

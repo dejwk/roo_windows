@@ -143,7 +143,8 @@ TEST(Material2Theme, ToggleSelectionOwnsOverlayAboveTransparentContainer) {
   EXPECT_EQ(26, button.getOverlayOpacity());
   button.setFocused(false);
   button.setPressed(true);
-  EXPECT_EQ(26, button.getOverlayOpacity());
+  EXPECT_EQ(0, button.getOverlayOpacity());
+  EXPECT_EQ(26, button.interactionOpacity(InteractionState::kPressed));
   button.setPressed(false);
   button.setEnabled(false);
   theme.framework.state.hover = 0;

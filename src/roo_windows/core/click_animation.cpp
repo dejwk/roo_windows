@@ -39,6 +39,8 @@ ClickAnimation::ClickAnimation()
       previous_transient_footprint_(0, 0, -1, -1),
       click_anim_start_millis_(0),
       sampled_elapsed_millis_(0),
+      click_anim_duration_millis_(FrameworkClickTheme::kDefaultDurationMillis),
+      click_anim_reveal_(ClickOverlayAnimation::kRipple),
       click_anim_x_(0),
       click_anim_y_(0) {}
 
@@ -47,7 +49,8 @@ void ClickAnimation::tick() {
   if (!isAnimationPending() || !target_->isClicking()) return;
   target_->invalidateInterior();
   invalidateTransientFootprint();
-  if (sampled_elapsed_millis_ > kPressAnimationMillis + 100 &&
+  if (static_cast<uint64_t>(sampled_elapsed_millis_) >
+          static_cast<uint64_t>(click_anim_duration_millis_) + 100 &&
       phase_ == Phase::kAnimatingUnconfirmed) {
     // 100 ms is a grace period to allow the widget to draw the full click
     // state and then mark itself as non-clicking. If the widget is dragging
@@ -150,7 +153,8 @@ void ClickAnimation::deliverClick() {
 float ClickAnimation::progress() const {
   if (target() == nullptr) return 1.0f;
   if (isFinishing()) return 1.0f;
-  float result = (float)sampled_elapsed_millis_ / kPressAnimationMillis;
+  if (click_anim_duration_millis_ == 0) return 1.0f;
+  float result = (float)sampled_elapsed_millis_ / click_anim_duration_millis_;
   if (result > 1.0f) result = 1.0f;
   return result;
 }
@@ -168,6 +172,8 @@ bool ClickAnimation::tryStart(Widget& widget, int16_t x, int16_t y) {
   if (isBusy()) return false;
   target_ = &widget;
   click_anim_start_millis_ = millis();
+  click_anim_duration_millis_ = widget.theme().framework.click.durationMillis;
+  click_anim_reveal_ = widget.getClickOverlayAnimation();
   click_anim_x_ = x;
   click_anim_y_ = y;
   resetTransientFootprint();

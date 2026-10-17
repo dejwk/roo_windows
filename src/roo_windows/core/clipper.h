@@ -232,8 +232,12 @@ class ClipperOutput : public roo_display::DisplayOutput {
   }
 
   /// Configures the one shared ripple, which remains stable for this paint.
+  /// Area effects supply their base tint; point overlays use transparent tint
+  /// because their base halo is painted separately.
   /// The input model permits at most one active press animation at a time.
-  const PressOverlay* configurePressOverlay(const PressOverlaySpec& spec);
+  const PressOverlay* configurePressOverlay(
+      const PressOverlaySpec& spec,
+      roo_display::Color tint = roo_display::color::Transparent);
 
   void setPressOverlay(const PressOverlaySpec& spec,
                        roo_display::Box clip_box) {

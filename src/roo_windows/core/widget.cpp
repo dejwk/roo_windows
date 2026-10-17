@@ -671,33 +671,16 @@ uint8_t Widget::disabledContentOpacity() const {
   return theme().disabledContentOpacity();
 }
 
+InteractionState Widget::nonPressOverlayState() const {
+  if (isDragged()) return InteractionState::kDragged;
+  if (isFocused()) return InteractionState::kFocus;
+  return InteractionState::kHover;
+}
+
 uint8_t Widget::getOverlayOpacity() const {
   if (getOverlayType() == OVERLAY_NONE) return 0;
-  uint16_t overlay_opacity = 0;
-  if (isHover()) {
-    overlay_opacity += interactionOpacity(InteractionState::kHover);
-  }
-  if (isFocused()) {
-    overlay_opacity += interactionOpacity(InteractionState::kFocus);
-  }
-  if (isClicking() && useOverlayOnPress()) {
-    uint8_t pressed_opacity = interactionOpacity(InteractionState::kPressed);
-    if (getClickOverlayAnimation() == ClickOverlayAnimation::kFade) {
-      const ClickAnimation* animation = getClickAnimation();
-      float progress = animation == nullptr ? 1.0f : animation->progress();
-      overlay_opacity += static_cast<uint16_t>(pressed_opacity * progress);
-    } else {
-      overlay_opacity += pressed_opacity;
-    }
-  } else if (isPressed() && useOverlayOnPress()) {
-    overlay_opacity += interactionOpacity(InteractionState::kPressed);
-  }
-  if (isDragged()) {
-    overlay_opacity += interactionOpacity(InteractionState::kDragged);
-  }
-  if (overlay_opacity > 255) overlay_opacity = 255;
-  if (overlay_opacity == 0) return 0;  // roo_display::color::Transparent;
-  return overlay_opacity;
+  if (!isDragged() && !isFocused() && !isHover()) return 0;
+  return interactionOpacity(nonPressOverlayState());
 }
 
 Canvas Widget::prepareCanvas(const Canvas& in) {
@@ -776,13 +759,13 @@ void Widget::paintWidgetModded(PaintContext& ctx) {
       // Consume state-change invalidations in this final overlay paint.
       // Semantic click delivery follows after the drawing context closes.
       clearClicking();
-    } else if (spec.has_press_overlay() && spec.is_point()) {
-      clipper.setPressOverlay(spec.press_overlay(), ctx.canvas().clip_box());
     }
   }
-  if (spec.is_point() && !spec.has_press_overlay() &&
-      spec.base_overlay().a() > 0) {
+  if (spec.is_point() && spec.base_overlay().a() > 0) {
     AddPointOverlay(*this, ctx.canvas(), clipper, spec.base_overlay());
+  }
+  if (spec.is_point() && spec.has_press_overlay()) {
+    clipper.setPressOverlay(spec.press_overlay(), ctx.canvas().clip_box());
   }
   // Area and disabled effects were snapshotted when this overlay frame was
   // entered. Direct output and deferred contributors use that same scope.

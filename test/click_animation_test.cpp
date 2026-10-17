@@ -77,7 +77,8 @@ class ClickFrameWidget : public SurfaceWidget {
     return Dimensions(16, 16);
   }
   bool isClickable() const override { return true; }
-  OverlayType getOverlayType() const override { return OVERLAY_POINT; }
+  OverlayType getOverlayType() const override { return overlay_type; }
+  bool useOverlayOnPress() const override { return press_feedback; }
   roo_display::Color background() const override {
     return roo_display::color::Blue;
   }
@@ -96,6 +97,8 @@ class ClickFrameWidget : public SurfaceWidget {
     invalidateInterior();
   }
   ClickActivationPolicy policy = ClickActivationPolicy::kAfterNaturalAnimation;
+  OverlayType overlay_type = OVERLAY_POINT;
+  bool press_feedback = true;
   int clicks = 0;
   int registry_samples = 0;
   mutable int paints = 0;
@@ -126,11 +129,53 @@ class ClickFrameTest : public testing::Test {
   ManualTouchDevice touch_{32, 32};
   roo_display::Display display_{device_, touch_};
   roo_scheduler::SchedulingService scheduler_;
-  Environment environment_{scheduler_};
+  Theme theme_;
+  Environment environment_{scheduler_, theme_};
   CountingKeys keys_;
   Application app_{&environment_, display_, keys_, false};
   ClickFrameWidget* target_ = nullptr;
 };
+
+// Verifies each click captures shared timing and reveal defaults at admission.
+TEST_F(ClickFrameTest, FrameworkClickDefaultsAreCapturedPerInteraction) {
+  EXPECT_EQ(Widget::ClickOverlayAnimation::kRipple,
+            target_->getClickOverlayAnimation());
+  theme_.framework.click.reveal = ClickOverlayAnimation::kFade;
+  EXPECT_EQ(Widget::ClickOverlayAnimation::kFade,
+            target_->getClickOverlayAnimation());
+  theme_.framework.click.durationMillis = 400;
+  target_->onShowPress(8, 8);
+  EXPECT_EQ(ClickOverlayAnimation::kFade, animation().reveal());
+  system_time_delay_micros(100000);
+  app_.root().refreshClickAnimation();
+  EXPECT_NEAR(0.25f, animation().progress(), 0.01f);
+  theme_.framework.click.durationMillis = 200;
+  theme_.framework.click.reveal = ClickOverlayAnimation::kRipple;
+  EXPECT_NEAR(0.25f, animation().progress(), 0.01f);
+  EXPECT_EQ(ClickOverlayAnimation::kFade, animation().reveal());
+  app_.refresh();
+  EXPECT_EQ(0, target_->clicks);
+  target_->onCancel();
+  target_->onShowPress(8, 8);
+  EXPECT_EQ(ClickOverlayAnimation::kRipple, animation().reveal());
+}
+
+// Verifies invisible feedback still settles and delivers an animated click.
+TEST_F(ClickFrameTest, SuppressedPressFeedbackStillDeliversClick) {
+  theme_.framework.click.durationMillis = 0;
+  for (int variant = 0; variant < 3; ++variant) {
+    target_->overlay_type =
+        variant == 2 ? Widget::OVERLAY_NONE : Widget::OVERLAY_POINT;
+    target_->press_feedback = variant != 1;
+    theme_.framework.state.pressed = variant == 0 ? 0 : 26;
+    target_->onSingleTapUp(8, 8);
+    app_.refresh();
+    EXPECT_EQ(variant + 1, target_->clicks);
+    EXPECT_FALSE(animation().isBusy());
+    EXPECT_FALSE(target_->isClicking());
+    app_.refresh();
+  }
+}
 
 // Verifies hiding or disabling the target or an ancestor cancels ownership
 // immediately, even if eligibility is restored before the finger is released.

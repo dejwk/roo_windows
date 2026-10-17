@@ -64,9 +64,9 @@ typedef roo_display::RleImage4bppxBiased<roo_display::Alpha4,
 
 using roo_display::Color;
 
-// TODO: Rename this consistently in a separate change; it controls the full
-// click-animation lifecycle as well as the initial press visuals.
-static const uint32_t kPressAnimationMillis = 200;
+/// Legacy name for the default; live timing is Theme::framework.click.
+static const uint32_t kPressAnimationMillis =
+    FrameworkClickTheme::kDefaultDurationMillis;
 
 static const uint16_t kWidgetOwnedByParent = 0x0001;
 static const uint16_t kWidgetClippedInParent = 0x0002;
@@ -282,8 +282,13 @@ class Widget {
   // derived from the effective container role.
   virtual roo_display::Color defaultColor() const;
 
-  /// Returns the ink used by shared hover, press, and click effects.
+  /// Returns the legacy ink used by shared interaction effects.
   virtual roo_display::Color interactionColor() const;
+
+  /// Returns ink for @p state; the default forwards to the legacy ink hook.
+  virtual roo_display::Color interactionColor(InteractionState state) const {
+    return interactionColor();
+  }
 
   /// Returns the opacity for one shared interaction state (0..255).
   virtual uint8_t interactionOpacity(InteractionState state) const;
@@ -568,13 +573,13 @@ class Widget {
 
   /// Selects how the pressed interaction layer is revealed while a click
   /// animation is active. The default preserves the existing ripple behavior.
-  enum class ClickOverlayAnimation : uint8_t { kRipple, kFade };
+  using ClickOverlayAnimation = roo_windows::ClickOverlayAnimation;
 
   virtual OverlayType getOverlayType() const { return OVERLAY_POINT; }
 
   /// Returns the reveal used for the clicking pressed interaction layer.
   virtual ClickOverlayAnimation getClickOverlayAnimation() const {
-    return ClickOverlayAnimation::kRipple;
+    return theme().framework.click.reveal;
   }
 
   virtual roo_display::FpPoint getPointOverlayFocus() const {
@@ -618,8 +623,11 @@ class Widget {
     return roo_display::color::Transparent;
   }
 
-  // Computes the current area-overlay opacity from the widget theme and
-  // interaction state.
+  /// Returns the winning non-press interaction state. When none is active,
+  /// the returned hover state is inert because getOverlayOpacity() is zero.
+  InteractionState nonPressOverlayState() const;
+
+  // Computes opacity for one non-press interaction from the current flags.
   //
   // Paint-pipeline only: this depends on the effective overlay color role, so
   // it is valid only after the widget is attached to the parent/application

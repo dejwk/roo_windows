@@ -71,12 +71,12 @@ RoundedPaintState& ClipperOutput::roundedArena() {
 }
 
 const PressOverlay* ClipperOutput::configurePressOverlay(
-    const PressOverlaySpec& spec) {
+    const PressOverlaySpec& spec, roo_display::Color tint) {
   if (!spec.enabled) return nullptr;
   // PaintEffect records borrow this shared object. The input model permits one
   // active press animation, so its sample remains unchanged for this paint.
   press_overlay_ =
-      PressOverlay(spec.center_x, spec.center_y, spec.radius, spec.color);
+      PressOverlay(spec.center_x, spec.center_y, spec.radius, spec.color, tint);
   if (spec.clipped_to_circle) {
     press_overlay_.setClipCircle(spec.clip_circle_center_x,
                                  spec.clip_circle_center_y,
@@ -112,7 +112,8 @@ void ClipperOutput::pushOverlaySpec(Widget& widget, const Canvas& canvas) {
       tint = roo_display::AlphaBlend(
           tint, canvas.bgcolor().withA(255 - ((255 * opacity) >> 7)));
     }
-    const PressOverlay* press = configurePressOverlay(spec.press_overlay());
+    const PressOverlay* press =
+        configurePressOverlay(spec.press_overlay(), tint);
     const PaintEffect snapshot(arena.active_effect, canvas.clip_box(), tint,
                                press);
     // Deferred overlays borrow effect nodes, so retain stable slots until the

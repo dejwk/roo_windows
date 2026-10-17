@@ -35,6 +35,72 @@ class ClickableSurfaceBoxWidget : public test_support::ColorBoxWidget {
   bool isClickable() const override { return true; }
 };
 
+class StateInkSurface : public ClickableSurfaceBoxWidget {
+ public:
+  using ClickableSurfaceBoxWidget::ClickableSurfaceBoxWidget;
+
+  void setFocusOpacity(uint8_t opacity) { focus_opacity_ = opacity; }
+
+  uint8_t interactionOpacity(InteractionState state) const override {
+    return state == InteractionState::kFocus
+               ? focus_opacity_
+               : ClickableSurfaceBoxWidget::interactionOpacity(state);
+  }
+
+  Color interactionColor(InteractionState state) const override {
+    switch (state) {
+      case InteractionState::kHover:
+        return color::Red;
+      case InteractionState::kFocus:
+        return color::Green;
+      case InteractionState::kDragged:
+        return color::Yellow;
+      case InteractionState::kPressed:
+        return color::White;
+      default:
+        return color::Black;
+    }
+  }
+
+ private:
+  uint8_t focus_opacity_ = 26;
+};
+
+class FadeStateInkSurface : public StateInkSurface {
+ public:
+  using StateInkSurface::StateInkSurface;
+
+  ClickOverlayAnimation getClickOverlayAnimation() const override {
+    return ClickOverlayAnimation::kFade;
+  }
+};
+
+class StateInkPoint : public PointOverlayBoxWidget {
+ public:
+  using PointOverlayBoxWidget::PointOverlayBoxWidget;
+
+  Color interactionColor(InteractionState state) const override {
+    return state == InteractionState::kPressed ? color::White : color::Green;
+  }
+};
+
+class StateInkCustom : public StateInkSurface {
+ public:
+  using StateInkSurface::StateInkSurface;
+
+  OverlayType getOverlayType() const override { return OVERLAY_CUSTOM; }
+
+  ClickOverlayAnimation getClickOverlayAnimation() const override {
+    return ClickOverlayAnimation::kFade;
+  }
+
+  void paint(PaintContext& ctx) const override {
+    const Color fill =
+        AlphaBlend(color::Blue, ctx.overlaySpec().base_overlay());
+    ctx.canvas().fillRect(0, 0, width() - 1, height() - 1, fill);
+  }
+};
+
 class ClickableIcon : public Icon {
  public:
   using Icon::Icon;
@@ -465,6 +531,176 @@ TEST_F(RooWindowsRenderTest, OverlayPolicyDefaultsFollowWidgetHierarchy) {
   EXPECT_EQ(Widget::OVERLAY_AREA, surface.getOverlayType());
   EXPECT_EQ(Widget::ClickOverlayAnimation::kRipple,
             surface.getClickOverlayAnimation());
+}
+
+// Verifies fixed drag/focus/hover arbitration independent of entry order and
+// confirms a zero-opacity winner does not expose a lower-priority state.
+TEST_F(RooWindowsRenderTest, NonPressFeedbackUsesOnePriorityWinner) {
+  auto surface = std::make_unique<StateInkSurface>(context(), color::Blue,
+                                                   Dimensions(24, 24));
+  StateInkSurface* target = surface.get();
+  app_.add(std::move(surface), Box(12, 8, 35, 31));
+  const int x = 24;
+  const int y = 20;
+  refresh();
+  const Color plain = pixelAt(x, y);
+
+  target->setHover(true);
+  refresh();
+  const Color hovered = pixelAt(x, y);
+  EXPECT_EQ(QuantizeToArgb4444(AlphaBlend(
+                color::Blue, color::Red.withA(target->interactionOpacity(
+                                 InteractionState::kHover)))),
+            hovered);
+  target->setFocused(true);
+  refresh();
+  const Color focused = pixelAt(x, y);
+  EXPECT_EQ(QuantizeToArgb4444(AlphaBlend(
+                color::Blue, color::Green.withA(target->interactionOpacity(
+                                 InteractionState::kFocus)))),
+            focused);
+  target->setDragged(true);
+  refresh();
+  const Color dragged = pixelAt(x, y);
+  EXPECT_EQ(QuantizeToArgb4444(AlphaBlend(
+                color::Blue, color::Yellow.withA(target->interactionOpacity(
+                                 InteractionState::kDragged)))),
+            dragged);
+
+  target->setDragged(false);
+  refresh();
+  EXPECT_EQ(focused, pixelAt(x, y));
+  target->setFocused(false);
+  refresh();
+  EXPECT_EQ(hovered, pixelAt(x, y));
+  target->setHover(false);
+  refresh();
+  EXPECT_EQ(plain, pixelAt(x, y));
+
+  target->setFocused(true);
+  target->setHover(true);
+  refresh();
+  EXPECT_EQ(focused, pixelAt(x, y));
+  target->setFocusOpacity(0);
+  target->invalidateInterior();
+  refresh();
+  EXPECT_EQ(plain, pixelAt(x, y));
+}
+
+// Verifies an expanding press reveal uses state-specific ink exactly once,
+// while the non-press layer remains visible outside the reveal and after it.
+TEST_F(RooWindowsRenderTest, AreaPressComposesOverHoverWithoutTintDrop) {
+  auto surface = std::make_unique<StateInkSurface>(context(), color::Blue,
+                                                   Dimensions(40, 32));
+  StateInkSurface* target = surface.get();
+  app_.add(std::move(surface), Box(8, 8, 47, 39));
+  target->setHover(true);
+  refresh();
+  const Color hovered = pixelAt(28, 24);
+  target->onShowPress(20, 16);
+  delay(kPressAnimationMillis / 4);
+  refresh();
+  const Color revealed = pixelAt(28, 24);
+  EXPECT_EQ(hovered, pixelAt(45, 36));
+  const Color expected = QuantizeToArgb4444(AlphaBlend(
+      AlphaBlend(color::Blue, color::Red.withA(20)), color::White.withA(26)));
+  EXPECT_EQ(expected, revealed);
+
+  delay(kPressAnimationMillis + 20);
+  refresh();
+  EXPECT_EQ(revealed, pixelAt(28, 24));
+  EXPECT_TRUE(target->isPressed());
+  refresh();
+  EXPECT_EQ(revealed, pixelAt(28, 24));
+  target->setPressed(false);
+  refresh();
+  EXPECT_EQ(hovered, pixelAt(28, 24));
+}
+
+// Verifies fade reveal modulates only pressed ink while preserving focused ink.
+TEST_F(RooWindowsRenderTest, AreaFadeComposesPressedInkOverFocus) {
+  auto surface = std::make_unique<FadeStateInkSurface>(context(), color::Blue,
+                                                       Dimensions(32, 24));
+  FadeStateInkSurface* target = surface.get();
+  app_.add(std::move(surface), Box(8, 8, 39, 31));
+  target->setFocused(true);
+  refresh();
+  const Color focused = pixelAt(24, 20);
+  target->onShowPress(16, 12);
+  delay(kPressAnimationMillis / 2);
+  refresh();
+  const ClickAnimation* animation = target->getClickAnimation();
+  ASSERT_NE(nullptr, animation);
+  const uint8_t press_alpha = static_cast<uint8_t>(
+      target->interactionOpacity(InteractionState::kPressed) *
+      animation->progress());
+  EXPECT_GT(press_alpha, 0);
+  EXPECT_LT(press_alpha,
+            target->interactionOpacity(InteractionState::kPressed));
+  EXPECT_EQ(QuantizeToArgb4444(
+                AlphaBlend(AlphaBlend(color::Blue, color::Green.withA(26)),
+                           color::White.withA(press_alpha))),
+            pixelAt(24, 20));
+  target->setPressed(false);
+  target->onCancel();
+  refresh();
+  EXPECT_EQ(focused, pixelAt(24, 20));
+}
+
+// Verifies the point halo remains under a growing ripple and survives its
+// terminal frame after press feedback has settled.
+TEST_F(RooWindowsRenderTest, PointRippleKeepsHoverOutsideReveal) {
+  auto back = std::make_unique<ColorBoxWidget>(context(), color::Red,
+                                               Dimensions(48, 40));
+  auto point = std::make_unique<StateInkPoint>(context(), color::Blue,
+                                               Dimensions(18, 18));
+  StateInkPoint* target = point.get();
+  app_.add(std::move(back), Box(0, 0, 47, 39));
+  app_.add(std::move(point), Box(20, 12, 37, 29));
+  target->setHover(true);
+  refresh();
+  const Color halo = pixelAt(12, 20);
+  const Color center = pixelAt(28, 20);
+  target->onShowPress(9, 9);
+  delay(kPressAnimationMillis / 4);
+  refresh();
+  EXPECT_EQ(halo, pixelAt(12, 20));
+  const Color revealed = pixelAt(28, 20);
+  EXPECT_NE(center, revealed);
+  delay(kPressAnimationMillis + 20);
+  refresh();
+  EXPECT_EQ(revealed, pixelAt(28, 20));
+  refresh();
+  EXPECT_EQ(revealed, pixelAt(28, 20));
+  target->setPressed(false);
+  refresh();
+  EXPECT_EQ(center, pixelAt(28, 20));
+  EXPECT_EQ(halo, pixelAt(12, 20));
+}
+
+// Verifies a custom paint owner receives the composed non-press and faded
+// press color through OverlaySpec without an automatic area effect.
+TEST_F(RooWindowsRenderTest, CustomFadeReceivesComposedFeedback) {
+  auto custom = std::make_unique<StateInkCustom>(context(), color::Blue,
+                                                 Dimensions(24, 24));
+  StateInkCustom* target = custom.get();
+  app_.add(std::move(custom), Box(8, 8, 31, 31));
+  target->setHover(true);
+  refresh();
+  const Color hovered = pixelAt(20, 20);
+  target->onShowPress(12, 12);
+  delay(kPressAnimationMillis / 2);
+  refresh();
+  const ClickAnimation* animation = target->getClickAnimation();
+  ASSERT_NE(nullptr, animation);
+  const uint8_t press_alpha = static_cast<uint8_t>(26 * animation->progress());
+  const Color expected = QuantizeToArgb4444(
+      AlphaBlend(AlphaBlend(color::Blue, color::Red.withA(20)),
+                 color::White.withA(press_alpha)));
+  EXPECT_EQ(expected, pixelAt(20, 20));
+  target->onCancel();
+  refresh();
+  EXPECT_EQ(hovered, pixelAt(20, 20));
 }
 
 // A fade keeps using the shared click timeline but exposes the pressed layer

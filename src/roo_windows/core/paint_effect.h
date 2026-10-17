@@ -12,8 +12,9 @@ namespace roo_windows::internal {
 /// all deferred contributors have been painted.
 class PaintEffect {
  public:
-  /// Captures a flat @p tint or @p press within device-coordinate @p bounds.
-  /// A non-null @p press replaces the flat tint; @p parent is the outer scope.
+  /// Captures a flat @p tint and optional press reveal within @p bounds.
+  /// When present, @p press already contains the tint; @p parent is the outer
+  /// scope.
   PaintEffect(const PaintEffect* parent, roo_display::Box bounds,
               roo_display::Color tint, const PressOverlay* press)
       : parent_(parent), bounds_(bounds), tint_(tint), press_(press) {}
@@ -24,10 +25,10 @@ class PaintEffect {
   /// Returns the device-coordinate scope bounds.
   roo_display::Box bounds() const { return bounds_; }
 
-  /// Returns the borrowed ripple, or null for a flat tint.
+  /// Returns the borrowed ripple containing the tint, or null for a flat tint.
   const PressOverlay* press() const { return press_; }
 
-  /// Returns the flat tint, used only when press() is null.
+  /// Returns the flat tint used when no press reveal is present.
   roo_display::Color tint() const { return tint_; }
 
  private:

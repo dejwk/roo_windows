@@ -29,16 +29,27 @@ class PressOverlay : public roo_display::Rasterizable {
   /// Creates an inert overlay (radius zero, transparent foreground).
   PressOverlay() : PressOverlay(0, 0, 0, roo_display::color::Transparent) {}
 
-  /// Creates an overlay drawing a circle of radius `r` at `(x, y)` (device
-  /// coordinates) filled with `fg`, optionally over a background `bg`.
-  PressOverlay(int16_t x, int16_t y, int16_t r, roo_display::Color fg,
-               roo_display::Color bg = roo_display::color::Transparent)
+  /// Creates a ripple at device coordinates `(x, y)` with radius @p r.
+  /// Composes @p press over @p tint for its interior and edge bands once at
+  /// construction, so samples need no further blending. Outside the ripple,
+  /// samples retain @p tint throughout the enclosing paint-effect scope.
+  PressOverlay(int16_t x, int16_t y, int16_t r, roo_display::Color press,
+               roo_display::Color tint = roo_display::color::Transparent)
       : x_(x),
         y_(y),
         r_(r),
         r_sq_(r * r),
-        fg_(fg),
-        bg_(bg),
+        fg_(roo_display::AlphaBlend(tint, press)),
+        bg_(tint),
+        edge96_(roo_display::AlphaBlend(
+            tint, internal::AverageColors(roo_display::color::Transparent,
+                                          press, 96))),
+        edge64_(roo_display::AlphaBlend(
+            tint, internal::AverageColors(roo_display::color::Transparent,
+                                          press, 64))),
+        edge32_(roo_display::AlphaBlend(
+            tint, internal::AverageColors(roo_display::color::Transparent,
+                                          press, 32))),
         clip_circle_(false),
         clip_circle_x_(),
         clip_circle_y_(),
@@ -96,7 +107,7 @@ class PressOverlay : public roo_display::Rasterizable {
     int32_t min_dy_sq = minDistanceSq(yMin, yMax, y_);
     if (r_sq_ < min_dx_sq + min_dy_sq) {
       // Entirely outside the circle.
-      *result = roo_display::Color(0);
+      *result = bg_;
       return true;
     }
     if (clip_circle_) {
@@ -125,7 +136,7 @@ class PressOverlay : public roo_display::Rasterizable {
     int32_t min_dy_sq = minDistanceSq(yMin, yMax, y_);
     if (r_sq_ < min_dx_sq + min_dy_sq) {
       // Outside.
-      *result = roo_display::Color(0);
+      *result = bg_;
       return true;
     }
     if (clip_circle_) {
@@ -165,11 +176,11 @@ class PressOverlay : public roo_display::Rasterizable {
     if (delta <= 0) {
       return bg_;
     } else if (r_ >= 1 && delta <= 2 * r_ - 1) {
-      return internal::AverageColors(bg_, fg_, 96);
+      return edge96_;
     } else if (r_ >= 2 && delta <= 4 * r_ - 4) {
-      return internal::AverageColors(bg_, fg_, 64);
+      return edge64_;
     } else if (r_ >= 3 && delta <= 6 * r_ - 9) {
-      return internal::AverageColors(bg_, fg_, 32);
+      return edge32_;
     } else {
       return fg_;
     }
@@ -194,11 +205,11 @@ class PressOverlay : public roo_display::Rasterizable {
     if (delta <= 0) {
       return bg_;
     } else if (r_ >= 1 && delta <= 2 * r_ - 1) {
-      c = internal::AverageColors(bg_, fg_, 96);
+      c = edge96_;
     } else if (r_ >= 2 && delta <= 4 * r_ - 4) {
-      c = internal::AverageColors(bg_, fg_, 64);
+      c = edge64_;
     } else if (r_ >= 3 && delta <= 6 * r_ - 9) {
-      c = internal::AverageColors(bg_, fg_, 32);
+      c = edge32_;
     } else {
       c = fg_;
     }
@@ -212,7 +223,6 @@ class PressOverlay : public roo_display::Rasterizable {
     if (shade > 1.0) shade = 1.0;
     if (shade < 0.0) shade = 0.0;
     return c.withA(shade * c.a());
-    return c;
   }
 
  private:
@@ -257,6 +267,9 @@ class PressOverlay : public roo_display::Rasterizable {
   int32_t r_sq_;
   roo_display::Color fg_;
   roo_display::Color bg_;
+  roo_display::Color edge96_;
+  roo_display::Color edge64_;
+  roo_display::Color edge32_;
   bool clip_circle_;
   float clip_circle_x_;
   float clip_circle_y_;

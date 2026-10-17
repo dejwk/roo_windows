@@ -25,6 +25,8 @@ enum class InteractionState : uint8_t {
   kDragged,
 };
 
+enum class ClickOverlayAnimation : uint8_t { kRipple, kFade };
+
 static_assert(sizeof(FrameworkColorRole) == 1,
               "Framework color roles must remain compact.");
 
@@ -55,6 +57,13 @@ struct FrameworkStateTheme {
   }
 };
 
+/// Shared timing and reveal defaults for click feedback.
+struct FrameworkClickTheme {
+  static constexpr uint32_t kDefaultDurationMillis = 200;
+  uint32_t durationMillis = kDefaultDurationMillis;
+  ClickOverlayAnimation reveal = ClickOverlayAnimation::kRipple;
+};
+
 /// Application-owned colors used by design-system-independent roots.
 struct FrameworkTheme {
   roo_display::Color canvas = roo_display::Color(0xFFFFFBFE);
@@ -63,6 +72,7 @@ struct FrameworkTheme {
   roo_display::Color emphasis = roo_display::Color(0xFF6750A4);
   roo_display::Color outline = roo_display::Color(0xFFCAC4D0);
   FrameworkStateTheme state;
+  FrameworkClickTheme click;
 
   roo_display::Color color(FrameworkColorRole role) const {
     switch (role) {

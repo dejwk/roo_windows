@@ -114,14 +114,45 @@ TEST(PaintEffectTest, RippleHasSpatialCoverageAndUniformInterior) {
   EXPECT_EQ(actual, Color(0));
 }
 
+// Verifies a ripple with a built-in tint matches source-over composition at
+// its interior, outside, and each anti-aliased edge band.
+TEST(PaintEffectTest, RipplePrecomposesBaseTintAtEveryCoverage) {
+  const Color tint(0x6040A070);
+  const Color press(0x806040C0);
+  const PressOverlay plain(16, 16, 12, press);
+  const PressOverlay composed(16, 16, 12, press, tint);
+  for (int16_t y = 0; y <= 32; ++y) {
+    for (int16_t x = 0; x <= 32; ++x) {
+      EXPECT_EQ(composed.get(x, y),
+                roo_display::AlphaBlend(tint, plain.get(x, y)));
+    }
+  }
+  const int16_t sample_x[] = {0, 4, 6, 8, 16, 23, 26, 32};
+  const int16_t sample_y[] = {16, 16, 16, 16, 16, 16, 16, 16};
+  Color samples[8];
+  const PaintEffect effect(nullptr, Box(0, 0, 32, 32), tint, &composed);
+  PaintEffectStack(&effect).readColors(sample_x, sample_y, 8, samples);
+  for (int i = 0; i < 8; ++i) {
+    EXPECT_EQ(samples[i], roo_display::AlphaBlend(
+                              tint, plain.get(sample_x[i], sample_y[i])));
+  }
+  Color outside;
+  ASSERT_TRUE(composed.readUniformColorRect(0, 0, 2, 2, &outside));
+  EXPECT_EQ(outside, tint);
+  Color interior;
+  ASSERT_TRUE(composed.readUniformColorRect(15, 15, 17, 17, &interior));
+  EXPECT_EQ(interior, roo_display::AlphaBlend(tint, press));
+}
+
 // Verifies rectangle modulation matches point semantics for clipped scopes,
 // nested effects, exclusive limits, ripple edges, and transparent source RGB.
 TEST(PaintEffectTest, RectangleMatchesPointApplication) {
   const Box bounds(-7, -3, 28, 19);
-  const PressOverlay ripple(8, 9, 12, Color(0x806040C0));
+  const Color inner_tint(0x6040A070);
+  const PressOverlay ripple(8, 9, 12, Color(0x806040C0), inner_tint);
   const PaintEffect outer(nullptr, Box(-4, 0, 27, 18), Color(0x60C04020),
                           nullptr);
-  const PaintEffect inner(&outer, Box(-2, -1, 25, 17), Color(0), &ripple);
+  const PaintEffect inner(&outer, Box(-2, -1, 25, 17), inner_tint, &ripple);
   const PaintEffect flat(nullptr, bounds, Color(0x8050B020), nullptr);
   const PaintEffect* starts[] = {nullptr, &flat, &outer, &inner};
   const PaintEffect* limits[] = {nullptr, &outer, &inner};

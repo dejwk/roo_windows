@@ -11,6 +11,7 @@ class Application;
 class DisplayWindow;
 class Widget;
 enum class ClickActivationPolicy : uint8_t;
+enum class ClickOverlayAnimation : uint8_t;
 
 /// Shared click-animation controller owned by a MainWindow.
 ///
@@ -38,6 +39,9 @@ class ClickAnimation {
   /// Returns `1.0f` when target() is `nullptr`.
   /// Returns the exposed target's sampled progress when target() is non-null.
   float progress() const;
+
+  /// Returns the reveal choice captured when the active click began.
+  ClickOverlayAnimation reveal() const { return click_anim_reveal_; }
 
   /// Returns the x-coordinate of the click center in target-local space.
   ///
@@ -170,6 +174,9 @@ class ClickAnimation {
 
   unsigned long click_anim_start_millis_;
   unsigned long sampled_elapsed_millis_;
+
+  uint32_t click_anim_duration_millis_;
+  ClickOverlayAnimation click_anim_reveal_;
 
   int16_t click_anim_x_, click_anim_y_;
 };
