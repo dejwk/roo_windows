@@ -6,6 +6,7 @@
 #include "roo_display/filter/clip_exclude_rects.h"
 #include "roo_windows/core/application.h"
 #include "roo_windows/core/press_overlay.h"
+#include "roo_windows/core/task.h"
 
 namespace roo_windows {
 
@@ -47,11 +48,15 @@ bool MainWindow::fillTouchTargetPath(XDim x, YDim y,
   if (!Container::fillTouchTargetPath(x, y, path)) return false;
   if (!app_.keyboard().getContents().isVisible()) return true;
   const Widget* editor = app_.activeTextEditorWidget();
+  const Widget* interaction_root =
+      editor == nullptr
+          ? nullptr
+          : editor->getTask()->textFieldEditor().interactionRoot();
   for (size_t i = begin; i < path.size(); ++i) {
     // Hosted surfaces retain their own outside-interaction policy.
     if (path[i] == &host_layer_ ||
         path[i] == app_.keyboard().getContents().parent() ||
-        path[i] == editor) {
+        path[i] == interaction_root) {
       return true;
     }
   }

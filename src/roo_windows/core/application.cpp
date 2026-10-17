@@ -345,7 +345,8 @@ class TickerGuard {
 
 Application::Application(const Environment* env, roo_display::Display& display)
     : env_(env),
-      context_(env->scheduler(), env->theme(), env->keyboardColorTheme()),
+      context_(env->scheduler(), env->theme(), env->keyboardColorTheme(),
+               env->defaultDesignSystem()),
 #if ROO_WINDOWS_ENABLE_SOFTWARE_KEYBOARD
       keyboard_(context_, kbEngUSLayout()),
 #endif
@@ -362,7 +363,8 @@ Application::Application(const Environment* env, roo_display::Display& display)
 Application::Application(const Environment* env, roo_display::Display& display,
                          KeySource& keys, bool enable_touch)
     : env_(env),
-      context_(env->scheduler(), env->theme(), env->keyboardColorTheme()),
+      context_(env->scheduler(), env->theme(), env->keyboardColorTheme(),
+               env->defaultDesignSystem()),
 #if ROO_WINDOWS_ENABLE_SOFTWARE_KEYBOARD
       keyboard_(context_, kbEngUSLayout()),
 #endif

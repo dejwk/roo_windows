@@ -22,10 +22,10 @@ TEST_F(DisabledKeyboardTest, BothSystemsEditInPlace) {
   const Rect before = second.bounds();
   TextInputEmitter input;
   input.connect(app_);
-  first.edit();
+  ASSERT_TRUE(first.editInDestination());
   ASSERT_TRUE(first_task.textFieldEditor().isEdited(&first));
   EXPECT_TRUE(input.commitRune(U'A'));
-  second.edit();
+  ASSERT_TRUE(second.editInDestination());
   ASSERT_TRUE(second.isEdited());
   EXPECT_FALSE(first_task.textFieldEditor().isEdited(&first));
   EXPECT_TRUE(input.commitRune(U'B'));

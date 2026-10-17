@@ -8,6 +8,10 @@
 
 namespace roo_windows {
 
+namespace material3 {
+class TextField;
+}
+
 class Application;
 class ApplicationInputRouter;
 class DisplayWindow;
@@ -65,7 +69,7 @@ class Task {
 
  private:
   friend class Application;
-  friend class EditorDestination;
+  friend class material3::TextField;
   friend class ApplicationInputRouter;
   friend class KeySource;
   friend class MainWindow;

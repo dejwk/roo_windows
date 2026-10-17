@@ -1,7 +1,7 @@
 #include "gtest/gtest.h"
 #include "roo_windows/containers/flex_layout.h"
 #include "roo_windows/containers/scrollable_panel.h"
-#include "roo_windows/keyboard/editor_destination.h"
+#include "roo_windows/material3/editor_destination/editor_destination.h"
 #include "roo_windows/material3/text_field/secure_text_field.h"
 #include "roo_windows/material3/text_field/text_field.h"
 #include "roo_windows_render_test_support.h"
@@ -269,8 +269,17 @@ TEST_F(KeyboardAvoidanceTest, ExtractedSecureFieldRemainsMasked) {
   ASSERT_EQ(2u, task.navigation().depth());
   Widget* editor = task.textFieldEditor().editedWidget();
   ASSERT_NE(nullptr, editor);
-  EXPECT_TRUE(
-      static_cast<roo_windows::material2::TextField*>(editor)->obscureText());
+  roo_display::GlyphMetrics mask;
+  text_style_body_large().font().getGlyphMetrics(
+      '*', roo_display::FontLayout::kHorizontal, &mask);
+  ASSERT_EQ(6u, task.textFieldEditor().glyphs().size());
+  int offset = 0;
+  for (const auto& glyph : task.textFieldEditor().glyphs()) {
+    EXPECT_EQ(offset + mask.advance(), glyph.advance());
+    EXPECT_EQ(mask.screen_extents().translate(offset, 0),
+              glyph.screen_extents());
+    offset += mask.advance();
+  }
   task.textFieldEditor().enter();
   EXPECT_EQ("secret", field.text());
   task.navigation().clear();
@@ -330,8 +339,7 @@ TEST_F(KeyboardAvoidanceTest, ExplicitEditorDestinationRoundTrip) {
   refresh();
   Widget* target = task.textFieldEditor().editedWidget();
   ASSERT_NE(nullptr, target);
-  EXPECT_EQ("New hint",
-            static_cast<roo_windows::material2::TextField*>(target)->hint());
+  EXPECT_EQ("New hint", static_cast<TextField*>(target)->label());
   task.textFieldEditor().enter();
   EXPECT_EQ(1, completions);
   EXPECT_EQ("before", result);

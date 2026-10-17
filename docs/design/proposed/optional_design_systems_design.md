@@ -3,11 +3,12 @@
 Status: proposed. Material2 isolation, independent system palettes, and the
 simplified Material3 state opacities are implemented prerequisites. Phase 1
 characterization is recorded in the
-[boundary audit](optional_design_systems_phase1_audit.md). Phases 2–9 implement
+[boundary audit](optional_design_systems_phase1_audit.md). Phases 2–10 implement
 shared feedback, inherited surface colors, local component styling, explicit
 coordinated palette installation, native Material3 dividers, and neutral shared
-editing with system-local alert helpers and an independently optional keyboard. Later phases remain proposed. Revised 2026-10-16 around a shared application look and
-feel rather than independent interaction policies per design system.
+editing with system-local alert helpers, an independently optional keyboard, and
+one app-styled editor destination. Phase 11 remains proposed. Revised 2026-10-17
+with an application-wide default design system and Material 3 as the default.
 
 ## Objective
 
@@ -65,7 +66,7 @@ terminology. The following inventory describes the pre-migration APIs:
   [Task](../../../src/roo_windows/core/task.h) owns a Material2 text-field
   editor shared by Material2 and Material3 text fields. Its caret, selection,
   and input functionality is needed even without the software keyboard.
-- [EditorDestination](../../../src/roo_windows/keyboard/editor_destination.cpp)
+- [EditorDestination](../../../src/roo_windows/core/editor_destination.cpp)
   presents an M2 text field and back/confirm buttons, including when opened by
   an M3 field. It holds the draft and commits on confirmation after removal
   from navigation. The keyboard is hosted separately in an application-owned
@@ -533,54 +534,63 @@ routes keyboard input to that field. Do not reparent the keyboard into the
 destination, construct one keyboard per destination, or change keyboard hosting.
 Switching editors must preserve existing routing and visibility semantics.
 
-#### System-specific editor destinations
+#### Application-selected editor destination
 
-Replace the neutral-named public `EditorDestination` with
-`material2::EditorDestination` and `material3::EditorDestination`, in each
-system's `editor_destination/editor_destination.h` and matching `.cpp`.
-No compatibility alias keeps M2 presentation in the keyboard module.
+An extracted editor is application-level UI. A borrowed field from another
+system uses the application's selected presentation, just as both systems use
+the same software keyboard. `Environment` accepts a `DesignSystem` default,
+which each application captures in its context. Material 3 is the default;
+applications select `DesignSystem::kMaterial2` explicitly for M2 presentation.
+This setting does not change the styling of ordinary widgets or coordinate
+palettes implicitly. It is fixed for the application's lifetime; existing theme
+colors and density remain live.
 
-| Responsibility | M2 destination | M3 destination |
+Keep one lazy `ApplicationContext::editorDestination()` slot and its
+non-allocating `editorDestinationIfPresent()` query, available only with the
+software keyboard enabled. The slot owns a neutral `roo_windows::EditorDestination`
+from `core/editor_destination.h`. System-local factories construct the selected
+`material2::EditorDestination` or `material3::EditorDestination`. Neutral editing
+and keyboard code include neither concrete destination. Selecting an unavailable
+system fails explicitly. Phase 11 makes the implicit default M3 when available,
+M2 in an M2-only build, and no extracted-editor presentation in a core-only
+build. Explicitly selecting an unavailable system remains an error.
+
+| Responsibility | M2 presentation | M3 presentation |
 | --- | --- | --- |
-| Draft field | Existing underlined M2 field | Filled M3 field |
-| Back and confirm actions | M2 buttons | M3 icon buttons |
-| Appearance and measurement | M2 palette, typography, and dimensions | M3 palette, typography, shapes, and density |
-| Editing and completion | Shared neutral engine and destination lifecycle | Same engine and lifecycle |
-| Software input | Shared application keyboard | Same keyboard instance |
+| Draft field | Underlined M2 field | Filled M3 field |
+| Back and Clear actions | 40dp M2 icon buttons | 40dp standard M3 icon buttons |
+| Appearance and measurement | Live M2 palette, typography, and dimensions | Live M3 palette, typography, shapes, and density |
+| Source field | Either system's neutral edit target | Either system's neutral edit target |
+| Software input | The application keyboard | The same application keyboard |
 
-Retain the simple back/field/confirm row. Each destination measures its own
-controls within the viewport available above the keyboard. Keep the original
-field's label/hint and obscure-text setting when creating the draft. Confirm copies
-the draft back; Back cancels without modifying the original. Keyboard confirmation
-and the visible confirm action use the same completion path.
+The shared base owns navigation admission, confirmation and completion guards,
+source borrowing, and the callback. Each concrete presentation keeps the draft
+in its field, with no second retained draft string. Both clear the draft after
+leaving history; clearing can retain capacity. The source receives a confirmed
+value only after removal. Recheck the source after value-change callbacks, since
+they may destroy it. Field destructors release the context-owned destination's
+borrow. Caller-owned explicit destinations require borrowed targets to outlive
+membership and source completion. Preserve detached external callback delivery,
+including callbacks that navigate or destroy their explicit destination.
 
-Extract a small internal destination base alongside neutral editing support,
-compiled only with keyboard integration. It owns the existing editing,
-confirmation, and completion guards and callback lifecycle; concrete destinations
-own their controls and typed source-field adapters. Keep the draft in the editor
-field, without an additional retained string in the base. Share navigation
-admission, removal, and completion ordering instead of duplicating that fragile
-logic. Preserve cleanup on failed admission, source destruction, and application
-teardown. Recheck the source after any user callback that can destroy it, and
-deliver completion only after the destination leaves navigation history.
+A busy destination refuses another extracted edit, including attempts from the
+other system or during source completion. No additional registry or state is
+added to ordinary widgets. Both fields expose `editInDestination()` for explicit
+app-styled extraction. M3 retains automatic extraction when a field cannot fit
+above the keyboard; M2 retains in-place editing unless explicitly extracted.
+With the keyboard disabled, explicit extraction falls back to in-place editing.
+The destination's own M3 field uses an internal in-place path that still requests
+the keyboard and cannot recursively extract on a small viewport. Each presentation
+measures its Back/field/Clear row across the available width above the keyboard.
+The M3 row has 4dp outer margins and 4dp gaps between the field and each button.
+Its draft field pins density to -2.
+Clear preserves its layout slot when hidden for an empty draft. Keyboard
+Done/Enter confirms the edit. The draft's interaction-root hook keeps the row's
+controls tappable while ordinary outside-field taps still dismiss the keyboard.
 
-Replace `ApplicationContext::editorDestination()` and its non-allocating query
-with typed `material2EditorDestination()` / `material3EditorDestination()` and
-matching `...IfPresent()` accessors, present only when the corresponding system
-and keyboard are enabled. Each lazily owns one destination, reused on later
-visits. Concrete construction lives in the corresponding system integration;
-neutral editing and keyboard sources include neither system's destination.
-Preserve the existing refusal to start another extracted edit while a destination
-is attached or completing, applying the guard across both cached destinations.
-Use their existing lifecycle flags; add no registry or state to ordinary widgets.
-
-Field adapters select their own system's destination directly. Move extraction
-eligibility and source-lifetime integration out of the current M2-backed shared
-class. Preserve automatic extraction for M3 fields and explicit extraction for
-M2 fields. The destination's own field starts editing through an internal
-in-place entry point that still requests the keyboard but skips extraction.
-This prevents another extraction attempt on a small viewport without disabling
-software input or adding a persistent flag to every field.
+The old `keyboard/editor_destination.h` and `activities/edit_text_field.h` alias
+are removed. Applications normally use the context-owned neutral destination;
+callers requiring their own concrete destination include its system-local header.
 
 ### Resource model
 
@@ -607,14 +617,13 @@ have shared flash cost but require no extra per-instance vptr. Phase 1 establish
 target-ABI and CPU gates; exact linked-size deltas are measured, not assumed.
 
 Editing retains one engine per task and one keyboard per application when
-configured. Destination ownership uses one pointer per enabled system when the
-keyboard is enabled: a mixed build adds one pointer over the current single
-slot. Destination objects allocate only on first use and remain cached; after
-both systems have been used, a mixed application retains both sets of controls,
-but only the active destination holds draft content. Clearing a string can retain
-its capacity. No second keyboard or per-key widget allocation is introduced.
-Measure idle and post-use context/destination heap costs separately in phase 10,
-including retained draft capacity; disabled integrations add no ownership slots.
+configured. Context ownership uses one pointer for the optional lazy editor,
+independent of the number of enabled design systems. The application default
+adds a compact enum to Environment and context; ABI padding is measured. Only
+the selected presentation allocates, and later visits reuse its controls. Clearing
+the draft can retain its capacity. No second keyboard, per-key widget, extraction
+flag, or source-registration field is added to ordinary widgets. Phase 10 records
+lazy allocations, retained capacity, and before/after target sizes.
 
 ## Proposed API
 
@@ -1032,31 +1041,63 @@ Proposed commit message:
 
 ### Phase 10: provide matching editor destinations for both systems
 
-Move existing M2 presentation into `material2::EditorDestination`, add the M3
-filled-field/icon-button presentation, and share the internal destination
-lifecycle. Replace the context's single accessor/slot with conditional typed lazy
-accessors. Migrate explicit M2 callers and automatic M3 extraction, preserving
-source lifetime and completion semantics. Add the internal in-place editing path
-for destination fields. Remove the old keyboard-module destination and its API.
+Provide M2 and M3 concrete presentations sharing a neutral destination lifecycle.
+Use one application-owned lazy slot selected by the new app-wide `DesignSystem`
+default in Environment, defaulting to M3. Both source-field systems use that
+presentation; preserve source lifetime, draft completion, and keyboard routing.
+Add explicit `editInDestination()` adapters, preserve automatic M3 extraction,
+and keep destination fields on an in-place path. Remove the keyboard-module
+concrete destination and compatibility alias. Include migration documentation
+and focused setting-editor examples for each app default.
 
-Add focused examples for editing a setting through each system's destination,
-using the same application keyboard, plus migration documentation. Test draft
-commit/cancel, masking, keyboard and button confirmation, failed admission,
-source destruction (including from a value-change callback), teardown, and
-refusal of overlapping extracted edits across systems. Exercise a viewport too
-small for the original field, verifying matching presentation and no nested
-extraction from the destination field. Test switching between M2 and M3 editors
-with one keyboard and correct active-target routing. Cover light/dark, density,
-zoom, and live theme changes in destination rendering. Record lazy allocation,
-retained draft capacity, and context/control sizes against the resource model;
-ordinary widget/field sizes must not grow for extraction policy.
+Validate mixed-source reuse of the same destination and keyboard, overlap refusal,
+draft commit/cancel, masking, keyboard confirmation, Back/Clear touch routing, failed admission,
+source destruction including from value-change callbacks, and teardown. Exercise
+a tiny viewport with no nested extraction, live light/dark palettes and density,
+and alternate zoom. Record lazy allocation and retained capacity separately from
+context/control sizes; ordinary widget/field sizes must not grow.
+
+Implemented with `core/editor_destination.h`, system-local factories, and
+`Environment::defaultDesignSystem()` / `ApplicationContext::defaultDesignSystem()`.
+The default is captured at application construction, and both field adapters use
+the one cached destination. The M2 and M3 device-name examples select their app
+style explicitly. Source completion remains guarded; external callbacks run
+last, after detachment, and may navigate or destroy an explicit destination.
+
+ESP32-C3 ABI measurements (bytes), against pre-phase commit `0a73ba35`:
+
+| Type | Before | After |
+| --- | ---: | ---: |
+| ApplicationContext | 224 | 224 |
+| Environment | 12 | 16 |
+| Widget | 24 | 24 |
+| M2 / M3 TextField | 104 / 104 | 104 / 104 |
+| M2 editor destination | 480 | 480 |
+| M3 editor destination | absent | 408 |
+
+The context selector fits existing padding; the single ownership slot is retained.
+The probe is `tools/editor_destination_size_probe.py`, with `--source-root` for an
+archived baseline and the installed ESP32-C3 compiler. It compiles with exceptions
+and RTTI disabled. Native allocation characterization records first-use requests
+of 13 allocations / 1,256 bytes for M2 and 11 / 1,016 bytes for M3, including
+control storage and callback registration, excluding allocator overhead. Repeated
+access performs zero allocations. A cleared 128-character draft retained capacity
+128; growing it by one character retained capacity 256 after cancellation. These
+capacities are library/allocator dependent, not embedded heap-size guarantees.
+
+Validation includes default input/editor/keyboard/application targets, unchanged
+text-field goldens, both application-style examples and the keyboard-disabled
+example, plus the destination lifecycle matrix at 75% zoom. AddressSanitizer
+covers source destruction, callback destruction, and navigation teardown. Member
+ordering ensures containers detach borrowed controls before control destruction.
 
 Proposed commit message:
 
 > Optional design systems, phase 10: add system-specific editor destinations.
 >
-> Share draft completion and navigation lifecycle across M2 and M3 editor
-> presentations, with typed lazy ownership and one application keyboard.
+> Select one lazy editor presentation from the application default design system,
+> defaulting to Material3. Share draft completion and navigation across both
+> source-field systems, with one application keyboard.
 
 ### Phase 11: enforce optional installation
 
@@ -1175,11 +1216,12 @@ runtime registration machinery.
 
 #### Keep one M2 editor destination or duplicate keyboards per system
 
-One M2 destination reuses the existing UI, but makes extracted M3 editing depend
-on M2 and changes its appearance. Separate system presentations preserve the
-field's design system; sharing their lifecycle avoids duplicated completion and
-lifetime logic. Per-system keyboards would duplicate controls and routing without
-serving that requirement. Keep the separate application keyboard host described
+An unconditional M2 destination makes every application depend on M2 controls.
+Instead, one app-owned destination selects its concrete presentation from the
+application default, which is M3 unless explicitly changed. Borrowed fields use
+that app-level presentation. Retaining one destination per source design system
+would allocate two control trees after mixed use without serving this policy.
+Per-system keyboards would also duplicate controls and routing. Keep the separate application keyboard host described
 in [Editing and keyboard integration](#editing-and-keyboard-integration).
 
 #### Rely on linker garbage collection

@@ -114,7 +114,13 @@ class TextField : public SurfaceWidget,
   /// A field that cannot fit above the keyboard opens a compact
   /// EditorDestination in its task. That destination edits a copy and commits
   /// it on confirmation; Back leaves this field's value unchanged.
-  void edit();
+  virtual void edit();
+
+  /// Opens a draft using the application's selected editor presentation.
+  /// Returns false if detached or busy. Without the software keyboard, edits
+  /// in place instead. Confirmation commits after removal; Back discards the
+  /// draft.
+  bool editInDestination();
 
   /// Uses the field palette to resolve disabled colors once.
   bool useAutomaticDisabledStyle() const override { return false; }
@@ -195,7 +201,8 @@ class TextField : public SurfaceWidget,
   void notifyStateChanged(uint16_t diff) override;
 
  private:
-  friend class ::roo_windows::EditorDestination;
+  friend class EditorDestination;
+  bool needsExtraction() const;
 
   /// Owner-local rectangles for the field's painted regions.
   using Slots = internal::TextFieldSlots;

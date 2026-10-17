@@ -109,9 +109,7 @@ class TextField : public ThemeMixin<Widget>, public internal::TextEditTarget {
         alignment_(alignment),
         editable_(true) {}
 
-  ~TextField() override {
-    if (isEdited()) editor().cancel();
-  }
+  ~TextField() override;
 
   bool isClickable() const override { return true; }
 
@@ -237,6 +235,12 @@ class TextField : public ThemeMixin<Widget>, public internal::TextEditTarget {
  public:
   /// Binds this field to the shared editor and starts editing.
   void edit();
+
+  /// Opens a draft using the application's selected editor presentation.
+  /// Returns false if detached or busy. Without the software keyboard, edits
+  /// in place instead. Confirmation commits after removal; Back discards the
+  /// draft.
+  bool editInDestination();
 
  private:
   Decoration decoration_;

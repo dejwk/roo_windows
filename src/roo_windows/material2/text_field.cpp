@@ -1,5 +1,7 @@
-
-#include "roo_windows/material2/text_field.h"
+#include "roo_windows/config.h"
+#if ROO_WINDOWS_ENABLE_SOFTWARE_KEYBOARD
+#include "roo_windows/core/editor_destination.h"
+#endif
 
 #include <algorithm>
 
@@ -11,6 +13,7 @@
 #include "roo_windows/core/application.h"
 #include "roo_windows/core/task.h"
 #include "roo_windows/internal/single_line_text.h"
+#include "roo_windows/material2/text_field.h"
 
 namespace roo_windows::material2 {
 
@@ -198,6 +201,28 @@ const TextFieldEditor& TextField::editor() const {
 bool TextField::isEdited() const {
   const Task* task = getTask();
   return task != nullptr && task->textFieldEditor().isEdited(this);
+}
+
+TextField::~TextField() {
+#if ROO_WINDOWS_ENABLE_SOFTWARE_KEYBOARD
+  ApplicationContext* owner = tryContext();
+  if (owner != nullptr && owner->editorDestinationIfPresent() != nullptr) {
+    owner->editorDestinationIfPresent()->forgetSource(*this);
+  }
+#endif
+  if (isEdited()) editor().cancel();
+}
+
+bool TextField::editInDestination() {
+  if (getTask() == nullptr || !isEnabled() || !isVisible() || !editable_ ||
+      presentationState() == PresentationState::kHidden)
+    return false;
+#if ROO_WINDOWS_ENABLE_SOFTWARE_KEYBOARD
+  return context().editorDestination().triggerEditField(*this, hint());
+#else
+  edit();
+  return isEdited();
+#endif
 }
 
 void TextField::edit() {

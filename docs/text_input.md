@@ -57,8 +57,7 @@ matching library and emulator adapter configuration automatically.
 The enabled renderer selects its two fonts directly from roo_fonts, preserving
 character/action sizes at 75%, 100%, 150%, and 200% zoom. Press feedback uses
 `KeyboardColorTheme::text` and `Theme::framework.state.pressed`. No design-system
-palette or typography is consulted. The legacy editor destination still uses M2
-controls until the separate system-destination phase.
+palette or typography is consulted. The extracted editor uses the application default described below.
 
 ## Custom targets and lifetime
 
@@ -81,3 +80,56 @@ include `roo_windows/core/text_field_editor.h`. `Task::textFieldEditor()` and th
 M2 field's `editor()` accessor return this neutral type. There is no compatibility
 alias in Material 2. Field painting, extraction eligibility, and focus policies
 remain in their concrete components.
+
+## Application-styled draft editors
+
+The app-wide default design system is **Material 3**. Configure Material 2 at
+bootstrap when the application uses M2 presentation defaults:
+
+```cpp
+Environment environment(scheduler, DefaultTheme(), DefaultKeyboardColorTheme(),
+                        DesignSystem::kMaterial2);
+Application app(&environment, display);
+```
+
+The application captures this selection; changing colors or density in its
+borrowed Theme still updates live controls after `invalidateTheme()`. The default
+does not restyle individual widgets or implicitly synchronize palettes.
+
+`app.context().editorDestination()` lazily creates one destination in that style.
+M2 and M3 source fields share it and the one application-hosted keyboard. M3
+fields automatically extract when they cannot fit above the keyboard. Either
+system can explicitly request a draft using `field.editInDestination()`; false
+means detached or busy. With software input disabled this method edits in place.
+Back discards the draft; keyboard Done/Enter confirms and copies it back after
+navigation removal. Clear empties the draft while keeping the keyboard open and
+is hidden when the draft is empty. Both actions remain tappable during input.
+Destroying a source releases the cached destination's borrow, including from a
+value-change callback. A second extraction is refused while the first is active
+or delivering source completion.
+
+For settings stored outside a field, include `roo_windows/core/editor_destination.h`
+and call:
+
+```cpp
+app.context().editorDestination().triggerEdit(
+    task.navigation(), device_name, "Device name",
+    [](const std::string& value) { device_name = value; });
+```
+
+The callback runs only on confirmation after removal. Its value is borrowed for
+the call; captured objects must survive delivery. Both cancellation and completion
+clear the retained draft (its string capacity may remain allocated).
+
+The [M2 example](../examples/material2/editor_destination/device_name/device_name.ino)
+and [M3 example](../examples/material3/editor_destination/device_name/device_name.ino)
+demonstrate identical setting-edit workflows with different application defaults.
+
+Migration: replace `keyboard/editor_destination.h` and the old
+`activities/edit_text_field.h` alias with the neutral core header when obtaining
+the app-owned editor. For explicitly owned presentation use
+`material2/editor_destination/editor_destination.h` or the corresponding M3
+header and the qualified concrete type. Remove an explicit destination from
+navigation before destruction; a source borrowed by an explicit destination must
+outlive its navigation membership and source completion. Prefer the context-owned
+destination for automatic source-lifetime handling.

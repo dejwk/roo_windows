@@ -358,6 +358,11 @@ void TextFieldEditor::ensureCursorVisible(int16_t width) {
   int16_t caret =
       cursor_position_ == 0 ? 0 : glyphs_[cursor_position_ - 1].advance();
   width = std::max<int16_t>(2, width);
+  // Layout may grow a viewport that was empty when the session began.
+  // Discard excess scroll before ensuring the caret is visible.
+  int16_t end = glyphs_.empty() ? 0 : glyphs_.back().advance();
+  draw_xoffset_ =
+      std::max<int16_t>(draw_xoffset_, std::min<int16_t>(0, width - 2 - end));
   if (caret + draw_xoffset_ > width - 2) draw_xoffset_ = width - 2 - caret;
   if (caret + draw_xoffset_ < 0) draw_xoffset_ = -caret;
 }

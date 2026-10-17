@@ -53,6 +53,11 @@ class TextFieldEditor {
     return target_ == nullptr ? nullptr : &target_->editWidget();
   }
 
+  /// Returns the active target's keyboard interaction subtree, or nullptr.
+  Widget* interactionRoot() const {
+    return target_ == nullptr ? nullptr : &target_->editInteractionRoot();
+  }
+
   /// Returns whether the final newly typed glyph is temporarily revealed.
   bool lastGlyphRecentlyEntered() const { return last_glyph_recently_entered_; }
 

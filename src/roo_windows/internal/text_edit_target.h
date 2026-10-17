@@ -40,6 +40,11 @@ class TextEditTarget {
   /// Mutating this reference does not itself dispatch change notifications.
   virtual std::string& textBuffer() = 0;
 
+  /// Returns the subtree whose controls remain tappable during keyboard input.
+  /// Defaults to the field; compound editors may return an ancestor in the
+  /// same task. The subtree must remain attached for the edit session.
+  virtual Widget& editInteractionRoot() { return editWidget(); }
+
   /// Returns a borrowed, read-only view of the same UTF-8 contents as
   /// textBuffer(). This accessor must not allocate or construct a temporary
   /// backing string. The view may be invalidated by any buffer mutation or

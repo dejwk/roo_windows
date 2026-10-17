@@ -1836,7 +1836,7 @@ cc_library(
             "src/**/*.cpp",
             "src/**/*.h",
         ],
-        exclude = ["test/**", "src/roo_windows/material3/palette.cpp", "src/roo_windows/keyboard/**", "src/roo_windows/activities/edit_text_field.h"],
+        exclude = ["test/**", "src/roo_windows/material3/palette.cpp", "src/roo_windows/keyboard/**", "src/roo_windows/material2/editor_destination/**", "src/roo_windows/material3/editor_destination/**", "src/roo_windows/core/editor_destination.*", "src/roo_windows/internal/editor_destination_factory.h"],
     ),
     defines = [
         "ROO_WINDOWS_ENABLE_SOFTWARE_KEYBOARD=0",
@@ -1879,3 +1879,23 @@ cc_test(
     includes = ["src"],
     deps = ["@roo_fonts_basic", "@roo_fonts_material", "@roo_locale", "@roo_testing//:arduino_gtest_main"],
 ) for zoom in [75, 100, 150, 200]]
+
+cc_test(
+    name = "editor_destination_test",
+    srcs = ["test/editor_destination_test.cpp", "test/roo_windows_render_test_support.h"],
+    linkstatic = 1,
+    deps = [":roo_windows", "@roo_testing//:arduino_gtest_main"],
+)
+
+cc_test(
+    name = "editor_destination_resource_test",
+    srcs = ["test/editor_destination_resource_test.cpp", "test/roo_windows_render_test_support.h"],
+    linkstatic = 1,
+    deps = [":roo_windows", "@roo_testing//:arduino_gtest_main"],
+)
+
+cc_library(
+    name = "editor_destination_size_probe",
+    srcs = ["benchmarks/editor_destination_size_probe.cpp"],
+    deps = [":roo_windows"],
+)

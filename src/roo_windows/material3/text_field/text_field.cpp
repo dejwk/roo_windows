@@ -4,10 +4,11 @@
 
 #include "roo_display/ui/text_label.h"
 #include "roo_icons/filled/alert.h"
+#include "roo_windows/core/application.h"
 #include "roo_windows/core/task.h"
 #include "roo_windows/internal/single_line_text.h"
 #if ROO_WINDOWS_ENABLE_SOFTWARE_KEYBOARD
-#include "roo_windows/keyboard/editor_destination.h"
+#include "roo_windows/core/editor_destination.h"
 #endif
 #include "roo_windows/material3/internal/density.h"
 #include "roo_windows/material3/text_field/internal/text_field_geometry.h"
@@ -478,17 +479,58 @@ void TextField::startEditing(bool show_keyboard) {
   if (!requestFocus() && !bounds().empty()) {
     return;
   }
-#if ROO_WINDOWS_ENABLE_SOFTWARE_KEYBOARD
-  if (show_keyboard && EditorDestination::NeedsExtraction(*this) &&
-      context().editorDestination().triggerEditField(*this)) {
-    return;
-  }
-#endif
+
   invalidateInterior();
   task->textFieldEditor().edit(this, show_keyboard);
 }
 
-void TextField::edit() { startEditing(true); }
+#if ROO_WINDOWS_ENABLE_SOFTWARE_KEYBOARD
+bool TextField::needsExtraction() const {
+  const Task* task = getTask();
+  if (task == nullptr || !task->navigation().isAvailable()) return false;
+  const Widget* ancestor = this;
+  while (ancestor != nullptr && ancestor != &task->panel_) {
+    ancestor = ancestor->parent();
+  }
+  if (ancestor == nullptr) return false;
+  const Widget* keyboard_panel =
+      task->application().keyboard().getContents().parent();
+  if (keyboard_panel == nullptr) return false;
+  int available_height = std::max(
+      0, std::min<int>(task->panel_.height(),
+                       keyboard_panel->offsetTop() - task->panel_.offsetTop()));
+  Dimensions minimum = getSuggestedMinimumDimensions();
+  return std::max<int>(height(), minimum.height()) > available_height ||
+         width() > task->panel_.width();
+}
+
+#endif
+
+bool TextField::editInDestination() {
+  if (getTask() == nullptr || !isEnabled() || !isVisible() || readOnly() ||
+      presentationState() == PresentationState::kHidden)
+    return false;
+#if ROO_WINDOWS_ENABLE_SOFTWARE_KEYBOARD
+  return context().editorDestination().triggerEditField(*this,
+                                                        std::string(label()));
+#else
+  edit();
+  return isEdited();
+#endif
+}
+
+void TextField::edit() {
+  if (!isEnabled() || !isVisible() || readOnly() || getTask() == nullptr ||
+      presentationState() == PresentationState::kHidden)
+    return;
+#if ROO_WINDOWS_ENABLE_SOFTWARE_KEYBOARD
+  if (needsExtraction()) {
+    editInDestination();
+    return;
+  }
+#endif
+  startEditing(true);
+}
 
 void TextField::onClicked() {
   uint8_t tapped = flags_ & (kLeadingTap | kTrailingTap);

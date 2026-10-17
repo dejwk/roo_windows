@@ -28,7 +28,7 @@ class MainWindow : public Container {
   /// Allows supplied task and popup roots to opt out of the window clip.
   bool mayHaveUnclippedChildren() const override { return true; }
 
-  /// Routes outside keyboard taps to the window for dismissal.
+  /// Routes taps outside the active editing subtree to keyboard dismissal.
   bool fillTouchTargetPath(XDim x, YDim y, std::vector<Widget*>& path) override;
 
   /// Accepts dismissal taps while the software keyboard is visible.

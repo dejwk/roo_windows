@@ -887,6 +887,7 @@ class Widget {
   }
 
  private:
+  friend class EditorDestination;
   friend class internal::ScrollConnectionRegistry;
   friend class internal::ScrollConnection;
   friend class AnimationRegistry;
