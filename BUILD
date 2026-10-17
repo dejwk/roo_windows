@@ -1899,3 +1899,42 @@ cc_library(
     srcs = ["benchmarks/editor_destination_size_probe.cpp"],
     deps = [":roo_windows"],
 )
+
+cc_test(
+    name = "material3_scheme_test",
+    srcs = ["test/material3_scheme_test.cpp"],
+    linkstatic = 1,
+    deps = [":roo_windows", "@roo_testing//:arduino_gtest_main"],
+)
+
+cc_test(
+    name = "material3_single_scheme_test",
+    srcs = ["test/material3_single_scheme_test.cpp"],
+    linkstatic = 1,
+    deps = [":roo_windows", "@roo_testing//:arduino_gtest_main"],
+)
+
+# Exercise the collection and installer with M2 headers absent from inputs.
+cc_test(
+    name = "material3_scheme_material3_only_test",
+    srcs = [
+        "test/material3_scheme_test.cpp",
+        "src/roo_windows/material3/default_theme.cpp",
+    ] + glob([
+        "src/roo_windows/material3/schemes/*.h",
+        "src/roo_windows/material3/schemes/*.cpp",
+    ]),
+    linkstatic = 1,
+    deps = [":material3_palette_only", "@roo_testing//:arduino_gtest_main"],
+)
+
+cc_test(
+    name = "palette_preview_test",
+    srcs = ["test/palette_preview_test.cpp"],
+    linkstatic = 1,
+    deps = [
+        "//examples/material3/theme/coordinated_palette:palette_preview",
+        "@roo_testing//:arduino_gtest_main",
+        "@roo_testing//roo_testing/system:manual_time_mode",
+    ],
+)

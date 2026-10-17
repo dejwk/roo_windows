@@ -1,4 +1,5 @@
-// Learning goal: replace a coordinated palette in a mixed M3/M2 application.
+// Learning goal: select a complete light/dark palette and compare its colors
+// on primary, secondary, tertiary, neutral, and borrowed Material 2 controls.
 
 #ifdef ROO_TESTING
 #include "roo_testing/devices/display/ili9341/ili9341spi.h"
@@ -36,18 +37,13 @@ roo_windows::fake::FltkKeySource emulator_keys;
 #endif
 
 #include "Arduino.h"
+#include "palette_preview.h"
 #include "roo_display.h"
 #include "roo_display/driver/ili9341.h"
 #include "roo_display/driver/touch_xpt2046.h"
 #include "roo_scheduler.h"
 #include "roo_windows.h"
-#include "roo_windows/containers/flex_layout.h"
-#include "roo_windows/material2/button.h"
-#include "roo_windows/material2/checkbox.h"
-#include "roo_windows/material3/button/button.h"
-#include "roo_windows/material3/palette.h"
-#include "roo_windows/material3/typography.h"
-#include "roo_windows/widgets/text_label.h"
+#include "roo_windows/core/task.h"
 
 using namespace roo_display;
 using namespace roo_windows;
@@ -58,48 +54,6 @@ Display display(screen, touch,
                 TouchCalibration(269, 249, 3829, 3684,
                                  Orientation::LeftDown()));
 
-// Installs values only; each application explicitly requests its next frame.
-void ChangePalette();
-
-class CoordinatedPaletteDemo : public FlexLayout {
- public:
-  explicit CoordinatedPaletteDemo(ApplicationContext& context)
-      : FlexLayout(context, FlexDirection::kColumn),
-        row_(context, FlexDirection::kRow),
-        checkbox_(context, material2::Checkbox::OnOffState::kOn),
-        label_(context, "Enable reminders", material3::text_style_body_large()),
-        apply_(context, "Apply reminders"),
-        change_palette_(context, "Change palette") {
-    setPadding(Padding(Scaled(20)));
-    setGap(Scaled(16));
-    checkbox_.setParentClipMode(ParentClipMode::kUnclipped);
-    row_.setGap(Scaled(12));
-    row_.add(checkbox_);
-    row_.add(label_);
-    add(row_);
-    add(apply_);
-    add(change_palette_);
-    apply_.setOnInteractiveChange([this]() { checkbox_.setOn(); });
-    change_palette_.setOnInteractiveChange(ChangePalette);
-  }
-
-  ~CoordinatedPaletteDemo() override {
-    row_.removeAll();
-    removeAll();
-  }
-
- private:
-  class Row : public FlexLayout {
-   public:
-    using FlexLayout::FlexLayout;
-    using FlexLayout::removeAll;
-  } row_;
-  material2::Checkbox checkbox_;
-  TextLabel label_;
-  material2::SimpleButton apply_;
-  material3::Button change_palette_;
-};
-
 roo_scheduler::SchedulingService scheduler;
 Theme theme;
 Environment environment(scheduler, theme);
@@ -108,32 +62,17 @@ Application app(&environment, display, emulator_keys, true);
 #else
 Application app(&environment, display);
 #endif
-CoordinatedPaletteDemo demo(app.context());
-Task& task = app.addTaskFullScreen(demo);
-
-void ChangePalette() {
-  static bool warm = false;
-  warm = !warm;
-  auto colors = material3::DefaultColorScheme();
-  if (warm) {
-    colors.primary = Color(0xFF865000);
-    colors.onPrimary = Color(0xFFFFFFFF);
-    colors.background = colors.surface = Color(0xFFFFF8F0);
-    colors.onSurface = Color(0xFF302820);
-  }
-  // Copies M3, framework roots, and matching M2 colors. The checkbox inherits
-  // framework emphasis; the contained M2 button uses its own copied palette.
-  ApplyCoordinatedMaterial3Palette(theme, colors);
-  app.invalidateTheme();
-}
-
 void setup() {
   SPI.begin(4, 5, 6);
   display.enableTurbo();
   display.init();
-  ApplyCoordinatedMaterial3Palette(theme, material3::DefaultColorScheme());
+  // A navigable task supplies the owner needed by menus and text editing.
+  // Keep its borrowed preview alive throughout the scheduler loop.
+  coordinated_palette_example::PalettePreview preview(app, theme);
+  Task& task = app.addTaskFullScreen(preview);
   app.start();
   scheduler.run();
+  task.navigation().clear();
 }
 
 void loop() {}

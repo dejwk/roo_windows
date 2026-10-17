@@ -1,0 +1,13 @@
+name: roo_windows_theme_import
+publish_to: none
+environment:
+  sdk: '>=3.6.0 <4.0.0'
+  flutter: '3.38.0'
+dependencies:
+  flutter:
+    sdk: flutter
+  flex_color_scheme: 8.4.0
+  flex_seed_scheme: 4.0.0
+dev_dependencies:
+  flutter_test:
+    sdk: flutter

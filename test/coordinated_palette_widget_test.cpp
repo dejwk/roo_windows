@@ -2,6 +2,8 @@
 #include "roo_windows/material2/button.h"
 #include "roo_windows/material2/typography.h"
 #include "roo_windows/material3/palette.h"
+#include "roo_windows/material3/schemes/blue_stone_teal.h"
+#include "roo_windows/material3/schemes/indigo_san_marino.h"
 #include "roo_windows_render_test_support.h"
 
 namespace roo_windows {
@@ -52,27 +54,27 @@ TEST_F(CoordinatedPaletteWidgetTest, PreservesExplicitOverrides) {
 // Verifies a borrowed contained button changes its live fill and readable ink,
 // but the installed palette does not repaint until the application invalidates.
 TEST_F(CoordinatedPaletteWidgetTest, RepaintsBorrowedSurfaceAfterInvalidation) {
-  auto colors = material3::DefaultColorScheme();
-  colors.primary = Color(0xFFFF0000);
-  colors.onPrimary = Color(0xFFFFFFFF);
+  const material3::ColorScheme& light =
+      material3::schemes::IndigoSanMarino().light;
+  const material3::ColorScheme& dark = material3::schemes::BlueStoneTeal().dark;
+  material3::ColorScheme colors = light;
   ApplyCoordinatedMaterial3Palette(theme_, colors);
   auto button = std::make_unique<material2::SimpleButton>(context(), "A");
   auto* borrowed = button.get();
   app_.add(std::move(button), Box(0, 0, 63, 47));
   app_.refresh();
   EXPECT_TRUE(containsColor(colors.primary, Box(0, 0, 63, 47)));
-  colors.primary = Color(0xFF0000FF);
-  colors.onPrimary = Color(0xFFFFFF00);
+  colors = dark;
   ApplyCoordinatedMaterial3Palette(theme_, colors);
   EXPECT_EQ(colors.primary, borrowed->background());
   EXPECT_EQ(colors.onPrimary, borrowed->contentColor());
   app_.refresh();
-  EXPECT_TRUE(containsColor(Color(0xFFFF0000), Box(0, 0, 63, 47)));
+  EXPECT_TRUE(containsColor(light.primary, Box(0, 0, 63, 47)));
   app_.invalidateTheme();
   app_.refresh();
   EXPECT_TRUE(containsColor(colors.primary, Box(0, 0, 63, 47)));
   EXPECT_TRUE(containsColor(colors.onPrimary, Box(0, 0, 63, 47)));
-  EXPECT_FALSE(containsColor(Color(0xFFFF0000), Box(0, 0, 63, 47)));
+  EXPECT_FALSE(containsColor(light.primary, Box(0, 0, 63, 47)));
 }
 }  // namespace
 }  // namespace roo_windows

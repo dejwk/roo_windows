@@ -28,6 +28,57 @@ longer than the environment and widgets. Copying a theme copies its palettes
 and settings, including interaction opacities; the copy does not borrow the
 original palette or state settings.
 
+## Preset palettes
+
+The collection in `roo_windows/material3/schemes/` supplies complete light/dark
+color pairs for all 67 named FlexColorScheme 8.4.0 presets. Include individual presets to keep unrelated palettes out of the
+linked program:
+
+```cpp
+#include "roo_windows/material3/palette.h"
+#include "roo_windows/material3/schemes/indigo_san_marino.h"
+
+// Before application startup, or on the UI thread between frames:
+const auto& colors = roo_windows::material3::schemes::IndigoSanMarino();
+roo_windows::ApplyCoordinatedMaterial3Palette(theme, colors.dark);
+// After a live switch, notify every application using this theme:
+app.invalidateTheme();
+```
+
+Each accessor returns a const `ColorSchemePair` with static lifetime. The
+installer copies the selected palette into the application-owned theme.
+Alternatively, assign `colors.light` or `colors.dark` directly to
+`theme.material3.color` for an M3-only change. Presets supply colors; they do not
+change component roles, density, fonts, interaction opacities or click behavior.
+
+The original six presets are listed below. The generated
+[full preset reference](material3_scheme_reference.md) lists all headers,
+accessors and stable IDs, including the older Material palettes, monochrome
+schemes and Shadcn-inspired presets. The `custom` placeholder is excluded.
+
+| Preset | Header under `material3/schemes/` | Accessor | Stable ID |
+| --- | --- | --- | --- |
+| Indigo San Marino | `indigo_san_marino.h` | `IndigoSanMarino()` | `indigo-san-marino` |
+| Blue stone teal | `blue_stone_teal.h` | `BlueStoneTeal()` | `blue-stone-teal` |
+| Camarone green | `camarone_green.h` | `CamaroneGreen()` | `camarone-green` |
+| Yukon gold yellow | `yukon_gold_yellow.h` | `YukonGoldYellow()` | `yukon-gold-yellow` |
+| Rust deep orange | `rust_deep_orange.h` | `RustDeepOrange()` | `rust-deep-orange` |
+| Eggplant purple | `eggplant_purple.h` | `EggplantPurple()` | `eggplant-purple` |
+
+For a picker, include `roo_windows/material3/schemes/catalog.h` and iterate
+`material3::schemes::kPresets`, sorted alphabetically by display name (ignoring
+case). Each `SchemePreset` has `id`, `name`, and a
+`colors()` function pointer returning the pair. Persist the ID and the selected
+mode, rather than an array index. Referencing the catalog retains every preset;
+applications selecting a fixed subset can reference individual accessors.
+
+These palettes are generated offline from FlexColorScheme 8.4.0 with a pinned
+Flutter SDK and explicit Material 3 seed settings. They contain resolved colors,
+so no Flutter dependency or color generation runs on the device. See the
+[import instructions](../tools/theme_import/README.md) for provenance,
+regeneration, exact settings and the accompanying BSD 3-Clause notice.
+The existing default palette is unchanged.
+
 ## Coordinating borrowed components
 
 Use the explicit palette installer to coordinate framework roots with a
@@ -66,9 +117,11 @@ applications: call `invalidateTheme()` on each application sharing the theme.
 It allocates no memory and installs no live bindings.
 
 The [coordinated palette example](../examples/material3/theme/coordinated_palette/coordinated_palette.ino)
-switches palettes live with an M3 button, an M2 checkbox, and an M2 contained
-button. The checkbox inherits the framework surface pair through a generic
-layout; the contained button resolves its independently owned M2 colors.
+offers all 67 presets in a scrolling drop-down and switches light/dark mode independently.
+The selectors stay visible above a scrollable preview of filled, tonal and
+disabled buttons, secondary/tertiary cards, a slider, a progress indicator, and an
+editable text field. A borrowed M2 checkbox inherits the tertiary card's resolved
+colors; a contained M2 button uses its own coordinated palette.
 
 The palette integration supports `ROO_WINDOWS_ENABLE_MATERIAL2=0`, set
 consistently across translation units. Its isolated test target omits M2
