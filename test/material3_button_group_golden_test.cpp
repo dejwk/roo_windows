@@ -158,7 +158,7 @@ TEST(ButtonGroupGolden, ConnectedHelperSurfaces) {
         320, 160, raster.data(), {});
     roo_display::Display display(device);
     roo_scheduler::SchedulingService scheduler;
-    Theme theme{.material3 = test_support::MakeAcceptanceTheme(dark)};
+    Theme theme = test_support::MakeAcceptanceApplicationTheme(dark);
 
     Environment env(scheduler, theme);
     Application app(&env, display);
@@ -249,7 +249,7 @@ TEST(ButtonGroupGolden, ConnectedSelectionAndRestoration) {
         320, 240, raster.data(), {});
     roo_display::Display display(device);
     roo_scheduler::SchedulingService scheduler;
-    Theme theme{.material3 = test_support::MakeAcceptanceTheme(dark)};
+    Theme theme = test_support::MakeAcceptanceApplicationTheme(dark);
     Material3Theme& material = theme.material3Theme();
 
     Environment env(scheduler, theme);
@@ -397,7 +397,7 @@ TEST(ButtonGroupGolden, StandardMotionRestoration) {
         320, 160, raster.data(), {});
     roo_display::Display display(device);
     roo_scheduler::SchedulingService scheduler;
-    Theme theme{.material3 = test_support::MakeAcceptanceTheme(dark)};
+    Theme theme = test_support::MakeAcceptanceApplicationTheme(dark);
 
     Environment env(scheduler, theme);
     Application app(&env, display);

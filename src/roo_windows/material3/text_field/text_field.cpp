@@ -301,17 +301,15 @@ void TextField::paint(PaintContext& ctx) const {
   if (!isEnabled() && !outlined) {
     fill = Opacity(colors.onSurface, 10, ancestor);
   } else if (isEnabled() && (isPressed() || isHover())) {
-    fill = AlphaBlend(fill, theme().material3Theme().stateLayer(
-                                outlined ? ColorToken::kSurface : filled_role,
-                                isPressed() ? InteractionState::kPressed
-                                            : InteractionState::kHover));
+    const ColorToken role = outlined ? ColorToken::kSurface : filled_role;
+    const InteractionState state =
+        isPressed() ? InteractionState::kPressed : InteractionState::kHover;
+    fill = AlphaBlend(
+        fill, colors.contentColorFor(role).withA(interactionOpacity(state)));
   }
-  Color input =
-      isEnabled()
-          ? colors.onSurface
-          : Opacity(colors.onSurface,
-                    theme().material3Theme().state.disabledContentOpacity,
-                    fill);
+  Color input = isEnabled()
+                    ? colors.onSurface
+                    : Opacity(colors.onSurface, disabledContentOpacity(), fill);
   Color secondary = isEnabled() ? colors.onSurfaceVariant : input;
   Color accent = !isEnabled()                  ? input
                  : hasError()                  ? colors.error

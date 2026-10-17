@@ -68,9 +68,6 @@ class Tab : public SurfaceWidget {
   /// Returns the tab background color.
   Color background() const override;
 
-  /// Selection changes content color only; tabs do not show activated fill.
-  bool useOverlayOnActivation() const override { return false; }
-
   /// Paints the tab-owned surface area, label, and optional icon foreground.
   void paint(PaintContext& ctx) const override;
 

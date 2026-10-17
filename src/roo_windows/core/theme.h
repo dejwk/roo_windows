@@ -100,6 +100,7 @@ namespace roo_windows {
 /// Mutate fields directly, then notify each affected Application with
 /// invalidateTheme(). Keep this object alive while environments borrow it.
 struct Theme {
+  FrameworkTheme framework;
   material3::Material3Theme material3;
   material2::Material2Theme material2;
 
@@ -115,20 +116,14 @@ struct Theme {
   /// Returns the owned Material 3 appearance settings.
   const material3::Material3Theme& material3Theme() const { return material3; }
 
-  /// Resolves generic framework colors from the current Material 3 palette.
+  /// Resolves application-owned framework root colors.
   roo_display::Color frameworkColor(FrameworkColorRole role) const {
-    return material3.frameworkColor(role);
-  }
-
-  /// Resolves generic interaction styling from the current Material 3 policy.
-  roo_display::Color frameworkStateLayer(FrameworkColorRole role,
-                                         InteractionState state) const {
-    return material3.frameworkStateLayer(role, state);
+    return framework.color(role);
   }
 
   /// Returns the current framework disabled-content opacity.
   uint8_t disabledContentOpacity() const {
-    return material3.state.disabledContentOpacity;
+    return framework.state.disabledContentOpacity;
   }
 };
 

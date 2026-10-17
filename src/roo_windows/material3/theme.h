@@ -153,64 +153,14 @@ struct ColorScheme {
   }
 };
 
-/// Owned Material 3 state-layer opacities, independent of container color.
-/// Defaults follow md.sys.state (Compose v0_210 / Android tokens 34.0.0).
-/// Layer opacities use 0..255 alpha, rounded from 8%, 10%, 10%, and 16%.
-struct StateLayerTheme {
-  uint8_t hover = 20;
-  uint8_t focus = 26;
-  uint8_t pressed = 26;
-  uint8_t dragged = 41;
-  /// Disabled content uses the renderer's separate 0..128 scale (38%).
-  uint8_t disabledContentOpacity = 49;
-
-  /// Returns transient interaction opacity. Selection and activation are
-  /// component appearance, not additional Material 3 state layers.
-  constexpr uint8_t opacity(InteractionState state) const {
-    switch (state) {
-      case InteractionState::kHover:
-        return hover;
-      case InteractionState::kFocus:
-        return focus;
-      case InteractionState::kPressed:
-        return pressed;
-      case InteractionState::kDragged:
-        return dragged;
-      case InteractionState::kSelected:
-      case InteractionState::kActivated:
-        return 0;
-    }
-    assert(false && "invalid Material 3 interaction state");
-    return 0;
-  }
-};
-
 /// Material 3 appearance data, owned by the application Theme.
 struct Material3Theme {
   ColorScheme color = DefaultColorScheme();
-  StateLayerTheme state = DefaultStateLayerTheme();
   ComponentTheme components{};
   /// Owned application compactness, borrowed live by supported components.
   /// After mutation, requestLayoutDescending() and invalidateDescending() on
   /// every affected display/detached root, on the UI thread between frames.
   Density density = Density::kDefault;
-
-  /// Resolves an interaction layer using this theme's current palette.
-  constexpr roo_display::Color stateLayer(ColorToken container,
-                                          InteractionState interaction) const {
-    const uint8_t opacity = state.opacity(interaction);
-    if (opacity == 0 || container == ColorToken::kNone) {
-      return roo_display::color::Transparent;
-    }
-    return color.contentColorFor(container).withA(opacity);
-  }
-
-  /// Maps a generic framework role to the current palette.
-  roo_display::Color frameworkColor(FrameworkColorRole role) const;
-
-  /// Maps a generic framework interaction to the current Material 3 policy.
-  roo_display::Color frameworkStateLayer(FrameworkColorRole role,
-                                         InteractionState interaction) const;
 };
 
 }  // namespace roo_windows::material3

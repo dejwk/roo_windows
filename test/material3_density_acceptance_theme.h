@@ -26,4 +26,17 @@ inline Material3Theme MakeAcceptanceTheme(bool dark) {
   return material;
 }
 
+// Golden scenes deliberately install matching framework roots alongside the
+// independent Material 3 palette, including in dark mode.
+inline Theme MakeAcceptanceApplicationTheme(bool dark) {
+  Theme theme{.material3 = MakeAcceptanceTheme(dark)};
+  const ColorScheme& colors = theme.material3Theme().color;
+  theme.framework.canvas = colors.background;
+  theme.framework.surface = colors.surface;
+  theme.framework.content = colors.onSurface;
+  theme.framework.emphasis = colors.primary;
+  theme.framework.outline = colors.outlineVariant;
+  return theme;
+}
+
 }  // namespace roo_windows::material3::test_support

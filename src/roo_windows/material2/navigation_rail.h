@@ -24,8 +24,6 @@ class NavigationRailEntry : public material2::IconWithCaption {
         idx_(idx),
         activator_(std::move(activator)) {}
 
-  bool useOverlayOnActivation() const override { return false; }
-
   bool isClickable() const override { return true; }
   bool usesHighlighterColor() const override { return true; }
 
@@ -34,8 +32,7 @@ class NavigationRailEntry : public material2::IconWithCaption {
   void onClicked() override;
 
  protected:
-  /// Repaints the foreground highlight when activation changes without an
-  /// overlay.
+  /// Repaints the foreground highlight when activation changes.
   void notifyStateChanged(uint16_t state_diff) override {
     if ((state_diff & kWidgetActivated) != 0) setDirty();
   }

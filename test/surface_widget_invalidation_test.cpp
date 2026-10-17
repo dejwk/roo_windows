@@ -557,14 +557,14 @@ TEST_F(SurfaceInvalidationTest, Material2ThemeChangesRepaintLiveDefaults) {
   for (int count : device_.writes) EXPECT_LE(count, 1);
   expectMatchesFullRepaint("palette");
 
-  theme_.material2Theme().state.colored[4] = 91;
+  theme_.framework.state.pressed = 91;
   button.setPressed(true);
   frame();
   expectInteriorOnly();
   expectMatchesFullRepaint("pressed");
   button.setPressed(false);
   button.setEnabled(false);
-  theme_.material2Theme().state.disabledContentOpacity = 64;
+  theme_.framework.state.disabledContentOpacity = 64;
   app_.invalidateTheme();
   frame();
   for (int count : device_.writes) EXPECT_LE(count, 1);

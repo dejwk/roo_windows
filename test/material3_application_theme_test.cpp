@@ -139,11 +139,11 @@ static_assert(std::is_move_constructible<Theme>::value);
 // component/density/interaction settings while framework colors resolve live.
 TEST(Material3ApplicationThemeTest, PreservesIdentityAndCustomPolicy) {
   Material3Theme material;
-  material.state.pressed = 128;
-  material.state.disabledContentOpacity = 17;
   material.components.card.filledContainer = ColorToken::kTertiary;
   material.density = Density::kMinus2;
   Theme owner{.material3 = material};
+  owner.framework.state.pressed = 128;
+  owner.framework.state.disabledContentOpacity = 17;
   const Theme* theme = &owner;
   const Material3Theme* m3 = &owner.material3Theme();
   ColorScheme colors = DefaultColorScheme();
@@ -155,16 +155,11 @@ TEST(Material3ApplicationThemeTest, PreservesIdentityAndCustomPolicy) {
   EXPECT_EQ(m3, &theme->material3Theme());
   EXPECT_EQ(ColorToken::kTertiary, m3->components.card.filledContainer);
   EXPECT_EQ(Density::kMinus2, m3->density);
-  EXPECT_EQ(128, m3->state.pressed);
+  EXPECT_EQ(128, theme->framework.state.pressed);
   EXPECT_EQ(17, theme->disabledContentOpacity());
-  EXPECT_EQ(colors.primary,
+  EXPECT_EQ(Color(0xFF6750A4),
             theme->frameworkColor(FrameworkColorRole::kEmphasis));
-  EXPECT_EQ(colors.onPrimary.withA(20),
-            theme->frameworkStateLayer(FrameworkColorRole::kEmphasis,
-                                       InteractionState::kHover));
-  EXPECT_EQ(colors.onPrimary.withA(128),
-            theme->frameworkStateLayer(FrameworkColorRole::kEmphasis,
-                                       InteractionState::kPressed));
+  EXPECT_EQ(20, theme->framework.state.hover);
 }
 
 class EmptyKeys : public KeySource {

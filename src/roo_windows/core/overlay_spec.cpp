@@ -10,7 +10,7 @@ namespace roo_windows {
 
 namespace {
 
-roo_display::Color getOverlayColor(const Widget& widget, const Canvas& canvas) {
+roo_display::Color getTransientOverlayColor(const Widget& widget) {
   uint8_t overlay_opacity = widget.getOverlayOpacity();
   if (overlay_opacity == 0) {
     return roo_display::color::Transparent;
@@ -18,6 +18,14 @@ roo_display::Color getOverlayColor(const Widget& widget, const Canvas& canvas) {
   Color overlay = widget.interactionColor();
   overlay.set_a(overlay_opacity);
   return overlay;
+}
+
+roo_display::Color getOverlayColor(const Widget& widget) {
+  Color component = widget.componentOverlayColor();
+  Color transient = getTransientOverlayColor(widget);
+  if (component.a() == 0) return transient;
+  if (transient.a() == 0) return component;
+  return AlphaBlend(component, transient);
 }
 
 roo_display::Color getClickAnimationColor(const Widget& widget,
@@ -69,14 +77,14 @@ OverlaySpec::OverlaySpec(Widget& widget, const Canvas& canvas)
       press_overlay_spec_() {
   if (is_disabled_) {
     is_modded_ = true;
-    base_overlay_ = roo_display::color::Transparent;
+    base_overlay_ = widget.componentOverlayColor();
     return;
   }
   if (widget.getOverlayType() == Widget::OVERLAY_NONE) {
     base_overlay_ = roo_display::color::Transparent;
     return;
   }
-  base_overlay_ = getOverlayColor(widget, canvas);
+  base_overlay_ = getOverlayColor(widget);
   is_modded_ = (base_overlay_.a() != 0);
   Widget::OverlayType overlay_type = widget.getOverlayType();
   switch (overlay_type) {
@@ -123,17 +131,15 @@ OverlaySpec::OverlaySpec(Widget& widget, const Canvas& canvas)
       int16_t r =
           animation_radius(anim_bounds, click_x, click_y, click_progress);
       roo_display::Color click_animation_overlay =
-          AlphaBlend(base_overlay_, getClickAnimationColor(widget, canvas));
-      base_overlay_ = roo_display::color::Transparent;
+          AlphaBlend(getTransientOverlayColor(widget),
+                     getClickAnimationColor(widget, canvas));
+      base_overlay_ = widget.componentOverlayColor();
       press_overlay_spec_.enabled = true;
       press_overlay_spec_.center_x = x;
       press_overlay_spec_.center_y = y;
       press_overlay_spec_.radius = r;
       press_overlay_spec_.color = click_animation_overlay;
 
-      // widget.getMainWindow()->set_press_overlay(
-      //     PressOverlay(x, y, r, click_animation_overlay, base_overlay_));
-      // press_overlay_ = &widget.getMainWindow()->press_overlay();
       if (is_point()) {
         roo_display::FpPoint focus = widget.getPointOverlayFocus();
         XDim dx;

@@ -179,8 +179,7 @@ void Slider::paint(PaintContext& ctx) const {
   auto sel = roo_display::SmoothThickLine(
       {kRadius + p.left() - 0.5f, kRadius - 0.5f},
       {xoffset - 0.5f, kRadius - 0.5f}, Scaled(6), circleColor);
-  Color unselColor =
-      circleColor.withA(th.material2Theme().state.disabledContentOpacity);
+  Color unselColor = circleColor.withA(th.disabledContentOpacity());
   auto unsel = roo_display::SmoothThickLine(
       {xoffset + 0.5f, kRadius - 0.5f},
       {parent_bounds().width() - 1 - kRadius - p.right() - 0.5f,

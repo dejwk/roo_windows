@@ -283,10 +283,16 @@ Persistent selected/activated flags remain, but request no automatic framework
 tint. Components can still paint a persistent tint, fill, icon, outline, or
 indicator. An automatic extra layer would shade components that already express
 selection. Before removing Material2's selected/activated opacity entries,
-migrate `ToggleButtons` to a component-owned active surface: use a local
-foreground tint of 31/255 over the inherited background, with transient effects
-composited above it. Its internal button becomes a `SurfaceWidget`, adds no style
-fields, and forwards inherited foreground/accent when the pair is introduced.
+migrate `ToggleButtons` to a component-owned active layer: apply a local
+foreground tint of 31/255 over the button's painted icon and container, with
+transient effects composited above it. Its internal button becomes a
+`SurfaceWidget`, adds no style fields, and forwards inherited foreground/accent
+when the pair is introduced. This follows the
+[Material 2 states guidance](https://m2.material.io/design/interaction/states.html),
+which uses selection overlays and permits activation overlays, without restoring
+an automatic layer for every widget. The component supplies its tint through
+`componentOverlayColor()` so the paint-effect path applies it above direct and
+deferred ink.
 Preserve explicit styling overrides. Every other persistent-layer consumer must
 receive an explicit replacement in the same phase; selection must remain visible
 without hover or focus.
@@ -727,7 +733,7 @@ Remove MainWindow's unused palette preparation, the three unused framework roles
 and `frameworkStateLayer()`. Migrate both systems, direct painters, and keyboard
 feedback; remove duplicate state settings and Material3's palette-only state-layer
 helper. Keep role-based ink temporarily. In this same commit, implement the
-component-owned active surface for ToggleButtons and replacements for every
+component-owned active layer for ToggleButtons and replacements for every
 inventoried persistent-layer consumer, then remove obsolete generic
 selection/activation-overlay hooks. Preserve logical state flags.
 

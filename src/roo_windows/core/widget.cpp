@@ -251,9 +251,7 @@ bool MayHaveNonTransparentOverlayOutsideBounds(const Widget& widget) {
   if (widget.getOverlayType() != Widget::OVERLAY_POINT) return false;
   if (widget.isHover()) return true;
   if (widget.isFocused()) return true;
-  if (widget.isSelected()) return true;
   if (widget.isDragged()) return true;
-  if (widget.isActivated() && widget.useOverlayOnActivation()) return true;
   if (widget.useOverlayOnPress()) {
     if (widget.isPressed() || widget.isClicking()) return true;
     const ClickAnimation* anim = ClickAnimationController(widget);
@@ -550,12 +548,7 @@ void Widget::setSelected(bool selected) {
 void Widget::setActivated(bool activated) {
   if (activated == isActivated()) return;
   state_ ^= kWidgetActivated;
-  if (isVisible() && useOverlayOnActivation()) {
-    if (getOverlayType() != OVERLAY_NONE) {
-      invalidateInterior();
-    }
-    notifyParentInvalidatedRegion(getParentInteractionBounds());
-  }
+  if (isVisible()) invalidateInterior();
   notifyStateChanged(kWidgetActivated);
 }
 
@@ -671,7 +664,7 @@ roo_display::Color Widget::interactionColor() const {
 }
 
 uint8_t Widget::interactionOpacity(InteractionState state) const {
-  return theme().material3Theme().state.opacity(state);
+  return theme().framework.state.opacity(state);
 }
 
 uint8_t Widget::disabledContentOpacity() const {
@@ -686,12 +679,6 @@ uint8_t Widget::getOverlayOpacity() const {
   }
   if (isFocused()) {
     overlay_opacity += interactionOpacity(InteractionState::kFocus);
-  }
-  if (isSelected() && useOverlayOnSelection()) {
-    overlay_opacity += interactionOpacity(InteractionState::kSelected);
-  }
-  if (isActivated() && useOverlayOnActivation()) {
-    overlay_opacity += interactionOpacity(InteractionState::kActivated);
   }
   if (isClicking() && useOverlayOnPress()) {
     uint8_t pressed_opacity = interactionOpacity(InteractionState::kPressed);

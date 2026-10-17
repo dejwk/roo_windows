@@ -601,8 +601,6 @@ class Widget {
     return getInteractionBounds().translate(offsetLeft(), offsetTop());
   }
 
-  virtual bool useOverlayOnActivation() const { return true; }
-  virtual bool useOverlayOnSelection() const { return true; }
   virtual bool useOverlayOnPress() const { return true; }
 
   virtual bool isClickable() const;
@@ -613,6 +611,12 @@ class Widget {
   }
 
   virtual bool usesHighlighterColor() const { return false; }
+
+  /// Returns a component-owned persistent area tint, painted above content.
+  /// Logical selection and activation alone do not supply this tint.
+  virtual roo_display::Color componentOverlayColor() const {
+    return roo_display::color::Transparent;
+  }
 
   // Computes the current area-overlay opacity from the widget theme and
   // interaction state.

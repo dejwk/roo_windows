@@ -49,12 +49,6 @@ class ButtonGroupEntry : public SurfaceWidget {
   /// Elevated entries use the primary interaction color.
   bool usesHighlighterColor() const override;
 
-  /// Selection is encoded in the group palette.
-  bool useOverlayOnSelection() const override { return false; }
-
-  /// Persistent activation never alters the group treatment.
-  bool useOverlayOnActivation() const override { return false; }
-
   /// Material disabled colors are already resolved once.
   bool useAutomaticDisabledStyle() const override { return false; }
 

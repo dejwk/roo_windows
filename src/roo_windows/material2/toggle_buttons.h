@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "roo_windows/core/panel.h"
+#include "roo_windows/core/surface_widget.h"
 #include "roo_windows/material2/theme_mixin.h"
 
 namespace roo_windows::material2 {
@@ -49,13 +50,20 @@ class ToggleButtons : public ThemeMixin<Panel> {
  private:
   void notifyButtonClicked(int index);
 
-  class ToggleButton : public ThemeMixin<Widget> {
+  class ToggleButton : public ThemeMixin<SurfaceWidget> {
    public:
     ToggleButton(ApplicationContext& context, const MonoIcon& icon,
                  ToggleButtons& group, int idx)
-        : ThemeMixin<Widget>(context), icon_(icon), group_(group), idx_(idx) {}
+        : ThemeMixin<SurfaceWidget>(context),
+          icon_(icon),
+          group_(group),
+          idx_(idx) {}
 
-    bool useOverlayOnActivation() const override { return true; }
+    bool fullyCoversBoundsWithOpaqueColors() const override { return false; }
+    Color componentOverlayColor() const override {
+      return isActivated() ? theme().material2Theme().color.onSurface.withA(31)
+                           : roo_display::color::Transparent;
+    }
     bool isClickable() const override { return true; }
 
     ClickActivationPolicy getClickActivationPolicy() const override {
@@ -69,7 +77,7 @@ class ToggleButtons : public ThemeMixin<Panel> {
       Widget::onClicked();
     }
 
-    /// Paints the icon glyph; the active overlay is provided by the group.
+    /// Paints the icon beneath its component-owned persistent tint.
     void paint(PaintContext& ctx) const override;
 
     /// Reports the icon's anchor extents plus a 1 dp margin.

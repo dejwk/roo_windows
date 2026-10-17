@@ -69,9 +69,6 @@ class ToggleIconButton : public IconButton {
   /// Returns the stable slot dimensions enclosing both possible icons.
   Dimensions getSuggestedMinimumDimensions() const override;
 
-  /// Prevents the generic selected overlay from double-encoding selection.
-  bool useOverlayOnSelection() const override { return false; }
-
   /// Uses the accent interaction layer for selected standard buttons.
   bool usesHighlighterColor() const override;
 

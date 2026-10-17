@@ -47,6 +47,4 @@ constexpr ColorScheme DefaultMaterial3Colors() {
 
 ColorScheme DefaultColorScheme() { return DefaultMaterial3Colors(); }
 
-StateLayerTheme DefaultStateLayerTheme() { return {}; }
-
 }  // namespace roo_windows::material3

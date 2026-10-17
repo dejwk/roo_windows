@@ -31,17 +31,6 @@ class ThemeMixin : public Base {
     return this->usesHighlighterColor() ? color.accentColorFor(role)
                                         : color.contentColorFor(role);
   }
-
-  /// Resolves an interaction opacity from the owned Material 2 settings.
-  uint8_t interactionOpacity(InteractionState state) const override {
-    return this->theme().material2Theme().state.opacity(
-        Material2ColorRole(this->effectiveOverlayColorRole()), state);
-  }
-
-  /// Resolves the Material 2 disabled-content opacity.
-  uint8_t disabledContentOpacity() const override {
-    return this->theme().material2Theme().state.disabledContentOpacity;
-  }
 };
 
 }  // namespace roo_windows::material2

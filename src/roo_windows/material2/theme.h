@@ -81,30 +81,10 @@ struct ColorScheme {
   }
 };
 
-/// Interaction opacities indexed by InteractionState, independent of
-/// Material 3.
-struct StateLayerTheme {
-  /// Disabled-content opacity in the legacy 0..128 scale (128 is opaque).
-  uint8_t disabledContentOpacity = 49;
-  /// Hover, focus, selected, activated, pressed, dragged on neutral surfaces.
-  uint8_t neutral[6] = {10, 31, 20, 31, 31, 20};
-  /// The same states on colored surfaces, including inherited container roles.
-  uint8_t colored[6] = {20, 61, 41, 61, 61, 41};
-
-  /// Returns the state opacity for the supplied surface role.
-  constexpr uint8_t opacity(ColorRole role,
-                            InteractionState interaction) const {
-    const unsigned index = static_cast<unsigned>(interaction);
-    if (index >= 6) return 0;
-    return role >= ColorRole::kPrimary ? colored[index] : neutral[index];
-  }
-};
-
 /// Material 2 appearance owned by Theme. Mutate, then call invalidateTheme()
-/// on affected applications. Copies own their palette and interaction settings.
+/// on affected applications. Copies own their palette.
 struct Material2Theme {
   ColorScheme color;
-  StateLayerTheme state;
 };
 
 }  // namespace roo_windows::material2

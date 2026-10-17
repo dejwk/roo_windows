@@ -325,8 +325,8 @@ class AlternativesPin final : public PresentationPin {
           {grid.xMin() + (selected % columns) * cell + (cell - 1) * 0.5f,
            grid.yMin() + (selected / columns) * height + (height - 1) * 0.5f},
           highlight_radius,
-          target_.theme().material3Theme().stateLayer(
-              material3::ColorToken::kPrimary, InteractionState::kPressed)));
+          target_.colorTheme().text.withA(
+              target_.interactionOpacity(InteractionState::kPressed))));
     }
     for (int i = 0; i < count; ++i) {
       const int x = grid.xMin() + (i % columns) * cell;
@@ -580,9 +580,9 @@ void KeyboardWidget::paintKey(PaintContext& ctx, int row_idx, int key_idx,
     background = colorTheme().acceptButton;
   }
   if (isPressed() && active_row_ == row_idx && active_key_ == key_idx) {
-    background = AlphaBlend(background, theme().material3Theme().stateLayer(
-                                            material3::ColorToken::kPrimary,
-                                            InteractionState::kPressed));
+    background = AlphaBlend(
+        background, colorTheme().text.withA(
+                        interactionOpacity(InteractionState::kPressed)));
   }
   // Resolve the flat interior first, including transparent glyph pixels.
   // The clipper composes rounded edges over the keyboard surface afterward.

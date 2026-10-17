@@ -58,7 +58,7 @@ TEST_F(DensityTest, NamedLevelsAndAggregateCompatibility) {
   static_assert(sizeof(Density) == 1);
   static_assert(std::is_same<std::underlying_type_t<Density>, int8_t>::value);
   EXPECT_EQ(DefaultTheme().material3Theme().density, Density::kDefault);
-  Material3Theme legacy{material_.color, material_.state};
+  Material3Theme legacy{material_.color};
   EXPECT_EQ(legacy.density, Density::kDefault);
   Theme copy = theme_;
   Button button(context(), "Save");

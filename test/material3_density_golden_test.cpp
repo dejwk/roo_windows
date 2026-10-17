@@ -31,7 +31,7 @@ roo_display::Offscreen<roo_display::Rgb888> RenderColumn(Density density,
       width, height, raster.data(), roo_display::Rgb565());
   roo_display::Display display(device);
   roo_scheduler::SchedulingService scheduler;
-  Theme theme{.material3 = test_support::MakeAcceptanceTheme(dark)};
+  Theme theme = test_support::MakeAcceptanceApplicationTheme(dark);
   Material3Theme& material = theme.material3Theme();
   material.density = density;
 

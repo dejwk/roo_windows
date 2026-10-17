@@ -3,7 +3,6 @@
 #include <Arduino.h>
 
 #include "roo_display/color/color.h"
-#include "roo_display/color/color_set.h"
 #include "roo_display/filter/clip_exclude_rects.h"
 #include "roo_windows/core/application.h"
 #include "roo_windows/core/press_overlay.h"
@@ -13,11 +12,6 @@ namespace roo_windows {
 using roo_display::Display;
 
 namespace {
-
-void MaybeAddColor(roo_display::internal::ColorSet& palette, Color color) {
-  if (palette.size() >= 15) return;
-  palette.insert(color);
-}
 
 Rect UnionNonEmpty(const Rect& a, const Rect& b) {
   if (a.empty()) return b;
@@ -44,34 +38,6 @@ MainWindow::MainWindow(Application& app, const roo_display::Box& bounds)
       transient_presentation_slot_(*this) {
   parent_bounds_ = Rect(bounds);
   invalidateDescending();
-  const ApplicationContext& context = app.context();
-  roo_display::internal::ColorSet color_set;
-  const Theme& theme = context.theme();
-  MaybeAddColor(color_set, theme.frameworkColor(FrameworkColorRole::kCanvas));
-  MaybeAddColor(color_set, theme.frameworkColor(FrameworkColorRole::kSurface));
-  MaybeAddColor(color_set, theme.frameworkColor(FrameworkColorRole::kEmphasis));
-  MaybeAddColor(color_set, context.keyboardColorTheme().background);
-  {
-    Color c = theme.frameworkStateLayer(FrameworkColorRole::kSurface,
-                                        InteractionState::kPressed);
-    c = AlphaBlend(theme.frameworkColor(FrameworkColorRole::kSurface), c);
-    MaybeAddColor(color_set, c);
-  }
-  {
-    Color c = theme.frameworkColor(FrameworkColorRole::kEmphasis);
-    c.set_a(theme.disabledContentOpacity());
-    c = AlphaBlend(theme.frameworkColor(FrameworkColorRole::kSurface), c);
-    MaybeAddColor(color_set, c);
-  }
-
-  MaybeAddColor(color_set, context.keyboardColorTheme().normalButton);
-  MaybeAddColor(color_set, theme.frameworkColor(FrameworkColorRole::kCritical));
-  MaybeAddColor(color_set, context.keyboardColorTheme().modifierButton);
-  Color palette[color_set.size()];
-  std::copy(color_set.begin(), color_set.end(), palette);
-  // background_fill_buffer_.setPalette(palette, color_set.size());
-  // background_fill_buffer_.setPrefilled(
-  //     theme.frameworkColor(FrameworkColorRole::kCanvas));
 }
 
 bool MainWindow::fillTouchTargetPath(XDim x, YDim y,

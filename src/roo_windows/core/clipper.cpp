@@ -109,7 +109,8 @@ void ClipperOutput::pushOverlaySpec(Widget& widget, const Canvas& canvas) {
       // with background alpha (1 - disabled opacity) implements that transform
       // while preserving the source coverage used at rounded boundaries.
       const uint8_t opacity = widget.disabledContentOpacity();
-      tint = canvas.bgcolor().withA(255 - ((255 * opacity) >> 7));
+      tint = roo_display::AlphaBlend(
+          tint, canvas.bgcolor().withA(255 - ((255 * opacity) >> 7)));
     }
     const PressOverlay* press = configurePressOverlay(spec.press_overlay());
     const PaintEffect snapshot(arena.active_effect, canvas.clip_box(), tint,

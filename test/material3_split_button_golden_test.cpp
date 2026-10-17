@@ -117,7 +117,7 @@ void CheckSplit(const char* name, SplitButtonVariant variant, bool open,
       kWidth, kHeight, raster.data(), roo_display::Argb4444());
   roo_display::Display display(device);
   roo_scheduler::SchedulingService scheduler;
-  Theme theme{.material3 = test_support::MakeAcceptanceTheme(dark)};
+  Theme theme = test_support::MakeAcceptanceApplicationTheme(dark);
 
   Environment environment(scheduler, theme);
   Application app(&environment, display);

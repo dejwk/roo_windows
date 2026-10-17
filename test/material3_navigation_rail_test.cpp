@@ -199,7 +199,7 @@ TEST(Material3NavigationRail, DestinationDefaultsAndSetters) {
   EXPECT_EQ(Widget::OVERLAY_CUSTOM, destination.getOverlayType());
   EXPECT_EQ(Widget::ClickOverlayAnimation::kFade,
             destination.getClickOverlayAnimation());
-  EXPECT_FALSE(destination.useOverlayOnSelection());
+  EXPECT_EQ(0, destination.interactionOpacity(InteractionState::kSelected));
   EXPECT_EQ(ColorToken::kSurface, destination.effectiveOverlayColorRole());
 
   NavigationRailDestinationTestAccess::setSelected(destination, true);

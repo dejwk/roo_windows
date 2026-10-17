@@ -231,7 +231,7 @@ TEST(Material3Tabs, TabOwnsSurfaceAreaForStateOverlays) {
   EXPECT_EQ(::roo_windows::material3::ColorToken::kSurface,
             tab.containerRole());
   EXPECT_EQ(env.theme().material3Theme().color.surface, tab.background());
-  EXPECT_FALSE(tab.useOverlayOnActivation());
+  EXPECT_EQ(0, tab.interactionOpacity(InteractionState::kActivated));
 }
 
 // Verifies that adding the first tab establishes row-owned selection and
@@ -938,10 +938,7 @@ TEST_F(Material3TabsRenderTest, PrimaryFixedRowPaintsIndicatorAndDivider) {
   roo_display::Color pressed_indicator = roo_display::AlphaBlend(
       env_.theme().material3Theme().color.primary,
       env_.theme().material3Theme().color.onSurface.withA(
-          env_.theme()
-              .material3Theme()
-              .stateLayer(ColorToken::kSurface, InteractionState::kPressed)
-              .a()));
+          env_.theme().framework.state.pressed));
   EXPECT_EQ(QuantizeToArgb4444(pressed_indicator), pixelAt(30, Scaled(45)));
   EXPECT_EQ(
       QuantizeToArgb4444(env_.theme().material3Theme().color.outlineVariant),

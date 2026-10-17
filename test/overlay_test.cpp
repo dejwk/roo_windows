@@ -1,3 +1,4 @@
+#include "roo_icons/outlined/24/action.h"
 #include "roo_icons/outlined/24/navigation.h"
 #include "roo_windows/containers/flex_layout.h"
 #include "roo_windows/containers/scrollable_panel.h"
@@ -7,6 +8,7 @@
 #include "roo_windows/material2/checkbox.h"
 #include "roo_windows/material2/radio_button.h"
 #include "roo_windows/material2/slider.h"
+#include "roo_windows/material2/toggle_buttons.h"
 #include "roo_windows/material2/typography.h"
 #include "roo_windows/material3/checkbox/checkbox.h"
 #include "roo_windows/material3/slider/slider.h"
@@ -529,6 +531,69 @@ TEST_F(RooWindowsRenderTest, AreaFadeStaysInsideSurfaceBounds) {
 
 TEST(OverlaySpecSize, RemainsWithinOneWordOfPressOverlayState) {
   EXPECT_LE(sizeof(OverlaySpec), sizeof(PressOverlaySpec) + sizeof(uint64_t));
+}
+
+// Verifies a selected button installs its own visible layer while activation
+// contributes no generic opacity; transient feedback remains independent.
+TEST_F(RooWindowsRenderTest, ToggleSelectionUsesComponentOverlay) {
+  auto group = std::make_unique<material2::ToggleButtons>(context());
+  material2::ToggleButtons* group_ptr = group.get();
+  Widget& button = group->addButton(ic_outlined_24_action_done());
+  app_.add(std::move(group), Box(8, 0, 55, 47));
+  refresh();
+  Color before[48][48];
+  for (int y = 0; y < 48; ++y) {
+    for (int x = 0; x < 48; ++x) before[y][x] = pixelAt(x + 8, y);
+  }
+  ASSERT_TRUE(group_ptr->setActive(0));
+  EXPECT_EQ(0, button.getOverlayOpacity());
+  EXPECT_EQ(roo_display::color::Transparent,
+            static_cast<SurfaceWidget&>(button).background());
+  refresh();
+  const Color ink =
+      QuantizeToArgb4444(env_.theme().material2Theme().color.onSurface);
+  int unchanged_ink = 0;
+  int changed_surface = 0;
+  int sample_x = -1;
+  int sample_y = -1;
+  for (int y = 2; y < 45; ++y) {
+    for (int x = 2; x < 45; ++x) {
+      const Color after = pixelAt(x + 8, y);
+      if (before[y][x] == ink && after == ink) ++unchanged_ink;
+      if (before[y][x] != ink && before[y][x] != after) {
+        ++changed_surface;
+        sample_x = x + 8;
+        sample_y = y;
+      }
+    }
+  }
+  EXPECT_GT(unchanged_ink, 0);
+  ASSERT_GT(changed_surface, 0);
+  const Color selected = pixelAt(sample_x, sample_y);
+  button.setHover(true);
+  refresh();
+  EXPECT_NE(selected, pixelAt(sample_x, sample_y));
+  button.setHover(false);
+  refresh();
+  EXPECT_EQ(selected, pixelAt(sample_x, sample_y));
+  button.setFocused(true);
+  refresh();
+  EXPECT_NE(selected, pixelAt(sample_x, sample_y));
+  button.setFocused(false);
+  refresh();
+  EXPECT_EQ(selected, pixelAt(sample_x, sample_y));
+  button.setPressed(true);
+  refresh();
+  EXPECT_NE(selected, pixelAt(sample_x, sample_y));
+  button.setPressed(false);
+  refresh();
+  EXPECT_EQ(selected, pixelAt(sample_x, sample_y));
+  button.setEnabled(false);
+  refresh();
+  const Color selected_disabled = pixelAt(sample_x, sample_y);
+  ASSERT_TRUE(group_ptr->setActive(-1));
+  refresh();
+  EXPECT_NE(selected_disabled, pixelAt(sample_x, sample_y));
 }
 
 // Verifies that a point-overlay widget's interaction bounds extend by the
@@ -1339,9 +1404,8 @@ TEST_F(
 }
 
 // Verifies that a point-overlay widget reports transient paint overflow only
-// while the overlay is active: setActivated(true) expands transient bounds
-// on all sides, and setActivated(false) collapses them back to the layout
-// rect.
+// while a transient overlay is active. Logical activation alone leaves the
+// bounds unchanged.
 TEST_F(RooWindowsRenderTest, PointOverlayBoundsExpandOnlyWhileOverlayIsActive) {
   auto checkbox = std::make_unique<material2::Checkbox>(context());
   material2::Checkbox* checkbox_ptr = checkbox.get();
@@ -1352,6 +1416,8 @@ TEST_F(RooWindowsRenderTest, PointOverlayBoundsExpandOnlyWhileOverlayIsActive) {
             checkbox_ptr->getParentTransientPaintBounds());
 
   checkbox_ptr->setActivated(true);
+  EXPECT_FALSE(checkbox_ptr->hasTransientPaintOverflow());
+  checkbox_ptr->setHover(true);
 
   Rect transient_bounds = checkbox_ptr->getParentTransientPaintBounds();
   EXPECT_TRUE(checkbox_ptr->hasTransientPaintOverflow());
@@ -1360,6 +1426,7 @@ TEST_F(RooWindowsRenderTest, PointOverlayBoundsExpandOnlyWhileOverlayIsActive) {
   EXPECT_GT(transient_bounds.xMax(), checkbox_ptr->parent_bounds().xMax());
   EXPECT_GT(transient_bounds.yMax(), checkbox_ptr->parent_bounds().yMax());
 
+  checkbox_ptr->setHover(false);
   checkbox_ptr->setActivated(false);
   EXPECT_FALSE(checkbox_ptr->hasTransientPaintOverflow());
   EXPECT_EQ(checkbox_ptr->parent_bounds(),
@@ -1424,10 +1491,7 @@ TEST_F(RooWindowsRenderTest,
 
   Color overlay =
       front_ptr->theme().material3Theme().color.contentColorFor(parent_role);
-  overlay.set_a(front_ptr->theme()
-                    .material3Theme()
-                    .stateLayer(parent_role, InteractionState::kFocus)
-                    .a());
+  overlay.set_a(front_ptr->interactionOpacity(InteractionState::kFocus));
   Color expected = QuantizeToArgb4444(AlphaBlend(
       front_ptr->theme().material3Theme().color.resolve(parent_role), overlay));
 

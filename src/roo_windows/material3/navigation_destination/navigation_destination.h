@@ -58,8 +58,6 @@ class NavigationDestinationBase : public Widget {
     return ClickOverlayAnimation::kFade;
   }
 
-  bool useOverlayOnSelection() const override { return false; }
-
   ColorToken effectiveOverlayColorRole() const override;
   void paint(PaintContext& ctx) const override;
 
