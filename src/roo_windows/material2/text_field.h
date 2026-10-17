@@ -4,24 +4,15 @@
 #include "roo_display/color/color.h"
 #include "roo_display/font/font.h"
 #include "roo_display/ui/tile.h"
-#include "roo_scheduler.h"
-#include "roo_time.h"
 #include "roo_windows/config.h"
-#include "roo_windows/core/panel.h"
+#include "roo_windows/core/text_field_editor.h"
 #include "roo_windows/core/widget.h"
 #include "roo_windows/internal/text_edit_target.h"
-#include "roo_windows/keyboard/keyboard.h"
 #include "roo_windows/material2/theme_mixin.h"
 
 namespace roo_windows::material2 {
 
 class TextField;
-
-static constexpr roo_time::Duration kCursorBlinkInterval =
-    roo_time::Millis(500);
-
-static constexpr roo_time::Duration kShowLastGlyphInterval =
-    roo_time::Millis(1500);
 
 /// Eye / eye-slash style toggle used by `TextField` to reveal a masked value.
 ///
@@ -87,131 +78,6 @@ class VisibilityToggle : public ThemeMixin<Widget> {
 
  private:
   OnOffState state_;
-};
-
-/// Shared editing controller for the `TextField` widgets in one `Task`.
-///
-/// One editor is owned by each `Task` and bound to whichever `TextField`
-/// currently has focus in that task. It receives semantic text input,
-/// maintains the cursor position, selection range, glyph
-/// metrics cache, and horizontal scroll offset. Caret blinking uses a sparse
-/// animation track on the active field; the one-shot "recently entered glyph"
-/// reveal deadline remains scheduler-owned. Keeping this state centrally
-/// avoids paying for it on every `TextField` instance.
-class TextFieldEditor {
- public:
-  TextFieldEditor(Application& application,
-                  roo_scheduler::SchedulerClient& scheduler)
-      : application_(application),
-        scheduler_(scheduler),
-        blinking_cursor_is_on_(false),
-        last_glyph_hider_(scheduler, [this]() { hideLastGlyph(); }),
-        last_glyph_recently_entered_(false),
-        target_(nullptr),
-        cursor_position_(0),
-        selection_begin_(0),
-        selection_end_(0),
-        selection_anchor_(0),
-        draw_xoffset_(0) {}
-
-  ~TextFieldEditor();
-
-  /// Begins editing `target` as the active field; any previously active
-  /// field is finished with confirmed=false and unbound first.
-  void edit(internal::TextEditTarget* target,
-            bool show_software_keyboard = true);
-
-  /// True iff this editor is currently bound to `target`.
-  bool isEdited(const internal::TextEditTarget* target) const;
-
-  /// Returns the bound target widget, or nullptr outside an edit session.
-  Widget* editedWidget() const {
-    return target_ == nullptr ? nullptr : &target_->editWidget();
-  }
-
-  bool lastGlyphRecentlyEntered() const { return last_glyph_recently_entered_; }
-
-  const std::vector<roo_display::GlyphMetrics>& glyphs() const {
-    return glyphs_;
-  }
-
-  bool isBlinkingCursorNowOn() const { return blinking_cursor_is_on_; }
-
-  int16_t draw_xoffset() const { return draw_xoffset_; }
-  int16_t selection_begin() const { return selection_begin_; }
-  int16_t selection_end() const { return selection_end_; }
-  int16_t cursor_position() const { return cursor_position_; }
-
-  bool has_selection() const { return selection_end_ > selection_begin_; }
-
-  /// Returns true when the active editing target belongs to `subtree`.
-  bool targetInSubtree(const Widget& subtree) const;
-
-  /// Sets the inclusive selection range in glyph indices and updates the
-  /// caret position to the selection end.
-  void setSelection(int16_t selection_begin, int16_t selection_end);
-
-  /// Inserts (or overwrites the current selection with) a single Unicode
-  /// code point at the caret and advances it.
-  void rune(uint32_t rune);
-
-  /// Confirms the edit and notifies the target's `onEditFinished(true)`.
-  void enter();
-
-  /// Deletes the current selection, or the glyph before the caret if no
-  /// selection is active.
-  void del();
-
-  void cancel();
-  void forwardDelete();
-  void moveLeft(bool extend_selection = false);
-  void moveRight(bool extend_selection = false);
-  void moveHome(bool extend_selection = false);
-  void moveEnd(bool extend_selection = false);
-
-  /// Applies a registry sample to the matching active target.
-  void applyCursorFrame(internal::TextEditTarget& target,
-                        const AnimationSample& sample);
-
-  /// Remeasures masking/font state while retaining selection and caret.
-  void refreshMetrics();
-
-  /// Remeasures a replaced value, clears selection and cancels recent reveal.
-  void resetMetrics();
-
-  /// Adjusts the horizontal offset to keep the caret in the given viewport.
-  void ensureCursorVisible(int16_t viewport_width);
-
- private:
-  friend class TextField;
-
-  void measure();
-  void restartCursor();
-  void stopCursor(internal::TextEditTarget& target);
-
-  void restartLastGlyphRecentlyEntered();
-  void hideLastGlyph();
-  void moveCursor(int16_t position, bool extend_selection);
-  void finish(bool confirmed);
-  void changed();
-
-  Application& application_;
-  roo_scheduler::SchedulerClient& scheduler_;
-  bool blinking_cursor_is_on_;
-  roo_scheduler::SingletonTask last_glyph_hider_;
-
-  // True if the last (rightmost) glyph is considered as 'recently entered'
-  // and meant to be shown.
-  bool last_glyph_recently_entered_;
-
-  internal::TextEditTarget* target_;
-  std::vector<roo_display::GlyphMetrics> glyphs_;
-  std::vector<int16_t> offsets_;
-  int16_t cursor_position_;
-  int16_t selection_begin_;
-  int16_t selection_end_;
-  int16_t selection_anchor_;
-  int16_t draw_xoffset_;
 };
 
 /// Single-line editable text widget.
@@ -356,8 +222,6 @@ class TextField : public ThemeMixin<Widget>, public internal::TextEditTarget {
   const TextFieldEditor& editor() const;
 
  private:
-  friend class TextFieldEditor;
-
   bool isEdited() const;
   bool isStarred() const { return starred_; }
 

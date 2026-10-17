@@ -43,4 +43,16 @@ class AlertDialog : public Dialog {
   SupportingText supporting_text_;
 };
 
+/// Shows a heap-owned alert through @p interaction_owner's application.
+/// Call on its UI thread. Completion receives the selected button index, or
+/// -1 on dismissal/teardown, after detachment. The dialog is deleted after the
+/// callback, or immediately if admission fails (without calling the callback).
+/// Title, supporting text, button labels, and callback are copied/moved into
+/// the presentation. Returns its admission result; no dialog pointer escapes.
+PresentationStartResult ShowAlertDialog(Task& interaction_owner,
+                                        std::string title,
+                                        std::string supporting_text,
+                                        std::vector<std::string> button_labels,
+                                        Dialog::CallbackFn callback_fn);
+
 }  // namespace roo_windows::material2

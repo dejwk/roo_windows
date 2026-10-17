@@ -6,7 +6,6 @@
 #include "roo_threads/mutex.h"
 #include "roo_threads/semaphore.h"
 #include "roo_windows/keyboard/layout/en_us.h"
-#include "roo_windows/material2/dialogs/alert_dialog.h"
 
 namespace roo_windows {
 
@@ -242,17 +241,17 @@ class ApplicationTextInput {
     active_editor_ = nullptr;
   }
 
-  void activate(material2::TextFieldEditor& editor) {
+  void activate(TextFieldEditor& editor) {
     checkUiThread();
     if (active_editor_ == &editor) return;
-    material2::TextFieldEditor* old_editor = active_editor_;
+    TextFieldEditor* old_editor = active_editor_;
     // Publish first: a completion callback may activate a third editor or
     // detach the incoming field. Its decision must not be overwritten here.
     active_editor_ = &editor;
     if (old_editor != nullptr) old_editor->cancel();
   }
 
-  void deactivate(material2::TextFieldEditor& editor) {
+  void deactivate(TextFieldEditor& editor) {
     if (app_.state_ != Application::State::kStopping) checkUiThread();
     if (active_editor_ == &editor) active_editor_ = nullptr;
   }
@@ -266,7 +265,7 @@ class ApplicationTextInput {
     if (active_editor_ != nullptr) active_editor_->cancel();
   }
 
-  bool isActiveEditor(const material2::TextFieldEditor& editor) const {
+  bool isActiveEditor(const TextFieldEditor& editor) const {
     return active_editor_ == &editor;
   }
 
@@ -319,7 +318,7 @@ class ApplicationTextInput {
 
   Application& app_;
   TextInputEmitter* head_ = nullptr;
-  material2::TextFieldEditor* active_editor_ = nullptr;
+  TextFieldEditor* active_editor_ = nullptr;
 };
 
 /// Marks the interval in which Application::tick() owns UI dispatch.
@@ -486,25 +485,6 @@ Task& Application::addTaskFullScreen() {
   return addTask(window_.display().extents());
 }
 
-PresentationStartResult Application::showAlertDialog(
-    Task& interaction_owner, std::string title, std::string supporting_text,
-    std::vector<std::string> button_labels,
-    material2::Dialog::CallbackFn callback_fn) {
-  checkUiThread();
-  material2::Dialog* dialog = new material2::AlertDialog(
-      context(), std::move(title), std::move(supporting_text),
-      std::move(button_labels));
-  PresentationStartResult result =
-      dialog->show(interaction_owner, [dialog, callback_fn](int id) {
-        if (callback_fn != nullptr) {
-          callback_fn(id);
-        }
-        delete dialog;
-      });
-  if (result != PresentationStartResult::kStarted) delete dialog;
-  return result;
-}
-
 bool Application::isUiThread() const {
   return state_ == State::kConstructed ||
          roo::this_thread::get_id() == ui_thread_id_;
@@ -559,11 +539,11 @@ bool Application::performTextInputAction(TextInputAction action) {
   return text_input_->performAction(action);
 }
 
-void Application::activateTextInput(material2::TextFieldEditor& editor) {
+void Application::activateTextInput(TextFieldEditor& editor) {
   text_input_->activate(editor);
 }
 
-void Application::deactivateTextInput(material2::TextFieldEditor& editor) {
+void Application::deactivateTextInput(TextFieldEditor& editor) {
   text_input_->deactivate(editor);
 }
 

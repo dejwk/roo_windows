@@ -13,8 +13,6 @@
 #include "roo_windows/core/task.h"
 #include "roo_windows/core/text_input.h"
 #include "roo_windows/keyboard/keyboard.h"
-#include "roo_windows/material2/dialogs/dialog.h"
-#include "roo_windows/material2/text_field.h"
 
 namespace roo_windows {
 
@@ -120,14 +118,6 @@ class Application {
   /// Creates an empty task filling the display.
   Task& addTaskFullScreen();
 
-  /// Convenience function showing a new, heap-allocated alert dialog with
-  /// the specified contents through `interaction_owner`. The dialog is
-  /// deleted after completion, or immediately when admission fails.
-  PresentationStartResult showAlertDialog(
-      Task& interaction_owner, std::string title, std::string supporting_text,
-      std::vector<std::string> button_labels,
-      material2::Dialog::CallbackFn callback_fn);
-
   /// Schedules the specified function to be executed in the UI thread.
   /// Blocks until the function completes. If called from the UI thread,
   /// executes the function immediately.
@@ -179,7 +169,7 @@ class Application {
   friend class ClickAnimation;
   friend class KeySource;
   friend class TextInputEmitter;
-  friend class material2::TextFieldEditor;
+  friend class TextFieldEditor;
   friend class TransientPresentationSlot;
   friend class TickerGuard;
 
@@ -208,8 +198,8 @@ class Application {
   bool commitTextInputRune(uint32_t rune);
   bool deleteTextInputBackward();
   bool performTextInputAction(TextInputAction action);
-  void activateTextInput(material2::TextFieldEditor& editor);
-  void deactivateTextInput(material2::TextFieldEditor& editor);
+  void activateTextInput(TextFieldEditor& editor);
+  void deactivateTextInput(TextFieldEditor& editor);
   void setTextEditorKeyboardVisibility(bool visible);
   Widget* activeTextEditorWidget() const;
   void dismissTextEditor();

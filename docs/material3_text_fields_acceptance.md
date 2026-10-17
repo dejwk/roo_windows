@@ -11,8 +11,9 @@ explicit LTR/RTL slot placement, and direct field painting. `SecureTextField`
 reserves the trailing affordance for reveal and adds one packed bit. Neither
 field contains children, an editor, or stored callback functions.
 
-The task-owned editor now binds an internal `TextEditTarget`, shared with the
-legacy field. It tracks UTF-8 byte offsets independently of masked glyphs,
+The task-owned `roo_windows::TextFieldEditor` in `core/text_field_editor.h`
+binds an internal `TextEditTarget`, shared with the legacy field. See the
+[text input guide](text_input.md) for routing and lifetime requirements. It tracks UTF-8 byte offsets independently of masked glyphs,
 preserves selection through reveal/expiry, scrolls the caret within the input
 viewport, and distinguishes visual updates from value-change notifications.
 Completion clears the session before callbacks, including reentrant transfer

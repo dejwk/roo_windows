@@ -65,7 +65,7 @@ ROO_WINDOWS_ANIMATION_SIZE_PROBE(roo_windows::material3::ToggleIconButton,
                                  toggle_icon_button);
 ROO_WINDOWS_ANIMATION_SIZE_PROBE(roo_windows::material2::ProgressBar,
                                  legacy_progress_bar);
-ROO_WINDOWS_ANIMATION_SIZE_PROBE(roo_windows::material2::TextFieldEditor,
+ROO_WINDOWS_ANIMATION_SIZE_PROBE(roo_windows::TextFieldEditor,
                                  text_field_editor);
 ROO_WINDOWS_ANIMATION_SIZE_PROBE(roo_windows::material2::TextField, text_field);
 ROO_WINDOWS_ANIMATION_SIZE_PROBE(roo_windows::material3::SnackbarPresenter,

@@ -3,6 +3,8 @@
 #include <functional>
 
 #include "gtest/gtest.h"
+#include "roo_fonts/NotoSans_Regular/14.h"
+#include "roo_windows/core/text_field_editor.h"
 #include "roo_windows/material2/typography.h"
 #include "roo_windows_render_test_support.h"
 namespace roo_windows {
@@ -17,7 +19,7 @@ class Target : public Widget, public internal::TextEditTarget {
   std::string& textBuffer() override { return buffer; }
   roo::string_view value() const override { return buffer; }
   const roo_display::Font& textFont() const override {
-    return roo_windows::material2::font_body1();
+    return roo_display::font_NotoSans_Regular_14();
   }
   bool obscureText() const override { return masked; }
   void notifyEditVisualChange() override { setDirty(); }

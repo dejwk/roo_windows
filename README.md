@@ -27,3 +27,24 @@ examples show explicit overflow and sibling FAB placement.
 cover modal calendar, numeric input, and a docked date field. Run the example:
 
     bazel run //examples/material3/date_picker/maintenance_date:maintenance_date
+
+## Text input and explicit dialogs
+
+[Text input](docs/text_input.md) describes the neutral task-owned editing engine,
+custom targets, and physical/semantic input routing.
+
+For a heap-owned Material 2 alert, include
+`roo_windows/material2/dialogs/alert_dialog.h` and call
+`material2::ShowAlertDialog(task, title, supporting_text, button_labels, callback)`.
+This replaces `Application::showAlertDialog`. The helper takes its application
+from the task, checks the UI thread, and deletes the dialog after completion or
+failed admission. Completion receives the button index, or -1 for dismissal,
+after the presentation detaches; failed admission does not invoke the callback.
+
+Run the [Material 2 confirmation example](examples/material2/dialogs/confirmation/confirmation.ino):
+
+    bazel run //examples/material2/dialogs/confirmation:confirmation
+
+Applications may instead own `material2::AlertDialog` or `material3::AlertDialog`
+directly, as shown by the [Material 3 dialog example](examples/material3/dialogs/dialogs.ino).
+The application does not select a dialog design system.

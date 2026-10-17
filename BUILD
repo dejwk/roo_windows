@@ -1821,3 +1821,10 @@ cc_library(
     tags = ["manual"],
     deps = [":roo_windows"],
 )
+
+cc_test(
+    name = "material2_alert_helper_test",
+    srcs = ["test/material2_alert_helper_test.cpp", "test/roo_windows_render_test_support.h"],
+    linkstatic = 1,
+    deps = [":roo_windows", "@roo_testing//:arduino_gtest_main"],
+)

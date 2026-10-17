@@ -3,10 +3,10 @@
 Status: proposed. Material2 isolation, independent system palettes, and the
 simplified Material3 state opacities are implemented prerequisites. Phase 1
 characterization is recorded in the
-[boundary audit](optional_design_systems_phase1_audit.md). Phases 2–7 implement
-shared feedback, inherited surface colors, local component styling, and explicit
-coordinated palette installation, and native Material3 dividers. Later
-phases remain proposed. Revised 2026-10-16 around a shared application look and
+[boundary audit](optional_design_systems_phase1_audit.md). Phases 2–8 implement
+shared feedback, inherited surface colors, local component styling, explicit
+coordinated palette installation, native Material3 dividers, and neutral shared
+editing with system-local alert helpers. Later phases remain proposed. Revised 2026-10-16 around a shared application look and
 feel rather than independent interaction policies per design system.
 
 ## Objective
@@ -963,6 +963,22 @@ Validate alert completion cleanup, failed admission and teardown; editor caret,
 selection, masking, replacement and teardown; hardware and semantic input; and
 cross-task routing. Verify no core public alert signature or Material2 editor
 engine type remains. Keep existing keyboard/editor tests passing.
+
+Implemented by `core/text_field_editor.h` and `.cpp`, with both field adapters,
+Task ownership, Application routing, and transient input containment using the
+neutral type. The engine retains its state layout and algorithms; no per-field
+state or extra dispatch layer was added. M2-specific editor friendships were
+removed because all target access uses `internal::TextEditTarget`.
+
+`material2::ShowAlertDialog` now lives beside `AlertDialog`; core has no alert
+signature or concrete alert include. The helper resolves the application from
+the task and retains detached completion and heap cleanup. Focused tests cover
+selected actions, busy admission, reentrant completion, and application teardown.
+The input guide and explicit M2 confirmation example document migration. Shared
+keyboard and editor-destination behavior remain unchanged until later phases.
+Validation covers 12 focused input/editing/keyboard/alert targets, unchanged M3
+text-field goldens, both system-specific dialog examples, and AddressSanitizer
+runs of the alert-helper and abstract-target editor tests.
 
 Proposed commit message:
 

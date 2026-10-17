@@ -86,7 +86,7 @@ TEST_F(TextFieldAnimationTest, MissedBoundariesUseElapsedParity) {
 TEST_F(TextFieldAnimationTest, EditingRestartsAtVisiblePhaseZero) {
   AddedField added = AddField();
   refresh();
-  material2::TextFieldEditor& editor = added.task->textFieldEditor();
+  TextFieldEditor& editor = added.task->textFieldEditor();
   editor.edit(added.field, false);
   refresh();
   ASSERT_EQ(AnimationStatus::kOk, added.field->seekCaret(500));

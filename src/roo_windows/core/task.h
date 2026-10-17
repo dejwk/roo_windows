@@ -4,7 +4,7 @@
 #include "roo_windows/core/key_source.h"
 #include "roo_windows/core/navigation_host.h"
 #include "roo_windows/core/task_panel.h"
-#include "roo_windows/material2/text_field.h"
+#include "roo_windows/core/text_field_editor.h"
 
 namespace roo_windows {
 
@@ -53,8 +53,8 @@ class Task {
   const FocusManager& focus() const { return focus_; }
 
   /// Returns the editor scoped to this task.
-  material2::TextFieldEditor& textFieldEditor() { return editor_; }
-  const material2::TextFieldEditor& textFieldEditor() const { return editor_; }
+  TextFieldEditor& textFieldEditor() { return editor_; }
+  const TextFieldEditor& textFieldEditor() const { return editor_; }
 
   /// Configures this task's optional semantic Back handler. Passing an empty
   /// function clears it.
@@ -94,7 +94,7 @@ class Task {
   DisplayWindow& window_;
   TaskPanel panel_;
   FocusManager focus_;
-  material2::TextFieldEditor editor_;
+  TextFieldEditor editor_;
   bool popup_ : 1;
   bool presentation_available_ : 1;
   Widget* armed_key_widget_ = nullptr;
