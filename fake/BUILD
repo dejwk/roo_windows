@@ -24,3 +24,17 @@ cc_test(
         "@roo_testing//:arduino_gtest_main",
     ],
 )
+
+cc_library(
+    name = "fltk_key_source_without_keyboard",
+    srcs = ["roo_windows/fake/fltk_key_source.cpp"],
+    hdrs = ["roo_windows/fake/fltk_key_source.h"],
+    strip_include_prefix = "roo_windows/fake",
+    include_prefix = "roo_windows/fake",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//:roo_windows_without_keyboard",
+        "@roo_testing//roo_testing/host_event",
+        "@roo_testing//roo_testing/transducers/ui/viewport/fltk",
+    ],
+)

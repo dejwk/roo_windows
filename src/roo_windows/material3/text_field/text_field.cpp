@@ -6,7 +6,9 @@
 #include "roo_icons/filled/alert.h"
 #include "roo_windows/core/task.h"
 #include "roo_windows/internal/single_line_text.h"
+#if ROO_WINDOWS_ENABLE_SOFTWARE_KEYBOARD
 #include "roo_windows/keyboard/editor_destination.h"
+#endif
 #include "roo_windows/material3/internal/density.h"
 #include "roo_windows/material3/text_field/internal/text_field_geometry.h"
 
@@ -84,10 +86,12 @@ TextField::TextField(ApplicationContext& context, roo::string_view label,
       flags_(variant == TextFieldVariant::kOutlined ? kOutlined : 0) {}
 
 TextField::~TextField() {
+#if ROO_WINDOWS_ENABLE_SOFTWARE_KEYBOARD
   ApplicationContext* owner = tryContext();
   if (owner != nullptr && owner->editorDestinationIfPresent() != nullptr) {
     owner->editorDestinationIfPresent()->forgetSource(*this);
   }
+#endif
   // Stop the editor before the edit-target base and owned value are destroyed.
   if (isEdited()) {
     getTask()->textFieldEditor().cancel();
@@ -474,10 +478,12 @@ void TextField::startEditing(bool show_keyboard) {
   if (!requestFocus() && !bounds().empty()) {
     return;
   }
+#if ROO_WINDOWS_ENABLE_SOFTWARE_KEYBOARD
   if (show_keyboard && EditorDestination::NeedsExtraction(*this) &&
       context().editorDestination().triggerEditField(*this)) {
     return;
   }
+#endif
   invalidateInterior();
   task->textFieldEditor().edit(this, show_keyboard);
 }

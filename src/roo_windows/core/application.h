@@ -12,7 +12,9 @@
 #include "roo_windows/core/key_source.h"
 #include "roo_windows/core/task.h"
 #include "roo_windows/core/text_input.h"
+#if ROO_WINDOWS_ENABLE_SOFTWARE_KEYBOARD
 #include "roo_windows/keyboard/keyboard.h"
+#endif
 
 namespace roo_windows {
 
@@ -45,6 +47,9 @@ class Application {
   ///
   /// When `enable_touch` is false the display is not polled for touch input,
   /// which lets keyboard-only displays use the normal application runtime.
+  /// With the software keyboard disabled, routing starts when the first
+  /// application task is added. Keep the borrowed source alive while adding
+  /// tasks through this compatibility constructor.
   Application(const Environment* env, roo_display::Display& display,
               KeySource& keys, bool enable_touch);
 
@@ -89,6 +94,7 @@ class Application {
   /// Returns the application-owned runtime context.
   const ApplicationContext& context() const { return context_; }
 
+#if ROO_WINDOWS_ENABLE_SOFTWARE_KEYBOARD
   /// Returns this application's built-in software keyboard. Its visibility is
   /// local presentation policy; its semantic input destination can be changed
   /// with `Keyboard::connect()`.
@@ -96,6 +102,7 @@ class Application {
 
   /// Returns this application's built-in software keyboard.
   const Keyboard& keyboard() const { return keyboard_; }
+#endif
 
   /// Adds a child widget to a new full-screen-ish task at the supplied
   /// bounds and immediately starts it.
@@ -212,10 +219,17 @@ class Application {
   /// References obtained earlier cannot be checked when they are later used.
   void checkUiThread() const;
 
+#if ROO_WINDOWS_ENABLE_SOFTWARE_KEYBOARD
+  // Installs the single application-hosted keyboard task and semantic route.
+  void installKeyboard();
+#endif
+
   const Environment* env_;
   ApplicationContext context_;
 
+#if ROO_WINDOWS_ENABLE_SOFTWARE_KEYBOARD
   Keyboard keyboard_;
+#endif
   std::vector<std::unique_ptr<Task>> tasks_;
   // Compatibility-only source supplied through the legacy constructor. New
   // callers connect sources directly to their selected task.

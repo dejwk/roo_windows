@@ -5,7 +5,9 @@
 #include "roo_threads.h"
 #include "roo_threads/mutex.h"
 #include "roo_threads/semaphore.h"
+#if ROO_WINDOWS_ENABLE_SOFTWARE_KEYBOARD
 #include "roo_windows/keyboard/layout/en_us.h"
+#endif
 
 namespace roo_windows {
 
@@ -344,33 +346,42 @@ class TickerGuard {
 Application::Application(const Environment* env, roo_display::Display& display)
     : env_(env),
       context_(env->scheduler(), env->theme(), env->keyboardColorTheme()),
+#if ROO_WINDOWS_ENABLE_SOFTWARE_KEYBOARD
       keyboard_(context_, kbEngUSLayout()),
+#endif
       input_router_(new ApplicationInputRouter(*this)),
       text_input_(new ApplicationTextInput(*this)),
       window_(*this, display, true),
       ticker_(new ApplicationTicker(env->scheduler(), [this]() { tick(); })) {
   context_.frame_driver_ = this;
-  roo_display::Box keyboard_bounds(0, window_.root().height() / 2,
-                                   window_.root().width() - 1,
-                                   window_.root().height() - 1);
-  auto keyboard_task = std::unique_ptr<Task>(
-      new Task(*this, window_, keyboard_bounds, true, keyboard_.getContents()));
-  keyboard_.setTask(*keyboard_task);
-  keyboard_.connect(*this);
-  keyboard_task->setVisible(false);
-  tasks_.push_back(std::move(keyboard_task));
+#if ROO_WINDOWS_ENABLE_SOFTWARE_KEYBOARD
+  installKeyboard();
+#endif
 }
 
 Application::Application(const Environment* env, roo_display::Display& display,
                          KeySource& keys, bool enable_touch)
     : env_(env),
       context_(env->scheduler(), env->theme(), env->keyboardColorTheme()),
+#if ROO_WINDOWS_ENABLE_SOFTWARE_KEYBOARD
       keyboard_(context_, kbEngUSLayout()),
+#endif
       input_router_(new ApplicationInputRouter(*this)),
       text_input_(new ApplicationTextInput(*this)),
       window_(*this, display, enable_touch),
       ticker_(new ApplicationTicker(env->scheduler(), [this]() { tick(); })) {
   context_.frame_driver_ = this;
+#if ROO_WINDOWS_ENABLE_SOFTWARE_KEYBOARD
+  installKeyboard();
+#endif
+  legacy_key_source_ = &keys;
+#if ROO_WINDOWS_ENABLE_SOFTWARE_KEYBOARD
+  keys.connect(*tasks_.front());
+#endif
+}
+
+#if ROO_WINDOWS_ENABLE_SOFTWARE_KEYBOARD
+void Application::installKeyboard() {
   roo_display::Box keyboard_bounds(0, window_.root().height() / 2,
                                    window_.root().width() - 1,
                                    window_.root().height() - 1);
@@ -380,9 +391,8 @@ Application::Application(const Environment* env, roo_display::Display& display,
   keyboard_.connect(*this);
   keyboard_task->setVisible(false);
   tasks_.push_back(std::move(keyboard_task));
-  legacy_key_source_ = &keys;
-  keys.connect(*tasks_.front());
 }
+#endif
 
 Application::~Application() {
   if (state_ != State::kConstructed) {
@@ -459,7 +469,8 @@ Task& Application::addTask(Widget& content, const roo_display::Box& bounds) {
   CHECK(content.parent() == nullptr);
   Task* task = new Task(*this, window_, bounds, false, content);
   tasks_.emplace_back(task);
-  if (legacy_key_source_ != nullptr && legacy_key_source_->isConnected()) {
+  if (legacy_key_source_ != nullptr &&
+      (legacy_key_source_->isConnected() || tasks_.size() == 1)) {
     legacy_key_source_->disconnect();
     legacy_key_source_->connect(*task);
   }
@@ -474,7 +485,8 @@ Task& Application::addTask(const roo_display::Box& bounds) {
   checkUiThread();
   Task* task = new Task(*this, window_, bounds, false);
   tasks_.emplace_back(task);
-  if (legacy_key_source_ != nullptr && legacy_key_source_->isConnected()) {
+  if (legacy_key_source_ != nullptr &&
+      (legacy_key_source_->isConnected() || tasks_.size() == 1)) {
     legacy_key_source_->disconnect();
     legacy_key_source_->connect(*task);
   }
@@ -554,6 +566,7 @@ Widget* Application::activeTextEditorWidget() const {
 void Application::dismissTextEditor() { text_input_->dismiss(); }
 
 void Application::setTextEditorKeyboardVisibility(bool visible) {
+#if ROO_WINDOWS_ENABLE_SOFTWARE_KEYBOARD
   // Task teardown can finish an editor after the keyboard task is destroyed.
   if (state_ == State::kStopping) return;
   if (visible) {
@@ -563,10 +576,12 @@ void Application::setTextEditorKeyboardVisibility(bool visible) {
   }
   // Recompute both outgoing and incoming owners during input transfer.
   for (const auto& task : tasks_) task->panel_.requestLayout();
+#endif
 }
 
 Rect Application::textEditorViewport(const Task& task) const {
   Rect viewport = task.panel_.bounds();
+#if ROO_WINDOWS_ENABLE_SOFTWARE_KEYBOARD
   if (!keyboard_.getContents().isVisible() ||
       !text_input_->isActiveEditor(task.textFieldEditor()))
     return viewport;
@@ -581,6 +596,9 @@ Rect Application::textEditorViewport(const Task& task) const {
   if (keyboard_panel == nullptr) return viewport;
   int top = keyboard_panel->offsetTop() - task.panel_.offsetTop();
   return Rect::Intersect(viewport, Rect(0, 0, viewport.xMax(), top - 1));
+#else
+  return viewport;
+#endif
 }
 
 #if !defined(ROO_THREADS_SINGLETHREADED)

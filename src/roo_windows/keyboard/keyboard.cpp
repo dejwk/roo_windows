@@ -1,5 +1,6 @@
-#include "roo_windows/keyboard/keyboard.h"
+#include "roo_windows/config.h"
 
+#if ROO_WINDOWS_ENABLE_SOFTWARE_KEYBOARD
 #include <algorithm>
 #include <memory>
 #include <new>
@@ -17,7 +18,8 @@
 #include "roo_windows/core/surface_widget.h"
 #include "roo_windows/core/task.h"
 #include "roo_windows/decoration/decoration.h"
-#include "roo_windows/material2/typography.h"
+#include "roo_windows/keyboard/keyboard.h"
+#include "roo_windows/keyboard/typography.h"
 
 namespace roo_windows {
 
@@ -215,7 +217,7 @@ namespace {
 // With the baseline half an ascent below center, the lower extent is
 // ascent/2 - descent. Mirror that extent and add scaled clearance.
 int AlternativeRowHeight() {
-  const FontMetrics& metrics = roo_windows::material2::font_body1().metrics();
+  const FontMetrics& metrics = internal::KeyboardCharacterFont().metrics();
   return metrics.ascent() - 2 * metrics.descent() + Scaled(8);
 }
 
@@ -252,7 +254,7 @@ class PressHighlighterPin final : public PresentationPin {
     char utf8[4];
     int size = roo_io::WriteUtf8Char(utf8, target_.activeRune());
     StringViewLabel label(roo::string_view(utf8, size),
-                          roo_windows::material2::font_body1(),
+                          internal::KeyboardCharacterFont(),
                           target_.colorTheme().text);
     const Offset offset =
         (kCenter | kMiddle)
@@ -339,12 +341,12 @@ class AlternativesPin final : public PresentationPin {
       int bytes = roo_io::WriteUtf8Char(text, target_.alternativeRune(i));
       content.drawTiled(
           StringViewLabel(roo::string_view(text, bytes),
-                          roo_windows::material2::font_body1(),
+                          internal::KeyboardCharacterFont(),
                           target_.colorTheme().text),
           box,
           kCenter |
               kBaseline.toMiddle().shiftBy(
-                  roo_windows::material2::font_body1().metrics().ascent() / 2));
+                  internal::KeyboardCharacterFont().metrics().ascent() / 2));
       content.addExclusion(inner);
     }
     PaintDecoration decoration;
@@ -599,11 +601,11 @@ void KeyboardWidget::paintKey(PaintContext& ctx, int row_idx, int key_idx,
     case KeyboardLayout::Function::kText: {
       char utf8[4];
       int size = roo_io::WriteUtf8Char(utf8, rune(row_idx, key_idx));
-      PaintKeyContent(content,
-                      StringViewLabel(roo::string_view(utf8, size),
-                                      roo_windows::material2::font_body1(),
-                                      colorTheme().text),
-                      bounds);
+      PaintKeyContent(
+          content,
+          StringViewLabel(roo::string_view(utf8, size),
+                          internal::KeyboardCharacterFont(), colorTheme().text),
+          bounds);
       break;
     }
     case KeyboardLayout::Function::kSwitchPage: {
@@ -611,11 +613,11 @@ void KeyboardWidget::paintKey(PaintContext& ctx, int row_idx, int key_idx,
       size_t length = 0;
       layout_.copyLabel(page_idx_, row_idx, key_idx, label, sizeof(label),
                         length);
-      PaintKeyContent(content,
-                      StringViewLabel(roo::string_view(label, length),
-                                      roo_windows::material2::font_button(),
-                                      colorTheme().text),
-                      bounds);
+      PaintKeyContent(
+          content,
+          StringViewLabel(roo::string_view(label, length),
+                          internal::KeyboardActionFont(), colorTheme().text),
+          bounds);
       break;
     }
     case KeyboardLayout::Function::kEnter:
@@ -882,3 +884,5 @@ void Keyboard::setCapsState(CapsState caps_state) {
 }
 
 }  // namespace roo_windows
+
+#endif

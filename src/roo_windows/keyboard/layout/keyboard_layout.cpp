@@ -1,8 +1,10 @@
-#include "roo_windows/keyboard/layout/keyboard_layout.h"
+#include "roo_windows/config.h"
 
+#if ROO_WINDOWS_ENABLE_SOFTWARE_KEYBOARD
 #include <algorithm>
 
 #include "roo_display/hal/progmem.h"
+#include "roo_windows/keyboard/layout/keyboard_layout.h"
 
 namespace roo_windows {
 namespace {
@@ -273,3 +275,5 @@ KeyboardLayout::KeyRange KeyboardLayout::findKeyRange(int page, int row,
 }
 
 }  // namespace roo_windows
+
+#endif

@@ -27,9 +27,38 @@ input.deleteBackward();
 
 Starting another task's session deactivates the previous application-wide input
 target. Modal presentation containment still governs whether semantic input is
-admitted. The built-in keyboard remains one application-owned producer; this
-extraction does not change its visibility, routing, or editor-destination policy.
-Software-keyboard build exclusion is introduced separately in Phase 9.
+admitted. When enabled, the built-in keyboard is one application-owned producer
+with its own task; editor destinations never reparent or duplicate it.
+
+## Building without the software keyboard
+
+Set `ROO_WINDOWS_ENABLE_SOFTWARE_KEYBOARD=0` for **every translation unit** in
+roo_windows and the application. It defaults to 1 independently of design-system
+selection. A sketch-local `#define` is insufficient: use a global compiler flag
+(e.g. PlatformIO `build_flags = -DROO_WINDOWS_ENABLE_SOFTWARE_KEYBOARD=0`).
+
+With it disabled, `Application::keyboard()` and the context's editor-destination
+accessors are absent. No keyboard object, keyboard task, or editor destination
+is owned. M2 and M3 fields edit in place even when `edit()` requests a keyboard;
+the viewport is not shortened. Task keyboard focus, `KeySource`, and
+`TextInputEmitter` remain available. The legacy Application constructor connects
+its key source when the first application task is added.
+
+Bazel consumers can depend on `//:roo_windows_without_keyboard` instead of
+`//:roo_windows`; never link both variants. The disabled variant excludes all
+keyboard headers and sources from its inputs. Arduino-style builds may compile
+all sources: optional implementations are guarded before their includes.
+
+Run the [device-name example](../examples/input/device_name/device_name.ino) with
+`bazel run //examples/input/device_name:device_name`. It accepts emulator keys
+or ASCII serial input on the physical display setup. Its target selects the
+matching library and emulator adapter configuration automatically.
+
+The enabled renderer selects its two fonts directly from roo_fonts, preserving
+character/action sizes at 75%, 100%, 150%, and 200% zoom. Press feedback uses
+`KeyboardColorTheme::text` and `Theme::framework.state.pressed`. No design-system
+palette or typography is consulted. The legacy editor destination still uses M2
+controls until the separate system-destination phase.
 
 ## Custom targets and lifetime
 

@@ -81,6 +81,7 @@ class ApplicationContext {
     return scroll_connections_.get();
   }
 
+#if ROO_WINDOWS_ENABLE_SOFTWARE_KEYBOARD
   /// Provides the application-owned full-screen editor, allocating on first
   /// use. Call on the UI thread. The returned destination is borrowed and
   /// must leave navigation history before context destruction.
@@ -91,6 +92,8 @@ class ApplicationContext {
   EditorDestination* editorDestinationIfPresent() const {
     return editor_destination_.get();
   }
+
+#endif
 
  private:
   friend class AnimationRegistry;
@@ -126,7 +129,9 @@ class ApplicationContext {
   AnimationRegistry animations_;
   Application* frame_driver_ = nullptr;
   Lifetime* lifetime_;
+#if ROO_WINDOWS_ENABLE_SOFTWARE_KEYBOARD
   std::unique_ptr<EditorDestination> editor_destination_;
+#endif
 };
 
 }  // namespace roo_windows

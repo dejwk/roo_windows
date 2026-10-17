@@ -3,10 +3,10 @@
 Status: proposed. Material2 isolation, independent system palettes, and the
 simplified Material3 state opacities are implemented prerequisites. Phase 1
 characterization is recorded in the
-[boundary audit](optional_design_systems_phase1_audit.md). Phases 2–8 implement
+[boundary audit](optional_design_systems_phase1_audit.md). Phases 2–9 implement
 shared feedback, inherited surface colors, local component styling, explicit
 coordinated palette installation, native Material3 dividers, and neutral shared
-editing with system-local alert helpers. Later phases remain proposed. Revised 2026-10-16 around a shared application look and
+editing with system-local alert helpers and an independently optional keyboard. Later phases remain proposed. Revised 2026-10-16 around a shared application look and
 feel rather than independent interaction policies per design system.
 
 ## Objective
@@ -1003,6 +1003,25 @@ Audit keyboard sources for direct system includes and palette/font access,
 and test keyboard-disabled hardware/semantic editing. Core theme composition
 still includes both systems at this phase; phase 11 verifies their physical
 absence after system switches land.
+
+Implemented with a default-on build-wide switch, guarded Application and context
+ownership/accessors, guarded presentation and extraction paths, and a separate
+Bazel library variant with keyboard files absent. Disabled fields keep in-place
+editing and the full viewport. The legacy hardware-source constructor attaches
+to the first application task when no keyboard task exists. The device-name
+example demonstrates physical/semantic input with the feature disabled.
+
+Keyboard-local font selectors retain the same two font ladders. Keyboard text
+ink and framework pressed opacity were already adopted by the submitted shared
+feedback work, so this phase introduces no further feedback-color or golden
+change. The renderer and layouts have no direct system includes; the legacy
+editor destination intentionally retains M2 controls until Phase 10.
+
+Validation covers disabled in-place M2/M3 editing, hardware and semantic routing,
+keyboard visibility/cancellation/repeat/alternatives, custom keyboard ink with
+shared opacity, single-write dirty/full repaint equivalence, and isolated font
+selection at all four zoom levels. Both enabled and disabled input examples
+compile. Generated layout data bytes remain unchanged.
 
 Proposed commit message:
 

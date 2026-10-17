@@ -1828,3 +1828,54 @@ cc_test(
     linkstatic = 1,
     deps = [":roo_windows", "@roo_testing//:arduino_gtest_main"],
 )
+
+cc_library(
+    name = "roo_windows_without_keyboard",
+    srcs = glob(
+        [
+            "src/**/*.cpp",
+            "src/**/*.h",
+        ],
+        exclude = ["test/**", "src/roo_windows/material3/palette.cpp", "src/roo_windows/keyboard/**", "src/roo_windows/activities/edit_text_field.h"],
+    ),
+    defines = [
+        "ROO_WINDOWS_ENABLE_SOFTWARE_KEYBOARD=0",
+    ],
+    includes = [
+        "src",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":material3_palette",
+        "@roo_collections",
+        "@roo_display",
+        "@roo_fonts_basic",
+        "@roo_fonts_material",
+        "@roo_icons",
+        "@roo_io",
+        "@roo_locale",
+        "@roo_logging",
+        "@roo_scheduler",
+        "@roo_testing//:arduino",
+        "@roo_time",
+    ],
+)
+
+cc_test(
+    name = "software_keyboard_disabled_test",
+    srcs = ["test/software_keyboard_disabled_test.cpp", "test/roo_windows_render_test_support.h"],
+    deps = [":roo_windows_without_keyboard", "@roo_testing//:arduino_gtest_main"],
+)
+
+# Font selection has no dependency on the runtime or either design system.
+[cc_test(
+    name = "keyboard_typography_%s_test" % zoom,
+    srcs = [
+        "test/keyboard_typography_test.cpp",
+        "src/roo_windows/keyboard/typography.h",
+        "src/roo_windows/config.h",
+    ],
+    copts = ["-DROO_WINDOWS_ZOOM=%s" % zoom],
+    includes = ["src"],
+    deps = ["@roo_fonts_basic", "@roo_fonts_material", "@roo_locale", "@roo_testing//:arduino_gtest_main"],
+) for zoom in [75, 100, 150, 200]]

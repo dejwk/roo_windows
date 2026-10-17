@@ -530,7 +530,12 @@ TEST(KeyboardPaint, AlternativePopupDirtyPaintMatchesFullPaint) {
   KeyboardDisplay device(pixels.data());
   roo_display::Display display(device);
   roo_scheduler::SchedulingService scheduler;
-  Environment env(scheduler);
+  Theme theme = DefaultTheme();
+  theme.framework.state.pressed = 128;
+  KeyboardColorTheme colors = DefaultKeyboardColorTheme();
+  colors.normalButton = roo_display::Color(0xFF204080);
+  colors.text = roo_display::Color(0xFFFF2000);
+  Environment env(scheduler, theme, colors);
   Application app(&env, display);
   for (bool multirow : {false, true}) {
     app.keyboard().setLayout(multirow ? kbPolPLLayout() : accentDemoLayout());
@@ -563,6 +568,40 @@ TEST(KeyboardPaint, AlternativePopupDirtyPaintMatchesFullPaint) {
     }
   }
   app.keyboard().hide();
+}
+
+// Verifies pressed ink comes from the independent keyboard theme and shared
+// framework opacity, even when the design-system palette is unchanged.
+TEST(KeyboardPaint, PressUsesKeyboardTextAndFrameworkOpacity) {
+  std::vector<roo::byte> pixels(412 * 320 * 2);
+  KeyboardDisplay device(pixels.data());
+  roo_display::Display display(device);
+  roo_scheduler::SchedulingService scheduler;
+  Theme theme = DefaultTheme();
+  theme.framework.state.pressed = 128;
+  KeyboardColorTheme colors = DefaultKeyboardColorTheme();
+  colors.normalButton = roo_display::Color(0xFF204080);
+  colors.text = roo_display::Color(0xFFFF2000);
+  Environment env(scheduler, theme, colors);
+  Application app(&env, display);
+  app.refresh();
+  app.keyboard().show();
+  app.refresh();
+  Widget& keyboard = app.keyboard().getContents();
+  keyboard.onDown(206, 135);
+  keyboard.onShowPress(206, 135);
+  app.refresh();
+  XDim dx;
+  YDim dy;
+  keyboard.getAbsoluteOffset(dx, dy);
+  int16_t x[] = {static_cast<int16_t>(dx + 206)};
+  int16_t y[] = {static_cast<int16_t>(dy + 135)};
+  Color pixel[1];
+  device.raster().readColors(x, y, 1, pixel);
+  EXPECT_EQ(QuantizeToArgb4444(roo_display::AlphaBlend(colors.normalButton,
+                                                       colors.text.withA(128))),
+            pixel[0]);
+  keyboard.onCancel();
 }
 
 // Verifies the preview escapes the leaf keyboard while retaining task focus,

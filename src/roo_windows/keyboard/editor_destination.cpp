@@ -1,5 +1,6 @@
-#include "roo_windows/keyboard/editor_destination.h"
+#include "roo_windows/config.h"
 
+#if ROO_WINDOWS_ENABLE_SOFTWARE_KEYBOARD
 #include <algorithm>
 #include <utility>
 
@@ -8,6 +9,7 @@
 #include "roo_windows/config.h"
 #include "roo_windows/core/application.h"
 #include "roo_windows/core/task.h"
+#include "roo_windows/keyboard/editor_destination.h"
 #include "roo_windows/material2/typography.h"
 #include "roo_windows/material3/text_field/text_field.h"
 
@@ -145,3 +147,5 @@ void EditorDestination::forgetSource(material3::TextField& field) {
 }
 
 }  // namespace roo_windows
+
+#endif

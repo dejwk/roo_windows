@@ -9,7 +9,7 @@
 #include "roo_windows/keyboard/layout/accent_demo.h"
 #include "roo_windows/keyboard/layout/en_us.h"
 #include "roo_windows/keyboard/layout/pl_pl.h"
-#include "roo_windows/material2/typography.h"
+#include "roo_windows/keyboard/typography.h"
 
 namespace roo_windows {
 namespace {
@@ -20,7 +20,7 @@ TEST(KeyboardLayoutTest, DefaultFontCoversPolishLetters) {
   for (char32_t rune : U"ąćęłńóśźżĄĆĘŁŃÓŚŹŻ") {
     if (rune == 0) continue;
     roo_display::GlyphMetrics metrics;
-    EXPECT_TRUE(roo_windows::material2::font_body1().getGlyphMetrics(
+    EXPECT_TRUE(internal::KeyboardCharacterFont().getGlyphMetrics(
         rune, roo_display::FontLayout::kHorizontal, &metrics))
         << static_cast<uint32_t>(rune);
   }

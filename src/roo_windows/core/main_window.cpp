@@ -42,6 +42,7 @@ MainWindow::MainWindow(Application& app, const roo_display::Box& bounds)
 
 bool MainWindow::fillTouchTargetPath(XDim x, YDim y,
                                      std::vector<Widget*>& path) {
+#if ROO_WINDOWS_ENABLE_SOFTWARE_KEYBOARD
   const size_t begin = path.size();
   if (!Container::fillTouchTargetPath(x, y, path)) return false;
   if (!app_.keyboard().getContents().isVisible()) return true;
@@ -58,15 +59,24 @@ bool MainWindow::fillTouchTargetPath(XDim x, YDim y,
   // control underneath it or move the form during an in-flight gesture.
   path.resize(begin + 1);
   return true;
+#else
+  return Container::fillTouchTargetPath(x, y, path);
+#endif
 }
 
 bool MainWindow::supportsTap() const {
+#if ROO_WINDOWS_ENABLE_SOFTWARE_KEYBOARD
   return app_.keyboard().getContents().isVisible();
+#else
+  return false;
+#endif
 }
 
 void MainWindow::onSingleTapUp(XDim x, YDim y) {
+#if ROO_WINDOWS_ENABLE_SOFTWARE_KEYBOARD
   if (!app_.keyboard().getContents().isVisible()) return;
   app_.dismissTextEditor();
+#endif
 }
 
 void MainWindow::transientActivityObserverSubtreeDetaching(Widget& subtree) {

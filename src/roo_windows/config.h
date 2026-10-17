@@ -2,6 +2,16 @@
 
 #include "roo_locale.h"
 
+/// Enables the application-owned software keyboard and editor destinations.
+/// Set to 0 or 1 consistently across the library and all consumers.
+#ifndef ROO_WINDOWS_ENABLE_SOFTWARE_KEYBOARD
+#define ROO_WINDOWS_ENABLE_SOFTWARE_KEYBOARD 1
+#endif
+#if ROO_WINDOWS_ENABLE_SOFTWARE_KEYBOARD != 0 && \
+    ROO_WINDOWS_ENABLE_SOFTWARE_KEYBOARD != 1
+#error "ROO_WINDOWS_ENABLE_SOFTWARE_KEYBOARD must be 0 or 1"
+#endif
+
 /// Includes Material 2 in Theme and coordinated palette installation.
 /// Set consistently across translation units. Currently supports isolated
 /// palette builds; full-library component exclusion is not yet implemented.
