@@ -672,19 +672,6 @@ TEST(Material3SliderValueIndicator,
                 .xMax());
 }
 
-// Verifies that the slider's container visuals resolve against the primary
-// color role, which drives its track and thumb color selection.
-TEST(Material3Slider, EffectiveContainerRoleIsPrimary) {
-  roo_scheduler::SchedulingService scheduler;
-  ApplicationContext context(scheduler, DefaultTheme(),
-                             DefaultKeyboardColorTheme());
-
-  Slider slider(context);
-
-  EXPECT_EQ(::roo_windows::material3::ColorToken::kPrimary,
-            slider.effectiveContainerRole());
-}
-
 // Verifies that pressed-state feedback is rendered directly by the slider and
 // does not opt into the framework overlay or click-animation paths.
 TEST(Material3Slider, PressStateDoesNotUseOverlayOrClickAnimation) {

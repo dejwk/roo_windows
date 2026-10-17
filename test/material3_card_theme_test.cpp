@@ -59,7 +59,30 @@ TEST(Material3CardThemeTest, UsesThemeRolesForOwnedCardAndChildSurfaces) {
 
   elevated.setContainerRole(ColorToken::kNone);
   EXPECT_EQ(parent.background(), elevated.background());
-  EXPECT_EQ(ColorToken::kBackground, elevated.effectiveContainerRole());
+  EXPECT_EQ(parent.surfaceColors().foreground,
+            elevated.surfaceColors().foreground);
+}
+
+// Verifies a subclass can still choose a local semantic surface after the
+// core role hook is removed, and its children receive the resolved pair.
+TEST(Material3CardThemeTest, SubclassRoleOverrideStillControlsAppearance) {
+  class CustomCard : public FlexCard {
+   public:
+    using FlexCard::FlexCard;
+    ColorToken containerRole() const override { return ColorToken::kPrimary; }
+  };
+  roo_scheduler::SchedulingService scheduler;
+  Theme theme;
+  theme.material3.color.primary = Color(0xFF112233);
+  theme.material3.color.onPrimary = Color(0xFFCCDDEE);
+  Environment environment(scheduler, theme);
+  ApplicationContext context = MakeContext(environment);
+  Panel child(context);
+  CustomCard card(context);
+  card.add(child);
+  EXPECT_EQ(theme.material3.color.primary, card.background());
+  EXPECT_EQ(theme.material3.color.onPrimary, child.defaultColor());
+  EXPECT_EQ(theme.material3.color.onPrimary, child.surfaceColors().accent);
 }
 
 // Verifies explicit card roles take precedence and clearing restores the live

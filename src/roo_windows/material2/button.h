@@ -65,7 +65,7 @@ class Button : public ThemeMixin<SurfaceWidget> {
 
   /// Resolves the container color role for the active style (e.g. surface
   /// roles for OUTLINED/TEXT; primary roles for CONTAINED).
-  ::roo_windows::material3::ColorToken containerRole() const override;
+  ColorRole containerRole() const override;
 
   /// Returns `elevation_pressed_` while pressed, otherwise the resting value.
   uint8_t getElevation() const override {

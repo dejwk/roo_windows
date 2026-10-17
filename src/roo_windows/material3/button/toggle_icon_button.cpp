@@ -62,6 +62,10 @@ uint8_t Interpolate(uint8_t from, uint8_t to, float progress) {
 
 }  // namespace
 
+Color ToggleIconButton::interactionColor(InteractionState state) const {
+  return ResolveContentColor(*this);
+}
+
 ToggleIconButton::ToggleIconButton(ApplicationContext& context,
                                    const MonoIcon& unselected_icon,
                                    const MonoIcon* selected_icon,
@@ -187,10 +191,6 @@ void ToggleIconButton::paint(PaintContext& ctx) const {
 
 Dimensions ToggleIconButton::getSuggestedMinimumDimensions() const {
   return internal::ResolveIconSlot(size(), unselectedIcon(), selectedIcon());
-}
-
-bool ToggleIconButton::usesHighlighterColor() const {
-  return isSelected() && style() == IconButtonStyle::kStandard;
 }
 
 void ToggleIconButton::onClicked() {

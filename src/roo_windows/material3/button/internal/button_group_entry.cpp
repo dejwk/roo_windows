@@ -35,7 +35,7 @@ ButtonVariant Variant(uint8_t style) {
 }  // namespace
 ButtonGroupEntry::ButtonGroupEntry(ApplicationContext& context,
                                    GroupStyle style)
-    : SurfaceWidget(context), style_(static_cast<uint8_t>(style)) {}
+    : Material3SurfaceWidget(context), style_(static_cast<uint8_t>(style)) {}
 
 bool ButtonGroupEntry::effectivelyEnabled() const {
   return isEnabled() && (group_ == nullptr || group_->isEnabled());
@@ -201,19 +201,15 @@ Widget::OverlayType ButtonGroupEntry::getOverlayType() const {
   return effectivelyEnabled() ? OVERLAY_AREA : OVERLAY_NONE;
 }
 
-ColorToken ButtonGroupEntry::effectiveOverlayColorRole() const {
-  ColorToken role = containerRole();
-  if (usesHighlighterColor() || role == ColorToken::kNone ||
-      (group_ != nullptr && group_->connected() &&
-       static_cast<GroupStyle>(style_) == GroupStyle::kFilled &&
-       !group_->selected(group_->indexOf(*this))))
-    return ColorToken::kSurfaceVariant;
-  return role;
-}
-
-bool ButtonGroupEntry::usesHighlighterColor() const {
-  return static_cast<GroupStyle>(style_) == GroupStyle::kElevated &&
-         (group_ == nullptr || !group_->selected(group_->indexOf(*this)));
+Color ButtonGroupEntry::interactionColor(InteractionState state) const {
+  if (group_ != nullptr && group_->connected()) {
+    return ResolveConnectedAppearance(theme(), static_cast<GroupStyle>(style_),
+                                      group_->selected(group_->indexOf(*this)),
+                                      effectivelyEnabled())
+        .content;
+  }
+  return ResolveButtonAppearance(theme(), Variant(style_), effectivelyEnabled())
+      .content;
 }
 
 void ButtonGroupEntry::contentChanged() {

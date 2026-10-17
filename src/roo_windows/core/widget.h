@@ -273,23 +273,16 @@ class Widget {
   /// descendants and interior to schedule repainting with the new pair.
   virtual SurfaceColors surfaceColors() const;
 
-  /// Returns the legacy ink used by shared interaction effects.
-  virtual roo_display::Color interactionColor() const;
-
-  /// Returns ink for @p state; the default forwards to the legacy ink hook.
-  virtual roo_display::Color interactionColor(InteractionState state) const {
-    return interactionColor();
-  }
+  /// Returns interaction ink for @p state. The generic fallback uses the
+  /// parent foreground for point halos and the local foreground for area
+  /// layers.
+  virtual roo_display::Color interactionColor(InteractionState state) const;
 
   /// Returns the opacity for one shared interaction state (0..255).
   virtual uint8_t interactionOpacity(InteractionState state) const;
 
   /// Returns the automatic disabled-content opacity (0..128).
   virtual uint8_t disabledContentOpacity() const;
-
-  virtual ::roo_windows::material3::ColorToken effectiveContainerRole() const;
-  virtual ::roo_windows::material3::ColorToken effectiveOverlayColorRole()
-      const;
 
   const Rect& parent_bounds() const { return parent_bounds_; }
 
@@ -606,8 +599,6 @@ class Widget {
     return ClickActivationPolicy::kAfterNaturalAnimation;
   }
 
-  virtual bool usesHighlighterColor() const { return false; }
-
   /// Returns a component-owned persistent area tint, painted above content.
   /// Logical selection and activation alone do not supply this tint.
   virtual roo_display::Color componentOverlayColor() const {
@@ -618,11 +609,7 @@ class Widget {
   /// the returned hover state is inert because getOverlayOpacity() is zero.
   InteractionState nonPressOverlayState() const;
 
-  // Computes opacity for one non-press interaction from the current flags.
-  //
-  // Paint-pipeline only: this depends on the effective overlay color role, so
-  // it is valid only after the widget is attached to the parent/application
-  // tree.
+  /// Computes opacity for one non-press interaction from the current flags.
   virtual uint8_t getOverlayOpacity() const;
 
   const Container* parent() const { return parent_; }

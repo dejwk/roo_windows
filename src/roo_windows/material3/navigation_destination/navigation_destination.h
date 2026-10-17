@@ -58,7 +58,7 @@ class NavigationDestinationBase : public Widget {
     return ClickOverlayAnimation::kFade;
   }
 
-  ColorToken effectiveOverlayColorRole() const override;
+  Color interactionColor(InteractionState state) const override;
   void paint(PaintContext& ctx) const override;
 
  protected:

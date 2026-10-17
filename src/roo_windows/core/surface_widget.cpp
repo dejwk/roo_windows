@@ -2,18 +2,8 @@
 
 #include "roo_windows/core/panel.h"
 #include "roo_windows/decoration/decoration.h"
-#include "roo_windows/material3/theme.h"
 
 namespace roo_windows {
-
-SurfaceColors SurfaceWidget::surfaceColors() const {
-  // Transitional bridge while the core role API remains available. Material 2
-  // boundaries resolve their own palette in ThemeMixin.
-  const material3::ColorToken role = containerRole();
-  if (role == material3::ColorToken::kNone) return Widget::surfaceColors();
-  const auto& colors = theme().material3Theme().color;
-  return {colors.contentColorFor(role), colors.accentColorFor(role)};
-}
 
 bool SurfaceWidget::hasDecorationOverflow() const { return getElevation() > 0; }
 
@@ -27,18 +17,6 @@ Color SurfaceWidget::effectiveBackground() const {
              ? bgcolor
              : roo_display::AlphaBlend(parent()->effectiveBackground(),
                                        bgcolor);
-}
-
-::roo_windows::material3::ColorToken SurfaceWidget::effectiveContainerRole()
-    const {
-  ::roo_windows::material3::ColorToken role = containerRole();
-  if (role != ::roo_windows::material3::ColorToken::kNone) {
-    return role;
-  }
-
-  return parent() != nullptr
-             ? parent()->effectiveContainerRole()
-             : ::roo_windows::material3::ColorToken::kBackground;
 }
 
 void SurfaceWidget::invalidateInterior() {

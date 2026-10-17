@@ -26,8 +26,18 @@ class OpenPanel : public Panel {
 
 class RolePanel : public OpenPanel {
  public:
+  /// Publishes this surface's resolved Material 3 content colors.
+  SurfaceColors surfaceColors() const override {
+    const auto& colors = theme().material3Theme().color;
+    const auto role = containerRole();
+    return role == material3::ColorToken::kNone
+               ? OpenPanel::surfaceColors()
+               : SurfaceColors{colors.contentColorFor(role),
+                               colors.accentColorFor(role)};
+  }
+
   using OpenPanel::OpenPanel;
-  ColorToken containerRole() const override { return role; }
+  ColorToken containerRole() const { return role; }
   Color background() const override { return fill; }
   ColorToken role = ColorToken::kSurface;
   Color fill = roo_display::color::Transparent;
@@ -119,7 +129,9 @@ TEST_F(SurfaceColorsTest, Material2SurfaceKeepsItsPalette) {
   class FilledPanel : public material2::ThemeMixin<OpenPanel> {
    public:
     using ThemeMixin::ThemeMixin;
-    ColorToken containerRole() const override { return ColorToken::kPrimary; }
+    material2::ColorRole containerRole() const override {
+      return material2::ColorRole::kPrimary;
+    }
   } filled(context());
   RolePanel material3_surface(context());
   theme_.material2.color.onPrimary = Color(0xFF112233);

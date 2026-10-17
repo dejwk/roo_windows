@@ -5,8 +5,8 @@
 #include <new>
 
 #include "roo_display/shape/smooth.h"
-#include "roo_windows/core/overlay_spec.h"
 #include "roo_windows/core/main_window.h"
+#include "roo_windows/core/overlay_spec.h"
 #include "roo_windows/material3/slider/slider_internal.h"
 #include "roo_windows/material3/slider/slider_paint_internal.h"
 #include "roo_windows/material3/slider/slider_size_internal.h"
@@ -796,11 +796,6 @@ roo_display::FpPoint RangeSlider::getPointOverlayFocus() const {
   }
   return roo_display::FpPoint{thumb == 1 ? end_center : start_center,
                               axis.centeredCross()};
-}
-
-::roo_windows::material3::ColorToken RangeSlider::effectiveContainerRole()
-    const {
-  return ::roo_windows::material3::ColorToken::kPrimary;
 }
 
 Rect RangeSlider::getSloppyTouchParentBounds() const {

@@ -2,10 +2,10 @@
 
 #include <stdint.h>
 
-#include "roo_windows/core/surface_widget.h"
 #include "roo_windows/core/border_style.h"
 #include "roo_windows/core/theme.h"
 #include "roo_windows/material3/button/button_types.h"
+#include "roo_windows/material3/surface.h"
 
 namespace roo_windows {
 namespace material3 {
@@ -29,8 +29,11 @@ enum class IconButtonWidth : uint8_t {
 ///
 /// The icon is borrowed and must outlive this widget. Size, shape, width, and
 /// colors resolve from Material 3 tokens without per-instance appearances.
-class IconButton : public SurfaceWidget {
+class IconButton : public Material3SurfaceWidget {
  public:
+  /// Resolves interaction ink from this component's live appearance.
+  Color interactionColor(InteractionState state) const override;
+
   /// Creates an icon button that borrows `icon`.
   explicit IconButton(ApplicationContext& context, const MonoIcon& icon,
                       IconButtonStyle style = IconButtonStyle::kFilled);

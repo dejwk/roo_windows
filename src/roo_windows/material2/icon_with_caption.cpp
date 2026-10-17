@@ -27,11 +27,7 @@ void IconWithCaption::paint(PaintContext& ctx) const {
   const Canvas& canvas = ctx.canvas();
   Color color = color_;
   if (color == roo_display::color::Transparent) {
-    const Theme& myTheme = theme();
-    color = myTheme.material2Theme().color.onSurface;
-    if (isActivated() && usesHighlighterColor()) {
-      color = myTheme.material2Theme().color.primary;
-    }
+    color = defaultColor();
   }
   color = AlphaBlend(canvas.bgcolor(), color);
   if (isInvalidated() && hi_border_ > 0) {

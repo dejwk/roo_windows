@@ -11,7 +11,6 @@
 #include "roo_windows/core/rtti.h"
 #include "roo_windows/core/scroll_connection.h"
 #include "roo_windows/core/task.h"
-#include "roo_windows/material3/theme.h"
 
 #ifndef MLOG_roo_windows_layout
 #define MLOG_roo_windows_layout 0
@@ -331,12 +330,6 @@ SurfaceColors Widget::surfaceColors() const {
   return {framework.content, framework.emphasis};
 }
 
-::roo_windows::material3::ColorToken Widget::effectiveContainerRole() const {
-  return parent() != nullptr
-             ? parent()->effectiveContainerRole()
-             : ::roo_windows::material3::ColorToken::kBackground;
-}
-
 const Theme& Widget::theme() const { return context().theme(); }
 
 void Widget::setDirty(const Rect& bounds) {
@@ -654,18 +647,10 @@ void Widget::moveTo(const Rect& parent_bounds) {
   setParentBounds(parent_bounds);
 }
 
-::roo_windows::material3::ColorToken Widget::effectiveOverlayColorRole() const {
-  if (getOverlayType() == Widget::OVERLAY_POINT && parent() != nullptr) {
-    return parent()->effectiveContainerRole();
-  }
-  return effectiveContainerRole();
-}
-
-roo_display::Color Widget::interactionColor() const {
-  const auto& color = theme().material3Theme().color;
-  return usesHighlighterColor()
-             ? color.accentColorFor(effectiveOverlayColorRole())
-             : color.contentColorFor(effectiveOverlayColorRole());
+roo_display::Color Widget::interactionColor(InteractionState state) const {
+  return getOverlayType() == OVERLAY_POINT && parent() != nullptr
+             ? parent()->surfaceColors().foreground
+             : surfaceColors().foreground;
 }
 
 uint8_t Widget::interactionOpacity(InteractionState state) const {

@@ -547,6 +547,10 @@ void AppBar::onLayout(bool changed, const Rect& rect) {
   }
 }
 
+Color SearchBar::interactionColor(InteractionState state) const {
+  return theme().material3Theme().color.onSurface;
+}
+
 SearchBar::SearchBar(ApplicationContext& context)
     : Material3Container(context),
       display_text_widget_(context),

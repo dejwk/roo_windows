@@ -3,7 +3,7 @@
 #include <stdint.h>
 
 #include "roo_backport/string_view.h"
-#include "roo_windows/core/surface_widget.h"
+#include "roo_windows/material3/surface.h"
 
 namespace roo_windows::material3 {
 
@@ -20,7 +20,7 @@ enum class FabColorStyle : uint8_t {
 };
 
 /// Icon-only Material 3 floating action button. The icon is borrowed.
-class FloatingActionButton : public SurfaceWidget {
+class FloatingActionButton : public Material3SurfaceWidget {
  public:
   explicit FloatingActionButton(
       ApplicationContext& context, const MonoIcon& icon,
@@ -45,7 +45,8 @@ class FloatingActionButton : public SurfaceWidget {
   Color background() const override;
   BorderStyle getBorderStyle() const override;
   uint8_t getElevation() const override;
-  bool usesHighlighterColor() const override;
+  /// Uses the FAB's local content ink for transient feedback.
+  Color interactionColor(InteractionState state) const override;
   Dimensions getSuggestedMinimumDimensions() const override;
   Dimensions getNaturalDimensions() const override;
   void paint(PaintContext& ctx) const override;
@@ -61,7 +62,7 @@ class FloatingActionButton : public SurfaceWidget {
 };
 
 /// Label-bearing Material 3 FAB. Icon and label storage are borrowed.
-class ExtendedFloatingActionButton : public SurfaceWidget {
+class ExtendedFloatingActionButton : public Material3SurfaceWidget {
  public:
   explicit ExtendedFloatingActionButton(
       ApplicationContext& context, roo::string_view label, const MonoIcon& icon,
@@ -90,7 +91,8 @@ class ExtendedFloatingActionButton : public SurfaceWidget {
   Color background() const override;
   BorderStyle getBorderStyle() const override;
   uint8_t getElevation() const override;
-  bool usesHighlighterColor() const override;
+  /// Uses the FAB's local content ink for transient feedback.
+  Color interactionColor(InteractionState state) const override;
   Dimensions getSuggestedMinimumDimensions() const override;
   Dimensions getNaturalDimensions() const override;
   void paint(PaintContext& ctx) const override;

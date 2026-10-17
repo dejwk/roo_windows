@@ -188,11 +188,9 @@ roo_display::FpPoint Switch::getPointOverlayFocus() const {
   return roo_display::FpPoint{currentThumbCenterX(), kTrackCenterY};
 }
 
-::roo_windows::material3::ColorToken Switch::effectiveContainerRole() const {
-  return isOn() ? ::roo_windows::material3::ColorToken::kPrimary
-                : theme()
-                      .material3Theme()
-                      .components.switchControl.unselectedTrack;
+Color Switch::interactionColor(InteractionState state) const {
+  return isOn() ? theme().material3Theme().color.primary
+                : theme().material3Theme().color.onSurface;
 }
 
 void Switch::onAnimationFrame(AnimationTag tag, const AnimationSample& sample) {

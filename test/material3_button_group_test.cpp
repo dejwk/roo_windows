@@ -167,17 +167,17 @@ class GroupFixture : public testing::Test {
 };
 
 // Verifies selected elevated surfaces use on-primary overlays, while an
-// unselected elevated surface retains the primary highlighter treatment.
-TEST_F(GroupFixture, ElevatedSelectionOverlayRole) {
+// unselected elevated surface retains primary interaction ink.
+TEST_F(GroupFixture, ElevatedSelectionInteractionInk) {
   ButtonGroupButton entry(context, "Day", ButtonGroupButtonStyle::kElevated);
   ConnectedButtonGroup group(context);
   group.add(entry);
-  EXPECT_EQ(ColorToken::kPrimary, entry.effectiveOverlayColorRole());
-  EXPECT_FALSE(entry.usesHighlighterColor());
+  EXPECT_EQ(material.color.onPrimary,
+            entry.interactionColor(InteractionState::kHover));
   group.setSelectionRequired(false);
   group.setSelectionMask(0);
-  EXPECT_EQ(ColorToken::kSurfaceVariant, entry.effectiveOverlayColorRole());
-  EXPECT_TRUE(entry.usesHighlighterColor());
+  EXPECT_EQ(material.color.primary,
+            entry.interactionColor(InteractionState::kHover));
   group.setEnabled(false);
   EXPECT_EQ(Widget::OVERLAY_NONE, entry.getOverlayType());
 }

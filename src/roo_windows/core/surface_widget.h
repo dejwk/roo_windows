@@ -1,7 +1,6 @@
 #pragma once
 
 #include "roo_windows/core/widget.h"
-#include "roo_windows/material3/theme.h"
 
 namespace roo_windows {
 
@@ -11,25 +10,9 @@ class SurfaceWidget : public Widget {
  public:
   using Widget::Widget;
 
-  /// Publishes colors for an owned semantic surface; kNone forwards the parent
-  /// pair. A background RGB override alone does not establish a new pair.
-  SurfaceColors surfaceColors() const override;
-
   /// Returns this widget's background. Transparent by default. Normally
   /// overridden by panels, which usually have opaque backgrounds.
   virtual Color background() const { return roo_display::color::Transparent; }
-
-  /// Returns the semantic container role owned by this surface widget. This
-  /// is the surface-facing public accessor. Returning kNone means that
-  /// this surface does not introduce a new role and instead inherits the
-  /// effective role from its ancestors.
-  virtual ::roo_windows::material3::ColorToken containerRole() const {
-    return ::roo_windows::material3::ColorToken::kNone;
-  }
-
-  /// Resolves the inherited or surface-owned container role for theme
-  /// lookups.
-  ::roo_windows::material3::ColorToken effectiveContainerRole() const override;
 
   /// Returns the effective background color of this widget. If this widget
   /// has a non-opaque background, it is returned. If this widget has a

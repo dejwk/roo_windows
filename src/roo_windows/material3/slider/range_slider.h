@@ -131,10 +131,6 @@ class RangeSlider : public Widget {
   /// Cancels any in-progress interaction state.
   void onCancel() override;
 
-  /// Material 3 range sliders use the primary role for container-derived
-  /// visuals.
-  ::roo_windows::material3::ColorToken effectiveContainerRole() const override;
-
   /// Extends sloppy-touch reach along the slider's main interaction axis.
   Rect getSloppyTouchParentBounds() const override;
 

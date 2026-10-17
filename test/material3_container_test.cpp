@@ -27,10 +27,20 @@ class RoleContainer : public EmptyContainer {
 
 class CustomParent : public Panel {
  public:
+  /// Publishes this surface's resolved Material 3 content colors.
+  SurfaceColors surfaceColors() const override {
+    const auto& colors = theme().material3Theme().color;
+    const auto role = containerRole();
+    return role == material3::ColorToken::kNone
+               ? Panel::surfaceColors()
+               : SurfaceColors{colors.contentColorFor(role),
+                               colors.accentColorFor(role)};
+  }
+
   using Panel::add;
   using Panel::Panel;
   Color background() const override { return Color(127, 12, 34, 56); }
-  ColorToken containerRole() const override { return ColorToken::kSurface; }
+  ColorToken containerRole() const { return ColorToken::kSurface; }
   bool fullyCoversBoundsWithOpaqueColors() const override { return false; }
 };
 
@@ -51,7 +61,7 @@ TEST(Material3ContainerTest, DetachedContainerUsesFrameworkSurface) {
 
 // Verifies inheritance uses the actual parent fill, including alpha, even when
 // that fill differs from the parent's semantic color role.
-TEST(Material3ContainerTest, NoneInheritsActualParentBackgroundAndRole) {
+TEST(Material3ContainerTest, NoneInheritsActualParentBackgroundAndColors) {
   roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context(env.scheduler(), env.theme(),
@@ -61,7 +71,8 @@ TEST(Material3ContainerTest, NoneInheritsActualParentBackgroundAndRole) {
   parent.add(child);
   EXPECT_EQ(parent.background(), child.background());
   EXPECT_NE(env.theme().material3Theme().color.surface, child.background());
-  EXPECT_EQ(ColorToken::kSurface, child.effectiveContainerRole());
+  EXPECT_EQ(parent.surfaceColors().foreground,
+            child.surfaceColors().foreground);
 }
 
 // Verifies an owned role follows both theme and role changes without caching,
@@ -82,10 +93,10 @@ TEST(Material3ContainerTest, OwnedRoleUsesCurrentThemeAndOverridesParentFill) {
   EXPECT_EQ(material.color.primaryContainer, child.background());
   child.role = ColorToken::kSurfaceContainerHigh;
   EXPECT_EQ(material.color.surfaceContainerHigh, child.background());
-  EXPECT_EQ(child.role, child.effectiveContainerRole());
+  EXPECT_EQ(material.color.onSurface, child.surfaceColors().foreground);
   child.role = ColorToken::kNone;
   EXPECT_EQ(parent.background(), child.background());
-  EXPECT_EQ(parent.containerRole(), child.effectiveContainerRole());
+  EXPECT_EQ(parent.surfaceColors().accent, child.surfaceColors().accent);
 }
 
 }  // namespace

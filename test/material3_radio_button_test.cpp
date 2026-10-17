@@ -78,21 +78,19 @@ TEST(Material3RadioButton, ReportsMaterial3MinimumSize) {
   EXPECT_EQ(Scaled(20), dims.height());
 }
 
-// Verifies that effectiveContainerRole resolves to kSurface while off and
-// kPrimary while on, so the rendered ring and dot pick up the selected
-// accent color.
-TEST(Material3RadioButton, EffectiveContainerRoleTracksSelectionState) {
+// Verifies interaction ink follows component selection without ancestor roles.
+TEST(Material3RadioButton, InteractionInkTracksSelectionState) {
   roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
   RadioButton radio(context, RadioButton::OnOffState::kOff);
-  EXPECT_EQ(::roo_windows::material3::ColorToken::kSurface,
-            radio.effectiveContainerRole());
+  EXPECT_EQ(env.theme().material3Theme().color.onSurface,
+            radio.interactionColor(InteractionState::kHover));
 
   radio.setOn();
-  EXPECT_EQ(::roo_windows::material3::ColorToken::kPrimary,
-            radio.effectiveContainerRole());
+  EXPECT_EQ(env.theme().material3Theme().color.primary,
+            radio.interactionColor(InteractionState::kHover));
 }
 
 }  // namespace

@@ -52,9 +52,6 @@ class ButtonGroupBase : public Container {
   /// Keeps ancestor content visible through gaps and rounded corners.
   Color background() const override { return roo_display::color::Transparent; }
 
-  /// Introduces no surface role of its own.
-  ColorToken containerRole() const override { return ColorToken::kNone; }
-
   /// Introduces no rectangular opaque coverage.
   bool fullyCoversBoundsWithOpaqueColors() const override { return false; }
 

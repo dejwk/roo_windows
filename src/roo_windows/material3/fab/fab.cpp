@@ -144,7 +144,7 @@ void PaintIcon(const Canvas& canvas, const MonoIcon& icon, Color color,
 FloatingActionButton::FloatingActionButton(ApplicationContext& context,
                                            const MonoIcon& icon, FabSize size,
                                            FabColorStyle color_style)
-    : SurfaceWidget(context),
+    : Material3SurfaceWidget(context),
       icon_(&icon),
       size_(static_cast<uint8_t>(size)),
       color_style_(static_cast<uint8_t>(color_style)) {}
@@ -179,8 +179,8 @@ BorderStyle FloatingActionButton::getBorderStyle() const {
 uint8_t FloatingActionButton::getElevation() const {
   return Elevation(isEnabled(), isPressed(), isFocused(), isHover());
 }
-bool FloatingActionButton::usesHighlighterColor() const {
-  return colorStyle() == FabColorStyle::kSurface;
+Color FloatingActionButton::interactionColor(InteractionState state) const {
+  return ContentColor(theme(), colorStyle(), isEnabled());
 }
 Dimensions FloatingActionButton::getSuggestedMinimumDimensions() const {
   int side = Scaled(IconGeometry(size()).height);
@@ -214,7 +214,7 @@ void FloatingActionButton::notifyStateChanged(uint16_t state_diff) {
 ExtendedFloatingActionButton::ExtendedFloatingActionButton(
     ApplicationContext& context, roo::string_view label, const MonoIcon& icon,
     ExtendedFabSize size, FabColorStyle color_style)
-    : SurfaceWidget(context),
+    : Material3SurfaceWidget(context),
       label_(label),
       icon_(&icon),
       size_(static_cast<uint8_t>(size)),
@@ -262,8 +262,9 @@ BorderStyle ExtendedFloatingActionButton::getBorderStyle() const {
 uint8_t ExtendedFloatingActionButton::getElevation() const {
   return Elevation(isEnabled(), isPressed(), isFocused(), isHover());
 }
-bool ExtendedFloatingActionButton::usesHighlighterColor() const {
-  return colorStyle() == FabColorStyle::kSurface;
+Color ExtendedFloatingActionButton::interactionColor(
+    InteractionState state) const {
+  return ContentColor(theme(), colorStyle(), isEnabled());
 }
 Dimensions ExtendedFloatingActionButton::getSuggestedMinimumDimensions() const {
   int side = Scaled(ExtendedTokens(size()).body.height);

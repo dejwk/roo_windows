@@ -18,13 +18,12 @@ enum class ColorRole : uint8_t {
   kTertiary,
   kTertiaryContainer,
   kError,
-  kErrorContainer
+  kErrorContainer,
+  kNone
 };
 
-/// Independently owned colors read by the migrated controls. Additional
-/// on-colors preserve contrast when controls inherit other container roles from
-/// core; there are no unused container-fill colors or references to another
-/// palette.
+/// Independently owned Material 2 palette. On-colors provide readable ink
+/// for locally owned colored surfaces; borrowed content uses SurfaceColors.
 struct ColorScheme {
   roo_display::Color primary{0xFF6750A4};
   roo_display::Color onPrimary{0xFFFFFFFF};

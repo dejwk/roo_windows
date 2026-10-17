@@ -41,6 +41,9 @@ class Tabs;
 /// parent `Tabs` row and reflected through the widget activated state.
 class Tab : public SurfaceWidget {
  public:
+  /// Resolves interaction ink from this component's live appearance.
+  Color interactionColor(InteractionState state) const override;
+
   /// Creates a tab with the supplied non-owning label view.
   explicit Tab(ApplicationContext& context, roo::string_view label = {});
 
@@ -61,9 +64,6 @@ class Tab : public SurfaceWidget {
 
   /// Tabs are clickable when enabled.
   bool isClickable() const override { return isEnabled(); }
-
-  /// Exposes each tab as a surface-colored interaction rectangle.
-  ::roo_windows::material3::ColorToken containerRole() const override;
 
   /// Returns the tab background color.
   Color background() const override;
@@ -137,6 +137,12 @@ class BadgedTab : public Tab {
 
 class Tabs : public Container {
  public:
+  /// Returns this strip's locally configured Material 3 surface role.
+  ColorToken containerRole() const;
+
+  /// Publishes readable content colors for the owned strip surface.
+  SurfaceColors surfaceColors() const override;
+
   /// Creates a Material 3 tabs row with explicit variant and layout mode.
   explicit Tabs(ApplicationContext& context,
                 TabsVariant variant = TabsVariant::kPrimary,
@@ -205,9 +211,6 @@ class Tabs : public Container {
 
   /// Selects a tab by index. Returns false for invalid or already-selected.
   bool setSelectedIndex(int index, bool animate = true);
-
-  /// Exposes the tabs row as the configured variant's Material surface.
-  ::roo_windows::material3::ColorToken effectiveContainerRole() const override;
 
   /// Returns the row background color.
   Color background() const override;

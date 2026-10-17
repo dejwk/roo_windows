@@ -16,6 +16,9 @@ namespace material3 {
 /// preserves the selection shape transition.
 class ToggleIconButton : public IconButton {
  public:
+  /// Uses the selected or unselected icon ink for transient feedback.
+  Color interactionColor(InteractionState state) const override;
+
   /// Creates a toggle that borrows an unselected icon and optional selected
   /// icon. A null selected icon reuses the unselected icon in both states.
   explicit ToggleIconButton(ApplicationContext& context,
@@ -51,7 +54,7 @@ class ToggleIconButton : public IconButton {
   /// Returns the state-independent icon slot used by badge-aware hosts.
   Rect getIconBounds() const override;
 
-  /// Returns the current Material 3 container role for interaction overlays.
+  /// Returns the current Material 3 locally owned container role.
   ::roo_windows::material3::ColorToken containerRole() const override;
 
   /// Returns the selected or unselected Material 3 container fill.
@@ -68,9 +71,6 @@ class ToggleIconButton : public IconButton {
 
   /// Returns the stable slot dimensions enclosing both possible icons.
   Dimensions getSuggestedMinimumDimensions() const override;
-
-  /// Uses the accent interaction layer for selected standard buttons.
-  bool usesHighlighterColor() const override;
 
   ClickActivationPolicy getClickActivationPolicy() const override {
     return ClickActivationPolicy::kImmediateContinueAnimation;

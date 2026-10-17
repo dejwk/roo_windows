@@ -57,9 +57,13 @@ uint8_t Interpolate(uint8_t from, uint8_t to, float progress) {
 
 }  // namespace
 
+Color IconButton::interactionColor(InteractionState state) const {
+  return resolveContentColor();
+}
+
 IconButton::IconButton(ApplicationContext& context, const MonoIcon& icon,
                        IconButtonStyle style)
-    : SurfaceWidget(context),
+    : Material3SurfaceWidget(context),
       icon_(&icon),
       style_(static_cast<uint8_t>(style)),
       size_(static_cast<uint8_t>(ButtonSize::kSmall)),

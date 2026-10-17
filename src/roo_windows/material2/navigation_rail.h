@@ -25,7 +25,16 @@ class NavigationRailEntry : public material2::IconWithCaption {
         activator_(std::move(activator)) {}
 
   bool isClickable() const override { return true; }
-  bool usesHighlighterColor() const override { return true; }
+  /// Uses emphasis ink for the active destination.
+  Color defaultColor() const override {
+    const SurfaceColors colors = surfaceColors();
+    return isActivated() ? colors.accent : colors.foreground;
+  }
+
+  /// Uses the inherited accent for destination feedback.
+  Color interactionColor(InteractionState state) const override {
+    return surfaceColors().accent;
+  }
 
   /// Activates this destination in its rail and invokes the user-supplied
   /// callback to switch the application's content.

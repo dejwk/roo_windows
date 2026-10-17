@@ -4,9 +4,9 @@
 
 #include "roo_backport/string_view.h"
 #include "roo_windows/core/border_style.h"
-#include "roo_windows/core/surface_widget.h"
 #include "roo_windows/core/theme.h"
 #include "roo_windows/material3/button/button_types.h"
+#include "roo_windows/material3/surface.h"
 
 namespace roo_windows {
 namespace material3 {
@@ -49,8 +49,11 @@ enum class SmallButtonPadding : uint8_t {
 /// The label is held as a non-owning `roo::string_view`, so the caller must
 /// keep the backing string alive while the button is using it. See
 /// docs/material3_buttons_design.md for the full contract.
-class Button : public SurfaceWidget {
+class Button : public Material3SurfaceWidget {
  public:
+  /// Resolves interaction ink from this component's live appearance.
+  Color interactionColor(InteractionState state) const override;
+
   /// Creates a Material 3 button with the supplied label and visual variant.
   ///
   /// The label is stored as a non-owning view; the caller must keep the

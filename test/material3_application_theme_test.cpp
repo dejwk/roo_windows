@@ -12,6 +12,7 @@
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/panel.h"
 #include "roo_windows/core/theme.h"
+#include "roo_windows/material3/surface.h"
 
 namespace roo_windows::material3 {
 namespace {
@@ -100,9 +101,9 @@ class WriteCountingDevice final
   int right_ = 0;
 };
 
-class ThemeSurface : public SurfaceWidget {
+class ThemeSurface : public material3::Material3Surface<SurfaceWidget> {
  public:
-  using SurfaceWidget::SurfaceWidget;
+  using material3::Material3Surface<SurfaceWidget>::Material3Surface;
   Dimensions getSuggestedMinimumDimensions() const override {
     return Dimensions(8, 8);
   }

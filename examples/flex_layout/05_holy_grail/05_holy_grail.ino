@@ -90,6 +90,16 @@ void initDisplay() {
 
 class NamedPanel : public FlexLayout {
  public:
+  /// Publishes this surface's resolved Material 3 content colors.
+  SurfaceColors surfaceColors() const override {
+    const auto& colors = theme().material3Theme().color;
+    const auto role = containerRole();
+    return role == material3::ColorToken::kNone
+               ? FlexLayout::surfaceColors()
+               : SurfaceColors{colors.contentColorFor(role),
+                               colors.accentColorFor(role)};
+  }
+
   NamedPanel(ApplicationContext& context, const char* name,
              ::roo_windows::material3::ColorToken role =
                  ::roo_windows::material3::ColorToken::kSurfaceContainer)
@@ -101,9 +111,7 @@ class NamedPanel : public FlexLayout {
     add(label_);
   }
 
-  ::roo_windows::material3::ColorToken containerRole() const override {
-    return role_;
-  }
+  ::roo_windows::material3::ColorToken containerRole() const { return role_; }
 
   BorderStyle getBorderStyle() const override { return BorderStyle(0, 1); }
 

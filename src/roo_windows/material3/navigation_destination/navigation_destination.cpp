@@ -29,13 +29,6 @@ Color ContentColorFor(const NavigationDestinationBase& destination) {
                                 : colors.onSurfaceVariant;
 }
 
-ColorToken UnselectedIndicatorRole(
-    const NavigationDestinationBase& destination) {
-  if (destination.parent() == nullptr) return ColorToken::kSurface;
-  const ColorToken role = destination.parent()->effectiveContainerRole();
-  return role == ColorToken::kNone ? ColorToken::kSurface : role;
-}
-
 }  // namespace
 
 NavigationDestinationBase::NavigationDestinationBase(
@@ -82,9 +75,9 @@ bool NavigationDestinationBase::selected() const { return selected_ != 0; }
 
 bool NavigationDestinationBase::isClickable() const { return isEnabled(); }
 
-ColorToken NavigationDestinationBase::effectiveOverlayColorRole() const {
-  return selected() ? ColorToken::kSecondaryContainer
-                    : UnselectedIndicatorRole(*this);
+Color NavigationDestinationBase::interactionColor(
+    InteractionState state) const {
+  return ContentColorFor(*this);
 }
 
 void NavigationDestinationBase::paint(PaintContext& ctx) const {

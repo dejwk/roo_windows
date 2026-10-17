@@ -7,7 +7,7 @@ namespace material3 {
 
 /// Material 3 tri-state checkbox.
 ///
-/// Theme colors come from `effectiveContainerRole()`.
+/// Content and interaction colors come from the local Material 3 palette.
 /// Default padding and margins are zero so the widget can be combined freely
 /// in compound rows.
 class Checkbox : public Widget {
@@ -69,8 +69,8 @@ class Checkbox : public Widget {
     return ClickActivationPolicy::kImmediateContinueAnimation;
   }
 
-  /// Resolves the surface color role based on the current on/off state.
-  ::roo_windows::material3::ColorToken effectiveContainerRole() const override;
+  /// Resolves the component state-layer ink.
+  Color interactionColor(InteractionState state) const override;
 
   /// Toggles between off and on (programmatic-only paths can also set the
   /// indeterminate state through `setOnOffState()`).

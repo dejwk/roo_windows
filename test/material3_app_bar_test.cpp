@@ -72,13 +72,13 @@ TEST(Material3AppBar, SurfaceRolesFollowFlatAndScrolledStates) {
   TestSearchAppBar search_app_bar(context);
   SearchBar standalone_search(context);
   const ColorScheme& colors = env.theme().material3Theme().color;
-  const SurfaceWidget& embedded_search =
-      static_cast<const SurfaceWidget&>(search_app_bar.childAt(0));
+  const SearchBar& embedded_search =
+      static_cast<const SearchBar&>(search_app_bar.childAt(0));
 
   EXPECT_EQ(ColorToken::kSurface, app_bar.containerRole());
   EXPECT_EQ(colors.surface, app_bar.background());
-  EXPECT_EQ(ColorToken::kSurface,
-            app_bar.childAt(0).effectiveOverlayColorRole());
+  EXPECT_EQ(colors.onSurface,
+            app_bar.childAt(0).interactionColor(InteractionState::kHover));
   EXPECT_EQ(ColorToken::kSurface, search_app_bar.containerRole());
   EXPECT_EQ(colors.surface, search_app_bar.background());
   EXPECT_EQ(ColorToken::kSurfaceContainer, embedded_search.containerRole());
@@ -91,14 +91,14 @@ TEST(Material3AppBar, SurfaceRolesFollowFlatAndScrolledStates) {
   search_app_bar.setSurfaceState(AppBarSurfaceState::kScrolled);
   EXPECT_EQ(ColorToken::kSurfaceContainer, app_bar.containerRole());
   EXPECT_EQ(colors.surfaceContainer, app_bar.background());
-  EXPECT_EQ(ColorToken::kSurfaceContainer,
-            app_bar.childAt(0).effectiveOverlayColorRole());
+  EXPECT_EQ(colors.onSurface,
+            app_bar.childAt(0).interactionColor(InteractionState::kHover));
   EXPECT_EQ(ColorToken::kSurfaceContainer, search_app_bar.containerRole());
   EXPECT_EQ(colors.surfaceContainer, search_app_bar.background());
   EXPECT_EQ(ColorToken::kSurfaceContainerHighest,
             embedded_search.containerRole());
-  EXPECT_EQ(ColorToken::kSurfaceContainerHighest,
-            embedded_search.effectiveOverlayColorRole());
+  EXPECT_EQ(colors.onSurface,
+            embedded_search.interactionColor(InteractionState::kHover));
   EXPECT_EQ(colors.surfaceContainerHighest, embedded_search.background());
 
   app_bar.setSurfaceState(AppBarSurfaceState::kFlat);
@@ -135,8 +135,8 @@ TEST(Material3AppBar, UsesIndependentComponentThemeSlots) {
   TestAppBar app_bar(context);
   TestSearchAppBar search_app_bar(context);
   SearchBar search_bar(context);
-  const SurfaceWidget& embedded_search =
-      static_cast<const SurfaceWidget&>(search_app_bar.childAt(0));
+  const SearchBar& embedded_search =
+      static_cast<const SearchBar&>(search_app_bar.childAt(0));
 
   EXPECT_EQ(ColorToken::kSurfaceContainerLow, app_bar.containerRole());
   EXPECT_EQ(ColorToken::kSurfaceContainerHighest,

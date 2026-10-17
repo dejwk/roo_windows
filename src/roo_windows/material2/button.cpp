@@ -13,15 +13,15 @@ namespace roo_windows::material2 {
 
 namespace {
 
-::roo_windows::material3::ColorToken ButtonContainerRole(Button::Style style) {
+ColorRole ButtonContainerRole(Button::Style style) {
   switch (style) {
     case Button::CONTAINED:
-      return ::roo_windows::material3::ColorToken::kPrimary;
+      return ColorRole::kPrimary;
     case Button::OUTLINED:
     case Button::TEXT:
-      return ::roo_windows::material3::ColorToken::kBackground;
+      return ColorRole::kBackground;
   }
-  return ::roo_windows::material3::ColorToken::kBackground;
+  return ColorRole::kBackground;
 }
 
 }  // namespace
@@ -38,9 +38,7 @@ Button::Button(ApplicationContext& context, Style style)
       current_elevation_(0),
       corner_radius_(Scaled(4)) {}
 
-::roo_windows::material3::ColorToken Button::containerRole() const {
-  return ButtonContainerRole(style());
-}
+ColorRole Button::containerRole() const { return ButtonContainerRole(style()); }
 
 roo_display::Color Button::getOutlineColor() const {
   if (outline_color_override_) return outline_color_;

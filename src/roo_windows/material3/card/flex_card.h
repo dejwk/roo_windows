@@ -75,7 +75,10 @@ class FlexCard : public FlexLayout {
 
   /// Returns either the configured override or the style-default container
   /// color role selected by the current Material theme.
-  ::roo_windows::material3::ColorToken containerRole() const override;
+  virtual ::roo_windows::material3::ColorToken containerRole() const;
+
+  /// Publishes content colors for the local card surface.
+  SurfaceColors surfaceColors() const override;
   /// Resolves the selected Material container role to the card's owned fill.
   Color background() const override;
   /// Returns the outline color resolved from the (overridden) outline role.

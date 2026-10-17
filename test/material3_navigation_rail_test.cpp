@@ -200,11 +200,12 @@ TEST(Material3NavigationRail, DestinationDefaultsAndSetters) {
   EXPECT_EQ(Widget::ClickOverlayAnimation::kFade,
             destination.getClickOverlayAnimation());
   EXPECT_EQ(0, destination.interactionOpacity(InteractionState::kSelected));
-  EXPECT_EQ(ColorToken::kSurface, destination.effectiveOverlayColorRole());
+  EXPECT_EQ(env.theme().material3Theme().color.onSurfaceVariant,
+            destination.interactionColor(InteractionState::kHover));
 
   NavigationRailDestinationTestAccess::setSelected(destination, true);
-  EXPECT_EQ(ColorToken::kSecondaryContainer,
-            destination.effectiveOverlayColorRole());
+  EXPECT_EQ(env.theme().material3Theme().color.onSecondaryContainer,
+            destination.interactionColor(InteractionState::kHover));
   destination.setLabel("Saved");
   destination.setIcon(nullptr);
   destination.setSelectedIcon(nullptr);

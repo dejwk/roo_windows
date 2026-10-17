@@ -10,6 +10,12 @@ namespace roo_windows::material2 {
 /// For new code, prefer `material3::RadioButton`.
 class RadioButton : public ThemeMixin<Widget> {
  public:
+  /// Uses inherited emphasis for active feedback and foreground otherwise.
+  Color interactionColor(InteractionState state) const override {
+    const SurfaceColors colors = surfaceColors();
+    return isOn() ? colors.accent : colors.foreground;
+  }
+
   /// Logical selection state exposed by the radio button.
   enum class OnOffState : uint8_t { kOff, kOn };
 

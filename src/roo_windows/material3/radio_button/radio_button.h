@@ -61,8 +61,8 @@ class RadioButton : public Widget {
     return ClickActivationPolicy::kImmediateContinueAnimation;
   }
 
-  /// Resolves the surface color role based on the current on/off state.
-  ::roo_windows::material3::ColorToken effectiveContainerRole() const override;
+  /// Resolves the component state-layer ink.
+  Color interactionColor(InteractionState state) const override;
 
   /// Forces the selected state, mirroring radio-group semantics.
   void onClicked() override;

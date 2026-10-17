@@ -99,13 +99,10 @@ void Switch::onPresentationChanged(const PresentationChange& change) {
 }
 
 void Switch::paint(PaintContext& ctx) const {
-  const Theme& th = theme();
-  ColorRole bg_role = Material2ColorRole(effectiveContainerRole());
-  Color circleColor = isOn() ? th.material2Theme().color.accentColorFor(bg_role)
-                             : th.material2Theme().color.surface;
-  Color sliderColor = isOn()
-                          ? th.material2Theme().color.accentColorFor(bg_role)
-                          : th.material2Theme().color.contentColorFor(bg_role);
+  const SurfaceColors colors = surfaceColors();
+  Color circleColor =
+      isOn() ? colors.accent : theme().material2Theme().color.surface;
+  Color sliderColor = isOn() ? colors.accent : colors.foreground;
   int16_t xoffset = currentThumbOffsetX();
 #if ROO_WINDOWS_ZOOM >= 200
   auto slider = slider_48();

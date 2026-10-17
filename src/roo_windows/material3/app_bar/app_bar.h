@@ -174,6 +174,9 @@ class AppBar : public Material3Container {
 /// Phase-1 declaration of the standalone Material 3 search-entry surface.
 class SearchBar : public Material3Container {
  public:
+  /// Resolves interaction ink from this component's live appearance.
+  Color interactionColor(InteractionState state) const override;
+
   /// Creates a standalone Material 3 search entry surface.
   explicit SearchBar(ApplicationContext& context);
 

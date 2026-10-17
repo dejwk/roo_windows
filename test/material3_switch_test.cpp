@@ -116,26 +116,23 @@ TEST(Material3Switch, ReportsMaterial3MinimumSize) {
   EXPECT_EQ(Scaled(32), dims.height());
 }
 
-// Verifies that the effective container color role flips with the switch
-// state: surfaceContainerHighest while off (so the track reads as a neutral
-// inset) and primary while on (so the track adopts the selected accent).
-TEST(Material3Switch, EffectiveContainerRoleTracksState) {
+// Verifies the halo uses on-surface ink while off and primary while on.
+TEST(Material3Switch, InteractionInkTracksState) {
   roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
   Switch sw(context, Switch::OnOffState::kOff);
-  EXPECT_EQ(::roo_windows::material3::ColorToken::kSurfaceContainerHighest,
-            sw.effectiveContainerRole());
+  EXPECT_EQ(env.theme().material3Theme().color.onSurface,
+            sw.interactionColor(InteractionState::kHover));
 
   sw.setOn();
-  EXPECT_EQ(::roo_windows::material3::ColorToken::kPrimary,
-            sw.effectiveContainerRole());
+  EXPECT_EQ(env.theme().material3Theme().color.primary,
+            sw.interactionColor(InteractionState::kHover));
 }
 
-// Verifies the unselected track role is shared while the selected track
-// remains the fixed primary accent.
-TEST(Material3Switch, UnselectedTrackUsesComponentTheme) {
+// Verifies a customized track fill does not change the halo ink.
+TEST(Material3Switch, TrackRoleDoesNotLeakIntoInteractionInk) {
   roo_scheduler::SchedulingService scheduler;
   Theme theme = DefaultTheme();
   material3::Material3Theme& material = theme.material3Theme();
@@ -146,9 +143,11 @@ TEST(Material3Switch, UnselectedTrackUsesComponentTheme) {
   ApplicationContext context = MakeContext(env);
   Switch sw(context, Switch::OnOffState::kOff);
 
-  EXPECT_EQ(ColorToken::kSurfaceContainerLow, sw.effectiveContainerRole());
+  EXPECT_EQ(env.theme().material3Theme().color.onSurface,
+            sw.interactionColor(InteractionState::kHover));
   sw.setOn();
-  EXPECT_EQ(ColorToken::kPrimary, sw.effectiveContainerRole());
+  EXPECT_EQ(env.theme().material3Theme().color.primary,
+            sw.interactionColor(InteractionState::kHover));
 }
 
 // Verifies a click starts the 100 ms Material thumb value track while the

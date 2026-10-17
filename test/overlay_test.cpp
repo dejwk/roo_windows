@@ -293,6 +293,16 @@ class RoundedClickableChildSurface : public Panel {
 
 class RolePanel : public Panel {
  public:
+  /// Publishes this surface's resolved Material 3 content colors.
+  SurfaceColors surfaceColors() const override {
+    const auto& colors = theme().material3Theme().color;
+    const auto role = containerRole();
+    return role == material3::ColorToken::kNone
+               ? Panel::surfaceColors()
+               : SurfaceColors{colors.contentColorFor(role),
+                               colors.accentColorFor(role)};
+  }
+
   RolePanel(ApplicationContext& context,
             ::roo_windows::material3::ColorToken role)
       : Panel(context), role_(role) {}
@@ -301,23 +311,22 @@ class RolePanel : public Panel {
     add(std::move(child), bounds);
   }
 
-  ::roo_windows::material3::ColorToken containerRole() const override {
-    return role_;
-  }
+  ::roo_windows::material3::ColorToken containerRole() const { return role_; }
 
  private:
   ::roo_windows::material3::ColorToken role_;
 };
 
-class RoleOverridingPointOverlayWidget : public PointOverlayBoxWidget {
+class ColorOverridingPointOverlayWidget : public PointOverlayBoxWidget {
  public:
-  RoleOverridingPointOverlayWidget(ApplicationContext& context,
-                                   roo_display::Color color, Dimensions dims,
-                                   ::roo_windows::material3::ColorToken role)
+  ColorOverridingPointOverlayWidget(ApplicationContext& context,
+                                    roo_display::Color color, Dimensions dims,
+                                    ::roo_windows::material3::ColorToken role)
       : PointOverlayBoxWidget(context, color, dims), role_(role) {}
 
-  ::roo_windows::material3::ColorToken effectiveContainerRole() const override {
-    return role_;
+  SurfaceColors surfaceColors() const override {
+    const auto& colors = theme().material3Theme().color;
+    return {colors.contentColorFor(role_), colors.accentColorFor(role_)};
   }
 
  private:
@@ -1703,19 +1712,19 @@ TEST_F(RooWindowsRenderTest,
 }
 
 // Verifies that a point overlay rendered over a child widget which overrides
-// its container role still picks the overlay color from the parent's role,
+// its resolved colors still picks the overlay color from the parent foreground,
 // since the halo paints onto the parent's surface, not the child's.
 TEST_F(RooWindowsRenderTest,
-       PointOverlayColorUsesParentRoleWhenChildOverridesContainerRole) {
+       PointOverlayUsesParentForegroundWhenChildOverridesColors) {
   const ::roo_windows::material3::ColorToken parent_role =
       ::roo_windows::material3::ColorToken::kSurfaceContainerHighest;
   const Color parent_surface =
       context().theme().material3Theme().color.resolve(parent_role);
   auto back = std::make_unique<RolePanel>(context(), parent_role);
-  auto front = std::make_unique<RoleOverridingPointOverlayWidget>(
+  auto front = std::make_unique<ColorOverridingPointOverlayWidget>(
       context(), parent_surface, Dimensions(18, 18),
       ::roo_windows::material3::ColorToken::kPrimary);
-  RoleOverridingPointOverlayWidget* front_ptr = front.get();
+  ColorOverridingPointOverlayWidget* front_ptr = front.get();
 
   back->addChild(std::move(front), Box(20, 12, 37, 29));
   app_.add(std::move(back), Box(0, 0, 47, 39));

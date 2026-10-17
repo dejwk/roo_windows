@@ -58,10 +58,10 @@ TEST(Material3TabsTheme, UsesSharedVariantSurfaceForStripAndTabs) {
   Tab child(context, "Overview");
   tabs.addTab(child);
 
-  EXPECT_EQ(ColorToken::kSurfaceContainerLow, tabs.effectiveContainerRole());
+  EXPECT_EQ(material.color.surfaceContainerLow, tabs.background());
   EXPECT_EQ(tabs.background(), child.background());
   tabs.setVariant(TabsVariant::kSecondary);
-  EXPECT_EQ(ColorToken::kSurfaceContainerHigh, tabs.effectiveContainerRole());
+  EXPECT_EQ(material.color.surfaceContainerHigh, tabs.background());
   EXPECT_EQ(tabs.background(), child.background());
 }
 
@@ -228,8 +228,6 @@ TEST(Material3Tabs, TabOwnsSurfaceAreaForStateOverlays) {
 
   EXPECT_TRUE((std::is_base_of<SurfaceWidget, Tab>::value));
   EXPECT_EQ(Widget::OVERLAY_AREA, tab.getOverlayType());
-  EXPECT_EQ(::roo_windows::material3::ColorToken::kSurface,
-            tab.containerRole());
   EXPECT_EQ(env.theme().material3Theme().color.surface, tab.background());
   EXPECT_EQ(0, tab.interactionOpacity(InteractionState::kActivated));
 }
@@ -935,10 +933,10 @@ TEST_F(Material3TabsRenderTest, PrimaryFixedRowPaintsIndicatorAndDivider) {
   first_raw->setPressed(true);
   refresh();
 
-  roo_display::Color pressed_indicator = roo_display::AlphaBlend(
-      env_.theme().material3Theme().color.primary,
-      env_.theme().material3Theme().color.onSurface.withA(
-          env_.theme().framework.state.pressed));
+  roo_display::Color pressed_indicator =
+      roo_display::AlphaBlend(env_.theme().material3Theme().color.primary,
+                              env_.theme().material3Theme().color.primary.withA(
+                                  env_.theme().framework.state.pressed));
   EXPECT_EQ(QuantizeToArgb4444(pressed_indicator), pixelAt(30, Scaled(45)));
   EXPECT_EQ(
       QuantizeToArgb4444(env_.theme().material3Theme().color.outlineVariant),

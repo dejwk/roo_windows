@@ -103,7 +103,8 @@ TEST(Material3Fab, ColorsAndElevationFollowThemeAndState) {
   fab.setFocused(false);
   fab.setColorStyle(FabColorStyle::kSurface);
   EXPECT_EQ(ColorToken::kSurfaceContainerHigh, fab.containerRole());
-  EXPECT_TRUE(fab.usesHighlighterColor());
+  EXPECT_EQ(fab.theme().material3Theme().color.primary,
+            fab.interactionColor(InteractionState::kHover));
   EXPECT_EQ(colors.surfaceContainerHigh, fab.background());
   fab.setEnabled(false);
   EXPECT_EQ(0, fab.getOverlayOpacity());

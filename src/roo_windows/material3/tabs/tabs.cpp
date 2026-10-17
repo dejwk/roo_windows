@@ -90,6 +90,10 @@ Rect LerpRect(const Rect& from, const Rect& to, float t) {
 
 }  // namespace
 
+Color Tab::interactionColor(InteractionState state) const {
+  return ContentColorFor(*this);
+}
+
 Tab::Tab(ApplicationContext& context, roo::string_view label)
     : SurfaceWidget(context), label_(label), icon_(nullptr) {}
 
@@ -107,13 +111,9 @@ void Tab::setIcon(const MonoIcon* icon) {
   requestLayout();
 }
 
-ColorToken Tab::containerRole() const {
-  if (parent() != nullptr) return parent()->effectiveContainerRole();
-  return theme().material3Theme().components.tabs.primaryContainer;
-}
-
 Color Tab::background() const {
-  return theme().material3Theme().color.resolve(containerRole());
+  return parent() != nullptr ? parent()->effectiveBackground()
+                             : theme().framework.surface;
 }
 
 Dimensions Tab::getContentMinimumDimensions() const {
@@ -467,14 +467,24 @@ void Tabs::setShowsDivider(bool shows_divider) {
   invalidateInterior();
 }
 
-ColorToken Tabs::effectiveContainerRole() const {
+ColorToken Tabs::containerRole() const {
   const TabsTheme& tabs = theme().material3Theme().components.tabs;
   return variant() == TabsVariant::kPrimary ? tabs.primaryContainer
                                             : tabs.secondaryContainer;
 }
 
+SurfaceColors Tabs::surfaceColors() const {
+  const ColorToken role = containerRole();
+  if (role == ColorToken::kNone) return Container::surfaceColors();
+  const ColorScheme& colors = theme().material3Theme().color;
+  return {colors.contentColorFor(role), colors.accentColorFor(role)};
+}
+
 Color Tabs::background() const {
-  return theme().material3Theme().color.resolve(effectiveContainerRole());
+  const ColorToken role = containerRole();
+  return role == ColorToken::kNone
+             ? Container::background()
+             : theme().material3Theme().color.resolve(role);
 }
 
 void Tabs::paint(PaintContext& ctx) const {

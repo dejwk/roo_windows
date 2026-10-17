@@ -6,18 +6,21 @@
 #include <memory>
 
 #include "roo_backport/string_view.h"
-#include "roo_windows/core/surface_widget.h"
 #include "roo_windows/material3/button/button.h"
 #include "roo_windows/material3/density.h"
 #include "roo_windows/material3/menu/menu.h"
+#include "roo_windows/material3/surface.h"
 
 namespace roo_windows::material3 {
 
 /// A Material 3 button that selects one item from a borrowed string table.
 /// The pointer array and strings must remain unchanged and alive until a
 /// successful setItems() call replaces them or the button is destroyed.
-class DropdownButton : public SurfaceWidget {
+class DropdownButton : public Material3SurfaceWidget {
  public:
+  /// Resolves interaction ink from this component's live appearance.
+  Color interactionColor(InteractionState state) const override;
+
   /// Sentinel returned by selectedIndex() when the choice table is empty.
   static constexpr size_t kNoSelection = static_cast<size_t>(-1);
 

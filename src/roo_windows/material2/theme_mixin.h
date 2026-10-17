@@ -7,40 +7,26 @@
 
 namespace roo_windows::material2 {
 
-/// Bridges the current core container vocabulary to Material 2 surface roles.
-/// This translates role identity only; it never reads a Material 3 palette.
-ColorRole Material2ColorRole(material3::ColorToken role);
-
-/// Selects Material 2 content and interaction defaults without per-widget
-/// state. Generic child layouts inside a Material 2 composite can use the same
-/// mixin.
+/// Resolves locally owned Material 2 surfaces; unfilled widgets inherit colors.
+/// Adds no per-widget state or dependency on another system's palette roles.
 template <typename Base>
 class ThemeMixin : public Base {
  public:
   using Base::Base;
 
-  /// Publishes Material 2 colors only when this widget owns a surface role.
-  /// Unfilled controls and generic layouts forward the surrounding pair.
+  /// Returns the owned Material 2 surface role, or kNone to inherit colors.
+  virtual ColorRole containerRole() const { return ColorRole::kNone; }
+
+  /// Publishes colors only for a locally owned semantic surface.
   SurfaceColors surfaceColors() const override {
     if constexpr (std::is_base_of<SurfaceWidget, Base>::value) {
-      const material3::ColorToken role = this->containerRole();
-      if (role != material3::ColorToken::kNone) {
+      const ColorRole role = containerRole();
+      if (role != ColorRole::kNone) {
         const auto& colors = this->theme().material2Theme().color;
-        const ColorRole local_role = Material2ColorRole(role);
-        return {colors.contentColorFor(local_role),
-                colors.accentColorFor(local_role)};
+        return {colors.contentColorFor(role), colors.accentColorFor(role)};
       }
     }
     return Base::surfaceColors();
-  }
-
-  /// Resolves the live Material 2 ink for the shared interaction pipeline.
-  roo_display::Color interactionColor() const override {
-    const auto& color = this->theme().material2Theme().color;
-    const ColorRole role =
-        Material2ColorRole(this->effectiveOverlayColorRole());
-    return this->usesHighlighterColor() ? color.accentColorFor(role)
-                                        : color.contentColorFor(role);
   }
 };
 

@@ -338,6 +338,9 @@ class ExpandablePanel : public Container {
 /// Material 3 row surface that binds one stable `ListItem` at a time.
 class ListEntry : public Material3Container {
  public:
+  /// Resolves interaction ink from this component's live appearance.
+  Color interactionColor(InteractionState state) const override;
+
   /// Creates an empty Material 3 list row surface.
   explicit ListEntry(ApplicationContext& context);
 

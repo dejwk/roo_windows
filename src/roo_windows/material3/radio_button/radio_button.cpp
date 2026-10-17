@@ -41,7 +41,10 @@ Tokens ResolveTokens(const RadioButton& widget) {
   }
 
   if (!on) {
-    return Tokens{colors.onSurfaceVariant, color::Transparent};
+    const bool interacting = widget.isHover() || widget.isFocused() ||
+                             widget.isPressed() || widget.isClicking();
+    return Tokens{interacting ? colors.onSurface : colors.onSurfaceVariant,
+                  color::Transparent};
   }
 
   return Tokens{colors.primary, colors.primary};
@@ -87,10 +90,9 @@ Dimensions RadioButton::getSuggestedMinimumDimensions() const {
   return Dimensions(kContainerSize, kContainerSize);
 }
 
-::roo_windows::material3::ColorToken RadioButton::effectiveContainerRole()
-    const {
-  return isOn() ? ::roo_windows::material3::ColorToken::kPrimary
-                : ::roo_windows::material3::ColorToken::kSurface;
+Color RadioButton::interactionColor(InteractionState state) const {
+  return isOn() ? theme().material3Theme().color.primary
+                : theme().material3Theme().color.onSurface;
 }
 
 }  // namespace material3

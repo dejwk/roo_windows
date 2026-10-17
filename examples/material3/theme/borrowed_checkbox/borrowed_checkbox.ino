@@ -59,6 +59,16 @@ Display display(screen, touch,
 
 class BorrowedCheckboxDemo : public FlexLayout {
  public:
+  /// Publishes this surface's resolved Material 3 content colors.
+  SurfaceColors surfaceColors() const override {
+    const auto& colors = theme().material3Theme().color;
+    const auto role = containerRole();
+    return role == material3::ColorToken::kNone
+               ? FlexLayout::surfaceColors()
+               : SurfaceColors{colors.contentColorFor(role),
+                               colors.accentColorFor(role)};
+  }
+
   explicit BorrowedCheckboxDemo(ApplicationContext& context)
       : FlexLayout(context, FlexDirection::kColumn),
         row_(context, FlexDirection::kRow),
@@ -88,7 +98,7 @@ class BorrowedCheckboxDemo : public FlexLayout {
     removeAll();
   }
 
-  material3::ColorToken containerRole() const override {
+  material3::ColorToken containerRole() const {
     return colored_ ? material3::ColorToken::kSecondaryContainer
                     : material3::ColorToken::kSurfaceContainerLow;
   }

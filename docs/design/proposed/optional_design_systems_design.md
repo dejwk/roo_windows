@@ -3,9 +3,10 @@
 Status: proposed. Material2 isolation, independent system palettes, and the
 simplified Material3 state opacities are implemented prerequisites. Phase 1
 characterization is recorded in the
-[boundary audit](optional_design_systems_phase1_audit.md). Phases 2–4 implement
-shared feedback and inherited surface colors. Later phases remain proposed. Revised 2026-10-16 around a shared application look and feel rather
-than independent interaction policies per design system.
+[boundary audit](optional_design_systems_phase1_audit.md). Phases 2–5 implement
+shared feedback, inherited surface colors, and local component styling. Later
+phases remain proposed. Revised 2026-10-16 around a shared application look and
+feel rather than independent interaction policies per design system.
 
 ## Objective
 
@@ -30,7 +31,7 @@ respective design systems.
 ## Background
 
 The [design glossary](../glossary.md) defines shared runtime and rendering
-terminology. Relevant current APIs are:
+terminology. The following inventory describes the pre-migration APIs:
 
 - [Theme](../../../src/roo_windows/core/theme.h) owns `material2` and `material3`
   by value, exposed through `material2Theme()` and `material3Theme()`.
@@ -833,6 +834,48 @@ role APIs, `Material2ColorRole`, and `usesHighlighterColor()` from core. Update
 relevant examples and goldens after reviewing intended changes. Validate
 component states, mixed-system nesting, no ancestor-role leakage into component
 ink, and phase 1 resource gates; run the full library suite.
+
+Implementation validation (2026-10-17): all 168 library test targets pass,
+including example build coverage. A final optimized card regression also
+verifies that subclass `containerRole()` overrides remain virtual and control
+both fill and inherited content. The new component-ink matrix checks button
+variants, toggle selection, point halos, list/menu selection, borrowed M2
+controls, live color changes, and explicit state-aware overrides against
+distinct colors. Existing overlay tests retain pixel-level composition coverage.
+
+Generic layouts remain ordinary `Panel`/`FlexLayout` instances. Concrete layout
+subclasses that own a surface publish their pair explicitly; system surface
+classes share local resolution without adding instance state. Tab entries use
+the strip's actual background, while the strip retains its configured local
+variant surface. Menu feedback reuses the virtual headline-color resolver.
+Unfilled M2 widgets bypass local surface-role resolution at compile time.
+
+Eight golden images were reviewed and refreshed: M3 checkbox enabled outlines,
+light/dark density galleries (outlined-button hover ink), bar/rail destination
+interaction states, and the M2 switch resting-state gallery. Geometry is
+unchanged; the differences reflect component-specific or inherited ink.
+
+The ESP32-C3 size probe remains unchanged from phase 4: `SurfaceColors` 8,
+`Widget` / `SurfaceWidget` / `Container` 24 / 24 / 44, `Theme` 268, M2/M3 themes
+68 / 164, `ClickAnimation` / `OverlaySpec` 36 / 36, and
+`PaintContext` / `ClipperState` / `PaintEffectStack` / rounded arena
+32 / 252 / 12 / 96 bytes. Resolution adds no allocations or stored widget state.
+
+Five interleaved optimized fixture runs against submitted phase 4 (`44af8a90`),
+pinned to CPU 2, pass the 10% regression gate. Both binaries use
+`-c opt --copt=-Wno-error=stringop-truncation`; the retained phase 4 binary's
+ELF section sizes match the recorded phase 4 build.
+
+| Ancestor depth | Phase 4 CPU µs | Phase 5 CPU µs | Change |
+| ---: | ---: | ---: | ---: |
+| 1 | 40.37 | 40.46 | +0.22% |
+| 8 | 41.83 | 42.83 | +2.39% |
+| 32 | 52.78 | 50.80 | -3.75% |
+
+The linked host fixture changes by -10,356 text bytes, -1,184 data bytes, and
++3,424 BSS bytes, for -8,116 bytes overall. These sections include linked test
+and host runtime code; they are not embedded flash/RAM estimates. Target object
+sizes above remain the embedded RAM check.
 
 Proposed commit message:
 

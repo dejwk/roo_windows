@@ -17,8 +17,9 @@ app.invalidateTheme();
 ```
 
 Assign a complete `material3::ColorScheme` to `theme.material3Theme().color` to switch
-palettes. Component roles, density and interaction opacities live beside `color`
-in the same `material3::Material3Theme` section. Defaults work without a factory.
+palettes. Component roles and density live beside `color` in the same
+`material3::Material3Theme` section. Shared interaction opacities and click
+settings live in `theme.framework`. Defaults work without a factory.
 
 The application borrows the theme, so keep it at a stable address and alive
 longer than the environment and widgets. Copying a theme copies its palettes
@@ -40,15 +41,12 @@ A detached tree rendered independently must explicitly call
 
 ## Framework and design-system roles
 
-Generic widgets use `Theme::frameworkColor()`, `frameworkStateLayer()`, and
-`disabledContentOpacity()`. These resolve directly from the current Material 3
-settings; there is no copied framework palette to refresh. Material 3 owns the
-mapping implementation. Core knows that Material 3 is supported, while its
-palette, component policy and defaults remain in `material3/`.
-
-Future supported systems can add named sections to the application theme.
-When another system is introduced, framework-default selection can become an
-explicit setting. Today Material 3 supplies those defaults.
+Generic widgets inherit resolved `SurfaceColors` for content. Root colors,
+shared interaction opacities, disabled-content opacity, and click settings come
+from `Theme::framework`; they are independent of the system palettes. Editing a
+Material 3 palette does not implicitly rewrite framework or Material 2 colors.
+System components resolve their own semantic palette roles and publish resolved
+foreground/accent values when they own a surface.
 
 ## Inherited surface colors
 
@@ -73,8 +71,33 @@ a generic layout: its checked glyph uses accent and its inactive outline uses
 foreground with the existing opacity. The
 [borrowed-checkbox example](../examples/material3/theme/borrowed_checkbox/borrowed_checkbox.ino)
 shows this on neutral and colored Material 3 surfaces without copying palettes.
-The core role APIs remain temporarily available for components awaiting the
-next migration phase.
+Ordinary `FlexLayout` and `Panel` instances need no mixin: they already forward
+resolved colors. A layout subclass that owns a surface overrides
+`surfaceColors()` explicitly. Material 3 surface components can use
+`Material3SurfaceWidget` or `Material3Container` to resolve their local role.
+
+Core no longer exposes `containerRole()`, `effectiveContainerRole()`, or
+`effectiveOverlayColorRole()`. Material 3 components may still expose a local
+`containerRole()`; its token never propagates through generic ancestors.
+Material 2 owned surfaces use their own `ColorRole`, without translation from
+Material 3. Borrowed radio buttons, switches, and sliders also read the inherited
+pair for ordinary and active ink.
+
+## Component interaction ink
+
+Override `interactionColor(InteractionState state)` to customize feedback. The
+old parameterless hook and `usesHighlighterColor()` are removed. The generic
+fallback uses parent foreground for a point halo and local foreground for an
+area overlay. Components choose their own ink: buttons follow their variant,
+selected M3 checkbox/radio/switch halos use primary, and navigation destinations
+and toggle icon buttons follow selection. This choice is independent of the
+ancestor's palette role. Shared opacity and click timing remain in
+`theme.framework`.
+
+Tab entries inherit their parent's actual background. The tab strip retains its
+locally configured variant fill and publishes its resolved surface pair.
+Explicit content colors, fonts, and state-aware interaction overrides retain
+precedence.
 
 ## Interaction opacities
 

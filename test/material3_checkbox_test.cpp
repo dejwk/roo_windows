@@ -97,25 +97,23 @@ TEST(Material3Checkbox, UsesZeroInsetsAndMeasuredContentBounds) {
             checkbox.getContentBounds());
 }
 
-// Verifies that effectiveContainerRole reports kSurface while off (neutral
-// outline color) and kPrimary while indeterminate or on, so theming picks up
-// the selected accent for both filled states.
-TEST(Material3Checkbox, EffectiveContainerRoleTracksSelectionState) {
+// Verifies interaction ink follows component selection without ancestor roles.
+TEST(Material3Checkbox, InteractionInkTracksSelectionState) {
   roo_scheduler::SchedulingService scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
   Checkbox checkbox(context, Checkbox::OnOffState::kOff);
-  EXPECT_EQ(::roo_windows::material3::ColorToken::kSurface,
-            checkbox.effectiveContainerRole());
+  EXPECT_EQ(env.theme().material3Theme().color.onSurface,
+            checkbox.interactionColor(InteractionState::kHover));
 
   checkbox.setOnOffState(Checkbox::OnOffState::kIndeterminate);
-  EXPECT_EQ(::roo_windows::material3::ColorToken::kPrimary,
-            checkbox.effectiveContainerRole());
+  EXPECT_EQ(env.theme().material3Theme().color.primary,
+            checkbox.interactionColor(InteractionState::kHover));
 
   checkbox.setOn();
-  EXPECT_EQ(::roo_windows::material3::ColorToken::kPrimary,
-            checkbox.effectiveContainerRole());
+  EXPECT_EQ(env.theme().material3Theme().color.primary,
+            checkbox.interactionColor(InteractionState::kHover));
 }
 
 }  // namespace

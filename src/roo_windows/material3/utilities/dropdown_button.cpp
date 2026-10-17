@@ -48,6 +48,11 @@ int16_t ClampedDimension(int value) {
 }  // namespace
 
 /// One active menu and its deferred completion, borrowed by its trigger.
+Color DropdownButton::interactionColor(InteractionState state) const {
+  return internal::ResolveButtonAppearance(theme(), variant(), isEnabled())
+      .content;
+}
+
 class DropdownButton::Session final : public Menu,
                                       private roo_scheduler::Executable {
  public:
@@ -152,7 +157,7 @@ class DropdownButton::Session final : public Menu,
 DropdownButton::DropdownButton(ApplicationContext& context,
                                const char* const* items, size_t count,
                                ButtonVariant variant)
-    : SurfaceWidget(context),
+    : Material3SurfaceWidget(context),
       variant_(static_cast<uint8_t>(variant)),
       size_(static_cast<uint8_t>(ButtonSize::kSmall)),
       shape_(static_cast<uint8_t>(ButtonShape::kRound)) {

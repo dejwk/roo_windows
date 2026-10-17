@@ -46,7 +46,10 @@ class Slider : public ThemeMixin<Widget> {
 
   DragAxis dragAxis() const override { return DragAxis::kHorizontal; }
 
-  bool usesHighlighterColor() const override { return true; }
+  /// Uses inherited emphasis ink for feedback around the active handle.
+  Color interactionColor(InteractionState state) const override {
+    return surfaceColors().accent;
+  }
 
   /// Translates horizontal scroll deltas into position deltas while dragging.
   void onDrag(XDim x, YDim y, XDim dx, YDim dy) override;

@@ -92,8 +92,8 @@ class Switch : public Widget {
   /// follows the thumb during animation).
   roo_display::FpPoint getPointOverlayFocus() const override;
 
-  /// Resolves the surface color role based on the current on/off state.
-  ::roo_windows::material3::ColorToken effectiveContainerRole() const override;
+  /// Resolves the component state-layer ink.
+  Color interactionColor(InteractionState state) const override;
 
   ClickActivationPolicy getClickActivationPolicy() const override {
     return ClickActivationPolicy::kImmediateContinueAnimation;

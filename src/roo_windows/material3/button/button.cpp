@@ -35,9 +35,14 @@ class ButtonLabel final : public StringViewLabel {
 
 }  // namespace
 
+Color Button::interactionColor(InteractionState state) const {
+  return internal::ResolveButtonAppearance(theme(), variant(), isEnabled())
+      .content;
+}
+
 Button::Button(ApplicationContext& context, roo::string_view label,
                ButtonVariant variant)
-    : SurfaceWidget(context),
+    : Material3SurfaceWidget(context),
       label_(label),
       icon_(nullptr),
       variant_(static_cast<uint8_t>(variant)),

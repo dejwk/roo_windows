@@ -46,14 +46,10 @@ TEST(Material2Theme, PreservesPaletteDefaults) {
   EXPECT_EQ(previous.color.surface, material.color.surface);
   EXPECT_EQ(previous.color.onSurface, material.color.onSurface);
   EXPECT_EQ(previous.color.outline, material.color.outline);
-  for (unsigned token_index = 0; token_index < 33; ++token_index) {
-    const auto token = static_cast<material3::ColorToken>(token_index);
-    const ColorRole role = Material2ColorRole(token);
-    EXPECT_EQ(previous.color.contentColorFor(token),
-              material.color.contentColorFor(role));
-    EXPECT_EQ(previous.color.accentColorFor(token),
-              material.color.accentColorFor(role));
-  }
+  EXPECT_EQ(material.color.onPrimary,
+            material.color.contentColorFor(ColorRole::kPrimary));
+  EXPECT_EQ(material.color.primary,
+            material.color.accentColorFor(ColorRole::kSurface));
 }
 
 // Verifies defaults follow palette changes, while explicit overrides (even the
@@ -105,7 +101,8 @@ TEST(Material2Theme, InteractionsUseSharedPolicy) {
   theme.framework.state.hover = 37;
   theme.framework.state.pressed = 82;
   theme.framework.state.disabledContentOpacity = 64;
-  EXPECT_EQ(Color(0xFF123456), material2_button.interactionColor());
+  EXPECT_EQ(Color(0xFF123456),
+            material2_button.interactionColor(InteractionState::kHover));
   EXPECT_EQ(37, material2_button.interactionOpacity(InteractionState::kHover));
   EXPECT_EQ(82,
             material2_button.interactionOpacity(InteractionState::kPressed));
@@ -114,8 +111,8 @@ TEST(Material2Theme, InteractionsUseSharedPolicy) {
   EXPECT_EQ(82,
             material3_button.interactionOpacity(InteractionState::kPressed));
   EXPECT_EQ(64, material3_button.disabledContentOpacity());
-  EXPECT_NE(material2_button.interactionColor(),
-            material3_button.interactionColor());
+  EXPECT_NE(material2_button.interactionColor(InteractionState::kHover),
+            material3_button.interactionColor(InteractionState::kHover));
 }
 
 // Verifies activation has no generic layer and keeps the container transparent

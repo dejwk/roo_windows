@@ -153,9 +153,8 @@ bool Slider::onKeyEvent(const KeyEvent& event) {
 }
 
 void Slider::paint(PaintContext& ctx) const {
-  const Theme& th = theme();
-  Color circleColor = th.material2Theme().color.accentColorFor(
-      Material2ColorRole(effectiveContainerRole()));
+  const SurfaceColors colors = surfaceColors();
+  Color circleColor = colors.accent;
   Padding p = getPadding();
 
   int16_t range = range_from_width(width(), p);
@@ -179,7 +178,7 @@ void Slider::paint(PaintContext& ctx) const {
   auto sel = roo_display::SmoothThickLine(
       {kRadius + p.left() - 0.5f, kRadius - 0.5f},
       {xoffset - 0.5f, kRadius - 0.5f}, Scaled(6), circleColor);
-  Color unselColor = circleColor.withA(th.disabledContentOpacity());
+  Color unselColor = colors.foreground.withA(theme().disabledContentOpacity());
   auto unsel = roo_display::SmoothThickLine(
       {xoffset + 0.5f, kRadius - 0.5f},
       {parent_bounds().width() - 1 - kRadius - p.right() - 0.5f,

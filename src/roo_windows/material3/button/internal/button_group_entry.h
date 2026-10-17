@@ -1,14 +1,14 @@
 #pragma once
 
-#include "roo_windows/core/surface_widget.h"
 #include "roo_windows/material3/button/internal/button_group_appearance.h"
+#include "roo_windows/material3/surface.h"
 
 namespace roo_windows::material3::internal {
 
 class ButtonGroupBase;
 
 /// Surface entry with a typed, non-owning relationship to its group.
-class ButtonGroupEntry : public SurfaceWidget {
+class ButtonGroupEntry : public Material3SurfaceWidget {
  public:
   /// Creates an inert entry until typed group attachment.
   ButtonGroupEntry(ApplicationContext& context, GroupStyle style);
@@ -44,10 +44,7 @@ class ButtonGroupEntry : public SurfaceWidget {
   OverlayType getOverlayType() const override;
 
   /// Selects the content treatment for surface interaction layers.
-  ColorToken effectiveOverlayColorRole() const override;
-
-  /// Elevated entries use the primary interaction color.
-  bool usesHighlighterColor() const override;
+  Color interactionColor(InteractionState state) const override;
 
   /// Material disabled colors are already resolved once.
   bool useAutomaticDisabledStyle() const override { return false; }

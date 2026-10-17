@@ -179,6 +179,13 @@ void FlexCard::clearCornerRadiusOverride() {
   borderStyleChanged(previous_style);
 }
 
+SurfaceColors FlexCard::surfaceColors() const {
+  const ColorToken role = containerRole();
+  if (role == ColorToken::kNone) return FlexLayout::surfaceColors();
+  const ColorScheme& colors = theme().material3Theme().color;
+  return {colors.contentColorFor(role), colors.accentColorFor(role)};
+}
+
 ::roo_windows::material3::ColorToken FlexCard::containerRole() const {
   if ((override_flags_ & kOverrideContainerRole) != 0) {
     return container_role_override_;

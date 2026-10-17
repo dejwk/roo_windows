@@ -227,9 +227,6 @@ class Slider : public Widget {
   /// Returns the thumb center used by point-style overlays and focus effects.
   roo_display::FpPoint getPointOverlayFocus() const override;
 
-  /// Material 3 sliders use the primary role for container-derived visuals.
-  ::roo_windows::material3::ColorToken effectiveContainerRole() const override;
-
   /// Extends sloppy-touch reach along the slider's main interaction axis.
   Rect getSloppyTouchParentBounds() const override;
 

@@ -74,7 +74,10 @@ Tokens ResolveTokens(const Checkbox& widget) {
     return Tokens{disabled_container, colors.surface, disabled_container};
   }
 
-  return Tokens{colors.primary, colors.onPrimary, colors.outline};
+  const bool interacting = widget.isHover() || widget.isFocused() ||
+                           widget.isPressed() || widget.isClicking();
+  return Tokens{colors.primary, colors.onPrimary,
+                interacting ? colors.onSurface : colors.onSurfaceVariant};
 }
 
 const Pictogram* MarkForState(Checkbox::OnOffState state) {
@@ -132,10 +135,10 @@ Dimensions Checkbox::getSuggestedMinimumDimensions() const {
   return Dimensions(kContainerSize, kContainerSize);
 }
 
-::roo_windows::material3::ColorToken Checkbox::effectiveContainerRole() const {
-  return onOffState() == Checkbox::OnOffState::kOff
-             ? ::roo_windows::material3::ColorToken::kSurface
-             : ::roo_windows::material3::ColorToken::kPrimary;
+Color Checkbox::interactionColor(InteractionState state) const {
+  return onOffState() == OnOffState::kOff
+             ? theme().material3Theme().color.onSurface
+             : theme().material3Theme().color.primary;
 }
 
 }  // namespace material3

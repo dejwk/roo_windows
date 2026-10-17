@@ -481,6 +481,10 @@ Widget& ExpandablePanel::getChild(int idx) {
       static_cast<const ExpandablePanel&>(*this).getChild(idx));
 }
 
+Color ListEntry::interactionColor(InteractionState state) const {
+  return headlineColor();
+}
+
 ListEntry::ListEntry(ApplicationContext& context)
     : Material3Container(context),
       item_(nullptr),
@@ -656,7 +660,7 @@ Color ListEntry::supportingColor() const {
 Color ListEntry::defaultColor() const { return supportingColor(); }
 
 SurfaceColors ListEntry::surfaceColors() const {
-  SurfaceColors colors = SurfaceWidget::surfaceColors();
+  SurfaceColors colors = Material3Container::surfaceColors();
   colors.foreground = supportingColor();
   return colors;
 }
