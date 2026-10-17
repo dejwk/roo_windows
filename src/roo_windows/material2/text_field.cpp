@@ -129,7 +129,7 @@ void TextField::paint(PaintContext& ctx) const {
     // We truncate the text on the advance boundaries, so that it appears
     // aligned with the decoration.
     my_canvas.clearRect(0, text_ymin, padding.left() - 1, text_ymax);
-    my_canvas.clearRect(text_ymax - padding.right() + 1, text_ymin, width() - 1,
+    my_canvas.clearRect(width() - padding.right(), text_ymin, width() - 1,
                         text_ymax);
     text_clip_box =
         Box(padding.left(), text_clip_box.yMin(),
@@ -154,7 +154,7 @@ void TextField::paint(PaintContext& ctx) const {
       canvas.fillRect(padding.left(), min_y_undrawn + 3,
                       width() - 1 - padding.right(), min_y_undrawn + 5,
                       highlight_color);
-      canvas.clearRect(width() - padding.right() - 1, min_y_undrawn + 3,
+      canvas.clearRect(width() - padding.right(), min_y_undrawn + 3,
                        width() - 1, min_y_undrawn + 5);
       min_y_undrawn += 6;
       break;

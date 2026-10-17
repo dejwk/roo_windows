@@ -9,6 +9,73 @@
 #include "roo_windows_render_test_support.h"
 namespace roo_windows {
 namespace {
+// Counts every output path used by keyboard painting; duplicate writes would
+// expose a background prefill followed by foreground redraw.
+class TextFieldDisplay
+    : public roo_display::OffscreenDevice<roo_display::Argb4444> {
+ public:
+  explicit TextFieldDisplay(roo::byte* data)
+      : OffscreenDevice(180, 80, data, roo_display::Argb4444()),
+        writes(180 * 80) {}
+  void reset() { std::fill(writes.begin(), writes.end(), 0); }
+  void setAddress(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1,
+                  roo_display::BlendingMode mode) override {
+    left = x = x0;
+    right = x1;
+    y = y0;
+    OffscreenDevice::setAddress(x0, y0, x1, y1, mode);
+  }
+  void count(uint32_t n) {
+    while (n--) {
+      ++writes[y * 180 + x];
+      if (++x > right) {
+        x = left;
+        ++y;
+      }
+    }
+  }
+  void write(Color* colors, uint32_t n) override {
+    count(n);
+    OffscreenDevice::write(colors, n);
+  }
+  void fill(Color color, uint32_t n) override {
+    count(n);
+    OffscreenDevice::fill(color, n);
+  }
+  void writePixels(roo_display::BlendingMode mode, Color* colors, int16_t* xs,
+                   int16_t* ys, uint16_t n) override {
+    for (int i = 0; i < n; ++i) {
+      setAddress(xs[i], ys[i], xs[i], ys[i], mode);
+      write(colors + i, 1);
+    }
+  }
+  void fillPixels(roo_display::BlendingMode mode, Color color, int16_t* xs,
+                  int16_t* ys, uint16_t n) override {
+    for (int i = 0; i < n; ++i) {
+      setAddress(xs[i], ys[i], xs[i], ys[i], mode);
+      fill(color, 1);
+    }
+  }
+  void writeRects(roo_display::BlendingMode mode, Color* colors, int16_t* x0,
+                  int16_t* y0, int16_t* x1, int16_t* y1, uint16_t n) override {
+    for (int i = 0; i < n; ++i) {
+      setAddress(x0[i], y0[i], x1[i], y1[i], mode);
+      fill(colors[i], (x1[i] - x0[i] + 1) * (y1[i] - y0[i] + 1));
+    }
+  }
+  void fillRects(roo_display::BlendingMode mode, Color color, int16_t* x0,
+                 int16_t* y0, int16_t* x1, int16_t* y1, uint16_t n) override {
+    for (int i = 0; i < n; ++i) {
+      setAddress(x0[i], y0[i], x1[i], y1[i], mode);
+      fill(color, (x1[i] - x0[i] + 1) * (y1[i] - y0[i] + 1));
+    }
+  }
+  std::vector<uint8_t> writes;
+
+ private:
+  int left = 0, right = 0, x = 0, y = 0;
+};
+
 class Target : public Widget, public internal::TextEditTarget {
  public:
   using Widget::Widget;
@@ -35,6 +102,29 @@ class Target : public Widget, public internal::TextEditTarget {
 };
 class TextFieldTest : public test_support::RooWindowsRenderTestSized<180, 80> {
 };
+// Verifies overflowing text and underline padding never prefill settled pixels,
+// including dirty cursor redraws.
+TEST_F(TextFieldTest, OverflowPaintWritesEachPixelOnce) {
+  roo::byte pixels[180 * 80 * 2] = {};
+  TextFieldDisplay device(pixels);
+  roo_display::Display display(device);
+  Application app(&env_, display);
+  material2::TextField field(app.context(), material2::font_body1(), "",
+                             roo_display::kLeft | roo_display::kMiddle,
+                             material2::TextField::UNDERLINE);
+  Task& task = app.addTaskFullScreen(field);
+  field.setContent(std::string(80, 'W'));
+  app.refresh();
+  task.textFieldEditor().edit(&field, false);
+  for (int pass = 0; pass < 2; ++pass) {
+    device.reset();
+    field.notifyEditVisualChange();
+    app.refresh();
+    EXPECT_LE(*std::max_element(device.writes.begin(), device.writes.end()), 1);
+  }
+  task.navigation().clear();
+}
+
 // Verifies abstract target unicode selection and completion.
 TEST_F(TextFieldTest, AbstractTargetUnicodeSelectionAndCompletion) {
   Target target(context());
