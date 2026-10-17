@@ -1,20 +1,21 @@
 # Optional design systems and resolved appearance inheritance
 
-Status: proposed. Material2 isolation, independent system palettes, and the
+Status: implemented through Phase 10. Material2 isolation, independent system palettes, and the
 simplified Material3 state opacities are implemented prerequisites. Phase 1
 characterization is recorded in the
-[boundary audit](optional_design_systems_phase1_audit.md). Phases 2–10 implement
+[boundary audit](../proposed/optional_design_systems_phase1_audit.md). Phases 2–10 implement
 shared feedback, inherited surface colors, local component styling, explicit
 coordinated palette installation, native Material3 dividers, and neutral shared
 editing with system-local alert helpers, an independently optional keyboard, and
-one app-styled editor destination. Phase 11 remains proposed. Revised 2026-10-17
-with an application-wide default design system and Material 3 as the default.
+one app-styled editor destination. Both M2 and M3 remain built and supported,
+with M3 as the application default. Optional installation (Phase 11) is deferred
+to [Future Work](#future-work). Revised 2026-10-17.
 
 ## Objective
 
 Let applications borrow components from other design systems while maintaining
 a common look and feel, with no mandatory Material2 or Material3 dependency in
-core widget inheritance or core-only builds.
+core widget inheritance. Builds that omit either system remain future work.
 
 ## Motivation
 
@@ -24,70 +25,65 @@ surface and share the application's interaction strength and feedback timing.
 It should not acquire a different hover or press policy merely because its
 implementation lives in another design-system directory.
 
-Today independent palettes solve ownership, but container-role inheritance still
-speaks Material3 and interaction settings differ by system. Define the common
-framework vocabulary and application defaults first. Keep component shapes,
-semantic palettes, typography, and choices of framework behavior in their
-respective design systems.
+The implemented design separates common framework vocabulary and application
+defaults from component shapes, semantic palettes, typography, and choices of
+framework behavior. Borrowing a component does not require merging system
+palettes or carrying system-specific color tokens through generic layouts.
 
 ## Background
 
 The [design glossary](../glossary.md) defines shared runtime and rendering
-terminology. The following inventory describes the pre-migration APIs:
+terminology. The current implementation has these boundaries:
 
-- [Theme](../../../src/roo_windows/core/theme.h) owns `material2` and `material3`
-  by value, exposed through `material2Theme()` and `material3Theme()`.
-  Framework color helpers still delegate to Material3.
-- [Widget](../../../src/roo_windows/core/widget.h) exposes
-  `effectiveContainerRole()` and `effectiveOverlayColorRole()` using Material3
-  `ColorToken`. Generic descendants inherit a container role; point overlays
-  normally use the parent's role. `interactionColor()`, `interactionOpacity()`
-  and `disabledContentOpacity()` already provide resolved rendering hooks.
-- [SurfaceWidget](../../../src/roo_windows/core/surface_widget.h) introduces a
-  role through `containerRole()` and separately resolves alpha-composited
-  backgrounds. A role is semantic information, not a pixel color.
-- [OverlaySpec](../../../src/roo_windows/core/overlay_spec.cpp) already
-  alpha-composites a pressed ripple over the widget's overlay color. The overlay
-  query first sums simultaneous-state opacities, including pressed; the ripple
-  can therefore apply pressed twice. During expansion it folds the base into the
-  ripple and clears the separate base, restricting both to the ripple coverage.
+- [Theme](../../../src/roo_windows/core/theme.h) owns `framework`, `material3`,
+  and, when enabled, `material2` by value. Existing `material2Theme()` and
+  `material3Theme()` accessors remain. Framework color and disabled-opacity
+  helpers read framework settings directly.
+- [FrameworkTheme](../../../src/roo_windows/core/framework_theme.h) owns five
+  root colors, one `FrameworkStateTheme`, and one `FrameworkClickTheme`.
+  System themes no longer own duplicate interaction settings.
+- [Widget](../../../src/roo_windows/core/widget.h) inherits a resolved
+  foreground/accent pair through `surfaceColors()`. Background composition
+  remains separate. Core no longer exposes Material3 container-role inheritance
+  or a highlighter-selection policy. Interaction ink is state-aware;
+  component overrides choose ink while common defaults supply opacity.
+- [OverlaySpec](../../../src/roo_windows/core/overlay_spec.cpp) keeps the
+  winning non-press layer and press effect separate. The implemented policy
+  is described in [Interaction states and combination](#interaction-states-and-combination).
 - [Material2 ThemeMixin](../../../src/roo_windows/material2/theme_mixin.h)
-  maps those role identities to its independently owned palette and state
-  settings. It does not read Material3 palette values.
-- Material3 role consumers include
-  [tabs](../../../src/roo_windows/material3/tabs/tabs.cpp), which resolve a
-  parent's role back to a fill, and
-  [navigation destinations](../../../src/roo_windows/material3/navigation_destination/navigation_destination.cpp),
-  which choose selected versus inherited interaction styling. Controls and
-  button-group entries also choose different roles with state. Replacing every
-  role lookup with one foreground color would lose behavior.
-- [Application](../../../src/roo_windows/core/application.h) owns the software
-  keyboard and exposes a Material2 alert convenience method.
-  [Task](../../../src/roo_windows/core/task.h) owns a Material2 text-field
-  editor shared by Material2 and Material3 text fields. Its caret, selection,
-  and input functionality is needed even without the software keyboard.
-- [EditorDestination](../../../src/roo_windows/core/editor_destination.cpp)
-  presents an M2 text field and back/confirm buttons, including when opened by
-  an M3 field. It holds the draft and commits on confirmation after removal
-  from navigation. The keyboard is hosted separately in an application-owned
-  task; the destination does not contain it.
-- [KeyboardWidget](../../../src/roo_windows/keyboard/keyboard.cpp) already draws
-  all keys in one `SurfaceWidget`, using `KeyboardColorTheme`. Its direct styling
-  dependencies on M2 typography helpers and M3 pressed-state colors prevent
-  independent installation; it does not need replacement M3 key widgets.
-- [Material3 dialog scaffolding](../../../src/roo_windows/material3/dialog/dialog_scaffold.h)
-  embeds Material2 horizontal dividers. Optional installation also requires
-  replacing this direct component dependency with Material3 dividers.
-- The root [Bazel target](../../../BUILD) currently collects all sources.
-  Linker removal of unused code does not prove header or source independence.
+  resolves only locally owned Material2 surfaces. Unfilled controls inherit
+  resolved colors; Material3 surface roles remain local to Material3 components.
+- [Palette coordination](../../../src/roo_windows/material3/palette.h) explicitly
+  copies a Material3 scheme into framework roots and matching Material2 fields.
+  There is no live palette projection. The
+  [color-theming guide](../../material3_color_theming.md) documents installation,
+  independent edits, overrides, and repaint/relayout requirements.
+- Shared editing and the [editor destination base](../../../src/roo_windows/core/editor_destination.h)
+  are neutral. Material2 and Material3 supply concrete destinations; application
+  configuration selects the style, with Material3 the default. The shared
+  software keyboard is independently optional. Material3 dialogs use native
+  dividers, and system alert helpers no longer belong to core Application.
+- Physical system independence is **not implemented**. The root
+  [Bazel target](../../../BUILD) still gathers both systems. `Theme` includes
+  Material3 unconditionally; `ROO_WINDOWS_ENABLE_MATERIAL3` does not exist.
+  `ROO_WINDOWS_ENABLE_MATERIAL2` currently supports conditional theme composition
+  and isolated palette builds, not full-library exclusion. The software-keyboard
+  switch does support full-library exclusion of that feature.
 
-The earlier [color-token design](../implemented/theme_color_tokens_design.md)
-and [component surface theme design](../implemented/material3_component_surface_theme_design.md)
-remain historical foundations. This proposal changes the boundary through
-which their results reach generic widgets; it does not replace Material3's
-component roles or color scheme.
+The [boundary audit](../proposed/optional_design_systems_phase1_audit.md) records
+pre-migration dependencies and measurements; it is historical evidence, not the
+current API inventory. The implementation phases below retain the migration
+record. Their completed removals and additions are not new work to repeat.
+
+The earlier [color-token design](theme_color_tokens_design.md) and
+[component surface theme design](material3_component_surface_theme_design.md)
+remain historical foundations. This design changes how their results reach
+generic widgets; it does not replace Material3 component roles or color schemes.
 
 ## Requirements
+
+Requirements concerning physical removal of design systems and their build
+switches are deferred to Phase 11 under [Future Work](#future-work).
 
 1. Borrowed widgets must adopt common interaction defaults and surrounding
    colors where their component semantics permit it.
@@ -124,7 +120,7 @@ component requirement justifies a local override.
 
 An **inherited color style** supplies background, foreground, and accent for a
 surface. Background remains the existing resolved/composited background query;
-a new temporary `SurfaceColors` value carries only foreground and accent.
+a temporary `SurfaceColors` value carries only foreground and accent.
 There is no per-widget style storage, system identifier, interaction-opacity
 array, or inherited interaction-color field.
 
@@ -146,7 +142,8 @@ choices that depend on selection, error, or the particular interaction state.
 
 `Theme` stays a concrete bag of supported system themes plus the common framework
 settings. Explicit palette coordination creates consistent defaults across that
-bag without introducing live projections. Build switches omit unused systems.
+bag without introducing live projections. Omitting unused systems from the full
+build remains deferred Phase 11 work.
 
 Editing has three separate responsibilities: a task-owned neutral engine handles
 text input and caret/selection behavior; each system supplies its own editor
@@ -254,7 +251,7 @@ contributors. With the same ink and normalized alphas $a_b$ (non-press) and $a_p
 (press), combined alpha is $a_p + a_b(1-a_p)$, not $a_b+a_p$. Different inks require
 compositing the colors too; one summed opacity and one ink are insufficient.
 
-![Feedback composition order](figures/optional_design_systems_feedback.svg)
+![Feedback composition order](../proposed/figures/optional_design_systems_feedback.svg)
 
 The official [Compose implementation](https://raw.githubusercontent.com/androidx/androidx/androidx-main/compose/material/material-ripple/src/commonMain/kotlin/androidx/compose/material/ripple/Ripple.kt)
 separates a non-press layer from press ripples; [Material Web](https://raw.githubusercontent.com/material-components/material-web/main/ripple/internal/_ripple.scss)
@@ -373,7 +370,7 @@ of current output, not specification proof.
 
 ### Theme ownership and explicit coordination
 
-Add `FrameworkTheme` in `core/framework_theme.h`. It owns five framework root
+`FrameworkTheme` in `core/framework_theme.h` owns five framework root
 colors, shared state settings, disabled-content default, and shared click
 defaults. Retain these existing `FrameworkColorRole` names:
 
@@ -403,8 +400,9 @@ caller. Resolve component ink and opacity separately through widget hooks.
 Preserve system fields/accessors and independent palettes. Removing their
 duplicated state members is intentional.
 
-Provide `ApplyCoordinatedMaterial3Palette(Theme&, const material3::ColorScheme&)`
-in a Material3 integration header/target. It assigns the Material3 palette,
+`ApplyCoordinatedMaterial3Palette(Theme&, const material3::ColorScheme&)` is
+provided by [material3/palette.h](../../../src/roo_windows/material3/palette.h)
+and the `material3_palette` Bazel target. It assigns the Material3 palette,
 copies the five mappings above into framework root colors, and,
 when Material2 is enabled, copies all currently matching Material2 color fields
 by name. It changes no interaction settings, component roles, density, fonts,
@@ -417,11 +415,12 @@ borrowed filled widgets as well as unfilled ones. It is an explicit value copy,
 not a live projection. Reapply it when deliberately installing another coordinated
 palette; direct subsequent edits remain independent. The helper compiles with
 Material3 alone and excludes all Material2 includes/code when Material2 is off.
-Core-only and Material2-only applications customize their available themes
-directly; no Material3 conversion is required to construct defaults.
+Core-only and Material2-only full-library configurations remain deferred. Phase 11
+will preserve direct default construction without requiring a Material3 conversion.
 
 Applications mutate themes between UI frames and call `invalidateTheme()` on
-each affected application. Environments retain their existing borrowing
+each affected application; pass `true` when typography or density changes require
+relayout. Environments retain their existing borrowing
 lifetimes. Reparenting resolves the new inherited pair on the next paint;
 no per-widget cache, subscription list, or generation counter is added.
 Detached roots use framework root colors unless their component establishes
@@ -429,6 +428,9 @@ its own boundary. Existing presentation-owner relationships can supply live
 originating-surface colors where that is the component's specified behavior.
 
 ### Optional systems and remaining application dependencies
+
+This section specifies deferred Phase 11 work. The implemented scope continues
+to build both systems; only the software keyboard is independently optional.
 
 Use build-wide `ROO_WINDOWS_ENABLE_MATERIAL2` and
 `ROO_WINDOWS_ENABLE_MATERIAL3`, each defaulting to 1. Both must be 0 or 1.
@@ -551,9 +553,9 @@ software keyboard enabled. The slot owns a neutral `roo_windows::EditorDestinati
 from `core/editor_destination.h`. System-local factories construct the selected
 `material2::EditorDestination` or `material3::EditorDestination`. Neutral editing
 and keyboard code include neither concrete destination. Selecting an unavailable
-system fails explicitly. Phase 11 makes the implicit default M3 when available,
-M2 in an M2-only build, and no extracted-editor presentation in a core-only
-build. Explicitly selecting an unavailable system remains an error.
+system fails explicitly. The implicit application default remains M3 in every build. M2-only
+applications explicitly select M2; requesting an unavailable editor style is an
+error. Core-only builds expose no extracted-editor destination.
 
 | Responsibility | M2 presentation | M3 presentation |
 | --- | --- | --- |
@@ -627,8 +629,9 @@ lazy allocations, retained capacity, and before/after target sizes.
 
 ## Proposed API
 
-Illustrative final signatures; implementation adds full public documentation.
-Existing enum spellings remain unless their contract changes.
+The following abridged signatures reflect the implemented theming API.
+Conditional Material3 composition belongs to deferred Phase 11, not this API.
+See the linked headers in Background for full declarations.
 
 ```cpp
 enum class FrameworkColorRole : uint8_t {
@@ -640,7 +643,7 @@ struct SurfaceColors {
   roo_display::Color accent;
 };
 
-struct StateLayerTheme {  // Core, owned once by FrameworkTheme.
+struct FrameworkStateTheme {  // Core, owned once by FrameworkTheme.
   uint8_t hover = 20;
   uint8_t focus = 26;
   uint8_t pressed = 26;
@@ -669,16 +672,14 @@ struct Theme {
   material2::Material2Theme& material2Theme();
   const material2::Material2Theme& material2Theme() const;
 #endif
-#if ROO_WINDOWS_ENABLE_MATERIAL3
   material3::Material3Theme material3;  // No duplicate state policy.
   material3::Material3Theme& material3Theme();
   const material3::Material3Theme& material3Theme() const;
-#endif
   // Preserve framework forwarding helpers.
 };
 ```
 
-Representative application use after migration:
+Representative application use (include `roo_windows/material3/palette.h`):
 
 ```cpp
 Theme theme = DefaultTheme();
@@ -688,11 +689,9 @@ theme.framework.state.hover = 20;                // Shared across systems.
 app.invalidateTheme();
 ```
 
-Delete `Material3Theme::stateLayer()` once its callers migrate: without owning
-state policy it would need an implicit framework dependency. Callers resolve
-component ink and obtain opacity through the widget or framework instead.
-During migration, adapters can resolve existing roles, but every new hook ships
-with a working implementation. No unimplemented public stubs are introduced.
+`Material3Theme::stateLayer()` and the core role adapters have been removed.
+Callers resolve component ink and obtain opacity through the widget or framework.
+No compatibility adapters or unimplemented public stubs are required.
 
 ## Implementation Plan
 
@@ -700,11 +699,12 @@ Authoring references: [C++ instructions](../../../.github/instructions/general-c
 [widget instructions](../../../.github/instructions/roo-windows-widget-authoring.instructions.md),
 and [example instructions](../../../.github/instructions/embedded-example-authoring.instructions.md).
 Each phase is one reviewable commit with its own tests and documentation.
-The stashed earlier stage 3 is reference material, not a patch to apply wholesale.
+Phases 1–10 below are completed implementation history. Remaining optional-build
+work is scoped separately in [Future Work](#future-work).
 
 ### Phase 1: document vocabulary and characterize the boundaries
 
-The [Phase 1 boundary audit](optional_design_systems_phase1_audit.md) records
+The [Phase 1 boundary audit](../proposed/optional_design_systems_phase1_audit.md) records
 the role inventory, pinned component sources, current versus intended feedback,
 test vectors, target ABI sizes, and host paint fixture results. Existing and new
 component regressions cover current appearance; tests for intended interaction
@@ -1099,29 +1099,6 @@ Proposed commit message:
 > defaulting to Material3. Share draft completion and navigation across both
 > source-field systems, with one application keyboard.
 
-### Phase 11: enforce optional installation
-
-Add system switches, conditional theme composition, integration dependencies,
-and build partitions. Document Bazel/Arduino configuration with core-only,
-Material2-only, Material3-only, and mixed examples. Compile/link all eight
-combinations of system and keyboard switches, with disabled directories
-physically excluded. Cover M3 dividers, dialogs, editable text fields, and the
-M3 editor destination with M2 absent; cover the equivalent M2 editor with M3
-absent. With the keyboard disabled, exclude both destinations and keyboard files
-while exercising in-place hardware/semantic editing. With neither system enabled
-and keyboard enabled, route input to a minimal neutral edit target.
-Verify build inputs, reject non-Boolean switch values, and check coordinated
-palette helper and destination accessor availability in each configuration.
-Run the full default suite and affected frontend/companion builds serially with
-persistent Bazel storage and existing limits. Record final resource comparisons.
-
-Proposed commit message:
-
-> Optional design systems, phase 11: build without unused design systems.
->
-> Select theme, destination, and keyboard dependencies consistently, with
-> physical-absence coverage for every supported feature combination.
-
 ## Testing Plan
 
 Use focused theme, overlay, container, component, divider, dialog, keyboard and
@@ -1230,6 +1207,37 @@ It removes unused code but cannot prove source/header independence or remove
 unused theme members. Physical-absence fixtures enforce the installation contract.
 
 ## Future Work
+
+### Phase 11 (future work): enforce optional installation
+
+Deferred: the current implementation builds and supports both M2 and M3.
+M3 remains the application default. The optional-installation work below is
+retained for a future phase.
+
+Extend the existing Material2 palette switch to full-library exclusion, add the
+Material3 switch, and implement conditional theme composition, integration
+dependencies, and build partitions. Preserve the already working software-keyboard
+switch and the completed shared theming contracts; this phase does not introduce
+a new theme registry, palette projection, or interaction policy. Document Bazel/Arduino configuration with core-only,
+Material2-only, Material3-only, and mixed examples. Compile/link all eight
+combinations of system and keyboard switches, with disabled directories
+physically excluded. Cover M3 dividers, dialogs, editable text fields, and the
+M3 editor destination with M2 absent; cover the equivalent M2 editor with M3
+absent. With the keyboard disabled, exclude both destinations and keyboard files
+while exercising in-place hardware/semantic editing. With neither system enabled
+and keyboard enabled, route input to a minimal neutral edit target.
+Verify build inputs, reject non-Boolean switch values, and check coordinated
+palette helper and destination accessor availability in each configuration.
+Run the full default suite and affected frontend/companion builds serially with
+persistent Bazel storage and existing limits. Record final resource comparisons.
+
+Proposed commit message:
+
+> Optional design systems, phase 11: build without unused design systems.
+>
+> Select theme, destination, and keyboard dependencies consistently, with
+> physical-absence coverage for every supported feature combination.
+
 
 Separate published packages, runtime plugins, additional palette-coordination
 adapters, alternate keyboard hosting inside destinations, and a runtime common

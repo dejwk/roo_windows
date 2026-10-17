@@ -1,7 +1,7 @@
 # Optional design systems: Phase 1 boundary audit
 
 Source revision: `roo_windows` `836a9f22` (the parent of this audit). This is
-the pre-migration baseline for the [optional design systems proposal](optional_design_systems_design.md).
+the pre-migration baseline for the [optional design systems design](../implemented/optional_design_systems_design.md).
 No future-phase API is assumed to exist here.
 
 ## Source of Material 3 behavior

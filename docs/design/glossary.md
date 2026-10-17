@@ -11,7 +11,7 @@ same term.
 A reusable mechanism supplied by core, such as layout, input routing, clipping,
 state flags, click feedback, animation scheduling, or painting. A capability
 does not choose a component's shape, color, or response to an action. See the
-[optional design systems proposal](proposed/optional_design_systems_design.md#common-vocabulary-and-responsibility).
+[optional design systems design](implemented/optional_design_systems_design.md#common-vocabulary-and-responsibility).
 
 ### Application look and feel
 
@@ -47,7 +47,7 @@ A non-press interaction layer covers the component's chosen region during hover,
 focus, or drag. A press effect may reveal through a ripple or fade. They are
 separate contributions: the press effect composites over the non-press layer,
 and persistent component appearance is below both. See the
-[feedback composition design](proposed/optional_design_systems_design.md#interaction-states-and-combination).
+[feedback composition design](implemented/optional_design_systems_design.md#interaction-states-and-combination).
 
 ### Shared spacing vocabulary
 

@@ -36,6 +36,7 @@ motion pauses. It does not restore paint interruption.
 
 | Design | Dependency status |
 | --- | --- |
+| [Optional design systems and resolved appearance inheritance](implemented/optional_design_systems_design.md) | Phases 1–10 are implemented: shared feedback, inherited surface colors, independent palettes, native dividers, and app-styled editing. Both systems remain built, with M3 as default; optional installation is deferred to future work. |
 | [App bar scroll behaviors](implemented/app_bar_scroll_behaviors.md) | Pinned, enter-always and exit-until-collapsed connections, coordinated motion, examples, lifecycle and resource coverage are implemented. Glyph-paint allocation remains upstream work; physical gesture checks remain manual. |
 | [Date pickers](implemented/material3_date_pickers_design.md) | Modal calendar/input, internal month/year modes, docked field with exclusive calendar focus, compact promotion, example and focused resource/behavior/golden tests are implemented. Simultaneous source editing and upstream allocation-free glyph paint remain future work. |
 | [Compact keyboard layouts and long-press alternatives](implemented/keyboard_binary_layout_design.md) | Generated en-US/pl-PL assets, validated byte reader, binary-search lookup, circular action faces, and long-press selection are implemented. Host regressions and ESP32-C3 build/resource checks pass; physical touchscreen checks remain manual. |
@@ -115,7 +116,6 @@ motion pauses. It does not restore paint interruption.
 
 | Design | Dependency status |
 | --- | --- |
-| [Optional design systems and resolved appearance inheritance](proposed/optional_design_systems_design.md) | Independent system palettes and simplified Material3 opacities are implemented. Shared application feedback, inherited foreground/accent, explicit palette coordination, and optional installation remain proposed. |
 | Display runtime Phase 7 task-bounded transient coverage | Phase 6 input is implemented. Phase 7 is reconciled as task-bounded attachment of the one shared window host layer, retaining one active-presentation authority and explicit interaction owner; the extension remains unimplemented. |
 | Display runtime Phase 8 migration and cost audit | Phases 2–6 and the shared display-wide host are implemented. Task-bounded coverage in Phase 7 remains proposed; final migration documentation, resource audit, and hardware validation belong to Phase 8. |
 | Interaction overlay reveal | Point and area ripples, widget-local click animation, paint context, and the navigation bar's component-local fade are implemented; shared fade reveal and paint-owned overlay policy are not. |
