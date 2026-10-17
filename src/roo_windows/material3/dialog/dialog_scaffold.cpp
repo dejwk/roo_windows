@@ -329,6 +329,11 @@ Dimensions DialogScaffold::onMeasure(WidthSpec width, HeightSpec height) {
         std::max<YDim>(0, height.value() - kFullScreenHeaderHeight);
     body_scroller_.measure(WidthSpec::Exactly(width.value()),
                            HeightSpec::Exactly(body_height));
+    top_divider_.measure(WidthSpec::Exactly(width.value()),
+                         HeightSpec::Exactly(top_divider_.dividerThickness()));
+    bottom_divider_.measure(
+        WidthSpec::Exactly(width.value()),
+        HeightSpec::Exactly(bottom_divider_.dividerThickness()));
     return Dimensions(width.resolveSize(width.value()),
                       height.resolveSize(height.value()));
   }
@@ -340,6 +345,11 @@ Dimensions DialogScaffold::onMeasure(WidthSpec width, HeightSpec height) {
   const int16_t vertical_padding = 2 * content_inset_;
   const int16_t available_width =
       std::max<int16_t>(0, width.value() - horizontal_padding);
+  top_divider_.measure(WidthSpec::Exactly(available_width),
+                       HeightSpec::Exactly(top_divider_.dividerThickness()));
+  bottom_divider_.measure(
+      WidthSpec::Exactly(available_width),
+      HeightSpec::Exactly(bottom_divider_.dividerThickness()));
   const int16_t available_height =
       std::max<int16_t>(0, height.value() - vertical_padding);
 
@@ -423,9 +433,11 @@ void DialogScaffold::onLayout(bool, const Rect& rect) {
     const YDim body_top = header_height;
     body_scroller_.layout(
         Rect(0, body_top, rect.width() - 1, rect.height() - 1));
-    top_divider_.layout(Rect(0, body_top, rect.width() - 1, body_top + 1));
+    top_divider_.layout(Rect(0, body_top, rect.width() - 1,
+                             body_top + top_divider_.dividerThickness() - 1));
     bottom_divider_.layout(
-        Rect(0, rect.height() - 2, rect.width() - 1, rect.height() - 1));
+        Rect(0, rect.height() - bottom_divider_.dividerThickness(),
+             rect.width() - 1, rect.height() - 1));
     updateDividers();
     return;
   }
@@ -451,8 +463,11 @@ void DialogScaffold::onLayout(bool, const Rect& rect) {
   }
   const int16_t body_bottom = std::max<int16_t>(top - 1, bottom - 1);
   body_scroller_.layout(Rect(left, top, right, body_bottom));
-  top_divider_.layout(Rect(left, top, right, top + 1));
-  bottom_divider_.layout(Rect(left, body_bottom - 1, right, body_bottom));
+  top_divider_.layout(
+      Rect(left, top, right, top + top_divider_.dividerThickness() - 1));
+  bottom_divider_.layout(
+      Rect(left, body_bottom - bottom_divider_.dividerThickness() + 1, right,
+           body_bottom));
   updateDividers();
 }
 
@@ -465,14 +480,19 @@ void DialogScaffold::clearDialogBody() {
 
 void DialogScaffold::updateDividers() {
   const Widget* contents = body_scroller_.contents();
-  const bool clipped =
-      contents != nullptr && contents->height() > body_scroller_.height();
+  const Margins margins =
+      contents == nullptr ? Margins(0) : contents->getMargins();
+  const int32_t content_height =
+      contents == nullptr
+          ? 0
+          : contents->height() + margins.top() + margins.bottom();
+  const bool clipped = content_height > body_scroller_.height();
   const SimpleScrollablePanel::ScrollPosition position =
       body_scroller_.getScrollPosition();
-  top_divider_.setVisibility(clipped && position.y > 0 ? Visibility::kVisible
+  top_divider_.setVisibility(clipped && position.y < 0 ? Visibility::kVisible
                                                        : Visibility::kGone);
   bottom_divider_.setVisibility(
-      clipped && position.y < contents->height() - body_scroller_.height()
+      clipped && position.y > body_scroller_.height() - content_height
           ? Visibility::kVisible
           : Visibility::kGone);
 }

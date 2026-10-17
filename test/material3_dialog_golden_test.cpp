@@ -123,5 +123,42 @@ TEST_F(Material3DialogGoldenTest, FullScreenDialogRtlHeader) {
       "material3_dialog_full_screen_rtl_header"));
 }
 
+class ScrollingFullScreenDialog : public FullScreenDialog {
+ public:
+  using FullScreenDialog::FullScreenDialog;
+  SimpleScrollablePanel& scroller() {
+    return static_cast<SimpleScrollablePanel&>(*focusChildAt(1));
+  }
+};
+
+// Verifies visible divider ink at the top, middle, and bottom scroll positions.
+TEST_F(Material3DialogGoldenTest, FullScreenScrollDividers) {
+  TextBlock body(app_.context(),
+                 "Maintenance checklist\n\n"
+                 "Check water level.\n\nClean filter basket.\n\n"
+                 "Inspect inlet valve.\n\nCheck pump seals.\n\n"
+                 "Test temperature sensor.\n\nRecord service date.\n\n"
+                 "Close service cover.",
+                 text_style_body_large());
+  ScrollingFullScreenDialog dialog(app_.context(), WidgetRef(body));
+  dialog.setHeaderTitle("Maintenance");
+  app_.refresh();
+  ASSERT_EQ(DialogShowResult::kShown, dialog.show(owner_));
+  app_.refresh();
+  EXPECT_TRUE(::roo_windows::test::CompareOrUpdateGolden(
+      capture(), "test/goldens/material3_dialog/scroll_top.ppm",
+      "dialog_scroll_top"));
+  dialog.scroller().scrollTo(0, -30);
+  app_.refresh();
+  EXPECT_TRUE(::roo_windows::test::CompareOrUpdateGolden(
+      capture(), "test/goldens/material3_dialog/scroll_middle.ppm",
+      "dialog_scroll_middle"));
+  dialog.scroller().scrollToBottom();
+  app_.refresh();
+  EXPECT_TRUE(::roo_windows::test::CompareOrUpdateGolden(
+      capture(), "test/goldens/material3_dialog/scroll_bottom.ppm",
+      "dialog_scroll_bottom"));
+}
+
 }  // namespace
 }  // namespace roo_windows::material3

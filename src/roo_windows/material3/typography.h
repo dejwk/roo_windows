@@ -39,6 +39,7 @@
 #include "roo_fonts/NotoSans_Regular/68.h"
 #include "roo_fonts/NotoSans_Regular/72.h"
 #include "roo_fonts/NotoSans_Regular/86.h"
+#include "roo_fonts/NotoSans_Regular/9.h"
 #include "roo_fonts/NotoSans_Regular/90.h"
 #include "roo_windows/config.h"
 #include "roo_windows/core/text_style.h"

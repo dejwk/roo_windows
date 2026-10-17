@@ -3,9 +3,9 @@
 Status: proposed. Material2 isolation, independent system palettes, and the
 simplified Material3 state opacities are implemented prerequisites. Phase 1
 characterization is recorded in the
-[boundary audit](optional_design_systems_phase1_audit.md). Phases 2–6 implement
+[boundary audit](optional_design_systems_phase1_audit.md). Phases 2–7 implement
 shared feedback, inherited surface colors, local component styling, and explicit
-coordinated palette installation. Later
+coordinated palette installation, and native Material3 dividers. Later
 phases remain proposed. Revised 2026-10-16 around a shared application look and
 feel rather than independent interaction policies per design system.
 
@@ -929,6 +929,20 @@ appearance change. Verify the new divider headers/sources and dialog scaffold
 have no Material2 dependency; phase 11 compiles them with Material2 physically
 absent. Record target-ABI sizes and confirm the default divider adds no fields
 beyond `Widget`.
+
+Implemented in `material3/divider/divider.h` and `.cpp`; usage and validation are
+recorded in [Material 3 dividers](../../material3_dividers.md). Both divider
+types measure 24 bytes on ESP32-C3, equal to `Widget`. The dialog scaffold now
+measures and places its own M3 dividers. Scroll-boundary tests also corrected an
+existing offset-sign error: the scroller reports negative content offsets.
+Visibility accounts for content margins at the lower boundary.
+
+The two existing basic-dialog goldens change only their 224-by-2-pixel divider
+footprints. Full-screen header goldens are unchanged; three new scroll goldens
+exercise top, middle, and bottom boundaries. The divider and scaffold source
+files have no M2 includes or references. Full transitive source exclusion remains
+Phase 11. The required 75% build also restores a missing 9-point regular font
+include in the existing M3 typography header.
 
 Proposed commit message:
 

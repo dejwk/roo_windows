@@ -1807,3 +1807,17 @@ cc_test(
     linkstatic = 1,
     deps = [":roo_windows", "@roo_testing//:arduino_gtest_main"],
 )
+
+cc_test(
+    name = "material3_divider_test",
+    srcs = ["test/material3_divider_test.cpp"],
+    linkstatic = 1,
+    deps = [":roo_windows", "@roo_testing//:arduino_gtest_main"],
+)
+
+cc_library(
+    name = "material3_divider_size_probe",
+    srcs = ["benchmarks/material3_divider_size_probe.cpp"],
+    tags = ["manual"],
+    deps = [":roo_windows"],
+)
