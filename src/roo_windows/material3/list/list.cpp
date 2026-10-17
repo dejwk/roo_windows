@@ -655,6 +655,12 @@ Color ListEntry::supportingColor() const {
 
 Color ListEntry::defaultColor() const { return supportingColor(); }
 
+SurfaceColors ListEntry::surfaceColors() const {
+  SurfaceColors colors = SurfaceWidget::surfaceColors();
+  colors.foreground = supportingColor();
+  return colors;
+}
+
 // Updates retained text widgets without reading a possibly unbound model.
 void ListEntry::syncTextColors() {
   auto set_color = [](Widget* slot, TextSlotMode mode, Color color) {

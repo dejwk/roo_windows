@@ -398,6 +398,9 @@ class ListEntry : public Material3Container {
   /// Explicit widget colors remain unchanged.
   Color defaultColor() const override;
 
+  /// Preserves secondary slot ink through generic descendant layouts.
+  SurfaceColors surfaceColors() const override;
+
   /// Returns the row's Material 3 container color role.
   ::roo_windows::material3::ColorToken containerRole() const override;
 

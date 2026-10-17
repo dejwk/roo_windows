@@ -23,13 +23,7 @@ Insets InsetsFromDrawableBounds(const roo_display::Drawable& drawable) {
 void Icon::paint(PaintContext& ctx) const {
   Color color = color_;
   if (color == roo_display::color::Transparent) {
-    const Theme& myTheme = theme();
-    color = parent() != nullptr
-                ? parent()->defaultColor()
-                : myTheme.frameworkColor(FrameworkColorRole::kContent);
-    if (isActivated() && usesHighlighterColor()) {
-      color = myTheme.frameworkColor(FrameworkColorRole::kEmphasis);
-    }
+    color = parent() != nullptr ? parent()->defaultColor() : defaultColor();
   }
   if (icon_ == nullptr) {
     ctx.clear();

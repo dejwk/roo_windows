@@ -28,3 +28,5 @@ using namespace roo_windows;
     sizeof_paint_effect_stack[sizeof(roo_windows::internal::PaintEffectStack)];
 [[gnu::used]] char
     sizeof_rounded_arena[sizeof(roo_windows::internal::RoundedPaintState)];
+
+[[gnu::used]] char sizeof_surface_colors[sizeof(SurfaceColors)];

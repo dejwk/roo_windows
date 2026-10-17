@@ -1,6 +1,8 @@
 #pragma once
 
-#include "roo_windows/core/widget.h"
+#include <type_traits>
+
+#include "roo_windows/core/surface_widget.h"
 #include "roo_windows/material2/theme.h"
 
 namespace roo_windows::material2 {
@@ -17,10 +19,19 @@ class ThemeMixin : public Base {
  public:
   using Base::Base;
 
-  /// Resolves default foreground content from the live Material 2 palette.
-  roo_display::Color defaultColor() const override {
-    return this->theme().material2Theme().color.contentColorFor(
-        Material2ColorRole(this->effectiveContainerRole()));
+  /// Publishes Material 2 colors only when this widget owns a surface role.
+  /// Unfilled controls and generic layouts forward the surrounding pair.
+  SurfaceColors surfaceColors() const override {
+    if constexpr (std::is_base_of<SurfaceWidget, Base>::value) {
+      const material3::ColorToken role = this->containerRole();
+      if (role != material3::ColorToken::kNone) {
+        const auto& colors = this->theme().material2Theme().color;
+        const ColorRole local_role = Material2ColorRole(role);
+        return {colors.contentColorFor(local_role),
+                colors.accentColorFor(local_role)};
+      }
+    }
+    return Base::surfaceColors();
   }
 
   /// Resolves the live Material 2 ink for the shared interaction pipeline.

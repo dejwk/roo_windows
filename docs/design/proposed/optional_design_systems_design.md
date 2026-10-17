@@ -3,8 +3,8 @@
 Status: proposed. Material2 isolation, independent system palettes, and the
 simplified Material3 state opacities are implemented prerequisites. Phase 1
 characterization is recorded in the
-[boundary audit](optional_design_systems_phase1_audit.md). Later phases remain
-proposed. Revised 2026-10-16 around a shared application look and feel rather
+[boundary audit](optional_design_systems_phase1_audit.md). Phases 2–4 implement
+shared feedback and inherited surface colors. Later phases remain proposed. Revised 2026-10-16 around a shared application look and feel rather
 than independent interaction policies per design system.
 
 ## Objective
@@ -787,6 +787,34 @@ Migrate generic labels/icons and scrollbar ink to the pair, preserving overrides
 Add the borrowed-checkbox example from the overview and tests for distinct colors,
 transparent backgrounds, detached roots, reparenting, and live surface changes.
 Verify resource gates and document accent as surface-relative emphasis ink.
+
+Implementation validation (2026-10-17): the full library run passed 164/167
+initially; the three text/density golden targets passed after reviewing and
+refreshing their intentional root-foreground changes. The focused inheritance
+target and borrowed-checkbox example also pass. Root text now uses framework
+content rather than the old inherited Material 3 background role.
+
+The ESP32-C3 size probe reports `SurfaceColors` = 8 bytes and unchanged
+`Widget` / `SurfaceWidget` / `Container` sizes of 24 / 24 / 44 bytes. No inherited
+pair is stored and resolution adds no allocations. Theme/controller sizes also
+remain unchanged from phase 3: `Theme` 268, M2 theme 68, M3 theme 164,
+`ClickAnimation` 36, and `OverlaySpec` 36 bytes.
+
+Five interleaved optimized host fixture runs against submitted phase 3
+(`b089a1bd`), pinned to CPU 2, produced these median CPU microseconds per full
+refresh. Both builds used `-c opt --copt=-Wno-error=stringop-truncation`.
+Host timings varied between runs; these measurements check the 10% regression
+gate and do not estimate display-bus latency.
+
+| Ancestor depth | Phase 3 | Phase 4 | Change |
+| ---: | ---: | ---: | ---: |
+| 1 | 254.02 | 218.59 | -13.95% |
+| 8 | 235.52 | 230.55 | -2.11% |
+| 32 | 276.21 | 285.46 | +3.35% |
+
+The optimized host fixture ELF changes by +3,824 text bytes, +288 data bytes,
+and -32 BSS bytes (`size`); these include the linked test/runtime code and are
+not an embedded flash estimate.
 
 Proposed commit message:
 

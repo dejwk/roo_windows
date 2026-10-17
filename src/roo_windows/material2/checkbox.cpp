@@ -17,14 +17,10 @@ void Checkbox::onClicked() {
 
 void Checkbox::paint(PaintContext& ctx) const {
   OnOffState state = onOffState();
-  ColorRole bg_role = Material2ColorRole(effectiveContainerRole());
-  Color color =
-      state == OnOffState::kOn
-          ? theme().material2Theme().color.accentColorFor(bg_role)
-          : AlphaBlend(
-                ctx.bgcolor(),
-                theme().material2Theme().color.contentColorFor(bg_role).withA(
-                    0x90));
+  const SurfaceColors colors = surfaceColors();
+  Color color = state == OnOffState::kOn
+                    ? colors.accent
+                    : AlphaBlend(ctx.bgcolor(), colors.foreground.withA(0x90));
   RleImage4bppxBiased<Alpha4, ProgMemPtr> img =
       state == OnOffState::kOn ? SCALED_ROO_ICON(filled, toggle_check_box)
       : state == OnOffState::kOff

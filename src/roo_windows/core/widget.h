@@ -26,6 +26,7 @@
 #include "roo_windows/core/presentation_pin.h"
 #include "roo_windows/core/presentation_registry.h"
 #include "roo_windows/core/rect.h"
+#include "roo_windows/core/surface_colors.h"
 #include "roo_windows/core/theme.h"
 #include "roo_windows/core/touch_event.h"
 
@@ -261,26 +262,16 @@ class Widget {
   // Returns the effective theme for this widget.
   virtual const Theme& theme() const;
 
-  /// Returns the default color for monochromatic content.
-  /// Containers may override this to supply a component-specific content role.
-  //
-  // Calculated by determining the effective background color of this widget
-  // (which is the result of layering the, possibly semi-transparent,
-  // backgrounds of the ancestors), and consulting the theme to see if it has
-  // any registered 'onX' colors that correspond to that background. Usually,
-  // the background turns out to be one of: .surface, .background,
-  // .primary[Variant*], .secondary[Variant*], or .error, in which case the
-  // default color resolves to .onSurface, .onBackground, .onPrimary,
-  // .onSecondary, or .onError, appropriately. If all else fails, returns
-  // .onBackground.
-  //
-  // Paint-pipeline only: this depends on the effective container role, so it
-  // is valid only after the widget is attached to the parent/application
-  // tree.
-  //
-  // NOTE: during paint(PaintContext&), the default foreground color is
-  // derived from the effective container role.
+  /// Returns surfaceColors().foreground for monochromatic content.
+  /// Components may override this to supply specialized content ink.
   virtual roo_display::Color defaultColor() const;
+
+  /// Resolves foreground and surface-relative emphasis ink for descendants.
+  /// Generic widgets forward the parent pair; detached roots use framework
+  /// content/emphasis colors. Appearance boundaries override this without
+  /// storing inherited colors. After changing a boundary, invalidate its
+  /// descendants and interior to schedule repainting with the new pair.
+  virtual SurfaceColors surfaceColors() const;
 
   /// Returns the legacy ink used by shared interaction effects.
   virtual roo_display::Color interactionColor() const;

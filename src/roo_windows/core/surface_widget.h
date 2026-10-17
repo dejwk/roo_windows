@@ -11,6 +11,10 @@ class SurfaceWidget : public Widget {
  public:
   using Widget::Widget;
 
+  /// Publishes colors for an owned semantic surface; kNone forwards the parent
+  /// pair. A background RGB override alone does not establish a new pair.
+  SurfaceColors surfaceColors() const override;
+
   /// Returns this widget's background. Transparent by default. Normally
   /// overridden by panels, which usually have opaque backgrounds.
   virtual Color background() const { return roo_display::color::Transparent; }

@@ -71,7 +71,9 @@ TextLabel::TextLabel(ApplicationContext& context, std::string value,
 
 void TextLabel::paint(PaintContext& ctx) const {
   roo_display::Color color =
-      color_.a() == 0 ? parent()->defaultColor() : color_;
+      color_.a() == 0
+          ? (parent() != nullptr ? parent()->defaultColor() : defaultColor())
+          : color_;
   roo_display::StringViewLabel label(value_, textStyle().font(), color,
                                      textStyle().fontOptions());
   auto offset = ResolveAlignmentOffset(bounds(), Rect(label.anchorExtents()),
@@ -183,7 +185,9 @@ StringViewLabel::StringViewLabel(ApplicationContext& context,
 
 void StringViewLabel::paint(PaintContext& ctx) const {
   roo_display::Color color =
-      color_.a() == 0 ? parent()->defaultColor() : color_;
+      color_.a() == 0
+          ? (parent() != nullptr ? parent()->defaultColor() : defaultColor())
+          : color_;
   roo_display::StringViewLabel label(value_, textStyle().font(), color,
                                      textStyle().fontOptions());
   auto offset = ResolveAlignmentOffset(bounds(), Rect(label.anchorExtents()),

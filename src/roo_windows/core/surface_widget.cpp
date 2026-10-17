@@ -6,6 +6,15 @@
 
 namespace roo_windows {
 
+SurfaceColors SurfaceWidget::surfaceColors() const {
+  // Transitional bridge while the core role API remains available. Material 2
+  // boundaries resolve their own palette in ThemeMixin.
+  const material3::ColorToken role = containerRole();
+  if (role == material3::ColorToken::kNone) return Widget::surfaceColors();
+  const auto& colors = theme().material3Theme().color;
+  return {colors.contentColorFor(role), colors.accentColorFor(role)};
+}
+
 bool SurfaceWidget::hasDecorationOverflow() const { return getElevation() > 0; }
 
 Rect SurfaceWidget::getParentDecorationBounds() const {

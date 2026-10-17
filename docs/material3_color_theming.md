@@ -50,6 +50,32 @@ Future supported systems can add named sections to the application theme.
 When another system is introduced, framework-default selection can become an
 explicit setting. Today Material 3 supplies those defaults.
 
+## Inherited surface colors
+
+`Widget::surfaceColors()` resolves a temporary `SurfaceColors` pair with
+`foreground` and `accent`. Generic layouts forward the parent's pair; detached
+roots use `theme.framework.content` and `theme.framework.emphasis`. Accent means
+readable emphasis ink on the current surface, not necessarily the application's
+primary color. On neutral Material 3 surfaces it is commonly `primary`; on a
+colored surface it can equal the foreground's on-container color.
+
+Surfaces with their own semantic role publish colors from their own design
+system palette. A plain background RGB override does not infer a new pair.
+Override `surfaceColors()` to establish an application-defined appearance
+boundary. After changing a local boundary, call `invalidateDescending()` and
+`invalidateInterior()`; after palette changes, use `app.invalidateTheme()`.
+Queries observe live values without retaining style data on widgets.
+Background opacity and composition continue to use `effectiveBackground()`.
+
+Generic labels, icons, and scrollbar ink use the foreground. Explicit label and
+icon colors retain precedence. A Material 2 checkbox can borrow the pair through
+a generic layout: its checked glyph uses accent and its inactive outline uses
+foreground with the existing opacity. The
+[borrowed-checkbox example](../examples/material3/theme/borrowed_checkbox/borrowed_checkbox.ino)
+shows this on neutral and colored Material 3 surfaces without copying palettes.
+The core role APIs remain temporarily available for components awaiting the
+next migration phase.
+
 ## Interaction opacities
 
 Material 3 uses one opacity per transient state, independent of container color.

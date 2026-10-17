@@ -30,10 +30,11 @@ void VerticalScrollBar::setRange(int16_t begin, int16_t end) {
 }
 
 void VerticalScrollBar::paint(PaintContext& ctx) const {
-  Color s = theme().frameworkColor(FrameworkColorRole::kContent);
+  const Color foreground = surfaceColors().foreground;
+  Color s = foreground;
   s.set_a(0xC0);
   s = AlphaBlend(ctx.bgcolor(), s);
-  Color semi = theme().frameworkColor(FrameworkColorRole::kContent);
+  Color semi = foreground;
   semi.set_a(0x40);
   semi = AlphaBlend(ctx.bgcolor(), semi);
   if (begin_ > 0) {

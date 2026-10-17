@@ -322,8 +322,13 @@ Rect Widget::getSloppyTouchBounds() const {
 }
 
 roo_display::Color Widget::defaultColor() const {
-  return theme().material3Theme().color.contentColorFor(
-      effectiveContainerRole());
+  return surfaceColors().foreground;
+}
+
+SurfaceColors Widget::surfaceColors() const {
+  if (parent() != nullptr) return parent()->surfaceColors();
+  const FrameworkTheme& framework = theme().framework;
+  return {framework.content, framework.emphasis};
 }
 
 ::roo_windows::material3::ColorToken Widget::effectiveContainerRole() const {
