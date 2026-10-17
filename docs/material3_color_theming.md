@@ -17,7 +17,9 @@ app.invalidateTheme();
 ```
 
 Assign a complete `material3::ColorScheme` to `theme.material3Theme().color` to switch
-palettes. Component roles and density live beside `color` in the same
+palettes for Material 3 only; framework roots and Material 2 colors remain
+unchanged. Use the coordinated installer below for an application-wide palette
+change. Component roles and density live beside `color` in the same
 `material3::Material3Theme` section. Shared interaction opacities and click
 settings live in `theme.framework`. Defaults work without a factory.
 
@@ -28,8 +30,8 @@ original palette or state settings.
 
 ## Coordinating borrowed components
 
-Use the explicit palette installer when a Material 3 application borrows
-Material 2 controls:
+Use the explicit palette installer to coordinate framework roots with a
+Material 3 palette and, when enabled, matching Material 2 colors:
 
 ```cpp
 #include "roo_windows/material3/palette.h"
@@ -162,8 +164,9 @@ precedence.
 
 ## Interaction opacities
 
-Material 3 uses one opacity per transient state, independent of container color.
-The defaults follow the generated
+`theme.framework.state` owns one shared opacity per transient state, independent
+of design system and container color. These application defaults follow the
+generated
 [Compose v0_210 state tokens](https://raw.githubusercontent.com/androidx/androidx/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/StateTokens.kt)
 and [Android 34.0.0 state tokens](https://raw.githubusercontent.com/material-components/material-components-android/master/lib/java/com/google/android/material/resources/res/values/tokens.xml):
 
@@ -177,33 +180,42 @@ and [Android 34.0.0 state tokens](https://raw.githubusercontent.com/material-com
 Customize these owned values directly, then invalidate the theme:
 
 ```cpp
-theme.material3Theme().state.hover = 20;
-theme.material3Theme().state.pressed = 26;
+theme.framework.state.hover = 20;
+theme.framework.state.pressed = 26;
 app.invalidateTheme();
 ```
 
-`state.opacity(interaction)` returns alpha without resolving a palette color.
-`stateLayer(container, interaction)` applies it to the live content color for
-that container. Zero opacity or `ColorToken::kNone` produces a transparent layer.
-Selected and activated states add no generic Material 3 layer; components
-express persistent selection through their own colors and indicators.
+`theme.framework.state.opacity(interaction)` returns alpha without resolving a
+palette color. Widgets choose the live interaction ink through
+`interactionColor(state)`; `interactionOpacity(state)` uses the shared defaults
+unless a component overrides them. Zero opacity makes that contribution
+transparent. Palette changes require no stored state-layer colors to be rebuilt.
 
-`disabledContentOpacity` remains separate, with default 49 (38%) on the existing
-0..128 disabled-content scale. The entire state settings object occupies five
-bytes, with no matrix, borrowed rule storage, or per-widget state.
-Material2 keeps its independently owned settings. This simplification changes
-Material3 defaults; it does not change animation timing or the renderer's
-existing accumulation of simultaneous interactions.
+When several transient states are active, one non-press layer wins in priority
+order: dragged, focused, then hovered. A zero-opacity winner stays transparent;
+it does not expose a lower-priority state. The press ripple or fade composites
+separately above that layer, without an additional full-area pressed tint.
+Selected and activated states have zero shared opacity; components express
+persistent selection through their own colors, fills, icons, or indicators.
+Disabled controls suppress transient feedback.
+
+`theme.framework.state.disabledContentOpacity` controls automatic disabled
+content treatment, with default 49 (38%) on the existing 0..128 scale. The shared
+`FrameworkStateTheme` occupies five bytes. Neither Material 2 nor Material 3
+owns a separate interaction-opacity table. Click duration and default ripple or
+fade reveal remain separate in `theme.framework.click`; palette installation
+preserves both state and click settings.
 
 ## Migration
 
 - `ApplicationTheme` and its accessors are replaced by an ordinary
   `roo_windows::Theme` object.
-- `setColorScheme()` becomes direct palette assignment followed by
-  `app.invalidateTheme()`.
+- `setColorScheme()` becomes direct palette assignment for M3-only edits, or
+  `ApplyCoordinatedMaterial3Palette()` for coordinated application colors,
+  followed by `app.invalidateTheme()`.
 - `MakeFrameworkTheme()` and the stored framework projection are removed.
 - `MakeTheme()` and M3 default-theme accessors are replaced by default
   construction. `roo_windows::DefaultTheme()` remains a shared immutable option.
 - `StateLayerRules`, `StateLayerOverride`, and their borrowed pointers are
-  removed. Customize the four state opacity fields; implement component-specific
-  interaction ink in the widget's `interactionColor()` override.
+  removed. Customize the four `theme.framework.state` opacity fields; implement
+  component-specific interaction ink in the widget's `interactionColor()` override.
