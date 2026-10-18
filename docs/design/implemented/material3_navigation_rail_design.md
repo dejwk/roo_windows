@@ -110,8 +110,8 @@ This document is aligned against the Material 3 navigation rail references:
 
 The main product signals carried into this design are:
 
-1. the baseline rail is no longer recommended; collapsed and expanded rails are
-   the supported family,
+1. collapsed and expanded rails are recommended; the baseline narrow rail
+   remains available as an explicit compatibility layout,
 2. the rail is a leading-edge, medium-and-up navigation surface,
 3. the target area always spans the full rail width while the active indicator
    hugs the destination content,
@@ -159,8 +159,7 @@ Those references imply three important local constraints:
 
 ### Functional Requirements
 
-1. Support the Material 3 collapsed and expanded persistent navigation rail
-   layouts.
+1. Support baseline, collapsed wide, and expanded persistent navigation rails.
 2. Support one selected destination at a time.
 3. Support 3-7 destinations as the intended design range and a hard maximum of
    seven in both layouts, while allowing fewer during construction and tests.
@@ -416,12 +415,12 @@ API semantic, and let the theme and current state resolve the final draw.
 
 #### Interaction State and Direct Paint
 
-The destination follows the landed navigation-bar interaction contract. It
-uses a custom overlay whose geometry is the indicator pill, commits touch
-selection on single-tap release so the final feedback frame settles into the
-selected indicator, and routes deferred or keyboard activation through
-`onClicked()`. One packed bit prevents that touch path from invoking the rail a
-second time.
+The destination uses `kImmediateContinueAnimation`: click confirmation invokes
+`onClicked()` immediately, updating rail selection while the indicator feedback
+continues. Touch release and keyboard activation share this policy. Completing
+the animation does not deliver another invocation or reselection callback.
+This rail-specific override leaves the navigation bar's activation policy
+unchanged. The custom overlay follows the indicator pill geometry.
 
 Hover, focus, press, drag, click-animation, enabled, and selected changes
 invalidate the indicator/content region. Destination paint resolves icon and
@@ -589,15 +588,39 @@ hooks as touch when a destination is focused.
 
 ### Theme Resolution
 
-The rail resolves its defaults from the active `Theme`:
+The active theme supplies container colors, content colors, typography, and
+interaction styling. Shared constant geometry tokens supply dimensions; they
+are not per-instance copies or configurable theme fields.
 
-- collapsed and expanded rail widths,
-- collapsed and expanded item minimum heights,
-- inter-item gap and outer padding,
-- active-indicator shape and padding,
-- content colors and typography,
-- container color,
-- and state-layer color and opacity.
+The [Android generated tokens](https://github.com/material-components/material-components-android/blob/master/lib/java/com/google/android/material/navigationrail/res/values/tokens.xml)
+and [component styles](https://github.com/material-components/material-components-android/blob/master/lib/java/com/google/android/material/navigationrail/res/values/styles.xml)
+distinguish standard 64 dp items from optional short 56 dp items. This rail
+uses the standard height in both wide presentations, so expansion preserves
+item height. The baseline compatibility layout follows Android's compact
+60 dp minimum and 8 dp header spacing.
+
+| Layout | Preferred width | Item height | Label | Indicator |
+| --- | --- | --- | --- | --- |
+| Baseline | 80 dp | 60 dp | label-medium, stacked | 56 × 32 dp |
+| Collapsed wide (default) | 96 dp | 64 dp | label-medium, stacked | 56 × 32 dp |
+| Expanded | 220 dp | 64 dp | label-large, inline | content width + 32 dp, 56 dp high |
+
+Parents can constrain the width; expanded rails should normally occupy
+220–360 dp. Expanded icons and labels have an 8 dp gap and mirror together
+in RTL. Vertical content retains a 4 dp indicator-to-label gap.
+
+`setContainerRole(ColorToken::kSurfaceContainer)` selects the optional distinct
+surface. `clearContainerRoleOverride()` restores the layout-specific theme
+role (`collapsedContainer` also serves baseline). An explicit `kNone` inherits
+the parent's resolved surface, using the normal opaque surface pipeline.
+Changing a role invalidates the rail and its contents. The override uses one
+color-token byte and one packed flag; layout and direction use packed bits.
+The existing host-side size budgets remain enforced.
+
+```cpp
+rail.setLayout(NavigationRailLayout::kBaseline);
+rail.setContainerRole(ColorToken::kSurfaceContainer);
+```
 
 Badge colors stay owned by the shared badge helper. The rail does not shadow
 them with a second badge palette; `material3::Badge` continues to use the badge
@@ -644,80 +667,113 @@ shape:
 
 ### Core Types
 
+The maintained declarations are in
+[navigation_rail.h](../../../src/roo_windows/material3/navigation_rail/navigation_rail.h).
+The shared destination base owns labels, icons, selection, and painting; the
+rail destination adds only packed layout and direction state.
+
 ```cpp
 namespace roo_windows {
 namespace material3 {
 
+/// Selects baseline, collapsed wide, or expanded persistent rail geometry.
 enum class NavigationRailLayout : uint8_t {
+  /// Material 3 collapsed wide rail: 96 dp wide with 64 dp vertical items.
   kCollapsed,
+  /// Expanded rail with horizontal labels and 64 dp destination slots.
   kExpanded,
+  /// Baseline 80 dp rail with stacked labels and compact header spacing.
+  kBaseline,
 };
 
+/// Selects where the destination group sits below the optional header.
 enum class NavigationRailGroupAlignment : uint8_t {
   kTop,
   kCenter,
 };
 
-class NavigationRailDestination : public BasicWidget {
+class NavigationRail;
+class NavigationRailDestinationTestAccess;
+
+/// Badge-free Material 3 navigation-rail destination.
+///
+/// The parent `NavigationRail` owns selection and layout mode. The destination
+/// stores only its label, icon references, and compact derived state so badge
+/// storage remains opt-in through `BadgedNavigationRailDestination`.
+class NavigationRailDestination : public internal::NavigationDestinationBase {
  public:
+  /// Creates a destination with non-owning label and icon references.
   explicit NavigationRailDestination(ApplicationContext& context,
                                      roo::string_view label = {},
                                      const MonoIcon* icon = nullptr,
                                      const MonoIcon* selected_icon = nullptr);
 
-  roo::string_view label() const;
-  void setLabel(roo::string_view label);
-
-  const MonoIcon* icon() const;
-  void setIcon(const MonoIcon* icon);
-
-  const MonoIcon* selectedIcon() const;
-  void setSelectedIcon(const MonoIcon* icon);
-
-  bool selected() const;
-  NavigationRailLayout layout() const;
-
-  bool isClickable() const override;
-  OverlayType getOverlayType() const override { return OVERLAY_CUSTOM; }
-  ClickOverlayAnimation getClickOverlayAnimation() const override {
-    return ClickOverlayAnimation::kFade;
+  /// Activates on click confirmation while the feedback animation continues.
+  ClickActivationPolicy getClickActivationPolicy() const override {
+    return ClickActivationPolicy::kImmediateContinueAnimation;
   }
-  bool useOverlayOnSelection() const override { return false; }
-  ColorToken effectiveOverlayColorRole() const override;
+
+  /// Returns the layout mode supplied by the parent rail.
+  NavigationRailLayout layout() const;
   Dimensions getSuggestedMinimumDimensions() const override;
-  void paint(PaintContext& ctx) const override;
 
  protected:
-  void onSingleTapUp(XDim x, YDim y) override;
-  void onClicked() override;
-  void notifyStateChanged(uint16_t state_diff) override;
+  /// Returns the content bounds that determine active-indicator geometry.
   virtual Rect destinationContentBounds() const;
-  Rect getDirectPaintExclusionBounds() const override;
+
+  /// Returns the resolved icon slot used to anchor compact badges.
+  Rect iconBounds() const;
+
+  /// Returns the resolved label slot used for expanded badge anchoring.
+  Rect labelBounds() const;
+
+  /// Uses the rail label role outside the collapsed selection indicator.
+  Color labelColor() const override;
+
+  /// Uses label-large typography for horizontal destinations.
+  const TextStyle& labelStyle() const override;
+
+  /// Returns the logical direction supplied by the rail.
+  LayoutDirection layoutDirection() const;
+
+  /// Updates direction and lets badge hosts refresh their cached placement.
+  virtual void setLayoutDirectionFromRail(LayoutDirection direction);
 
  private:
   friend class NavigationRail;
+  friend class NavigationRailDestinationTestAccess;
+
   void setLayoutFromRail(NavigationRailLayout layout);
   void setSelectedFromRail(bool selected);
+  internal::NavigationDestinationGeometry resolveDestinationGeometry()
+      const override;
+  void activateFromOwner() override;
 
-  roo::string_view label_;
-  const MonoIcon* icon_;
-  const MonoIcon* selected_icon_;
-  uint8_t layout_ : 1;
-  uint8_t selected_ : 1;
-  uint8_t click_handled_on_release_ : 1;
+  uint8_t layout_ : 2;
+  uint8_t layout_direction_ : 1;
 };
 
+/// Navigation-rail destination that opts into one inline badge helper.
 class BadgedNavigationRailDestination : public NavigationRailDestination {
  public:
+  /// Creates a badge-capable destination with non-owning label and icons.
   explicit BadgedNavigationRailDestination(
       ApplicationContext& context, roo::string_view label = {},
-      const MonoIcon* icon = nullptr,
-      const MonoIcon* selected_icon = nullptr);
+      const MonoIcon* icon = nullptr, const MonoIcon* selected_icon = nullptr);
 
+  /// Returns the inline badge helper.
   const Badge& badge() const;
+
+  /// Hides the badge.
   void hideBadge();
+
+  /// Shows a dot badge.
   void setBadgeDot();
+
+  /// Shows a text badge using the helper's fixed inline storage.
   void setBadgeText(roo::string_view text);
+
+  /// Shows a decimal badge value, capped by the shared helper.
   void setBadgeValue(unsigned int number);
 
   void paint(PaintContext& ctx) const override;
@@ -725,6 +781,7 @@ class BadgedNavigationRailDestination : public NavigationRailDestination {
  protected:
   void onLayout(bool changed, const Rect& rect) override;
   Rect destinationContentBounds() const override;
+  void setLayoutDirectionFromRail(LayoutDirection direction) override;
 
  private:
   void relayoutBadge();
@@ -733,33 +790,73 @@ class BadgedNavigationRailDestination : public NavigationRailDestination {
   Badge badge_;
 };
 
-class NavigationRail : public Container {
+/// Material 3 persistent navigation-rail container with up to seven routes.
+class NavigationRail : public Material3Container {
  public:
+  /// Maximum number of destinations supported by one navigation rail.
   static constexpr uint8_t kMaxDestinations = 7;
 
+  /// Creates an empty rail in the collapsed, top-aligned layout.
   explicit NavigationRail(ApplicationContext& context);
+
+  /// Detaches its header and destinations before destruction.
   ~NavigationRail() override;
 
+  /// Allows caller-configured header and destinations to be unclipped.
+  bool mayHaveUnclippedChildren() const override { return true; }
+
+  /// Returns the configured rail layout mode.
   NavigationRailLayout layout() const;
+
+  /// Changes between baseline, collapsed wide, and expanded rail layouts.
   void setLayout(NavigationRailLayout layout);
 
+  /// Returns the destination-group alignment.
   NavigationRailGroupAlignment groupAlignment() const;
+
+  /// Changes whether destinations are top- or center-aligned below the header.
   void setGroupAlignment(NavigationRailGroupAlignment alignment);
 
+  /// Returns the logical direction used for content and badge placement.
+  LayoutDirection layoutDirection() const;
+
+  /// Changes the logical direction used for content and badge placement.
+  void setLayoutDirection(LayoutDirection direction);
+
+  /// Replaces the optional header child with a borrowed or adopted widget.
   void setHeader(WidgetRef header);
+
+  /// Detaches the optional header child.
   void clearHeader();
 
+  /// Returns the selected destination index, or -1 when empty.
   int selectedIndex() const;
+
+  /// Selects an existing destination by index.
   void setSelectedIndex(int index);
 
+  /// Returns the current number of destinations.
   int destinationCount() const;
 
+  /// Adds a borrowed or adopted destination when capacity permits.
+  ///
+  /// `destination` must reference a `NavigationRailDestination`. Pass
+  /// `WidgetRef(destination)` to borrow a caller-owned destination or
+  /// `WidgetRef(std::move(destination))` to transfer ownership.
   bool add(WidgetRef destination);
+
+  /// Detaches every destination and clears selection, retaining the header.
   void clear();
 
+  /// Returns the explicit surface role, or the layout-specific theme default.
   ColorToken containerRole() const override;
-  Color background() const override;
-  void paint(PaintContext& ctx) const override;
+
+  /// Overrides the rail surface, e.g. kSurfaceContainer. kNone inherits the
+  /// parent surface color; it does not introduce transparent painting.
+  void setContainerRole(ColorToken role);
+
+  /// Restores the layout-specific theme default surface role.
+  void clearContainerRoleOverride();
 
  protected:
   int getChildrenCount() const override;
@@ -769,11 +866,18 @@ class NavigationRail : public Container {
   void onLayout(bool changed, const Rect& rect) override;
   bool onKeyEvent(const KeyEvent& event) override;
 
+  /// Called whenever an enabled destination is invoked.
   virtual void onDestinationInvoked(int index) {}
+
+  /// Called after selection changes.
   virtual void onSelectedIndexChanged(int old_index, int new_index) {}
+
+  /// Called when the selected destination is invoked again.
   virtual void onSelectedDestinationReselected(int index) {}
 
  private:
+  friend class NavigationRailDestination;
+
   void updateSelectionFromDestination(NavigationRailDestination& destination);
   void propagateLayoutToDestinations();
   int indexOf(const NavigationRailDestination& destination) const;
@@ -781,8 +885,11 @@ class NavigationRail : public Container {
   Widget* header_;
   std::vector<NavigationRailDestination*> destinations_;
   int8_t selected_index_;
-  uint8_t layout_ : 1;
+  ColorToken container_role_override_;
+  uint8_t has_container_role_override_ : 1;
+  uint8_t layout_ : 2;
   uint8_t group_alignment_ : 1;
+  uint8_t layout_direction_ : 1;
 };
 
 }  // namespace material3
@@ -957,7 +1064,9 @@ Validation coverage should include:
    destinations; selected, unselected, disabled, focused, pressed, and hovered
    states; long-label clipping; and collapsed / expanded badge placement.
 3. RTL-focused render cases for expanded content ordering and badge mirroring.
-4. Example compilation and migrated consumer coverage once `NavigationPanel` or
+4. Pixel-write counts on initial, dirty, and invalidated repaint, including
+   baseline and explicit surface roles; expanded geometry and RTL ordering.
+5. Example compilation and migrated consumer coverage once `NavigationPanel` or
    another in-repo adapter is switched over.
 
 ## Caveats
@@ -1008,14 +1117,12 @@ adaptive switching to a navigation bar are not properties of every persistent
 rail instance. Carrying that state on the base rail would overpay RAM for the
 common case.
 
-#### Add Per-Instance Container or Divider Switches
+#### Add Transparent Painting or a Built-In Divider
 
-This was rejected.
-
-The Material rail owns a container and does not include a divider in its
-current anatomy. Optional transparency also changes `SurfaceWidget` opacity
-and invalidation semantics, while both switches cost state on every rail.
-Applications that need separation can compose a divider beside the rail.
+The optional container role is supported through a compact override, following
+`FlexCard`. It does not require transparent painting: `kNone` resolves the
+inherited surface color. A divider remains external composition because it is
+not part of the rail anatomy.
 
 ## Future Work
 

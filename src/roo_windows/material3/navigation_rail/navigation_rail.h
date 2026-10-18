@@ -17,10 +17,14 @@
 namespace roo_windows {
 namespace material3 {
 
-/// Selects the compact or expanded persistent navigation-rail layout.
+/// Selects baseline, collapsed wide, or expanded persistent rail geometry.
 enum class NavigationRailLayout : uint8_t {
+  /// Material 3 collapsed wide rail: 96 dp wide with 64 dp vertical items.
   kCollapsed,
+  /// Expanded rail with horizontal labels and 64 dp destination slots.
   kExpanded,
+  /// Baseline 80 dp rail with stacked labels and compact header spacing.
+  kBaseline,
 };
 
 /// Selects where the destination group sits below the optional header.
@@ -45,6 +49,11 @@ class NavigationRailDestination : public internal::NavigationDestinationBase {
                                      const MonoIcon* icon = nullptr,
                                      const MonoIcon* selected_icon = nullptr);
 
+  /// Activates on click confirmation while the feedback animation continues.
+  ClickActivationPolicy getClickActivationPolicy() const override {
+    return ClickActivationPolicy::kImmediateContinueAnimation;
+  }
+
   /// Returns the layout mode supplied by the parent rail.
   NavigationRailLayout layout() const;
   Dimensions getSuggestedMinimumDimensions() const override;
@@ -59,16 +68,30 @@ class NavigationRailDestination : public internal::NavigationDestinationBase {
   /// Returns the resolved label slot used for expanded badge anchoring.
   Rect labelBounds() const;
 
+  /// Uses the rail label role outside the collapsed selection indicator.
+  Color labelColor() const override;
+
+  /// Uses label-large typography for horizontal destinations.
+  const TextStyle& labelStyle() const override;
+
+  /// Returns the logical direction supplied by the rail.
+  LayoutDirection layoutDirection() const;
+
+  /// Updates direction and lets badge hosts refresh their cached placement.
+  virtual void setLayoutDirectionFromRail(LayoutDirection direction);
+
  private:
   friend class NavigationRail;
   friend class NavigationRailDestinationTestAccess;
 
   void setLayoutFromRail(NavigationRailLayout layout);
-  virtual void setLayoutDirectionFromRail(LayoutDirection direction) {}
   void setSelectedFromRail(bool selected);
   internal::NavigationDestinationGeometry resolveDestinationGeometry()
       const override;
   void activateFromOwner() override;
+
+  uint8_t layout_ : 2;
+  uint8_t layout_direction_ : 1;
 };
 
 /// Navigation-rail destination that opts into one inline badge helper.
@@ -106,7 +129,6 @@ class BadgedNavigationRailDestination : public NavigationRailDestination {
   Rect badgeAnchorBounds() const;
 
   Badge badge_;
-  uint8_t layout_direction_ : 1;
 };
 
 /// Material 3 persistent navigation-rail container with up to seven routes.
@@ -127,7 +149,7 @@ class NavigationRail : public Material3Container {
   /// Returns the configured rail layout mode.
   NavigationRailLayout layout() const;
 
-  /// Changes between collapsed and expanded rail layouts.
+  /// Changes between baseline, collapsed wide, and expanded rail layouts.
   void setLayout(NavigationRailLayout layout);
 
   /// Returns the destination-group alignment.
@@ -136,10 +158,10 @@ class NavigationRail : public Material3Container {
   /// Changes whether destinations are top- or center-aligned below the header.
   void setGroupAlignment(NavigationRailGroupAlignment alignment);
 
-  /// Returns the logical direction used for badge placement.
+  /// Returns the logical direction used for content and badge placement.
   LayoutDirection layoutDirection() const;
 
-  /// Changes the logical direction used for badge placement.
+  /// Changes the logical direction used for content and badge placement.
   void setLayoutDirection(LayoutDirection direction);
 
   /// Replaces the optional header child with a borrowed or adopted widget.
@@ -167,7 +189,15 @@ class NavigationRail : public Material3Container {
   /// Detaches every destination and clears selection, retaining the header.
   void clear();
 
+  /// Returns the explicit surface role, or the layout-specific theme default.
   ColorToken containerRole() const override;
+
+  /// Overrides the rail surface, e.g. kSurfaceContainer. kNone inherits the
+  /// parent surface color; it does not introduce transparent painting.
+  void setContainerRole(ColorToken role);
+
+  /// Restores the layout-specific theme default surface role.
+  void clearContainerRoleOverride();
 
  protected:
   int getChildrenCount() const override;
@@ -196,7 +226,9 @@ class NavigationRail : public Material3Container {
   Widget* header_;
   std::vector<NavigationRailDestination*> destinations_;
   int8_t selected_index_;
-  uint8_t layout_ : 1;
+  ColorToken container_role_override_;
+  uint8_t has_container_role_override_ : 1;
+  uint8_t layout_ : 2;
   uint8_t group_alignment_ : 1;
   uint8_t layout_direction_ : 1;
 };

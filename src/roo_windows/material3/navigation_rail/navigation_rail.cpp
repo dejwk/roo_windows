@@ -12,7 +12,16 @@ namespace roo_windows {
 namespace material3 {
 namespace {
 
-const TextStyle& DestinationLabelStyle() { return text_style_label_medium(); }
+const TextStyle& DestinationLabelStyle(NavigationRailLayout layout) {
+  return layout == NavigationRailLayout::kExpanded ? text_style_label_large()
+                                                   : text_style_label_medium();
+}
+
+const internal::NavigationRailTokens& TokensFor(NavigationRailLayout layout) {
+  return layout == NavigationRailLayout::kBaseline
+             ? internal::kBaselineNavigationRailTokens
+             : internal::kNavigationRailTokens;
+}
 
 struct DestinationContentMetrics {
   int16_t icon_width;
@@ -67,9 +76,9 @@ Rect ExpandedIndicatorBounds(const Rect& target, const Rect& content_bounds) {
 }
 
 DestinationContentMetrics ResolveContentMetrics(roo::string_view label,
-                                                const MonoIcon* icon) {
-  const internal::NavigationRailTokens& tokens =
-      internal::kNavigationRailTokens;
+                                                const MonoIcon* icon,
+                                                NavigationRailLayout layout) {
+  const internal::NavigationRailTokens& tokens = TokensFor(layout);
   DestinationContentMetrics result = {0, 0, 0, 0};
   if (icon != nullptr) {
     result.icon_width = std::max<int16_t>(Scaled(tokens.icon_size_dp),
@@ -78,40 +87,45 @@ DestinationContentMetrics ResolveContentMetrics(roo::string_view label,
                                            icon->anchorExtents().height());
   }
   if (!label.empty()) {
-    result.label_width = DestinationLabelStyle()
-                             .font()
-                             .getHorizontalStringMetrics(
-                                 label, DestinationLabelStyle().fontOptions())
-                             .advance();
-    result.label_height = DestinationLabelStyle().lineHeight();
+    result.label_width =
+        DestinationLabelStyle(layout)
+            .font()
+            .getHorizontalStringMetrics(
+                label, DestinationLabelStyle(layout).fontOptions())
+            .advance();
+    result.label_height = DestinationLabelStyle(layout).lineHeight();
   }
   return result;
 }
 
 DestinationContentGeometry ResolveContentGeometry(
-    const NavigationRailDestination& destination) {
+    const NavigationRailDestination& destination, LayoutDirection direction) {
   const internal::NavigationRailTokens& tokens =
-      internal::kNavigationRailTokens;
+      TokensFor(destination.layout());
   const Rect target = destination.bounds();
   const MonoIcon* icon =
       destination.selected() && destination.selectedIcon() != nullptr
           ? destination.selectedIcon()
           : destination.icon();
   const DestinationContentMetrics metrics =
-      ResolveContentMetrics(destination.label(), icon);
+      ResolveContentMetrics(destination.label(), icon, destination.layout());
   DestinationContentGeometry result = {EmptyRect(), EmptyRect(), EmptyRect(),
                                        EmptyRect()};
   if (target.empty()) return result;
 
-  if (destination.layout() == NavigationRailLayout::kCollapsed) {
+  if (destination.layout() != NavigationRailLayout::kExpanded) {
     const int16_t indicator_width = std::min<int16_t>(
         target.width(), Scaled(tokens.collapsed_indicator_width_dp));
     const int16_t indicator_height = std::min<int16_t>(
         target.height(), Scaled(tokens.collapsed_indicator_height_dp));
-    const int16_t indicator_top = std::max<int16_t>(
-        target.yMin(), (target.yMin() + target.yMax() + 1) / 2 -
-                           Scaled(tokens.destination_height_dp) / 2 +
-                           Scaled(4));
+    // Center the indicator plus label line box as one group (6 dp above
+    // and below the standard 52 dp content in a 64 dp collapsed item).
+    const int16_t content_height =
+        indicator_height + metrics.label_height +
+        (metrics.label_height > 0 ? Scaled(tokens.icon_label_gap_dp) : 0);
+    const int16_t indicator_top =
+        target.yMin() +
+        std::max<int16_t>(0, (target.height() - content_height) / 2);
     result.indicator_bounds = Rect(
         target.xMin() + (target.width() - indicator_width) / 2, indicator_top,
         target.xMin() + (target.width() - indicator_width) / 2 +
@@ -134,9 +148,8 @@ DestinationContentGeometry ResolveContentGeometry(
     return result;
   }
 
-  const int16_t gap = metrics.icon_width > 0 && metrics.label_width > 0
-                          ? Scaled(tokens.icon_label_gap_dp)
-                          : 0;
+  const int16_t gap =
+      metrics.icon_width > 0 && metrics.label_width > 0 ? Scaled(8) : 0;
   const int16_t content_width = metrics.icon_width + gap + metrics.label_width;
   const int16_t content_height =
       std::max(metrics.icon_height, metrics.label_height);
@@ -158,6 +171,19 @@ DestinationContentGeometry ResolveContentGeometry(
         metrics.label_width, metrics.label_height);
   }
 
+  if (direction == LayoutDirection::kRightToLeft) {
+    const int16_t axis = target.xMin() + target.xMax();
+    if (!result.icon_bounds.empty()) {
+      const Rect icon = result.icon_bounds;
+      result.icon_bounds = Rect(axis - icon.xMax(), icon.yMin(),
+                                axis - icon.xMin(), icon.yMax());
+    }
+    if (!result.label_bounds.empty()) {
+      const Rect label = result.label_bounds;
+      result.label_bounds = Rect(axis - label.xMax(), label.yMin(),
+                                 axis - label.xMin(), label.yMax());
+    }
+  }
   result.indicator_bounds =
       ExpandedIndicatorBounds(target, result.content_bounds);
   return result;
@@ -168,40 +194,27 @@ DestinationContentGeometry ResolveContentGeometry(
 NavigationRailDestination::NavigationRailDestination(
     ApplicationContext& context, roo::string_view label, const MonoIcon* icon,
     const MonoIcon* selected_icon)
-    : NavigationDestinationBase(context, label, icon, selected_icon) {}
+    : NavigationDestinationBase(context, label, icon, selected_icon),
+      layout_(static_cast<uint8_t>(NavigationRailLayout::kCollapsed)),
+      layout_direction_(static_cast<uint8_t>(LayoutDirection::kLeftToRight)) {}
 
 NavigationRailLayout NavigationRailDestination::layout() const {
-  return presentation() == internal::NavigationDestinationPresentation::kInline
-             ? NavigationRailLayout::kExpanded
-             : NavigationRailLayout::kCollapsed;
+  return static_cast<NavigationRailLayout>(layout_);
 }
 
 Dimensions NavigationRailDestination::getSuggestedMinimumDimensions() const {
-  const MonoIcon* content_icon = displayedIcon();
-  const DestinationContentMetrics metrics =
-      ResolveContentMetrics(label(), content_icon);
-  const internal::NavigationRailTokens& tokens =
-      internal::kNavigationRailTokens;
-  if (layout() == NavigationRailLayout::kCollapsed) {
-    return Dimensions(
-        std::max<int16_t>(Scaled(tokens.collapsed_min_width_dp),
-                          std::max<int16_t>(metrics.icon_width,
-                                            metrics.label_width + Scaled(16))),
-        Scaled(tokens.destination_height_dp));
-  }
-  const int16_t gap = metrics.icon_width > 0 && metrics.label_width > 0
-                          ? Scaled(tokens.icon_label_gap_dp)
-                          : 0;
-  return Dimensions(
-      std::max<int16_t>(Scaled(tokens.expanded_min_width_dp),
-                        metrics.icon_width + gap + metrics.label_width +
-                            2 * Scaled(tokens.expanded_indicator_padding_dp)),
-      Scaled(tokens.destination_height_dp));
+  const internal::NavigationRailTokens& tokens = TokensFor(layout());
+  const bool expanded = layout() == NavigationRailLayout::kExpanded;
+  return Dimensions(Scaled(expanded ? tokens.expanded_min_width_dp
+                                    : tokens.collapsed_min_width_dp),
+                    Scaled(expanded ? tokens.expanded_destination_height_dp
+                                    : tokens.collapsed_destination_height_dp));
 }
 
 internal::NavigationDestinationGeometry
 NavigationRailDestination::resolveDestinationGeometry() const {
-  DestinationContentGeometry geometry = ResolveContentGeometry(*this);
+  DestinationContentGeometry geometry =
+      ResolveContentGeometry(*this, layoutDirection());
   if (layout() == NavigationRailLayout::kExpanded) {
     // Badged destinations extend this virtual content envelope with their
     // cached badge bounds so the active indicator hugs the full cluster.
@@ -213,18 +226,46 @@ NavigationRailDestination::resolveDestinationGeometry() const {
 }
 
 Rect NavigationRailDestination::destinationContentBounds() const {
-  return ResolveContentGeometry(*this).content_bounds;
+  return ResolveContentGeometry(*this, layoutDirection()).content_bounds;
 }
 
 Rect NavigationRailDestination::iconBounds() const {
-  return ResolveContentGeometry(*this).icon_bounds;
+  return ResolveContentGeometry(*this, layoutDirection()).icon_bounds;
+}
+
+Color NavigationRailDestination::labelColor() const {
+  if (isEnabled() && selected() &&
+      layout() != NavigationRailLayout::kExpanded) {
+    return theme().material3Theme().color.secondary;
+  }
+  return NavigationDestinationBase::labelColor();
 }
 
 Rect NavigationRailDestination::labelBounds() const {
-  return ResolveContentGeometry(*this).label_bounds;
+  return ResolveContentGeometry(*this, layoutDirection()).label_bounds;
+}
+
+const TextStyle& NavigationRailDestination::labelStyle() const {
+  return DestinationLabelStyle(layout());
+}
+
+LayoutDirection NavigationRailDestination::layoutDirection() const {
+  return static_cast<LayoutDirection>(layout_direction_);
+}
+
+void NavigationRailDestination::setLayoutDirectionFromRail(
+    LayoutDirection direction) {
+  if (layoutDirection() == direction) return;
+  layout_direction_ = static_cast<uint8_t>(direction);
+  requestLayout();
+  invalidateInterior();
 }
 
 void NavigationRailDestination::setLayoutFromRail(NavigationRailLayout layout) {
+  if (this->layout() == layout) return;
+  layout_ = static_cast<uint8_t>(layout);
+  requestLayout();
+  invalidateInterior();
   setPresentation(layout == NavigationRailLayout::kExpanded
                       ? internal::NavigationDestinationPresentation::kInline
                       : internal::NavigationDestinationPresentation::kStacked);
@@ -243,6 +284,8 @@ NavigationRail::NavigationRail(ApplicationContext& context)
       header_(nullptr),
       destinations_(),
       selected_index_(-1),
+      container_role_override_(ColorToken::kNone),
+      has_container_role_override_(false),
       layout_(static_cast<uint8_t>(NavigationRailLayout::kCollapsed)),
       group_alignment_(
           static_cast<uint8_t>(NavigationRailGroupAlignment::kTop)),
@@ -360,10 +403,24 @@ void NavigationRail::clear() {
 }
 
 ::roo_windows::material3::ColorToken NavigationRail::containerRole() const {
+  if (has_container_role_override_) return container_role_override_;
   const NavigationRailTheme& rail =
       theme().material3Theme().components.navigationRail;
-  return layout() == NavigationRailLayout::kCollapsed ? rail.collapsedContainer
-                                                      : rail.expandedContainer;
+  return layout() != NavigationRailLayout::kExpanded ? rail.collapsedContainer
+                                                     : rail.expandedContainer;
+}
+
+void NavigationRail::setContainerRole(ColorToken role) {
+  if (has_container_role_override_ && container_role_override_ == role) return;
+  container_role_override_ = role;
+  has_container_role_override_ = true;
+  invalidateInterior();
+}
+
+void NavigationRail::clearContainerRoleOverride() {
+  if (!has_container_role_override_) return;
+  has_container_role_override_ = false;
+  invalidateInterior();
 }
 
 int NavigationRail::getChildrenCount() const {
@@ -386,13 +443,12 @@ Widget& NavigationRail::getChild(int idx) {
 }
 
 Dimensions NavigationRail::onMeasure(WidthSpec width, HeightSpec height) {
-  const internal::NavigationRailTokens& tokens =
-      internal::kNavigationRailTokens;
+  const internal::NavigationRailTokens& tokens = TokensFor(layout());
   // A rail has one token-defined width for each presentation. The parent may
   // still constrain that width through its WidthSpec, for example when a
   // scaffold must make room for body content.
   const XDim rail_width =
-      width.resolveSize(Scaled(layout() == NavigationRailLayout::kCollapsed
+      width.resolveSize(Scaled(layout() != NavigationRailLayout::kExpanded
                                    ? tokens.collapsed_min_width_dp
                                    : tokens.expanded_min_width_dp));
   // Destination slots use the full rail width: their indicators are resolved
@@ -400,8 +456,10 @@ Dimensions NavigationRail::onMeasure(WidthSpec width, HeightSpec height) {
   // The header remains naturally sized and centered by onLayout().
   const XDim content_width = std::max<XDim>(
       0, rail_width - 2 * Scaled(tokens.outer_horizontal_padding_dp));
-  const YDim vertical_padding = Scaled(tokens.outer_vertical_padding_dp);
-  YDim desired_height = 2 * vertical_padding;
+  const bool collapsed = layout() != NavigationRailLayout::kExpanded;
+  YDim desired_height = collapsed
+                            ? Scaled(tokens.collapsed_top_padding_dp)
+                            : 2 * Scaled(tokens.outer_vertical_padding_dp);
 
   // The header is optional and is measured independently: unlike destinations
   // it is a caller-supplied composite and may choose a narrower natural width.
@@ -411,7 +469,8 @@ Dimensions NavigationRail::onMeasure(WidthSpec width, HeightSpec height) {
         *header_, WidthSpec::AtMost(content_width), HeightSpec::Unspecified(0));
     desired_height += header_size.height();
     if (!destinations_.empty()) {
-      desired_height += Scaled(tokens.header_destination_gap_dp);
+      desired_height += Scaled(collapsed ? tokens.collapsed_header_gap_dp
+                                         : tokens.header_destination_gap_dp);
     }
   }
 
@@ -432,8 +491,7 @@ Dimensions NavigationRail::onMeasure(WidthSpec width, HeightSpec height) {
 void NavigationRail::onLayout(bool changed, const Rect& parent_rect) {
   const Rect rect(0, 0, parent_rect.width() - 1, parent_rect.height() - 1);
   (void)changed;
-  const internal::NavigationRailTokens& tokens =
-      internal::kNavigationRailTokens;
+  const internal::NavigationRailTokens& tokens = TokensFor(layout());
   if (rect.empty()) {
     // An empty parent target must also clear stale child geometry. Otherwise a
     // detached or clipped rail could leave old child hit targets reachable.
@@ -445,13 +503,17 @@ void NavigationRail::onLayout(bool changed, const Rect& parent_rect) {
   }
 
   const XDim horizontal_padding = Scaled(tokens.outer_horizontal_padding_dp);
-  const YDim vertical_padding = Scaled(tokens.outer_vertical_padding_dp);
+  const bool collapsed = layout() != NavigationRailLayout::kExpanded;
+  const YDim top_padding = Scaled(collapsed ? tokens.collapsed_top_padding_dp
+                                            : tokens.outer_vertical_padding_dp);
+  const YDim bottom_padding =
+      collapsed ? 0 : Scaled(tokens.outer_vertical_padding_dp);
   // The rail surface owns vertical padding. Destinations receive the entire
   // rail width, while their indicator remains narrower and is resolved
   // internally.
   const Rect content(
-      rect.xMin() + horizontal_padding, rect.yMin() + vertical_padding,
-      rect.xMax() - horizontal_padding, rect.yMax() - vertical_padding);
+      rect.xMin() + horizontal_padding, rect.yMin() + top_padding,
+      rect.xMax() - horizontal_padding, rect.yMax() - bottom_padding);
   if (content.empty()) {
     if (header_ != nullptr) LayoutChildWithMargins(*header_, EmptyRect());
     for (NavigationRailDestination* destination : destinations_) {
@@ -480,16 +542,26 @@ void NavigationRail::onLayout(bool changed, const Rect& parent_rect) {
     if (!destinations_.empty()) {
       destination_top = std::min<YDim>(
           content.yMax() + 1,
-          destination_top + Scaled(tokens.header_destination_gap_dp));
+          destination_top + Scaled(collapsed
+                                       ? tokens.collapsed_header_gap_dp
+                                       : tokens.header_destination_gap_dp));
     }
   } else if (header_ != nullptr) {
     LayoutChildWithMargins(*header_, EmptyRect());
   }
 
-  if (destinations_.empty() || destination_top > content.yMax()) return;
+  if (destination_top > content.yMax()) {
+    for (NavigationRailDestination* destination : destinations_) {
+      LayoutChildWithMargins(*destination, EmptyRect());
+    }
+    return;
+  }
+  if (destinations_.empty()) return;
   const YDim available_height = content.yMax() - destination_top + 1;
   const int count = destinationCount();
-  const YDim minimum_height = Scaled(tokens.destination_height_dp);
+  const YDim minimum_height =
+      Scaled(collapsed ? tokens.collapsed_destination_height_dp
+                       : tokens.expanded_destination_height_dp);
   const YDim preferred_gaps = Scaled(tokens.destination_gap_dp);
   const int32_t preferred_total =
       static_cast<int32_t>(count) * minimum_height +
@@ -584,8 +656,7 @@ BadgedNavigationRailDestination::BadgedNavigationRailDestination(
     ApplicationContext& context, roo::string_view label, const MonoIcon* icon,
     const MonoIcon* selected_icon)
     : NavigationRailDestination(context, label, icon, selected_icon),
-      badge_(),
-      layout_direction_(static_cast<uint8_t>(LayoutDirection::kLeftToRight)) {}
+      badge_() {}
 
 const Badge& BadgedNavigationRailDestination::badge() const { return badge_; }
 
@@ -636,24 +707,20 @@ Rect BadgedNavigationRailDestination::destinationContentBounds() const {
 
 void BadgedNavigationRailDestination::setLayoutDirectionFromRail(
     LayoutDirection direction) {
-  const uint8_t encoded = static_cast<uint8_t>(direction);
-  if (layout_direction_ == encoded) return;
-  layout_direction_ = encoded;
+  NavigationRailDestination::setLayoutDirectionFromRail(direction);
   relayoutBadge();
-  invalidateInterior();
 }
 
 void BadgedNavigationRailDestination::relayoutBadge() {
   if (!badge_.visible()) return;
-  if (layout() == NavigationRailLayout::kCollapsed) {
+  if (layout() != NavigationRailLayout::kExpanded) {
     badge_.layoutForIcon(iconBounds());
     return;
   }
   const Rect anchor = badgeAnchorBounds();
   if (anchor.empty()) return;
 
-  const bool rtl = static_cast<LayoutDirection>(layout_direction_) ==
-                   LayoutDirection::kRightToLeft;
+  const bool rtl = layoutDirection() == LayoutDirection::kRightToLeft;
   roo_display::Alignment alignment;
   // A one-pixel synthetic anchor just beyond the label maps the shared
   // corner-based helper onto the Material expanded beside-label treatment.
@@ -680,14 +747,13 @@ void BadgedNavigationRailDestination::relayoutBadge() {
 }
 
 Rect BadgedNavigationRailDestination::badgeAnchorBounds() const {
-  if (layout() == NavigationRailLayout::kCollapsed) return iconBounds();
+  if (layout() != NavigationRailLayout::kExpanded) return iconBounds();
 
   Rect label_bounds = labelBounds();
   if (label_bounds.empty()) label_bounds = iconBounds();
   if (label_bounds.empty()) return EmptyRect();
 
-  const bool rtl = static_cast<LayoutDirection>(layout_direction_) ==
-                   LayoutDirection::kRightToLeft;
+  const bool rtl = layoutDirection() == LayoutDirection::kRightToLeft;
   const int16_t anchor_x =
       rtl ? label_bounds.xMin() - 1 : label_bounds.xMax() + 1;
   return Rect(anchor_x, label_bounds.yMin(), anchor_x, label_bounds.yMax());

@@ -154,7 +154,12 @@ class EquipmentConsole : public FlexLayout {
     alerts_.setBadgeValue(2);
 
     // Collapsed rails preserve content width on this 320 px example display.
-    // Wider products can call setLayout(kExpanded) to show labels inline.
+    // Wider products can call setLayout(NavigationRailLayout::kExpanded)
+    // to show labels inline. Use kBaseline for an 80 dp narrow rail with
+    // compact header spacing instead of the default 96 dp collapsed rail.
+    // An optional surface-container role visually separates navigation from
+    // the page. clearContainerRoleOverride() restores the theme default.
+    navigation_.setContainerRole(material3::ColorToken::kSurfaceContainer);
     // Keep the persistent rail at its token width when the changing page
     // labels make the content column's natural width larger than the display.
     add(navigation_, {.flex_shrink = 0});

@@ -5,6 +5,7 @@
 #include "roo_backport/string_view.h"
 #include "roo_windows/core/widget.h"
 #include "roo_windows/material3/theme.h"
+#include "roo_windows/material3/typography.h"
 #include "roo_windows/widgets/icon.h"
 
 namespace roo_windows {
@@ -65,6 +66,12 @@ class NavigationDestinationBase : public Widget {
   NavigationDestinationBase(ApplicationContext& context, roo::string_view label,
                             const MonoIcon* icon,
                             const MonoIcon* selected_icon);
+
+  /// Returns label ink, allowing components to distinguish it from icon ink.
+  virtual Color labelColor() const;
+
+  /// Supplies component typography for the resolved label slot.
+  virtual const TextStyle& labelStyle() const;
 
   const MonoIcon* displayedIcon() const;
   NavigationDestinationPresentation presentation() const;

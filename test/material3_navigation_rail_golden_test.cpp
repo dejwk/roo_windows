@@ -23,24 +23,24 @@ class Material3NavigationRailGoldenTest : public testing::Test {
 
   roo_display::Offscreen<roo_display::Rgb888> RenderCollapsedStatesRow() {
     Application app(&env_, display_);
-    AddDestination(app, 0, 0, 87, "Home",
+    AddDestination(app, 0, 0, 96, "Home",
                    &ic_outlined_24_navigation_home_work(), nullptr, false,
                    false, false, false, NavigationRailLayout::kCollapsed);
-    AddDestination(app, 88, 0, 87, "Inbox", &ic_outlined_24_action_bookmark(),
+    AddDestination(app, 96, 0, 96, "Inbox", &ic_outlined_24_action_bookmark(),
                    &ic_outlined_24_action_done(), true, false, false, false,
                    NavigationRailLayout::kCollapsed);
-    AddDestination(app, 176, 0, 87, "Saved", &ic_outlined_24_action_done(),
+    AddDestination(app, 192, 0, 96, "Saved", &ic_outlined_24_action_done(),
                    nullptr, false, true, false, false,
                    NavigationRailLayout::kCollapsed);
-    AddDestination(app, 264, 0, 87, "Focus", &ic_outlined_24_action_bookmark(),
+    AddDestination(app, 288, 0, 96, "Focus", &ic_outlined_24_action_bookmark(),
                    nullptr, false, false, true, false,
                    NavigationRailLayout::kCollapsed);
-    AddDestination(app, 352, 0, 87, "Press", &ic_outlined_24_action_done(),
+    AddDestination(app, 384, 0, 96, "Press", &ic_outlined_24_action_done(),
                    nullptr, false, false, false, true,
                    NavigationRailLayout::kCollapsed);
 
     app.refresh();
-    return test::CaptureRgb(offscreen_.raster(), 0, 0, 440, Scaled(64));
+    return test::CaptureRgb(offscreen_.raster(), 0, 0, 480, Scaled(64));
   }
 
   roo_display::Offscreen<roo_display::Rgb888> RenderExpandedStatesRow() {
@@ -67,14 +67,14 @@ class Material3NavigationRailGoldenTest : public testing::Test {
 
   roo_display::Offscreen<roo_display::Rgb888> RenderCollapsedBadgesRow() {
     Application app(&env_, display_);
-    AddBadgedDestination(app, 0, 0, 87, "Home",
+    AddBadgedDestination(app, 0, 0, 96, "Home",
                          &ic_outlined_24_navigation_home_work(), true,
                          NavigationRailLayout::kCollapsed);
-    AddBadgedDestination(app, 88, 0, 87, "Inbox",
+    AddBadgedDestination(app, 96, 0, 96, "Inbox",
                          &ic_outlined_24_action_bookmark(), false,
                          NavigationRailLayout::kCollapsed);
     app.refresh();
-    return test::CaptureRgb(offscreen_.raster(), 0, 0, 176, Scaled(64));
+    return test::CaptureRgb(offscreen_.raster(), 0, 0, 192, Scaled(64));
   }
 
   roo_display::Offscreen<roo_display::Rgb888> RenderExpandedBadgesRow() {

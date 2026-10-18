@@ -21,6 +21,10 @@ class NavigationRailDestinationTestAccess {
     return destination.destinationContentBounds();
   }
 
+  static Rect indicatorBounds(const NavigationRailDestination& destination) {
+    return destination.resolveDestinationGeometry().indicator_bounds;
+  }
+
   static Rect iconBounds(const NavigationRailDestination& destination) {
     return destination.iconBounds();
   }
