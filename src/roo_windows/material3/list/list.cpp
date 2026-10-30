@@ -679,6 +679,16 @@ void ListEntry::syncTextColors() {
   set_color(supporting_text_, supporting_mode_, supportingColor());
 }
 
+void ListEntry::invalidateDescending() {
+  syncTextColors();
+  Material3Container::invalidateDescending();
+}
+
+void ListEntry::invalidateDescending(const Rect& rect) {
+  syncTextColors();
+  Material3Container::invalidateDescending(rect);
+}
+
 void ListEntry::setItem(ListItem& item) {
   if (item_ == &item) {
     refreshFromItem();

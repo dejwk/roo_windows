@@ -433,6 +433,13 @@ class ListEntry : public Material3Container {
   void onFocusChanged(bool focused) override;
 
  protected:
+  /// Refreshes retained text colors when theme or ancestor damage reaches the
+  /// row.
+  void invalidateDescending() override;
+
+  /// Refreshes retained text colors before propagating partial damage.
+  void invalidateDescending(const Rect& rect) override;
+
   /// Resolves the current row policy against live application density.
   int8_t resolvedDensityLevel() const;
 

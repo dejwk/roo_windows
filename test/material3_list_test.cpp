@@ -8,6 +8,7 @@
 #include "roo_icons/outlined/24/notification.h"
 #include "roo_scheduler.h"
 #include "roo_windows/containers/flex_layout.h"
+#include "roo_windows/containers/scrollable_panel.h"
 #include "roo_windows/core/destination.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/widget.h"
@@ -1722,6 +1723,44 @@ TEST(Material3List, SegmentedListSkipsGoneRowsWhenResolvingPositions) {
   EXPECT_EQ(ListItemPosition::kFirst, first.visualContext().position);
   EXPECT_EQ(ListItemPosition::kSingle, hidden.visualContext().position);
   EXPECT_EQ(ListItemPosition::kLast, last.visualContext().position);
+}
+
+// Verifies cached label and block colors refresh on both full-theme and
+// partial-row invalidation without rebinding the list item.
+TEST(Material3List, TextColorsRefreshOnInvalidation) {
+  roo_scheduler::SchedulingService scheduler;
+  Theme theme;
+  Environment environment(scheduler, theme);
+  std::vector<roo::byte> pixels(180 * 140 * 2);
+  roo_display::OffscreenDevice<roo_display::Argb4444> device(
+      180, 140, pixels.data(), roo_display::Argb4444());
+  roo_display::Display display(device);
+  Application app(&environment, display);
+  ListTextPolicy wrapping;
+  wrapping.overflow = TextOverflowPolicy::kWrap;
+  wrapping.max_lines = 2;
+  const auto icon = ic_filled_24_device_wifi_tethering();
+  ListRow<NavigationListItem> row(app.context(), icon, "Label", "Support",
+                                  ListTextPolicy{}, wrapping);
+  app.addTaskFullScreen(row);
+  app.refresh();
+  for (bool full : {true, false}) {
+    SCOPED_TRACE(full);
+    theme.material3.color.onSurface =
+        full ? roo_display::color::White : roo_display::color::Red;
+    theme.material3.color.onSurfaceVariant =
+        full ? roo_display::color::Yellow : roo_display::color::Blue;
+    if (full) {
+      app.invalidateTheme();
+    } else {
+      row.invalidateInterior();
+    }
+    app.refresh();
+    const auto actual = pixels;
+    row.refreshFromItem();
+    app.refresh();
+    EXPECT_EQ(actual, pixels);
+  }
 }
 
 // Verifies painted text and the navigation icon follow selection changes,
