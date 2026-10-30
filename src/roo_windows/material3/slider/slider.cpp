@@ -619,8 +619,9 @@ void Slider::notifyStateChanged(uint16_t state_diff) {
   updateValueIndicatorPin();
 }
 
-void Slider::paintTrackAndThumb(const Canvas& canvas, const Metrics& metrics,
+void Slider::paintTrackAndThumb(PaintContext& ctx, const Metrics& metrics,
                                 const Tokens& tokens) const {
+  const Canvas& canvas = ctx.canvas();
   float center_anchor_primary =
       metrics.axis.centerFromValue(range_, 0.5f * (range_.from + range_.to));
   auto handle_bounds = metrics.axis.paintRectFromPrimaryCross(
@@ -633,6 +634,12 @@ void Slider::paintTrackAndThumb(const Canvas& canvas, const Metrics& metrics,
   Rect handle_tile_bounds =
       GetHandleTileBounds(widget_bounds, handle.extents(), metrics.track_gap,
                           metrics.axis.isVertical());
+
+  // Settle the thumb and its background gap first. Rounded raster extents
+  // can share a column with a track tile at fractional thumb positions.
+  // Excluding the resolved tile keeps that column from being painted twice.
+  canvas.drawTiled(handle, handle_tile_bounds, kNoAlign);
+  ctx.addExclusion(handle_tile_bounds);
 
   // Paint the same segment model used by stop rendering so track and stop
   // passes agree on every active/inactive boundary.
@@ -661,7 +668,6 @@ void Slider::paintTrackAndThumb(const Canvas& canvas, const Metrics& metrics,
       canvas.fillRect(gap_rect, canvas.bgcolor());
     }
   }
-  canvas.drawTiled(handle, handle_tile_bounds, kNoAlign);
 }
 
 void Slider::paintStops(const Canvas& canvas, Clipper& clipper,
@@ -808,7 +814,7 @@ void Slider::paintWidgetContents(PaintContext& ctx) {
     Tokens tokens = ResolveTokens(*this);
     paintInsetIcons(content_canvas, clipper, metrics, tokens);
     paintStops(content_canvas, clipper, metrics, tokens);
-    paintTrackAndThumb(content_canvas, metrics, tokens);
+    paintTrackAndThumb(content_ctx, metrics, tokens);
   }
   markClean();
 }

@@ -1,3 +1,6 @@
+#include <algorithm>
+#include <vector>
+
 #include "gtest/gtest.h"
 #include "roo_display.h"
 #include "roo_display/core/offscreen.h"
@@ -2973,6 +2976,113 @@ TEST(Material3SliderValueIndicator, PersistentObjectSizesStayBounded) {
   constexpr size_t kRangeSliderBudget = sizeof(Widget) + 80;
   EXPECT_LE(sizeof(Slider), kSliderBudget);
   EXPECT_LE(sizeof(RangeSlider), kRangeSliderBudget);
+}
+
+class CompactCountingDisplay
+    : public roo_display::OffscreenDevice<roo_display::Argb4444> {
+ public:
+  explicit CompactCountingDisplay(roo::byte* data, int16_t width = 160,
+                                  int16_t height = 128)
+      : OffscreenDevice(width, height, data, roo_display::Argb4444()),
+        writes(width * height),
+        stride_(width) {}
+  void reset() { std::fill(writes.begin(), writes.end(), 0); }
+  void setAddress(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1,
+                  roo_display::BlendingMode mode) override {
+    left = x = x0;
+    right = x1;
+    y = y0;
+    OffscreenDevice::setAddress(x0, y0, x1, y1, mode);
+  }
+  void count(uint32_t n) {
+    while (n-- > 0) {
+      ++writes[y * stride_ + x];
+      if (++x > right) {
+        x = left;
+        ++y;
+      }
+    }
+  }
+  void write(Color* colors, uint32_t n) override {
+    count(n);
+    OffscreenDevice::write(colors, n);
+  }
+  void fill(Color color, uint32_t n) override {
+    count(n);
+    OffscreenDevice::fill(color, n);
+  }
+  void writePixels(roo_display::BlendingMode mode, Color* colors, int16_t* xs,
+                   int16_t* ys, uint16_t n) override {
+    for (int i = 0; i < n; ++i) {
+      setAddress(xs[i], ys[i], xs[i], ys[i], mode);
+      write(colors + i, 1);
+    }
+  }
+  void fillPixels(roo_display::BlendingMode mode, Color color, int16_t* xs,
+                  int16_t* ys, uint16_t n) override {
+    for (int i = 0; i < n; ++i) {
+      setAddress(xs[i], ys[i], xs[i], ys[i], mode);
+      fill(color, 1);
+    }
+  }
+  void writeRects(roo_display::BlendingMode mode, Color* colors, int16_t* x0,
+                  int16_t* y0, int16_t* x1, int16_t* y1, uint16_t n) override {
+    for (int i = 0; i < n; ++i) {
+      setAddress(x0[i], y0[i], x1[i], y1[i], mode);
+      fill(colors[i], (x1[i] - x0[i] + 1) * (y1[i] - y0[i] + 1));
+    }
+  }
+  void fillRects(roo_display::BlendingMode mode, Color color, int16_t* x0,
+                 int16_t* y0, int16_t* x1, int16_t* y1, uint16_t n) override {
+    for (int i = 0; i < n; ++i) {
+      setAddress(x0[i], y0[i], x1[i], y1[i], mode);
+      fill(color, (x1[i] - x0[i] + 1) * (y1[i] - y0[i] + 1));
+    }
+  }
+  std::vector<uint8_t> writes;
+
+ private:
+  int32_t stride_;
+  int left = 0;
+  int right = 0;
+  int x = 0;
+  int y = 0;
+};
+
+// Verifies fractional thumb positions do not repaint track/handle seam columns,
+// for initial, dirty, invalidated and disabled compact slider frames.
+TEST(Material3SliderCompactPaintTest, ThumbGapIsSettledOncePerFrame) {
+  for (int width : {65, 96}) {
+    std::vector<roo::byte> pixels(160 * 128 * 2);
+    CompactCountingDisplay device(pixels.data());
+    roo_display::Display display(device);
+    roo_scheduler::SchedulingService scheduler;
+    Environment environment(scheduler);
+    Application app(&environment, display);
+    app.refresh();
+    auto control =
+        std::make_unique<Slider>(app.context(), SliderRange{0, 5, 0.1f}, 2.6f);
+    Slider& slider = *control;
+    SliderStyle style = slider.style();
+    style.tick_mode = SliderTickMode::kHidden;
+    style.show_stop_indicators = false;
+    slider.setStyle(style);
+    app.add(std::move(control),
+            roo_display::Box(4, 6, width + 3, Scaled(44) + 5));
+    for (int frame = 0; frame < 4; ++frame) {
+      SCOPED_TRACE(width);
+      SCOPED_TRACE(frame);
+      if (frame == 1) slider.setValue(2.7f);
+      if (frame == 2) slider.invalidateInterior();
+      if (frame == 3) slider.setEnabled(false);
+      device.reset();
+      app.refresh();
+      EXPECT_GT(*std::max_element(device.writes.begin(), device.writes.end()),
+                0);
+      EXPECT_LE(*std::max_element(device.writes.begin(), device.writes.end()),
+                1);
+    }
+  }
 }
 
 }  // namespace

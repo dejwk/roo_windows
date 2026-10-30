@@ -269,7 +269,7 @@ class Slider : public Widget {
   Rect insetIconDirtyRect(const Metrics& metrics) const;
 
   /// Paints the active/inactive track pieces and the current thumb geometry.
-  void paintTrackAndThumb(const Canvas& canvas, const Metrics& metrics,
+  void paintTrackAndThumb(PaintContext& ctx, const Metrics& metrics,
                           const internal::SliderPaintTokens& tokens) const;
 
   /// Paints any inset icon before track segments exclude the same pixels.
