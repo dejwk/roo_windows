@@ -163,6 +163,16 @@ Changing translucent content also requires invalidating the scene beneath it;
 marking only the foreground dirty is insufficient. Use the
 [translucent widget path](#translucent-widgets-and-shaped-backgrounds) below.
 
+When state changes, calculate the smallest practical damage region from the old
+and new state before painting. Include removed and added ink, antialiasing,
+stroke caps, and declared overflow; preserve pixels whose final value cannot
+change. For a gauge value update with unchanged colors, invalidate the arc
+interval between the old and new endpoints, not the entire gauge. A color change
+may require the whole affected arc, while geometry changes may require old and
+new footprints. Use full-widget invalidation only when the whole area can change
+or a tighter region is impractical; document that tradeoff. Scheduling backdrop
+reconstruction before paint does not require enlarging damage to widget bounds.
+
 Paint-time state changes use the ordinary invalidation APIs. If a widget
 reports new damage while a refresh is painting, the framework retains that
 request for the next refresh and restores descendant dirty flags after the
@@ -296,8 +306,9 @@ notification invalidates lower contributors through the normal damage hooks.
 Use `Container::invalidateInterior(rect)` for a container so affected children
 are invalidated as well. Include old and new ink, antialiasing, and declared
 overflow. When a footprint shrinks or moves, invalidate its old bounds before
-discarding them, then invalidate the new bounds. A fixed-area widget can
-conservatively invalidate its full declared area.
+discarding them, then invalidate the new bounds. Compute a tighter region for
+state changes within a fixed footprint whenever practical, following the
+[damage guidance](#dirty-vs-invalidated).
 
 Do not notify parents from `invalidateDescending()`: that hook runs during
 descending invalidation and would reenter the upward notification path. Paint
@@ -367,6 +378,8 @@ See `src/roo_windows/core/container.cpp`, including `fastDrawChildShadow()`.
 - Widget-related examples are updated when the change introduces user-visible
   functionality worth demonstrating.
 - Dirty repaint minimizes written pixels.
+- State-change damage is limited to the smallest practical changed region;
+  full-widget invalidation has a concrete reason.
 - Invalidated repaint covers the entire invalid region.
 - No pixel is written more than once with a different color within the same
   paint pass.

@@ -173,12 +173,20 @@ widens its incoming context again. The radius and color remain stable during pai
 | Pattern underneath changes | The lower contributor schedules its own damage. | Register the unchanged circle, even though it is clean. |
 | Only a circle region is invalidated | The override invalidates that region and its backdrop. | Register the unchanged circle; output remains limited to active damage. |
 
-The gauge follows this recipe. Value, color, width, and angle setters invalidate
-its full declared area. This trades some extra painting for a smaller, simpler
-widget without last-painted snapshots. Setting an unchanged value still
-schedules no work.
-Several different assignments before a frame coalesce as ordinary damage; even
-returning to the originally displayed value can leave a conservative repaint.
+The gauge follows the same invalidation path with a smaller changed region.
+`setValue()` compares the old and new values and resolved colors before paint.
+With unchanged colors, it invalidates only the bounding rectangle of the arc
+interval between the endpoints, including round caps and antialiasing. Growth
+adds ink there; shrinkage reveals the lower scale and scene. A value-dependent
+color change also includes the visible filled prefix or scale whose color
+changed. Invisible ink contributes no damage.
+
+Each setter call schedules this region immediately, without retaining a
+last-painted snapshot. Several assignments before a frame accumulate their
+changed regions, so intermediate values can leave extra pending damage even
+when the final value returns to the displayed one. An unchanged assignment
+schedules no work. Width, angle, style, and explicit full-invalidation operations
+still use the full area because they can affect the gauge's entire appearance.
 
 ### Example 2: a custom rasterizable, without a bitmap
 
@@ -395,10 +403,12 @@ together before registration.
 ### Damage and source lifetime
 
 Setters sample application state and invalidate affected scene regions before
-paint begins. The simple recipes conservatively invalidate the declared content
-area. A consumer that already knows a smaller old/new changed region can pass
-it to `invalidateInterior(rect)`; no last-painted snapshot is required by the
-framework. Source-only invalidation works even when every value compares equal.
+paint begins. Calculate the smallest practical region that contains all changed
+ink and pass it to `invalidateInterior(rect)`, as the gauge does for value
+changes. Include removed ink and rasterization fringes; a full-area fallback
+needs a reason, such as all source pixels potentially changing. The framework
+requires no last-painted snapshot. Source-only invalidation works even when
+every value compares equal.
 
 A fixed-size icon with a four-pixel halo must include that halo when changing
 color. If its declared footprint also shrinks, invalidate the old footprint
@@ -502,9 +512,9 @@ There is no framework implementation plan: the required hooks already exist.
 The production consumer change is confined to
 [`ModernRadialGauge` in roo_dashboard](../../../../roo_dashboard/src/roo_dashboard/meters/modern_radial_gauge.cpp):
 route setters and both public invalidation forms through ordinary source and
-backdrop invalidation, retain clean overlay registration, and use conservative
-full-area damage without last-painted snapshots. This change and its regression
-tests are present in the working tree.
+backdrop invalidation, retain clean overlay registration, and calculate changed
+arc bounds in `setValue()` without last-painted snapshots. This change and its
+regression tests are present in the working tree.
 
 The widget-authoring instructions describe this path for future consumers.
 The shaped-window and cache examples above are recipes, not additional required
@@ -519,10 +529,12 @@ content, overflow and ink removal, nested ancestors, and clipped/unclipped
 stacking. Check final pixels, single writes, and an idle next refresh.
 
 The [gauge tests](../../../../roo_dashboard/test/modern_radial_gauge_test.cpp)
-cover full-area value updates, explicit region/full invalidation, translucent
-arcs, widths, angles, and value-dependent colors. Corrupt device pixels before
-source-only invalidation tests so a missed redraw cannot pass by preserving an
-already correct image. Full-render comparisons supplement independent
+cover bounded endpoint updates, explicit region/full invalidation, translucent
+arcs, widths, signed sweeps, wraparound, and value-dependent colors. Assert that
+small value changes write only a small region, not the gauge's full area or
+filled prefix. Corrupt device pixels before source-only invalidation tests so a
+missed redraw cannot pass by preserving an already correct image. Full-render
+comparisons supplement independent
 source-over arithmetic with explicit rounding tolerance. Existing overlay,
 rounded/effect, keyboard, scrolling, and pump integration suites cover regressions.
 
@@ -542,8 +554,8 @@ rollout.
 It could narrow a conservative dirty region after comparing final and
 last-painted states, but would need extra traversal state and coordination with
 lower widgets' damage bookkeeping. Ordinary invalidation already supplies the
-required reconstruction before paint. Use that existing path and accept
-conservative gauge-area repainting.
+required reconstruction before paint. A setter can calculate tight changed-ink
+bounds using the old and new state, then pass them through that existing path.
 
 #### A mandatory deferred-widget subclass
 
