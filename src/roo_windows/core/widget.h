@@ -742,6 +742,10 @@ class Widget {
   /// Reports whether this window has an active transient presentation.
   virtual void onTransientActivityChanged(bool active) { (void)active; }
 
+  /// Invalidates the scene below this widget, using parent coordinates.
+  /// Deferred contributors pair this with their own invalidation before paint,
+  /// including for unchanged-value region invalidation. This does not mark
+  /// the source widget itself invalidated or infer rectangular opacity.
   void notifyParentInvalidatedRegion(const Rect& rect);
 
   /// Reports a change to the shared click sample after it has been applied.

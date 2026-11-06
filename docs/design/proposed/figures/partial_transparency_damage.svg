@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="420" viewBox="0 0 1040 420" role="img">
+<title>Three different causes of reconstruction</title><desc>A shrinking circle, a changing lower pattern, and source-only invalidation all need current foreground over fresh lower pixels.</desc>
+<defs>
+  <pattern id="checker" width="32" height="32" patternUnits="userSpaceOnUse">
+    <rect width="32" height="32" fill="#edf2f7"/>
+    <path d="M0 0h16v16H0zM16 16h16v16H16z" fill="#cbd5e1"/>
+  </pattern>
+  <style>
+    text {font-family: DejaVu Sans, sans-serif; fill: #172033; font-size: 14px;}
+    .heading {font-size: 22px; font-weight: bold;}
+    .label {font-size: 16px; font-weight: bold;}
+    .small {font-size: 13px;}
+  </style>
+</defs>
+<rect width="1040" height="420" fill="white"/>
+<text x="24" y="35" class="heading">The source can be unchanged and still need composition</text>
+<text x="24" y="77" class="label">1. Foreground shrinks</text>
+<rect x="24" y="96" width="304" height="152" fill="url(#checker)" stroke="#94a3b8"/>
+<circle cx="176" cy="172" r="32" fill="#146ed2" fill-opacity="0.58"/>
+<circle cx="176" cy="172" r="56" fill="none" stroke="#64748b" stroke-dasharray="5 4" stroke-width="2"/>
+<rect x="116" y="112" width="120" height="120" fill="none" stroke="#b45309" stroke-width="2" stroke-dasharray="7 4"/>
+<text x="24" y="279" class="small">New circle: smaller radius.</text>
+<text x="24" y="304" class="small">Invalidate the old ring as well.</text>
+<text x="24" y="329" class="small">Removed ink reveals the pattern.</text>
+<text x="368" y="77" class="label">2. Backdrop changes</text>
+<rect x="368" y="96" width="304" height="152" fill="url(#checker)" stroke="#94a3b8"/>
+<rect x="500" y="97" width="40" height="150" fill="#91c8a3"/>
+<circle cx="520" cy="172" r="56" fill="#146ed2" fill-opacity="0.58"/>
+<rect x="500" y="97" width="40" height="150" fill="none" stroke="#b45309" stroke-width="2" stroke-dasharray="7 4"/>
+<text x="368" y="279" class="small">Circle and source cache stay unchanged.</text>
+<text x="368" y="304" class="small">Only the lower stripe changes.</text>
+<text x="368" y="329" class="small">Register the circle again over that stripe.</text>
+<text x="712" y="77" class="label">3. Source region invalidated</text>
+<rect x="712" y="96" width="304" height="152" fill="url(#checker)" stroke="#94a3b8"/>
+<circle cx="864" cy="172" r="56" fill="#146ed2" fill-opacity="0.58"/>
+<rect x="794" y="156" width="140" height="32" fill="none" stroke="#b45309" stroke-width="2" stroke-dasharray="7 4"/>
+<text x="712" y="279" class="small">No value or source pixels change.</text>
+<text x="712" y="304" class="small">The orange strip is invalidated.</text>
+<text x="712" y="329" class="small">Reconstruct lower pixels there anyway.</text>
+<text x="24" y="382" class="">Orange = damage to reconstruct. Blue = current contribution. Gray dashed circle = old ink.</text>
+</svg>

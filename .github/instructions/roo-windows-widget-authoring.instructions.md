@@ -159,6 +159,10 @@ Implications for paint logic:
   the widget, or a region being revealed. Repaint every pixel in the invalid
   region, while still applying any state-driven dirty updates.
 
+Changing translucent content also requires invalidating the scene beneath it;
+marking only the foreground dirty is insufficient. Use the
+[translucent widget path](#translucent-widgets-and-shaped-backgrounds) below.
+
 Paint-time state changes use the ordinary invalidation APIs. If a widget
 reports new damage while a refresh is painting, the framework retains that
 request for the next refresh and restores descendant dirty flags after the
@@ -195,6 +199,11 @@ If the widget can settle its content in one local paint plan where each pixel
 receives its final value directly, keep that logic in `paint()`. Separate
 dirty and invalidated handling does not by itself require overriding
 `paintWidgetContents()`.
+
+Deferred contributions needed when lower content repaints must also be
+registered on clean traversals. Put those registrations in
+`emitPersistentDecoration()` as described in the
+[translucent widget path](#translucent-widgets-and-shaped-backgrounds).
 
 Reference implementation:
 
@@ -259,6 +268,71 @@ registered and current for draws that proceed. Active fractional rounded-edge
 background accumulation remains mandatory. Cleanup belongs to the opting-in
 scroller.
 
+### Translucent Widgets and Shaped Backgrounds
+
+Use this path when holes, fractional alpha, or antialiased edges must show the
+actual scene below a widget. It also applies to a nonrectangular container with
+an opaque interior. Reporting nonopaque coverage or assigning a translucent
+surface color alone does not arrange this composition. Use existing hooks;
+no dedicated base class or offscreen cache is required.
+
+**Invalidate before paint.** Setters update sampled state and call the widget's
+backdrop-aware `invalidateInterior()`. Override both public forms so explicit
+invalidation of unchanged content reconstructs the backdrop too. For a leaf:
+
+```cpp
+void invalidateInterior() override {
+  invalidateInterior(getInteriorBounds());
+}
+
+void invalidateInterior(const Rect& rect) override {
+  Widget::invalidateInterior(rect);
+  notifyParentInvalidatedRegion(rect.translate(offsetLeft(), offsetTop()));
+}
+```
+
+These overrides stay public. The base call invalidates the source; the parent
+notification invalidates lower contributors through the normal damage hooks.
+Use `Container::invalidateInterior(rect)` for a container so affected children
+are invalidated as well. Include old and new ink, antialiasing, and declared
+overflow. When a footprint shrinks or moves, invalidate its old bounds before
+discarding them, then invalidate the new bounds. A fixed-area widget can
+conservatively invalidate its full declared area.
+
+Do not notify parents from `invalidateDescending()`: that hook runs during
+descending invalidation and would reenter the upward notification path. Paint
+consumes scheduled damage; it does not request backdrop reconstruction.
+
+**Register on every relevant traversal.** Use `emitPersistentDecoration()` for
+current overlays, including when the source is clean and only lower content
+changes. Reapply the local content clip, for example with
+`ctx.addOverlay(source_, getContentBounds())`. Borrowed rasterizables, their
+buffers, and sampled state stay alive and stable through the synchronous paint.
+Do not gate registration on `isDirty()` or cache staleness.
+
+**Exclude only final pixels.** Report false from
+`fullyCoversBoundsWithOpaqueColors()` when the rectangle is not fully opaque.
+For overlay-only content, return an explicitly empty `Rect(0, 0, -1, -1)` from
+`getDirectPaintExclusionBounds()`. Registration supplies a source for later
+composition; it does not settle a rectangle. Mixed widgets retain exclusions
+only for direct pixels they have fully resolved.
+
+A shaped container registers its background after child traversal and replaces
+the default rectangular surface fill and exclusion. Ordinary children may
+resolve their pixels against a known opaque interior only when their complete
+ink lies inside it. A shaped background does not clip children at its boundary.
+See the [container recipe](../../docs/design/proposed/partial_transparency_rendering_design.md#example-4-an-elliptical-window-containing-ordinary-widgets)
+for the surface hooks and placement constraints.
+
+**Cache only when useful.** Cache preparation precedes registration; source
+staleness is separate from scene invalidation. A backdrop-only repaint reuses
+unchanged source pixels. Content changes mark the source stale and invalidate
+the affected scene. The consumer owns allocation, resizing, and format:
+ARGB for multicolor sources, or Alpha8/Alpha4 with a colored view for monochrome
+coverage. Keep borrowed views valid when storage changes. The
+[shape and cache examples](../../docs/design/proposed/partial_transparency_rendering_design.md#design-details)
+show this contract without imposing storage on ordinary widgets.
+
 ### Single-Pass Paint Strategies
 
 - Use `Canvas::drawTiled()` when a drawable should occupy a specific rectangle
@@ -297,3 +371,7 @@ See `src/roo_windows/core/container.cpp`, including `fastDrawChildShadow()`.
 - No pixel is written more than once with a different color within the same
   paint pass.
 - Exclusions are added only after the excluded area is already final.
+- Translucent setters and explicit source invalidation also invalidate the
+  backdrop, including old ink and declared overflow.
+- Deferred contributions register on clean traversals and retain valid source
+  storage throughout paint; overlay registration adds no direct exclusion.

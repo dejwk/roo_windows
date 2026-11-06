@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="500" viewBox="0 0 1040 500">
+  <defs>
+    <marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto">
+      <path d="M0 0L9 4.5L0 9z" fill="#475569"/>
+    </marker>
+    <style>
+      text { font-family: sans-serif; fill: #172033; font-size: 15px; }
+      .title { font-size: 20px; font-weight: bold; }
+      .small { font-size: 13px; }
+      .step { font-size: 16px; font-weight: bold; }
+    </style>
+  </defs>
+  <rect width="1040" height="500" fill="white"/>
+  <text x="28" y="34" class="title">Coverage and damage are different</text>
+  <rect x="40" y="65" width="400" height="255" fill="#f1f5f9"/><path d="M40 65h24v24h-24zM88 65h24v24h-24zM136 65h24v24h-24zM184 65h24v24h-24zM232 65h24v24h-24zM280 65h24v24h-24zM328 65h24v24h-24zM376 65h24v24h-24zM424 65h16v24h-16zM64 89h24v24h-24zM112 89h24v24h-24zM160 89h24v24h-24zM208 89h24v24h-24zM256 89h24v24h-24zM304 89h24v24h-24zM352 89h24v24h-24zM400 89h24v24h-24zM40 113h24v24h-24zM88 113h24v24h-24zM136 113h24v24h-24zM184 113h24v24h-24zM232 113h24v24h-24zM280 113h24v24h-24zM328 113h24v24h-24zM376 113h24v24h-24zM424 113h16v24h-16zM64 137h24v24h-24zM112 137h24v24h-24zM160 137h24v24h-24zM208 137h24v24h-24zM256 137h24v24h-24zM304 137h24v24h-24zM352 137h24v24h-24zM400 137h24v24h-24zM40 161h24v24h-24zM88 161h24v24h-24zM136 161h24v24h-24zM184 161h24v24h-24zM232 161h24v24h-24zM280 161h24v24h-24zM328 161h24v24h-24zM376 161h24v24h-24zM424 161h16v24h-16zM64 185h24v24h-24zM112 185h24v24h-24zM160 185h24v24h-24zM208 185h24v24h-24zM256 185h24v24h-24zM304 185h24v24h-24zM352 185h24v24h-24zM400 185h24v24h-24zM40 209h24v24h-24zM88 209h24v24h-24zM136 209h24v24h-24zM184 209h24v24h-24zM232 209h24v24h-24zM280 209h24v24h-24zM328 209h24v24h-24zM376 209h24v24h-24zM424 209h16v24h-16zM64 233h24v24h-24zM112 233h24v24h-24zM160 233h24v24h-24zM208 233h24v24h-24zM256 233h24v24h-24zM304 233h24v24h-24zM352 233h24v24h-24zM400 233h24v24h-24zM40 257h24v24h-24zM88 257h24v24h-24zM136 257h24v24h-24zM184 257h24v24h-24zM232 257h24v24h-24zM280 257h24v24h-24zM328 257h24v24h-24zM376 257h24v24h-24zM424 257h16v24h-16zM64 281h24v24h-24zM112 281h24v24h-24zM160 281h24v24h-24zM208 281h24v24h-24zM256 281h24v24h-24zM304 281h24v24h-24zM352 281h24v24h-24zM400 281h24v24h-24zM40 305h24v15h-24zM88 305h24v15h-24zM136 305h24v15h-24zM184 305h24v15h-24zM232 305h24v15h-24zM280 305h24v15h-24zM328 305h24v15h-24zM376 305h24v15h-24zM424 305h16v15h-16z" fill="#cbd5e1"/><rect x="40" y="65" width="400" height="255" fill="none" stroke="#64748b"/>
+  <text x="50" y="90">Widget bounds: patterned scene underneath</text>
+  <!-- Old ink [100,145] x [350,235], new ink [100,145] x [250,235]. -->
+  <!-- Damage is their exact rectangular union [100,145] x [350,235]. -->
+  <path d="M100 144h7v3h-7zM100 234h7v3h-7zM112 144h7v3h-7zM112 234h7v3h-7zM124 144h7v3h-7zM124 234h7v3h-7zM136 144h7v3h-7zM136 234h7v3h-7zM148 144h7v3h-7zM148 234h7v3h-7zM160 144h7v3h-7zM160 234h7v3h-7zM172 144h7v3h-7zM172 234h7v3h-7zM184 144h7v3h-7zM184 234h7v3h-7zM196 144h7v3h-7zM196 234h7v3h-7zM208 144h7v3h-7zM208 234h7v3h-7zM220 144h7v3h-7zM220 234h7v3h-7zM232 144h7v3h-7zM232 234h7v3h-7zM244 144h7v3h-7zM244 234h7v3h-7zM256 144h7v3h-7zM256 234h7v3h-7zM268 144h7v3h-7zM268 234h7v3h-7zM280 144h7v3h-7zM280 234h7v3h-7zM292 144h7v3h-7zM292 234h7v3h-7zM304 144h7v3h-7zM304 234h7v3h-7zM316 144h7v3h-7zM316 234h7v3h-7zM328 144h7v3h-7zM328 234h7v3h-7zM340 144h7v3h-7zM340 234h7v3h-7zM99 145h3v7h-3zM349 145h3v7h-3zM99 157h3v7h-3zM349 157h3v7h-3zM99 169h3v7h-3zM349 169h3v7h-3zM99 181h3v7h-3zM349 181h3v7h-3zM99 193h3v7h-3zM349 193h3v7h-3zM99 205h3v7h-3zM349 205h3v7h-3zM99 217h3v7h-3zM349 217h3v7h-3zM99 229h3v6h-3zM349 229h3v6h-3z" fill="#b45309"/>
+  <rect x="100" y="145" width="150" height="90" rx="28" fill="#3b82f6" fill-opacity="0.55"/>
+  <text x="110" y="130">Current translucent ink</text>
+  <path d="M270 185h65" stroke="#475569" marker-end="url(#arrow)" stroke-width="2"/>
+  <text x="268" y="212" class="small">Old ink removed</text>
+  <path d="M102 238L82 266" stroke="#475569" stroke-width="1.5"/>
+  <text x="54" y="286" class="small">Rounded corner still needs the backdrop</text>
+  <text x="40" y="352" class="small">Dashed rectangle = old ink bounds union new ink bounds</text>
+  <text x="40" y="375" class="small">Neither widget bounds nor damage prove opaque coverage.</text>
+  <text x="510" y="34" class="title">Traversal and output</text>
+  <rect x="515" y="66" width="485" height="72" rx="8" fill="#eff6ff" stroke="#93c5fd"/>
+  <text x="534" y="94" class="step">1. Before paint</text>
+  <text x="534" y="119">Invalidate changed ink and the scene beneath it.</text>
+  <path d="M757 142h2v25h5l-6 9-6-9h5z" fill="#475569"/>
+  <rect x="515" y="181" width="485" height="72" rx="8" fill="#f8fafc" stroke="#94a3b8"/>
+  <text x="534" y="209" class="step">2. Traverse foreground before background</text>
+  <text x="534" y="234">Register current ink; repaint invalidated lower content.</text>
+  <path d="M757 257h2v25h5l-6 9-6-9h5z" fill="#475569"/>
+  <rect x="515" y="296" width="485" height="72" rx="8" fill="#f0fdf4" stroke="#86efac"/>
+  <text x="534" y="324" class="step">3. Compose before device output</text>
+  <text x="534" y="349">Blend foreground with fresh backdrop; emit final colors.</text>
+  <text x="515" y="410">The alpha source can be a custom rasterizer,</text>
+  <text x="515" y="433">a stack, or a cached procedural illustration.</text>
+  <text x="515" y="466" class="small">No intermediate clear is sent to the display.</text>
+</svg>

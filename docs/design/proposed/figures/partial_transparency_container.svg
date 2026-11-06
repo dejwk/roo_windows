@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="620" viewBox="0 0 1040 620" role="img">
+<title>A shaped container does not need a subtree bitmap</title><desc>Ordinary label and badge tiles are wholly inside an opaque ellipse. The background shape is registered after the children. Its edge and transparent corners need the actual lower scene.</desc>
+<defs>
+  <pattern id="checker" width="32" height="32" patternUnits="userSpaceOnUse">
+    <rect width="32" height="32" fill="#edf2f7"/>
+    <path d="M0 0h16v16H0zM16 16h16v16H16z" fill="#cbd5e1"/>
+  </pattern>
+  <style>
+    text {font-family: DejaVu Sans, sans-serif; fill: #172033; font-size: 14px;}
+    .heading {font-size: 22px; font-weight: bold;}
+    .label {font-size: 16px; font-weight: bold;}
+    .small {font-size: 13px;}
+  </style>
+</defs>
+<rect width="1040" height="620" fill="white"/>
+<text x="24" y="35" class="heading">An opaque interior can paint directly; the boundary still needs the scene</text>
+<text x="32" y="80" class="label">One container, two kinds of output</text>
+<rect x="32" y="98" width="480" height="356" fill="url(#checker)" stroke="#94a3b8"/>
+<rect x="56" y="130" width="432" height="288" fill="none" stroke="#64748b" stroke-dasharray="6 4"/>
+<ellipse cx="272" cy="274" rx="216" ry="144" fill="#fff0cf"/>
+<rect x="164" y="202" width="216" height="144" fill="none" stroke="#15803d" stroke-width="2" stroke-dasharray="6 4"/>
+<rect x="181" y="216" width="182" height="45" fill="#fff0cf" stroke="#2563eb" stroke-width="2"/>
+<text x="201" y="244" class="">Pressure: 2.4 bar</text>
+<rect x="220" y="285" width="104" height="40" rx="9" fill="#0f766e"/>
+<text x="240" y="311" style="fill:white;font-weight:bold">PUMP ON</text>
+<path d="M363 238L412 216" stroke="#334155" stroke-width="1.5" fill="none"/>
+<circle cx="412" cy="216" r="12" fill="white" stroke="#334155"/>
+<text x="407" y="221" class="">A</text>
+<path d="M366 368L423 386" stroke="#334155" stroke-width="1.5" fill="none"/>
+<circle cx="423" cy="386" r="12" fill="white" stroke="#334155"/>
+<text x="418" y="391" class="">B</text>
+<path d="M481 238L500 195" stroke="#334155" stroke-width="1.5" fill="none"/>
+<circle cx="500" cy="195" r="12" fill="white" stroke="#334155"/>
+<text x="495" y="200" class="">C</text>
+<path d="M80 151L94 115" stroke="#334155" stroke-width="1.5" fill="none"/>
+<circle cx="94" cy="115" r="12" fill="white" stroke="#334155"/>
+<text x="89" y="120" class="">D</text>
+<rect x="548" y="101" width="464" height="78" rx="7" fill="#f8fafc" stroke="#cbd5e1"/>
+<text x="564" y="124" class="label">A. Final child pixels</text>
+<text x="564" y="146" class="small">Text + known cream fill, or opaque badge.</text>
+<text x="564" y="165" class="small">Exclude only the area settled by that draw.</text>
+<rect x="548" y="191" width="464" height="78" rx="7" fill="#f8fafc" stroke="#cbd5e1"/>
+<text x="564" y="214" class="label">B. Remaining opaque interior</text>
+<text x="564" y="236" class="small">The deferred ellipse supplies the cream fill.</text>
+<text x="564" y="255" class="small">Its registration alone adds no exclusion.</text>
+<rect x="548" y="281" width="464" height="78" rx="7" fill="#f8fafc" stroke="#cbd5e1"/>
+<text x="564" y="304" class="label">C. Fractional boundary</text>
+<text x="564" y="326" class="small">Blend the ellipse with the lower pattern.</text>
+<text x="564" y="345" class="small">A child tile must not cover this band.</text>
+<rect x="548" y="371" width="464" height="78" rx="7" fill="#f8fafc" stroke="#cbd5e1"/>
+<text x="564" y="394" class="label">D. Transparent corners</text>
+<text x="564" y="416" class="small">The ellipse contributes zero alpha here.</text>
+<text x="564" y="435" class="small">Preserve the lower scene, not a cream box.</text>
+<text x="32" y="480" class="small">Green dashed box: a conservative area for complete child ink.</text>
+<text x="32" y="500" class="small">Gray dashed box: layout bounds, which are not an opaque rectangle.</text>
+<text x="32" y="549" class="label">Paint children and exclude final pixels</text>
+<text x="399" y="549" class="label">→</text>
+<text x="430" y="549" class="label">Register ellipse</text>
+<text x="598" y="549" class="label">→</text>
+<text x="630" y="549" class="label">Compose over lower scene</text>
+<text x="32" y="589" class="">A background-only cache can hold the ellipse. The children keep their own state and painting.</text>
+</svg>

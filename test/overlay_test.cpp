@@ -6,6 +6,7 @@
 #include "roo_windows/core/press_overlay.h"
 #include "roo_windows/core/theme.h"
 #include "roo_windows/material2/checkbox.h"
+#include "roo_windows/material2/divider.h"
 #include "roo_windows/material2/radio_button.h"
 #include "roo_windows/material2/slider.h"
 #include "roo_windows/material2/toggle_buttons.h"

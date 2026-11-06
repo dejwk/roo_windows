@@ -5,6 +5,7 @@
 
 #include "gtest/gtest.h"
 #include "roo_display/core/offscreen.h"
+#include "roo_display/shape/smooth.h"
 #include "roo_scheduler.h"
 #include "roo_windows/core/application.h"
 #include "roo_windows/core/blit_plan.h"
@@ -491,6 +492,349 @@ TEST(DamageRegionRenderTest, DecorationOverflowReachesDamage) {
     for (int x = 0; x < kWidth; ++x) {
       const bool damaged = damage.covers(Box(x, y, x, y));
       EXPECT_EQ(device.writes[y * kWidth + x], damaged ? 2 : 0);
+    }
+  }
+}
+
+class DeferredOverlay : public Widget {
+ public:
+  explicit DeferredOverlay(ApplicationContext& context, int overflow = 0)
+      : Widget(context), overflow_(overflow) {}
+
+  Insets getInkInsets() const override {
+    return Insets(-overflow_, -overflow_, -overflow_, -overflow_);
+  }
+  Dimensions getSuggestedMinimumDimensions() const override { return {12, 8}; }
+  void setColor(Color color) {
+    color_ = color;
+    invalidateInterior();
+  }
+
+  void invalidateInterior() override {
+    invalidateInterior(getInteriorBounds());
+  }
+
+  void invalidateInterior(const Rect& rect) override {
+    Widget::invalidateInterior(rect);
+    notifyParentInvalidatedRegion(rect.translate(offsetLeft(), offsetTop()));
+  }
+
+ protected:
+  Rect getDirectPaintExclusionBounds() const override { return {0, 0, -1, -1}; }
+  void emitPersistentDecoration(PaintContext& ctx) const override {
+    const Rect ink = getContentBounds();
+    ctx.addOverlayShape(roo_display::SmoothFilledRoundRect(
+                            ink.xMin() - 0.5f, ink.yMin() - 0.5f,
+                            ink.xMax() + 0.5f, ink.yMax() + 0.5f, 0, color_),
+                        ink);
+  }
+
+ private:
+  Color color_{128, 255, 0, 0};
+  int overflow_;
+};
+
+// Verifies pre-paint invalidation reconstructs lower contributors and
+// overlapping translucent foregrounds in the same frame, once per pixel,
+// without scheduling a follow-up refresh or disturbing a disjoint static area.
+TEST(DamageRegionRenderTest,
+     ForegroundInvalidationReconstructsBackdropInOnePass) {
+  std::array<roo::byte, kWidth * kHeight * 4> pixels{};
+  RecordingDevice device(pixels.data());
+  roo_display::Display display(device);
+  roo_scheduler::SchedulingService scheduler;
+  Environment environment(scheduler);
+  Application app(&environment, display);
+  app.refresh();
+  auto panel = std::make_unique<ChildPaintingPanel>(app.context());
+  auto lower = std::make_unique<CountingWidget>(app.context());
+  CountingWidget* lower_ptr = lower.get();
+  panel->addChild(std::move(lower), Rect(0, 0, kWidth - 1, kHeight - 1));
+  auto first = std::make_unique<DeferredOverlay>(app.context());
+  DeferredOverlay* first_ptr = first.get();
+  panel->addChild(std::move(first), Rect(2, 2, 13, 9));
+  auto second = std::make_unique<DeferredOverlay>(app.context());
+  DeferredOverlay* second_ptr = second.get();
+  panel->addChild(std::move(second), Rect(10, 6, 21, 13));
+  app.add(std::move(panel), Box(0, 0, kWidth - 1, kHeight - 1));
+  app.refresh();
+  lower_ptr->paint_calls = 0;
+  first_ptr->setColor(Color(160, 0, 255, 0));
+  second_ptr->setColor(Color(180, 0, 0, 255));
+  EXPECT_TRUE(first_ptr->isInvalidated());
+  EXPECT_TRUE(second_ptr->isInvalidated());
+  EXPECT_TRUE(lower_ptr->isInvalidated());
+  device.reset();
+  app.refresh();
+  EXPECT_EQ(lower_ptr->paint_calls, 1);
+  for (uint8_t count : device.writes) EXPECT_LE(count, 1);
+  EXPECT_EQ(device.writes[22 * kWidth + 30], 0);
+  const auto incremental = pixels;
+  device.reset();
+  app.refresh();
+  for (uint8_t count : device.writes) EXPECT_EQ(count, 0);
+  app.root().invalidateInterior();
+  device.reset();
+  app.refresh();
+  EXPECT_EQ(incremental, pixels);
+  for (uint8_t count : device.writes) EXPECT_LE(count, 1);
+}
+
+class BackdropPanel : public ChildPaintingPanel {
+ public:
+  BackdropPanel(ApplicationContext& context, Color color, bool rounded)
+      : ChildPaintingPanel(context), color_(color), rounded_(rounded) {}
+
+  Color background() const override { return color_; }
+
+  bool fullyCoversBoundsWithOpaqueColors() const override {
+    return color_.isOpaque() && !rounded_;
+  }
+
+  bool clipsChildrenToRoundedBounds() const override { return rounded_; }
+
+  BorderStyle getBorderStyle() const override {
+    return BorderStyle(rounded_ ? 6 : 0, 0);
+  }
+
+ private:
+  Color color_;
+  bool rounded_;
+};
+
+// Models the keyboard's private damage clip as well as a changing pattern.
+class PatternedBackdrop : public Widget {
+ public:
+  explicit PatternedBackdrop(ApplicationContext& context) : Widget(context) {}
+
+  Dimensions getSuggestedMinimumDimensions() const override {
+    return {kWidth, kHeight};
+  }
+
+  void setAlternate() {
+    alternate_ = !alternate_;
+    setDirty();
+  }
+
+  Color colorAt(int x, int y) const {
+    return ((x / 4 + y / 4) % 2 == 0) != alternate_ ? Color(0xFFE0F0C0)
+                                                    : Color(0xFF204060);
+  }
+
+  int paint_calls = 0;
+
+ protected:
+  void invalidateDescending() override {
+    Widget::invalidateDescending();
+    pending_ = bounds();
+  }
+
+  void invalidateDescending(const Rect& rect) override {
+    Widget::invalidateDescending(rect);
+    const Rect clipped = Rect::Intersect(rect, bounds());
+    if (clipped.empty()) return;
+    pending_ = pending_.empty() ? clipped : Rect::Extent(pending_, clipped);
+  }
+
+  void paintWidgetContents(PaintContext& ctx) override {
+    if (!isDirty()) return;
+    ++paint_calls;
+    PaintContext local = ctx.clipped(pending_.empty() ? bounds() : pending_);
+    Widget::paintWidgetContents(local);
+    pending_ = Rect(0, 0, -1, -1);
+  }
+
+  void paint(PaintContext& ctx) const override {
+    const auto pattern = roo_display::MakeRasterizable(
+        bounds().asBox(),
+        [this](int16_t x, int16_t y) { return colorAt(x, y); });
+    ctx.drawObject(pattern);
+  }
+
+ private:
+  Rect pending_{0, 0, -1, -1};
+  bool alternate_ = false;
+};
+
+// Independent source-over arithmetic for these fully covered rectangular
+// layers.
+Color CompositeOver(Color backdrop, Color foreground) {
+  const auto channel = [foreground](int back, int front) {
+    return (back * (255 - foreground.a()) + front * foreground.a() + 127) / 255;
+  };
+  return Color(255, channel(backdrop.r(), foreground.r()),
+               channel(backdrop.g(), foreground.g()),
+               channel(backdrop.b(), foreground.b()));
+}
+
+// Verifies invalidation reaches lower widgets' private dirty clips before
+// painting, including disjoint ordinary damage and overlapping alpha sources.
+TEST(DamageRegionRenderTest, DeferredInvalidationMergesPrivateDamage) {
+  std::array<roo::byte, kWidth * kHeight * 4> pixels{};
+  RecordingDevice device(pixels.data());
+  roo_display::Display display(device);
+  roo_scheduler::SchedulingService scheduler;
+  Environment environment(scheduler);
+  Application app(&environment, display);
+  app.refresh();
+  auto panel = std::make_unique<ChildPaintingPanel>(app.context());
+  auto lower = std::make_unique<PatternedBackdrop>(app.context());
+  PatternedBackdrop* lower_ptr = lower.get();
+  panel->addChild(std::move(lower), Rect(0, 0, kWidth - 1, kHeight - 1));
+  auto first = std::make_unique<DeferredOverlay>(app.context());
+  DeferredOverlay* first_ptr = first.get();
+  const Rect first_bounds(2, 2, 13, 9);
+  panel->addChild(std::move(first), first_bounds);
+  auto second = std::make_unique<DeferredOverlay>(app.context());
+  DeferredOverlay* second_ptr = second.get();
+  const Rect second_bounds(10, 6, 21, 13);
+  panel->addChild(std::move(second), second_bounds);
+  app.add(std::move(panel), Box(0, 0, kWidth - 1, kHeight - 1));
+  app.refresh();
+  lower_ptr->paint_calls = 0;
+  const Rect ordinary(26, 18, 29, 21);
+  device.fillRect(26, 18, 29, 21, roo_display::color::Magenta);
+  lower_ptr->invalidateInterior(ordinary);
+  const Color first_color(160, 0, 255, 0);
+  const Color second_color(180, 0, 0, 255);
+  first_ptr->setColor(first_color);
+  second_ptr->setColor(second_color);
+  device.reset();
+  app.refresh();
+  EXPECT_EQ(lower_ptr->paint_calls, 1);
+  for (int16_t y = 0; y < kHeight; ++y) {
+    for (int16_t x = 0; x < kWidth; ++x) {
+      Color expected = lower_ptr->colorAt(x, y);
+      if (first_bounds.contains(x, y)) {
+        expected = CompositeOver(expected, first_color);
+      }
+      if (second_bounds.contains(x, y)) {
+        expected = CompositeOver(expected, second_color);
+      }
+      Color actual;
+      device.raster().readColors(&x, &y, 1, &actual);
+      // The compositor can round the combined overlays before the final blend.
+      EXPECT_NEAR(actual.r(), expected.r(), 1) << x << "," << y;
+      EXPECT_NEAR(actual.g(), expected.g(), 1) << x << "," << y;
+      EXPECT_NEAR(actual.b(), expected.b(), 1) << x << "," << y;
+      EXPECT_LE(device.writes[y * kWidth + x], 1);
+      if (first_bounds.contains(x, y) || second_bounds.contains(x, y) ||
+          ordinary.contains(x, y)) {
+        EXPECT_EQ(device.writes[y * kWidth + x], 1);
+      }
+    }
+  }
+  device.reset();
+  app.refresh();
+  for (uint8_t count : device.writes) EXPECT_EQ(count, 0);
+}
+
+// Verifies clean foreground registration, unchanged-value invalidation, and
+// removal of declared ink outside layout bounds over a changing patterned leaf.
+TEST(DamageRegionRenderTest, DeferredOverflowAndSourceOnlyInvalidation) {
+  std::array<roo::byte, kWidth * kHeight * 4> pixels{};
+  RecordingDevice device(pixels.data());
+  roo_display::Display display(device);
+  roo_scheduler::SchedulingService scheduler;
+  Environment environment(scheduler);
+  Application app(&environment, display);
+  app.refresh();
+  auto panel = std::make_unique<ChildPaintingPanel>(app.context());
+  auto lower = std::make_unique<PatternedBackdrop>(app.context());
+  PatternedBackdrop* lower_ptr = lower.get();
+  panel->addChild(std::move(lower), Rect(0, 0, kWidth - 1, kHeight - 1));
+  auto foreground = std::make_unique<DeferredOverlay>(app.context(), 2);
+  DeferredOverlay* foreground_ptr = foreground.get();
+  panel->addChild(std::move(foreground), Rect(6, 6, 17, 13));
+  app.add(std::move(panel), Box(0, 0, kWidth - 1, kHeight - 1));
+  app.refresh();
+  lower_ptr->setAlternate();
+  EXPECT_FALSE(foreground_ptr->isDirty());
+  device.reset();
+  app.refresh();
+  for (int16_t y = 0; y < kHeight; ++y) {
+    for (int16_t x = 0; x < kWidth; ++x) {
+      Color expected = lower_ptr->colorAt(x, y);
+      if (foreground_ptr->getParentContentBounds().contains(x, y)) {
+        expected = CompositeOver(expected, Color(128, 255, 0, 0));
+      }
+      Color actual;
+      device.raster().readColors(&x, &y, 1, &actual);
+      EXPECT_EQ(actual, expected) << x << "," << y;
+      EXPECT_EQ(device.writes[y * kWidth + x], 1);
+    }
+  }
+  const auto expected_frame = pixels;
+  device.fillRect(4, 4, 8, 8, roo_display::color::Magenta);
+  Widget* source = foreground_ptr;
+  source->invalidateInterior(Rect(-2, -2, 2, 2));
+  device.reset();
+  app.refresh();
+  EXPECT_EQ(pixels, expected_frame);
+  for (int y = 0; y < kHeight; ++y) {
+    for (int x = 0; x < kWidth; ++x) {
+      EXPECT_EQ(device.writes[y * kWidth + x], Rect(4, 4, 8, 8).contains(x, y));
+    }
+  }
+  foreground_ptr->setColor(roo_display::color::Transparent);
+  device.reset();
+  app.refresh();
+  for (int16_t y = 0; y < kHeight; ++y) {
+    for (int16_t x = 0; x < kWidth; ++x) {
+      Color actual;
+      device.raster().readColors(&x, &y, 1, &actual);
+      EXPECT_EQ(actual, lower_ptr->colorAt(x, y));
+      EXPECT_LE(device.writes[y * kWidth + x], 1);
+    }
+  }
+  device.reset();
+  app.refresh();
+  for (uint8_t count : device.writes) EXPECT_EQ(count, 0);
+}
+
+// Verifies backdrop invalidation crosses transparent ancestors, restores
+// rounded corner coverage, and honors unclipped children and sibling stacking
+// groups.
+TEST(DamageRegionRenderTest, ForegroundInvalidationReconstructsNestedBackdrop) {
+  for (bool rounded : {false, true}) {
+    for (bool unclipped : {false, true}) {
+      SCOPED_TRACE(rounded);
+      SCOPED_TRACE(unclipped);
+      std::array<roo::byte, kWidth * kHeight * 4> pixels{};
+      RecordingDevice device(pixels.data());
+      roo_display::Display display(device);
+      roo_scheduler::SchedulingService scheduler;
+      Environment environment(scheduler);
+      Application app(&environment, display);
+      app.refresh();
+      auto root = std::make_unique<ChildPaintingPanel>(app.context());
+      root->addChild(std::make_unique<CountingWidget>(app.context()),
+                     Rect(0, 0, kWidth - 1, kHeight - 1));
+      auto nested = std::make_unique<BackdropPanel>(
+          app.context(), Color(100, 50, 180, 90), rounded);
+      auto foreground = std::make_unique<DeferredOverlay>(app.context());
+      DeferredOverlay* foreground_ptr = foreground.get();
+      if (unclipped) {
+        foreground->setParentClipMode(ParentClipMode::kUnclipped);
+      }
+      nested->addChild(std::move(foreground), Rect(-2, -2, 9, 5));
+      // A later clipped sibling remains below the unclipped foreground.
+      nested->addChild(std::make_unique<CountingWidget>(app.context()),
+                       Rect(0, 0, 5, 5));
+      root->addChild(std::move(nested), Rect(4, 3, 27, 20));
+      app.add(std::move(root), Box(0, 0, kWidth - 1, kHeight - 1));
+      app.refresh();
+      foreground_ptr->setColor(Color(160, 0, 255, 0));
+      device.reset();
+      app.refresh();
+      const auto incremental = pixels;
+      for (uint8_t count : device.writes) EXPECT_LE(count, 1);
+      EXPECT_EQ(device.writes[22 * kWidth + 30], 0);
+      app.root().invalidateInterior();
+      device.reset();
+      app.refresh();
+      EXPECT_EQ(incremental, pixels);
+      for (uint8_t count : device.writes) EXPECT_LE(count, 1);
     }
   }
 }
