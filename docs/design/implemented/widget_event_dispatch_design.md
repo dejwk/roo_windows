@@ -362,7 +362,7 @@ class Widget {
 Representative application construction becomes:
 
 ```cpp
-roo_scheduler::Scheduler scheduler;
+roo_scheduler::SchedulingService scheduler;
 Environment env(scheduler);
 Application app(&env, display);
 

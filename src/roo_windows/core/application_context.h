@@ -30,7 +30,7 @@ class ApplicationContext {
  public:
   /// Creates a context borrowing the supplied scheduler and themes.
   ApplicationContext(
-      roo_scheduler::SchedulerClient& scheduler, const Theme& theme,
+      roo_scheduler::Scheduler& scheduler, const Theme& theme,
       const KeyboardColorTheme& keyboard_color_theme,
       DesignSystem default_design_system = DesignSystem::kMaterial3);
 
@@ -47,7 +47,7 @@ class ApplicationContext {
   /// Returns scheduling and cancellation access for animations and deferred
   /// work. Dispatch methods are available only to the application runtime. UI
   /// callbacks must return without blocking or driving nested dispatch.
-  roo_scheduler::SchedulerClient& scheduler() const;
+  roo_scheduler::Scheduler& scheduler() const;
 
   /// Returns the active visual theme.
   const Theme& theme() const;
@@ -123,7 +123,7 @@ class ApplicationContext {
     ~Lifetime() = default;
   };
 
-  roo_scheduler::SchedulerClient& scheduler_;
+  roo_scheduler::Scheduler& scheduler_;
   const Theme& theme_;
   const KeyboardColorTheme& keyboard_color_theme_;
   WidgetEventDispatcher widget_events_;

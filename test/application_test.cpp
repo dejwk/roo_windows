@@ -20,11 +20,11 @@ namespace {
 
 static_assert(
     std::is_same<decltype(std::declval<const Environment&>().scheduler()),
-                 roo_scheduler::SchedulerClient&>::value,
+                 roo_scheduler::Scheduler&>::value,
     "Environment exposes scheduling without dispatch");
 static_assert(std::is_same<decltype(std::declval<const ApplicationContext&>()
                                         .scheduler()),
-                           roo_scheduler::SchedulerClient&>::value,
+                           roo_scheduler::Scheduler&>::value,
               "Widget contexts expose scheduling without dispatch");
 
 // Verifies detached contexts can submit deferred work through the restricted

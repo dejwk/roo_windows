@@ -21,8 +21,7 @@ class Application;
 class TextFieldEditor {
  public:
   /// Creates a task editor using @p application and its @p scheduler.
-  TextFieldEditor(Application& application,
-                  roo_scheduler::SchedulerClient& scheduler)
+  TextFieldEditor(Application& application, roo_scheduler::Scheduler& scheduler)
       : application_(application),
         scheduler_(scheduler),
         blinking_cursor_is_on_(false),
@@ -145,7 +144,7 @@ class TextFieldEditor {
   void changed();
 
   Application& application_;
-  roo_scheduler::SchedulerClient& scheduler_;
+  roo_scheduler::Scheduler& scheduler_;
   bool blinking_cursor_is_on_;
   roo_scheduler::SingletonTask last_glyph_hider_;
 

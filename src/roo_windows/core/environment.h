@@ -34,7 +34,7 @@ class Environment {
 
   /// Returns scheduling and cancellation access for animations and deferred
   /// work.
-  roo_scheduler::SchedulerClient& scheduler() const { return scheduler_; }
+  roo_scheduler::Scheduler& scheduler() const { return scheduler_; }
 
   /// Returns the default style for application-owned presentations.
   DesignSystem defaultDesignSystem() const { return default_design_system_; }

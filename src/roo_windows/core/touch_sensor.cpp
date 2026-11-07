@@ -72,7 +72,7 @@ void TouchSensor::notifyReady() {
   if (readiness_handler_ != nullptr) readiness_handler_();
 }
 
-void TouchSensor::start(roo_scheduler::SchedulerClient& scheduler) {
+void TouchSensor::start(roo_scheduler::Scheduler& scheduler) {
   if (started_) return;
   started_ = true;
 #if !defined(ROO_THREADS_SINGLETHREADED)

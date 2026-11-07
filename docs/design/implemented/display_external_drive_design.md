@@ -3,7 +3,7 @@
 ## Objective
 
 Let several one-display applications collaborate through one
-`roo_scheduler::Scheduler`. The caller constructs the applications, calls
+`roo_scheduler::SchedulingService`. The caller constructs the applications, calls
 `start()` on each, and enters `scheduler.run()`; applications schedule and
 bound their own work.
 
@@ -28,7 +28,7 @@ caller does not need an application group, a tick result, or a custom loop.
 
 The current private application ticker drains keys, advances pointer input,
 attempts one refresh, and reschedules a `roo_scheduler::SingletonTask`.
-[`roo_scheduler::Scheduler`](../../../../roo_scheduler/src/roo_scheduler.h)
+[`roo_scheduler::SchedulingService`](../../../../roo_scheduler/src/roo_scheduler.h)
 already dispatches eligible tasks and sleeps until the next execution.
 Equal-priority eligible tasks execute FIFO, so an application that reschedules
 immediate work goes behind tasks that were already eligible.
@@ -89,7 +89,7 @@ application, while a clean application without pending work remains dormant.
 ### Embedded requirements
 
 1. Start, ticker execution, and rescheduling must not allocate.
-2. An application ticker must not sleep, call `Scheduler::run()`, or invoke
+2. An application ticker must not sleep, call `SchedulingService::run()`, or invoke
    another application's ticker.
 3. Existing refresh continuation, click settlement, gesture ordering, and
    full-`KeyEvent` semantics must remain unchanged.
@@ -103,7 +103,7 @@ application, while a clean application without pending work remains dormant.
 - A framework-owned `ApplicationGroup` or multi-window `Application`.
 - Event-driven input notification or a fully dormant idle application ticker.
 - Wall-clock guarantees for a single display-device operation.
-- Changing `roo_scheduler::Scheduler` APIs or its fairness policy.
+- Changing `roo_scheduler::SchedulingService` APIs or its fairness policy.
 
 ## Design Overview
 
@@ -111,7 +111,7 @@ The caller owns one scheduler and starts all participants before running it:
 
 ```text
 caller
-├── construct shared Scheduler
+├── construct shared SchedulingService
 ├── construct Application A ── owns ticker A ──┐
 ├── construct Application B ── owns ticker B ──┤
 ├── app A.start()                              │
@@ -237,7 +237,7 @@ The application ticker and its scheduling decision remain private.
 Example cross-display setup:
 
 ```cpp
-roo_scheduler::Scheduler scheduler;
+roo_scheduler::SchedulingService scheduler;
 Environment env(scheduler);
 
 Application editor_app(&env, editor_display);

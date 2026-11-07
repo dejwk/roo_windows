@@ -42,7 +42,7 @@
 - Added navigation and semantic Back buttons, optional button shape morphing, and keyboard dismissal when tapping outside the editor and keyboard.
 - Improved container margin handling, asymmetric spacing, scaffold padding, background inheritance, and list/menu colors. Reduced unnecessary redraws and preserved blit caches during height-only changes.
 - Fixed empty-canvas crashes, borrowed-widget and recycled-row teardown, disabled-button double dimming, and gesture cancellation when widgets are hidden or disabled.
-- **API changes:** removed `BasicWidget` and `BasicSurfaceWidget` in favor of explicit padding/margin mixins; removed implicit spacing from several layouts and cards. `Environment` now accepts `roo_scheduler::SchedulingService` and exposes `SchedulerClient`.
+- **API changes:** removed `BasicWidget` and `BasicSurfaceWidget` in favor of explicit padding/margin mixins; removed implicit spacing from several layouts and cards. `Environment` now accepts `roo_scheduler::SchedulingService` and exposes `Scheduler`.
 - Updated dependencies to `roo_display` 3.3.1, `roo_io` 2.4.0, `roo_scheduler` 2.3.0, `roo_time` 2.0.1, `roo_collections` 1.4.8, `roo_logging` 1.5.11, and `roo_testing` 2.3.0. Updated vendored testing tools with ESP-IDF target detection and an Arduino/ESP-IDF test runner.
 - Expanded examples, rendering regression coverage, and resource benchmarks.
 

@@ -19,7 +19,7 @@ namespace roo_windows {
 class ApplicationTicker final : public roo_scheduler::Executable {
  public:
   /// Creates a ticker that invokes `callback` for each accepted dispatch.
-  ApplicationTicker(roo_scheduler::SchedulerClient& scheduler,
+  ApplicationTicker(roo_scheduler::Scheduler& scheduler,
                     std::function<void()> callback)
       : scheduler_(scheduler), callback_(std::move(callback)) {}
 
@@ -79,7 +79,7 @@ class ApplicationTicker final : public roo_scheduler::Executable {
         scheduler_.scheduleOn(when, *this, roo_scheduler::PRIORITY_NORMAL);
   }
 
-  roo_scheduler::SchedulerClient& scheduler_;
+  roo_scheduler::Scheduler& scheduler_;
   std::function<void()> callback_;
   roo::mutex mutex_;
   roo_scheduler::ExecutionID scheduled_id_ = -1;
