@@ -923,6 +923,18 @@ void FlexLayout::onLayout(bool changed, const Rect& rect) {
           item_cross_start = cross_cursor + it.mcs;
           break;
       }
+      // Align-content can stretch a line after onMeasure() has measured its
+      // children. Re-measure a stretched child at its final cross size so
+      // nested layouts receive the same size that they will be laid out at.
+      if (effective == AlignItems::kStretch && item_cross_size != it.cross) {
+        ChildMeasure& measure = child_measures_[it.index];
+        WidthSpec width_spec = horiz ? WidthSpec::Exactly(it.main)
+                                     : WidthSpec::Exactly(item_cross_size);
+        HeightSpec height_spec = horiz ? HeightSpec::Exactly(item_cross_size)
+                                       : HeightSpec::Exactly(it.main);
+        measure.latest().update(width_spec, height_spec,
+                                w.measure(width_spec, height_spec));
+      }
       int16_t item_cross_end = item_cross_start + item_cross_size - 1;
 
       // Build the physical Rect.

@@ -3,6 +3,7 @@
 #include "gtest/gtest.h"
 #include "roo_scheduler.h"
 #include "roo_windows/containers/scrollable_panel.h"
+#include "roo_windows/containers/vertical_layout.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/widget.h"
 #include "roo_windows/material2/divider.h"
@@ -52,6 +53,26 @@ class TestWrapContentWidget : public Widget {
 
  private:
   Dimensions dims_;
+};
+
+class TestMatchParentWidget : public Widget {
+ public:
+  explicit TestMatchParentWidget(ApplicationContext& context)
+      : Widget(context) {}
+
+  Dimensions getSuggestedMinimumDimensions() const override { return {0, 0}; }
+
+  PreferredSize getPreferredSize() const override {
+    return {PreferredSize::MatchParentWidth(),
+            PreferredSize::MatchParentHeight()};
+  }
+};
+
+class TestVerticalLayout : public VerticalLayout {
+ public:
+  using VerticalLayout::VerticalLayout;
+
+  ~TestVerticalLayout() override { removeAll(); }
 };
 
 class TestPaddedColumnFlexLayout : public TestFlexLayout {
@@ -108,6 +129,29 @@ TEST(FlexLayout, StretchUsesFinalLineCrossSizeAfterAlignContent) {
   // must size the child to that final cross size during onLayout.
   EXPECT_EQ(kParentHeight, child.height());
   EXPECT_EQ(0, child.offsetTop());
+}
+
+// Verifies that a line stretched during layout remeasures nested weighted
+// children at the final height, including the fixed footer position.
+TEST(FlexLayout, StretchedLineRemeasuresNestedLayout) {
+  roo_scheduler::SchedulingService scheduler;
+  Environment bootstrap(scheduler);
+  ApplicationContext context = MakeContext(bootstrap);
+
+  TestFlexLayout parent(context, FlexDirection::kRow);
+  TestVerticalLayout column(context);
+  TestMatchParentWidget content(context);
+  TestWrapContentWidget footer(context, Dimensions(20, 10));
+  column.add(content, {.weight = 1});
+  column.add(footer);
+  parent.add(column, {.flex_grow = 1, .flex_basis = FlexBasis::kZero});
+
+  parent.measure(WidthSpec::Exactly(120), HeightSpec::Exactly(60));
+  parent.layout(Rect(0, 0, 119, 59));
+
+  EXPECT_EQ(60, column.height());
+  EXPECT_EQ(50, content.height());
+  EXPECT_EQ(50, footer.offsetTop());
 }
 
 // Verifies that a padded column FlexLayout correctly inset its match-parent
