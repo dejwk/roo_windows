@@ -1,25 +1,17 @@
 #include "roo_windows/containers/blit_cache_container.h"
 
 #include <algorithm>
-#include <limits>
 
-#include "roo_windows/config.h"
-#include "roo_windows/core/blit_plan.h"
-#include "roo_windows/core/canvas.h"
 #include "roo_windows/core/child_layout.h"
-#include "roo_windows/core/clipper.h"
 
 namespace roo_windows {
 
 BlitCacheContainer::BlitCacheContainer(ApplicationContext& context)
     : Container(context),
       child_(nullptr),
-      blit_safe_region_(0, 0, -1, -1),
       pending_dx_(0),
       pending_dy_(0),
-      has_pending_blit_(false),
-      moving_(false),
-      blit_supported_(-1) {}
+      moving_(false) {}
 
 BlitCacheContainer::~BlitCacheContainer() { clearChild(); }
 
@@ -31,11 +23,9 @@ void BlitCacheContainer::setChild(WidgetRef child) {
   if (child_ != nullptr) {
     attachChild(std::move(child));
   }
-  blit_safe_region_ = roo_display::Box(0, 0, -1, -1);
+  cache_.invalidate();
   pending_dx_ = 0;
   pending_dy_ = 0;
-  has_pending_blit_ = false;
-  blit_supported_ = -1;
 }
 
 void BlitCacheContainer::clearChild() {
@@ -43,10 +33,9 @@ void BlitCacheContainer::clearChild() {
     detachChild(child_);
     child_ = nullptr;
   }
-  blit_safe_region_ = roo_display::Box(0, 0, -1, -1);
+  cache_.invalidate();
   pending_dx_ = 0;
   pending_dy_ = 0;
-  has_pending_blit_ = false;
 }
 
 PreferredSize BlitCacheContainer::getPreferredSize() const {
@@ -114,8 +103,7 @@ void BlitCacheContainer::moveTo(const Rect& new_bounds) {
     // copy pixels using the old geometry, without marking all existing pixels
     // for repaint. paintWidgetContents() can establish a new safe region after
     // painting. Cancel any previously queued scroll copy as well.
-    blit_safe_region_ = roo_display::Box(0, 0, -1, -1);
-    has_pending_blit_ = false;
+    cache_.invalidate();
     pending_dx_ = 0;
     pending_dy_ = 0;
   }
@@ -124,17 +112,8 @@ void BlitCacheContainer::moveTo(const Rect& new_bounds) {
   moving_ = false;
   resize_damage_ = nullptr;
 
-  if (dx == 0 && dy == 0) return;
-  if (blit_supported_ == 0) {
-    return;
-  }
-  if (blit_safe_region_.empty()) {
-    return;
-  }
-
   pending_dx_ += dx;
   pending_dy_ += dy;
-  has_pending_blit_ = true;
 }
 
 void BlitCacheContainer::invalidateInterior() {
@@ -150,8 +129,7 @@ void BlitCacheContainer::invalidateInterior() {
 
 void BlitCacheContainer::invalidateDescending() {
   if (!moving_) {
-    blit_safe_region_ = roo_display::Box(0, 0, -1, -1);
-    has_pending_blit_ = false;
+    cache_.invalidate();
     pending_dx_ = 0;
     pending_dy_ = 0;
   }
@@ -174,8 +152,7 @@ void BlitCacheContainer::propagateDirty(const Widget* child, const Rect& rect) {
 
 void BlitCacheContainer::childHidden(const Widget* child) {
   if (!moving_) {
-    blit_safe_region_ = roo_display::Box(0, 0, -1, -1);
-    has_pending_blit_ = false;
+    cache_.invalidate();
     pending_dx_ = 0;
     pending_dy_ = 0;
   }
@@ -184,8 +161,7 @@ void BlitCacheContainer::childHidden(const Widget* child) {
 
 void BlitCacheContainer::childShown(const Widget* child) {
   if (!moving_) {
-    blit_safe_region_ = roo_display::Box(0, 0, -1, -1);
-    has_pending_blit_ = false;
+    cache_.invalidate();
     pending_dx_ = 0;
     pending_dy_ = 0;
   }
@@ -193,120 +169,23 @@ void BlitCacheContainer::childShown(const Widget* child) {
 }
 
 void BlitCacheContainer::shrinkSafeRegion(const Rect& dirty) {
-  if (blit_safe_region_.empty()) return;
-
-  // blit_safe_region_ is kept in device coordinates, while dirty is local.
   XDim abs_x = 0;
   YDim abs_y = 0;
   getAbsoluteOffset(abs_x, abs_y);
-  Rect dirty_dev = dirty.translate(abs_x, abs_y);
-
-  // During pending blit, the safe region still refers to the source frame
-  // (pre-move) device coordinates. Map dirty rect back into that frame before
-  // intersecting/trimming, otherwise we may falsely keep stale source pixels.
-  if (has_pending_blit_) {
-    dirty_dev = dirty_dev.translate(-pending_dx_, -pending_dy_);
-  }
-
-  // Keep the safe region as a single rectangle by subtracting dirty_dev and
-  // retaining the largest remaining rectangle.
-  int16_t sy0 = blit_safe_region_.yMin();
-  int16_t sy1 = blit_safe_region_.yMax();
-  int16_t sx0 = blit_safe_region_.xMin();
-  int16_t sx1 = blit_safe_region_.xMax();
-
-  roo_display::Box overlap =
-      roo_display::Box::Intersect(blit_safe_region_, dirty_dev.asBox());
-  if (overlap.empty()) {
-    return;  // No overlap.
-  }
-
-  roo_display::Box candidates[4] = {
-      roo_display::Box(sx0, sy0, sx1, overlap.yMin() - 1),
-      roo_display::Box(sx0, overlap.yMax() + 1, sx1, sy1),
-      roo_display::Box(sx0, sy0, overlap.xMin() - 1, sy1),
-      roo_display::Box(overlap.xMax() + 1, sy0, sx1, sy1),
-  };
-
-  roo_display::Box best(0, 0, -1, -1);
-  int32_t best_area = 0;
-  for (const auto& c : candidates) {
-    if (c.empty()) continue;
-    int32_t area = (int32_t)c.width() * c.height();
-    if (area > best_area) {
-      best_area = area;
-      best = c;
-    }
-  }
-
-  blit_safe_region_ = best;
+  // The certificate still describes the source frame. Undo pending movement
+  // when mapping current local damage back to those device coordinates.
+  Rect source_damage =
+      dirty.translate(abs_x, abs_y).translate(-pending_dx_, -pending_dy_);
+  cache_.invalidateSource(source_damage);
 }
 
 void BlitCacheContainer::paintWidgetContents(PaintContext& ctx) {
-  using roo_display::Box;
-  const Canvas& canvas = ctx.canvas();
-  Clipper& clipper = ctx.clipperForFramework();
-  if (blit_supported_ < 0) {
-    blit_supported_ =
-        clipper.rawOut().getCapabilities().supportsBlitCopy() ? 1 : 0;
-  }
-
-  const Box panel_device = Box::Intersect(
-      Box(bounds().xMin() + canvas.dx(), bounds().yMin() + canvas.dy(),
-          bounds().xMax() + canvas.dx(), bounds().yMax() + canvas.dy()),
-      canvas.clip_box());
-
-  // Consume the pending translation exactly once. The retained rectangle still
-  // describes the preceding completed frame until planning finishes.
-  const bool had_pending_blit = has_pending_blit_;
-  const int32_t dx = pending_dx_;
-  const int32_t dy = pending_dy_;
-  has_pending_blit_ = false;
+  // Consume movement before traversal so fresh invalidations survive painting.
+  const PixelDelta movement{pending_dx_, pending_dy_};
   pending_dx_ = 0;
   pending_dy_ = 0;
-
-  internal::BlitPlan plan;
-  if (had_pending_blit && blit_supported_ == 1 &&
-      dx >= std::numeric_limits<int16_t>::min() &&
-      dx <= std::numeric_limits<int16_t>::max() &&
-      dy >= std::numeric_limits<int16_t>::min() &&
-      dy <= std::numeric_limits<int16_t>::max()) {
-    plan = clipper.planBlitCopy(blit_safe_region_, panel_device,
-                                static_cast<int16_t>(dx),
-                                static_cast<int16_t>(dy));
-  }
-  if (!plan.empty() &&
-      plan.destination.area() < ROO_WINDOWS_MIN_BLIT_COPY_PIXELS) {
-    // The geometry is safe, but the target says repaint is cheaper at this
-    // size. Keep ordinary invalidation intact by dropping the plan before its
-    // destination becomes an exclusion.
-    plan = internal::BlitPlan();
-  }
-
-  // Publish the next source certificate before child traversal. Any content
-  // invalidation raised during painting then shrinks or clears this rectangle
-  // directly, rather than being overwritten by an end-of-paint assignment.
-  blit_safe_region_ = blit_supported_ == 1
-                          ? clipper.certifyBlitSource(panel_device)
-                          : Box(0, 0, -1, -1);
-
-  if (!plan.empty()) {
-    // Reserve settled output before touching the device. The filtered child
-    // paint then supplies only exposed strips and rounded boundary pixels.
-    clipper.addExclusion(plan.destination);
-    clipper.rawOut().blitCopy(plan.source.xMin(), plan.source.yMin(),
-                              plan.source.xMax(), plan.source.yMax(),
-                              plan.destination.xMin(), plan.destination.yMin());
-  }
-
+  auto frame = cache_.beginPaint(ctx, bounds(), movement);
   Container::paintWidgetContents(ctx);
-
-  // Deferral can begin inside the cached subtree after the provisional source
-  // certificate was computed. Such a frame is incomplete and cannot seed a
-  // later copy.
-  if (clipper.backgroundDeferred()) {
-    blit_safe_region_ = Box(0, 0, -1, -1);
-  }
 }
 
 }  // namespace roo_windows

@@ -666,6 +666,16 @@ cc_test(
 )
 
 cc_test(
+    name = "blit_cache_test",
+    srcs = ["test/blit_cache_test.cpp"],
+    linkstatic = 1,
+    deps = [
+        ":roo_windows",
+        "@roo_testing//:arduino_gtest_main",
+    ],
+)
+
+cc_test(
     name = "blit_plan_test",
     srcs = ["test/blit_plan_test.cpp"],
     linkstatic = 1,

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "roo_display/core/box.h"
+#include "roo_windows/core/blit_cache.h"
 #include "roo_windows/core/container.h"
 #include "roo_windows/core/widget.h"
 
@@ -86,7 +86,7 @@ class BlitCacheContainer : public Container {
   void childShown(const Widget* child) override;
 
  private:
-  // Shrinks the blit_safe_region_ by subtracting a dirty rect.
+  // Removes local damage from the cache certificate in the source frame.
   // For full-width/full-height bands, trims from the edge that the rect
   // touches, or keeps the larger remaining portion if the rect is in the
   // middle.
@@ -97,22 +97,15 @@ class BlitCacheContainer : public Container {
   // Points to stack-owned damage only while moveTo performs a height resize.
   const Rect* resize_damage_ = nullptr;
 
-  // The region of the framebuffer (in device coordinates) known to contain
-  // correct pixels from the last paint of this widget's child. Only this
-  // region is safe to blit from.
-  roo_display::Box blit_safe_region_;
+  BlitCache cache_;
 
   // Accumulated scroll/move delta since last paint.
   int32_t pending_dx_;
   int32_t pending_dy_;
-  bool has_pending_blit_;
 
   // Set to true during moveTo() to distinguish scroll-move signals from
   // genuine content changes in propagateDirty/childHidden/childShown.
   bool moving_;
-
-  // Cached: whether the device supports blitCopy. Set on first paint.
-  int8_t blit_supported_;  // -1 = unknown, 0 = no, 1 = yes
 };
 
 }  // namespace roo_windows
