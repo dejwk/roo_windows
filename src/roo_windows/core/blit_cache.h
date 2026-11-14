@@ -36,6 +36,12 @@ struct BlitOptions {
 
   /// Performance requirement applied after the copy is proven safe.
   BlitCoverage coverage = BlitCoverage::kAnyRectangle;
+
+  /// Keeps certified pixels in place when movement is zero. Opt in only when
+  /// unchanged content is guaranteed; explicit content damage must invalidate
+  /// the cache. Foreground/effect restrictions still apply. No device copy is
+  /// issued for preserved pixels.
+  bool preserve_stationary = false;
 };
 
 /// Reuses translated framebuffer pixels without owning a widget or a buffer.
@@ -96,8 +102,9 @@ class BlitCache {
     PaintScope(const PaintScope&) = delete;
     PaintScope& operator=(const PaintScope&) = delete;
 
-    /// Reports the copied destination in local coordinates, or an empty rect
-    /// when ordinary painting is required. Its pixels are already excluded.
+    /// Reports the copied or preserved destination in local coordinates, or an
+    /// empty rect when ordinary painting is required. Its pixels are already
+    /// excluded.
     const Rect& copiedBounds() const { return copied_bounds_; }
 
     /// Subtracts copiedBounds() from the clipped paint bounds, producing at

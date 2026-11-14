@@ -119,9 +119,16 @@ BlitCache::PaintScope::PaintScope(BlitCache& cache, PaintContext& ctx,
     // the preceding paint's reusable source bounds.
     const Box source =
         SourceForDestination(cache_.safe_region_, reusable, movement);
-    plan = clipper_.planBlitCopy(source, viewport,
-                                 static_cast<int16_t>(movement.dx),
-                                 static_cast<int16_t>(movement.dy));
+    if (movement.dx == 0 && movement.dy == 0 && options.preserve_stationary) {
+      // The old certificate proves content identity; the current clipper
+      // removes foreground, effects and damage gaps before we preserve it.
+      const Box stationary = clipper_.certifyBlitSource(source);
+      plan = {stationary, stationary};
+    } else {
+      plan = clipper_.planBlitCopy(source, viewport,
+                                   static_cast<int16_t>(movement.dx),
+                                   static_cast<int16_t>(movement.dy));
+    }
   }
   if (!plan.empty() && (plan.area() < ROO_WINDOWS_MIN_BLIT_COPY_PIXELS ||
                         (options.coverage == BlitCoverage::kFullHeight &&
@@ -136,9 +143,11 @@ BlitCache::PaintScope::PaintScope(BlitCache& cache, PaintContext& ctx,
       supported ? clipper_.certifyBlitSource(reusable) : Box(0, 0, -1, -1);
   if (!plan.empty()) {
     clipper_.addExclusion(plan.destination);
-    clipper_.rawOut().blitCopy(
-        plan.source.xMin(), plan.source.yMin(), plan.source.xMax(),
-        plan.source.yMax(), plan.destination.xMin(), plan.destination.yMin());
+    if (movement.dx != 0 || movement.dy != 0) {
+      clipper_.rawOut().blitCopy(
+          plan.source.xMin(), plan.source.yMin(), plan.source.xMax(),
+          plan.source.yMax(), plan.destination.xMin(), plan.destination.yMin());
+    }
     copied_bounds_ =
         Rect(plan.destination).translate(-canvas.dx(), -canvas.dy());
   }

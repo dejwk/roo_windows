@@ -206,6 +206,43 @@ TEST_F(BlitCacheTest, CopiesStableColumnsInBothDirections) {
   expectPixelsOnce({4, 0});
 }
 
+// Verifies explicit stationary reuse preserves only certified pixels, without
+// a device copy, and explicit invalidation restores normal single-write paint.
+TEST_F(BlitCacheTest, PreservesStationaryPixelsOnlyWhenRequested) {
+  paint();
+  EXPECT_TRUE(paint().empty());
+  const auto before = pixels;
+  EXPECT_EQ(kStable, paint({}, {}, {kStable, BlitCoverage::kFullHeight, true}));
+  EXPECT_EQ(0, device.copies);
+  EXPECT_EQ(before, pixels);
+  for (int y = 0; y < kHeight; ++y) {
+    for (int x = 0; x < kWidth; ++x) {
+      bool painted =
+          kBounds.contains(x - 5, y - 7) && !kStable.contains(x - 5, y - 7);
+      EXPECT_EQ(painted ? 1 : 0, device.writes[y * kWidth + x]);
+    }
+  }
+  cache.invalidate();
+  EXPECT_TRUE(
+      paint({}, {}, {kStable, BlitCoverage::kFullHeight, true}).empty());
+  expectPixelsOnce();
+}
+
+// Verifies stationary reuse excludes foreground and cannot resurrect pixels
+// revoked by source damage, even when the current viewport grows.
+TEST_F(BlitCacheTest, StationaryReuseHonorsDamageAndForeground) {
+  paint({}, {}, {kBounds});
+  cache.invalidateSource(Rect(5, 7, 14, 30));
+  PaintPass pass(device);
+  pass.clipper.addExclusion(Box(35, 7, 44, 30));
+  auto frame =
+      cache.beginPaint(pass.ctx, Rect(0, 0, 49, 23), {},
+                       {Rect(0, 0, 49, 23), BlitCoverage::kFullHeight, true});
+  EXPECT_EQ(Rect(10, 0, 29, 23), frame.copiedBounds());
+  EXPECT_EQ(0, device.copies);
+  DrawPattern(pass.ctx, frame);
+}
+
 // Verifies current reusable bounds restrict destinations independently of the
 // preceding source, with four disjoint repaint regions around an interior copy.
 TEST_F(BlitCacheTest, ReportsCopiedBoundsAndOptionalRepaintComplement) {
