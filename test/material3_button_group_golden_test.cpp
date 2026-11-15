@@ -388,6 +388,72 @@ TEST(ButtonGroupGolden, FinalPixelWritesDuringMotion) {
   panel.removeAll();
 }
 
+// Verifies standard-group layout and press morphing leave unaffected entries
+// and unused strip pixels untouched, with single writes on initial, animated,
+// cancelled and explicitly invalidated paints in both placement directions.
+TEST(ButtonGroupGolden, PressDamageStaysWithChangedEntries) {
+  for (LayoutDirection direction :
+       {LayoutDirection::kLeftToRight, LayoutDirection::kRightToLeft}) {
+    std::vector<roo::byte> raster(320 * 160 * 2);
+    WriteCountingDevice device(320, 160, raster.data());
+    roo_display::Display display(device);
+    roo_scheduler::SchedulingService scheduler;
+    Environment env(scheduler);
+    Application app(&env, display);
+    StripedPanel panel(app.context());
+    ButtonGroupButton first(app.context(), "A");
+    ButtonGroupButton second(app.context(), "B");
+    ButtonGroupButton third(app.context(), "C");
+    ButtonGroup group(app.context());
+    group.add(first);
+    group.add(second);
+    group.add(third);
+    group.setLayoutDirection(direction);
+    app.refresh();
+    app.addTaskFullScreen(panel);
+    panel.add(WidgetRef(group), Rect(24, 40, 295, 95));
+    device.reset();
+    app.refresh();
+    for (int y = 0; y < 160; ++y)
+      for (int x = 0; x < 320; ++x) ASSERT_LE(device.writesAt(x, y), 1);
+    const std::vector<roo::byte> initial = raster;
+    group.requestLayout();
+    device.reset();
+    app.refresh();
+    for (int y = 0; y < 160; ++y)
+      for (int x = 0; x < 320; ++x) ASSERT_EQ(device.writesAt(x, y), 0);
+
+    const Rect untouched = third.parent_bounds().translate(24, 40);
+    first.onShowPress(10, 20);
+    for (int step = 0; step < 4; ++step) {
+      SCOPED_TRACE(step);
+      system_time_delay_micros(kPressAnimationMillis * 100);
+      if (step == 3) first.onCancel();
+      device.reset();
+      app.refresh();
+      int writes = 0;
+      for (int y = 0; y < 160; ++y) {
+        for (int x = 0; x < 320; ++x) {
+          ASSERT_LE(device.writesAt(x, y), 1);
+          if (untouched.contains(x, y) || (y >= 80 && y <= 95)) {
+            ASSERT_EQ(device.writesAt(x, y), 0) << x << "," << y;
+          }
+          writes += device.writesAt(x, y);
+        }
+      }
+      if (step == 0 || step == 3) EXPECT_GT(writes, 0);
+    }
+    ExpectSameRaster(initial, raster);
+    group.invalidateInterior();
+    device.reset();
+    app.refresh();
+    for (int y = 0; y < 160; ++y)
+      for (int x = 0; x < 320; ++x) ASSERT_LE(device.writesAt(x, y), 1);
+    ExpectSameRaster(initial, raster);
+    panel.removeAll();
+  }
+}
+
 // Verifies moving standard frames and unclipped elevated shadows restore
 // correctly at intermediate samples, cancellations and content changes.
 TEST(ButtonGroupGolden, StandardMotionRestoration) {

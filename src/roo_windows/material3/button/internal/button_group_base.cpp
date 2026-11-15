@@ -128,10 +128,10 @@ Dimensions ButtonGroupBase::onMeasure(WidthSpec width, HeightSpec height) {
 }
 
 void ButtonGroupBase::onLayout(bool changed, const Rect& rect) {
-  // Gone slots can change exposed corners without moving surviving frames.
-  // Restore the complete old strip before exact placement, without caching
-  // positions or a previous visibility mask on each entry.
-  invalidateInterior();
+  // Connected endpoints can gain corners when a slot becomes gone without
+  // moving the surviving frames. Standard groups have independent contours;
+  // their moved entries restore their own old and new footprints.
+  if (connected()) invalidateInterior();
   int16_t widths[kMaxEntries];
   int16_t budgets[kMaxEntries];
   Dimensions natural = measureStrip(widths, connected() ? nullptr : budgets);
@@ -201,7 +201,8 @@ void ButtonGroupBase::invalidateInterior(const Rect& rect) {
 
 void ButtonGroupBase::entryFeedbackChanged() {
   if (connected()) return;
-  invalidateInterior();
+  // Entry feedback invalidates its own appearance. Width redistribution only
+  // needs layout; changed frames supply the additional damage when moved.
   requestLayout();
 }
 
