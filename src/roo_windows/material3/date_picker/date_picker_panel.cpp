@@ -412,15 +412,30 @@ void DatePickerBody::activate(int index) {
   }
 }
 
-void DatePickerBody::onSingleTapUp(XDim x, YDim y) {
+int DatePickerBody::cellAt(XDim x, YDim y) const {
   const bool days = panel_.mode() == DatePickerMode::kDays;
   const int columns = days ? 7 : 3;
   const int rows = days ? 7 : (cellCount() + 2) / 3;
-  if (x < 0 || y < 0 || x >= width() || y >= height()) return;
+  if (x < 0 || y < 0 || x >= width() || y >= height()) return -1;
   const int row = ((y + 1) * rows - 1) / height() - (days ? 1 : 0);
-  if (row < 0) return;
+  if (row < 0) return -1;
   const int index = row * columns + ((x + 1) * columns - 1) / width();
-  if (index >= cellCount()) return;
+  return index < cellCount() ? index : -1;
+}
+
+bool DatePickerBody::cellEnabled(int index) const {
+  if (index < 0 || index >= cellCount()) return false;
+  if (panel_.mode() != DatePickerMode::kDays) return true;
+  const DatePickerSession& session = panel_.session();
+  const CivilDay day =
+      GridDay(session.month, session.strings().first_weekday, index);
+  return day.isValid() && day.month() == session.month.month() &&
+         session.enabled(day);
+}
+
+void DatePickerBody::onSingleTapUp(XDim x, YDim y) {
+  const int index = cellAt(x, y);
+  if (!cellEnabled(index)) return;
   cursor_ = index;
   setDirty();
   requestFocus();
@@ -436,6 +451,11 @@ void DatePickerBody::resetCursor() {
                          MonthStart(session.draft) == session.month)
                             ? session.draft.day() - 1
                             : 0);
+    if (!cellEnabled(cursor_)) {
+      cursor_ = 0;
+      while (cursor_ < cellCount() && !cellEnabled(cursor_)) ++cursor_;
+      if (cursor_ == cellCount()) cursor_ = -1;
+    }
   } else if (panel_.mode() == DatePickerMode::kMonths) {
     cursor_ = session.month.month() - 1;
   } else {
@@ -445,7 +465,9 @@ void DatePickerBody::resetCursor() {
   setDirty();
 }
 
-void DatePickerBody::revealCursor() { panel_.scrollTo(cellBounds(cursor_)); }
+void DatePickerBody::revealCursor() {
+  if (cursor_ >= 0) panel_.scrollTo(cellBounds(cursor_));
+}
 
 bool DatePickerBody::onKeyEvent(const KeyEvent& event) {
   if (event.phase != KeyPhase::kDown && event.phase != KeyPhase::kRepeat)

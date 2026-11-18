@@ -242,6 +242,51 @@ TEST_F(DatePickerPortrait, FittingCanBeDisabled) {
   EXPECT_GT(body().height(), body().parent()->height());
 }
 
+// Verifies disabled and adjacent-month taps leave selection, focus, and pixels
+// unchanged, including the would-be cursor outline.
+TEST_F(DatePickerRender, DisabledDatesDoNotAcquireFeedback) {
+  picker_.setBounds(
+      {CivilDay::FromYmd(2024, 2, 10), CivilDay::FromYmd(2024, 2, 20)});
+  open();
+  const std::vector<roo::byte> before = raster_;
+  const CivilDay selected = panel().session().draft;
+  for (int i = 0; i < 42; ++i) {
+    const CivilDay day = internal::GridDay(
+        panel().session().month, panel().session().strings().first_weekday, i);
+    if (day.month() == 2 && picker_.bounds().contains(day)) continue;
+    const Rect cell = body().cellBounds(i);
+    device_.reset();
+    body().onSingleTapUp(cell.xMin() + cell.width() / 2,
+                         cell.yMin() + cell.height() / 2);
+    app_.refresh();
+    EXPECT_EQ(selected, panel().session().draft);
+    EXPECT_EQ(&body(), owner_.focus().focused());
+    EXPECT_EQ(before, raster_);
+    EXPECT_FALSE(body().isClicking());
+    EXPECT_FALSE(body().isPressed());
+    EXPECT_EQ(0, device_.writesAt(200, 200));
+  }
+}
+
+// Verifies a month with no enabled dates has no initial purple cursor marker.
+TEST_F(DatePickerRender, UnavailableMonthHasNoCursorMarker) {
+  picker_.setBounds(
+      {CivilDay::FromYmd(2024, 3, 1), CivilDay::FromYmd(2024, 3, 31)});
+  open();
+  EXPECT_FALSE(panel().session().draft.isValid());
+  const Color primary = body().theme().material3Theme().color.primary;
+  roo_display::Argb4444 mode;
+  const Color marker = mode.toArgbColor(mode.fromArgbColor(primary));
+  int primary_pixels = 0;
+  for (int y = 0; y < body().height(); ++y) {
+    for (int x = 0; x < body().width(); ++x) {
+      if (localPixel(body(), x, y) == marker) ++primary_pixels;
+    }
+  }
+  EXPECT_EQ(0, primary_pixels);
+  expectSingleWrites();
+}
+
 // Verifies focus never adds a header-center halo or tints the whole day grid.
 TEST_F(DatePickerRender, FocusFeedbackBelongsToIndividualControls) {
   open();

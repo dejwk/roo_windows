@@ -113,6 +113,12 @@ class DatePickerBody final : public SurfaceWidget {
   Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
 
  private:
+  /// Returns a cell for a body-local point, or -1 outside the selectable grid.
+  int cellAt(XDim x, YDim y) const;
+
+  /// Rejects adjacent-month dates and dates excluded by the session policy.
+  bool cellEnabled(int index) const;
+
   /// Applies an enabled day or changes the month/year body selection.
   void activate(int index);
   DatePickerPanel& panel_;
