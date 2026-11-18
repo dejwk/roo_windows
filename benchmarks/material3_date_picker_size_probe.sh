@@ -35,7 +35,7 @@ includes=(
 
 common=(-std=gnu++17 -fno-exceptions -fno-rtti)
 
-"${compiler}" "${common[@]}" -DROO_WINDOWS_STANDALONE_ABI_PROBE \
+"${compiler}" "${common[@]}" \
   "${includes[@]}" -c "${repo_dir}/benchmarks/material3_date_picker_size_probe.cpp" \
   -o "${probe_dir}/public.o"
 

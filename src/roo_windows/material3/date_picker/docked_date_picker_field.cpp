@@ -73,7 +73,9 @@ class DockedDatePickerField::Picker final : public ModalDatePicker,
 DockedDatePickerField::DockedDatePickerField(ApplicationContext& context,
                                              roo::string_view label,
                                              TextFieldVariant variant)
-    : TextField(context, label, variant) {
+    : TextField(context, label, variant),
+      changing_text_(false),
+      shrink_to_fit_(true) {
   setTrailingIcon(&CalendarIcon());
 }
 
@@ -107,6 +109,11 @@ void DockedDatePickerField::setBounds(DatePickerBounds bounds) {
 void DockedDatePickerField::setDisplayedMonth(CivilDay day) {
   CHECK(!isPickerOpen());
   month_ = internal::MonthStart(day);
+}
+
+void DockedDatePickerField::setShrinkToFit(bool enabled) {
+  CHECK(!isPickerOpen());
+  shrink_to_fit_ = enabled;
 }
 
 CivilDay DockedDatePickerField::displayedMonth() const {
@@ -145,6 +152,7 @@ PresentationStartResult DockedDatePickerField::openPicker() {
   picker_->setValue(parseText(seed) ? seed : date_);
   picker_->setToday(today_);
   picker_->setBounds(bounds_);
+  picker_->setShrinkToFit(shrink_to_fit_);
   picker_->setDisplayedMonth(month_);
   PresentationStartResult result =
       picker_->openAt(*owner, &geometry.bounds_in_window);

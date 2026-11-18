@@ -58,6 +58,15 @@ class ModalDatePicker {
   /// Returns the next session's initial body mode.
   DatePickerEntryMode entryMode() const { return entry_mode_; }
 
+  /// Fits the calendar into its available area by shrinking cells when needed.
+  /// Enabled by default. Smaller cells have smaller touch targets. Disable to
+  /// retain 48 dp cells and scroll to dates outside the viewport. Set while
+  /// idle.
+  void setShrinkToFit(bool enabled);
+
+  /// Returns whether the next calendar shrinks to fit its available area.
+  bool shrinkToFit() const { return shrink_to_fit_; }
+
   /// Opens through the owner's shared transient host; never replaces a dialog.
   PresentationStartResult open(Task& owner);
 
@@ -96,7 +105,8 @@ class ModalDatePicker {
   roo_time::CivilDay today_;
   roo_time::CivilDay month_;
   DatePickerBounds bounds_;
-  DatePickerEntryMode entry_mode_ = DatePickerEntryMode::kCalendar;
+  DatePickerEntryMode entry_mode_ : 1;
+  bool shrink_to_fit_ : 1;
   std::unique_ptr<internal::DatePickerSession> session_;
 };
 

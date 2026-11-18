@@ -57,6 +57,19 @@ class DockedDatePickerTest : public testing::Test {
   Field* field_;
 };
 
+// Verifies the default fitting policy and opt-out reach the active presenter.
+TEST_F(DockedDatePickerTest, CalendarFittingPolicy) {
+  EXPECT_TRUE(field_->shrinkToFit());
+  app_.refresh();
+  ASSERT_EQ(PresentationStartResult::kStarted, field_->openPicker());
+  EXPECT_TRUE(panel().session().shrinkToFit());
+  field_->dismissPicker();
+  field_->setShrinkToFit(false);
+  EXPECT_FALSE(field_->shrinkToFit());
+  ASSERT_EQ(PresentationStartResult::kStarted, field_->openPicker());
+  EXPECT_FALSE(panel().session().shrinkToFit());
+}
+
 // Verifies focus-triggered admission is deferred and restoration does not
 // reopen.
 TEST_F(DockedDatePickerTest, FocusTakeoverAndRestoration) {

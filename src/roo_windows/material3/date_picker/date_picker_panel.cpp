@@ -2,7 +2,9 @@
 #include <cstdio>
 #include <new>
 
+#include "roo_display/shape/smooth.h"
 #include "roo_display/ui/text_label.h"
+#include "roo_display/ui/tile.h"
 #include "roo_icons/filled/24/action.h"
 #include "roo_icons/filled/24/editor.h"
 #include "roo_icons/filled/24/navigation.h"
@@ -35,40 +37,104 @@ void PaintText(PaintContext& ctx, roo::string_view text, const TextStyle& style,
   ctx.addExclusion(bounds);
 }
 
-/// Settles glyphs inside the safe center before registering a rounded
-/// decoration.
+/// Composes a rounded marker with its inherited surface in bounded scratch.
+class CellBackground final : public roo_display::Rasterizable {
+ public:
+  CellBackground(const Rect& cell, const Rect& marker, Color surface,
+                 Color fill, Color outline, int outline_width)
+      : cell_(cell.asBox()),
+        surface_(surface),
+        marker_(roo_display::SmoothFilledRoundRect(
+            marker.xMin(), marker.yMin(), marker.xMax(), marker.yMax(),
+            marker.height() * 0.5f, fill)),
+        outline_(roo_display::SmoothThickRoundRect(
+            marker.xMin(), marker.yMin(), marker.xMax(), marker.yMax(),
+            marker.height() * 0.5f, outline_width, outline)) {}
+
+  roo_display::Box extents() const override { return cell_; }
+
+  void readColors(const int16_t* x, const int16_t* y, uint32_t count,
+                  Color* result) const override {
+    Color fill[16];
+    Color outline[16];
+    while (count != 0) {
+      const uint32_t batch = std::min<uint32_t>(count, 16);
+      marker_.readColors(x, y, batch, fill);
+      outline_.readColors(x, y, batch, outline);
+      for (uint32_t i = 0; i < batch; ++i) {
+        result[i] = AlphaBlend(AlphaBlend(surface_, fill[i]), outline[i]);
+      }
+      x += batch;
+      y += batch;
+      result += batch;
+      count -= batch;
+    }
+  }
+
+ private:
+  roo_display::Box cell_;
+  Color surface_;
+  roo_display::SmoothShape marker_;
+  roo_display::SmoothShape outline_;
+};
+
+/// Chooses legible compact text without retaining per-cell font state.
+const TextStyle& CellTextStyle(const Rect& cell) {
+  return cell.height() < Scaled(18)   ? text_style_label_small()
+         : cell.height() < Scaled(32) ? text_style_body_small()
+                                      : text_style_body_medium();
+}
+
+/// Resolves glyphs, rounded markers, and surface together in a single tile.
 void PaintCell(PaintContext& ctx, roo::string_view text, const Rect& cell,
                Color foreground, Color background, Color accent, bool selected,
                bool today, bool focused) {
-  Rect circle(cell.xMin() + (cell.width() - Scaled(40)) / 2,
-              cell.yMin() + Scaled(4),
-              cell.xMin() + (cell.width() + Scaled(40)) / 2 - 1,
-              cell.yMin() + Scaled(44) - 1);
-  if (selected || today || focused) {
-    Rect inner(circle.xMin() + Scaled(6), circle.yMin() + Scaled(6),
-               circle.xMax() - Scaled(6), circle.yMax() - Scaled(6));
-    // Four-digit years need a wider pill than a day marker.
-    if (text.size() > 2) {
-      circle = Rect(cell.xMin() + Scaled(4), cell.yMin() + Scaled(4),
-                    cell.xMax() - Scaled(4), cell.yMin() + Scaled(44) - 1);
-      inner = Rect(circle.xMin() + Scaled(8), circle.yMin() + Scaled(6),
-                   circle.xMax() - Scaled(8), circle.yMax() - Scaled(6));
-    }
-    PaintText(ctx, text, text_style_body_medium(), foreground,
-              selected ? accent : background, inner);
-    PaintDecoration decoration;
-    decoration.bounds = circle;
-    decoration.background = selected ? accent : background;
-    const uint8_t radius = Scaled(20);
-    decoration.corner_radii = {radius, radius, radius, radius};
-    decoration.outline_width = SmallNumber(focused ? 2 : today ? 1 : 0);
-    decoration.outline_color = accent;
-    ctx.addDecoration(decoration);
-  } else {
-    PaintText(ctx, text, text_style_body_medium(), foreground, background,
-              cell);
+  const TextStyle& style = CellTextStyle(cell);
+  if (!selected && !today && !focused) {
+    PaintText(ctx, text, style, foreground, background, cell);
+    return;
   }
+  roo_display::StringViewLabel label(text, style.font(), foreground,
+                                     style.fontOptions());
+  const int marker_height = std::min(Scaled(40), cell.height() - Scaled(2));
+  const int marker_width =
+      std::min(cell.width() - Scaled(2),
+               std::max(marker_height, label.extents().width() + Scaled(6)));
+  const int left = cell.xMin() + (cell.width() - marker_width) / 2;
+  const int top = cell.yMin() + (cell.height() - marker_height) / 2;
+  const Rect marker(left, top, left + marker_width - 1,
+                    top + marker_height - 1);
+  const CellBackground composed(
+      cell, marker, background, selected ? accent : background,
+      today || focused ? accent : roo_display::color::Transparent,
+      focused ? Scaled(2) : Scaled(1));
+  roo_display::Tile tile(&label, cell.asBox(),
+                         roo_display::kCenter | roo_display::kMiddle);
+  tile.setBackground(&composed);
+  // Keep background reads in short bands so Tile's background filter never
+  // allocates a stream. Sources are borrowed only through this synchronous
+  // draw.
+  for (int y = cell.yMin(); y <= cell.yMax(); y += 8) {
+    PaintContext band = ctx.clipped(
+        Rect(cell.xMin(), y, cell.xMax(), std::min<int>(y + 7, cell.yMax())));
+    band.drawObject(tile);
+  }
+  ctx.addExclusion(cell);
 }
+
+/// Makes room for seven compact calendar rows on short displays.
+int HeaderHeight(bool shrink, int height) {
+  return shrink && height < Scaled(320) ? Scaled(80) : kHeader;
+}
+
+int FooterHeight(bool shrink, int height) {
+  return shrink && height < Scaled(320) ? Scaled(48) : kFooter;
+}
+
+int BottomInset(bool shrink, int height) {
+  return shrink && height < Scaled(320) ? Scaled(8) : kInset;
+}
+
 }  // namespace
 
 DatePickerHeader::DatePickerHeader(ApplicationContext& context,
@@ -79,8 +145,11 @@ DatePickerHeader::DatePickerHeader(ApplicationContext& context,
       navigation_style_(0) {}
 
 Rect DatePickerHeader::controlBounds(int control) const {
-  if (control == 4) return Rect(width() - kCell, 0, width() - 1, kCell - 1);
-  int y = height() - kCell;
+  const int navigation_height = height() < Scaled(104) ? Scaled(32) : kCell;
+  if (control == 4)
+    return Rect(width() - kCell, 0, width() - 1,
+                std::min(kCell, height() - navigation_height) - 1);
+  int y = height() - navigation_height;
   if (control == 0) return Rect(0, y, kCell - 1, height() - 1);
   if (control == 3) return Rect(width() - kCell, y, width() - 1, height() - 1);
   return control == 1
@@ -124,7 +193,7 @@ Dimensions DatePickerHeader::onMeasure(WidthSpec width, HeightSpec height) {
 void DatePickerHeader::dirtyPart(int part) {
   dirty_parts_ |= 1 << part;
   setDirty(part == 5
-               ? Rect(0, Scaled(24), width() - kCell - 1, height() - kCell - 1)
+               ? Rect(0, 0, width() - kCell - 1, controlBounds(0).yMin() - 1)
                : controlBounds(part));
 }
 
@@ -133,12 +202,14 @@ void DatePickerHeader::paint(PaintContext& ctx) const {
   const auto& colors = theme().material3Theme().color;
   Color bg = panel_.background();
   bool input = panel_.mode() == DatePickerMode::kInput;
+  const int title_height = height() < Scaled(104) ? Scaled(16) : Scaled(24);
+  const int navigation_top = controlBounds(0).yMin();
   if (isInvalidated())
     PaintText(ctx,
               input ? session.strings().headline_input_date
                     : session.strings().headline_select_date,
               text_style_label_large(), colors.onSurfaceVariant, bg,
-              Rect(0, 0, width() - kCell - 1, Scaled(24) - 1),
+              Rect(0, 0, width() - kCell - 1, title_height - 1),
               roo_display::kLeft | roo_display::kMiddle);
   if (isInvalidated() || (dirty_parts_ & (1 << 5))) {
     char text[64] = {};
@@ -147,8 +218,10 @@ void DatePickerHeader::paint(PaintContext& ctx) const {
     PaintText(ctx,
               session.draft.isValid() ? roo::string_view(text)
                                       : roo::string_view("—"),
-              text_style_headline_small(), colors.onSurface, bg,
-              Rect(0, Scaled(24), width() - kCell - 1, height() - kCell - 1),
+              height() < Scaled(104) ? text_style_title_large()
+                                     : text_style_headline_small(),
+              colors.onSurface, bg,
+              Rect(0, title_height, width() - kCell - 1, navigation_top - 1),
               roo_display::kLeft | roo_display::kMiddle);
   }
   for (int control = 0; control < 5; ++control) {
@@ -233,12 +306,27 @@ Dimensions DatePickerBody::getSuggestedMinimumDimensions() const {
                                    : ((cellCount() + 2) / 3) * kCell);
 }
 
+Dimensions DatePickerBody::onMeasure(WidthSpec width, HeightSpec height) {
+  const Dimensions desired = getSuggestedMinimumDimensions();
+  int w = desired.width();
+  int h = desired.height();
+  if (panel_.session().shrinkToFit()) {
+    if (width.value() > 0) w = std::min<int>(w, width.value());
+    if (height.value() > 0 && panel_.mode() != DatePickerMode::kYears)
+      h = std::min<int>(h, height.value());
+  }
+  return Dimensions(width.resolveSize(w), height.resolveSize(h));
+}
+
 Rect DatePickerBody::cellBounds(int index) const {
-  int columns = panel_.mode() == DatePickerMode::kDays ? 7 : 3;
-  int w = width() / columns;
-  int x = index % columns * w;
-  int y = (index / columns + (columns == 7 ? 1 : 0)) * kCell;
-  return Rect(x, y, x + w - 1, y + kCell - 1);
+  const bool days = panel_.mode() == DatePickerMode::kDays;
+  const int columns = days ? 7 : 3;
+  const int column = index % columns;
+  const int row = index / columns + (days ? 1 : 0);
+  const int rows = days ? 7 : (cellCount() + 2) / 3;
+  return Rect(column * width() / columns, row * height() / rows,
+              (column + 1) * width() / columns - 1,
+              (row + 1) * height() / rows - 1);
 }
 
 void DatePickerBody::paint(PaintContext& ctx) const {
@@ -247,13 +335,13 @@ void DatePickerBody::paint(PaintContext& ctx) const {
   bool days = panel_.mode() == DatePickerMode::kDays;
   if (days && isInvalidated()) {
     for (int col = 0; col < 7; ++col) {
+      const Rect first = cellBounds(col);
       PaintText(
           ctx,
           session.strings()
               .weekday_narrow[(col + session.strings().first_weekday) % 7],
-          text_style_body_medium(), colors.onSurfaceVariant, background(),
-          Rect(col * (width() / 7), 0, (col + 1) * (width() / 7) - 1,
-               kCell - 1));
+          CellTextStyle(first), colors.onSurfaceVariant, background(),
+          Rect(first.xMin(), 0, first.xMax(), first.yMin() - 1));
     }
   }
   for (int i = 0; i < cellCount(); ++i) {
@@ -325,10 +413,13 @@ void DatePickerBody::activate(int index) {
 }
 
 void DatePickerBody::onSingleTapUp(XDim x, YDim y) {
-  int columns = panel_.mode() == DatePickerMode::kDays ? 7 : 3;
-  int row = y / kCell - (columns == 7 ? 1 : 0);
-  if (x < 0 || x >= width() || row < 0) return;
-  int index = row * columns + x / (width() / columns);
+  const bool days = panel_.mode() == DatePickerMode::kDays;
+  const int columns = days ? 7 : 3;
+  const int rows = days ? 7 : (cellCount() + 2) / 3;
+  if (x < 0 || y < 0 || x >= width() || y >= height()) return;
+  const int row = ((y + 1) * rows - 1) / height() - (days ? 1 : 0);
+  if (row < 0) return;
+  const int index = row * columns + ((x + 1) * columns - 1) / width();
   if (index >= cellCount()) return;
   cursor_ = index;
   setDirty();
@@ -501,10 +592,14 @@ Dimensions DatePickerPanel::onMeasure(WidthSpec width, HeightSpec height) {
   Dimensions desired = getSuggestedMinimumDimensions();
   int w = width.resolveSize(desired.width()),
       h = height.resolveSize(desired.height());
+  const bool shrink = session_.shrinkToFit();
+  const int header_height = HeaderHeight(shrink, h);
   header_.measure(WidthSpec::Exactly(w - 2 * kInset),
-                  HeightSpec::Exactly(kHeader - kInset / 2));
-  viewport_.measure(WidthSpec::Exactly(w - 2 * kInset),
-                    HeightSpec::Exactly(h - kHeader - kFooter - kInset));
+                  HeightSpec::Exactly(header_height - kInset / 2));
+  viewport_.measure(
+      WidthSpec::Exactly(w - 2 * kInset),
+      HeightSpec::Exactly(h - header_height - FooterHeight(shrink, h) -
+                          BottomInset(shrink, h)));
   MeasureChildWithMargins(cancel_, WidthSpec::Exactly(Scaled(96)),
                           HeightSpec::Exactly(kCell));
   MeasureChildWithMargins(confirm_, WidthSpec::Exactly(Scaled(64)),
@@ -516,19 +611,25 @@ Dimensions DatePickerPanel::onMeasure(WidthSpec width, HeightSpec height) {
 }
 
 void DatePickerPanel::onLayout(bool, const Rect&) {
-  header_.layout(Rect(kInset, kInset / 2, width() - kInset - 1, kHeader - 1));
-  viewport_.layout(Rect(kInset, kHeader, width() - kInset - 1,
-                        height() - kFooter - kInset - 1));
+  const bool shrink = session_.shrinkToFit();
+  const int header_height = HeaderHeight(shrink, height());
+  const int footer_height = FooterHeight(shrink, height());
+  const int bottom_inset = BottomInset(shrink, height());
+  header_.layout(
+      Rect(kInset, kInset / 2, width() - kInset - 1, header_height - 1));
+  viewport_.layout(Rect(kInset, header_height, width() - kInset - 1,
+                        height() - footer_height - bottom_inset - 1));
   LayoutChildWithMargins(
-      cancel_, Rect(width() - kInset - Scaled(160), height() - kFooter,
-                    width() - kInset - Scaled(64) - 1, height() - kInset - 1));
-  LayoutChildWithMargins(confirm_,
-                         Rect(width() - kInset - Scaled(64), height() - kFooter,
-                              width() - kInset - 1, height() - kInset - 1));
+      cancel_,
+      Rect(width() - kInset - Scaled(160), height() - footer_height,
+           width() - kInset - Scaled(64) - 1, height() - bottom_inset - 1));
+  LayoutChildWithMargins(
+      confirm_, Rect(width() - kInset - Scaled(64), height() - footer_height,
+                     width() - kInset - 1, height() - bottom_inset - 1));
   if (input_)
-    input_->layout(
-        Rect(kInset, kHeader, width() - kInset - 1,
-             std::min<int>(height() - kFooter - 1, kHeader + Scaled(80) - 1)));
+    input_->layout(Rect(kInset, header_height, width() - kInset - 1,
+                        std::min<int>(height() - footer_height - 1,
+                                      header_height + Scaled(80) - 1)));
   if (focus_pending_) {
     focus_pending_ = false;
     preferredFocusChild()->requestFocus();

@@ -99,11 +99,12 @@ class WriteCountingDevice final
   int right_ = 0;
 };
 
-class DatePickerRender : public testing::Test {
+template <int Width, int Height>
+class DatePickerRenderSized : public testing::Test {
  protected:
-  DatePickerRender()
-      : raster_(400 * 576 * 2),
-        device_(400, 576, raster_.data()),
+  DatePickerRenderSized()
+      : raster_(Width * Height * 2),
+        device_(Width, Height, raster_.data()),
         display_(device_),
         environment_(scheduler_),
         app_(&environment_, display_),
@@ -149,17 +150,54 @@ class DatePickerRender : public testing::Test {
     return pixelAt(dx + x, dy + y);
   }
 
-  void expectSingleWrites() const {
+  void expectSingleWrites(bool expect_output = true) const {
     int excess = 0;
     int written = 0;
-    for (int y = 0; y < 576; ++y) {
-      for (int x = 0; x < 400; ++x) {
+    for (int y = 0; y < Height; ++y) {
+      for (int x = 0; x < Width; ++x) {
         if (device_.writesAt(x, y) > 1) ++excess;
         if (device_.writesAt(x, y) != 0) ++written;
       }
     }
     EXPECT_EQ(0, excess);
-    EXPECT_GT(written, 0);
+    if (expect_output) EXPECT_GT(written, 0);
+  }
+
+  void expectFittedCalendar() {
+    EXPECT_TRUE(picker_.shrinkToFit());
+    open();
+    expectSingleWrites();
+    Widget* viewport = body().parent();
+    ASSERT_LE(body().width(), viewport->width());
+    ASSERT_LE(body().height(), viewport->height());
+    EXPECT_EQ(0, body().offsetLeft());
+    EXPECT_EQ(0, body().offsetTop());
+    EXPECT_EQ(body().width() - 1, body().cellBounds(41).xMax());
+    EXPECT_EQ(body().height() - 1, body().cellBounds(41).yMax());
+    for (int i = 0; i < 42; ++i) {
+      const CivilDay day =
+          internal::GridDay(panel().session().month,
+                            panel().session().strings().first_weekday, i);
+      if (day.month() != panel().session().month.month()) continue;
+      const Rect cell = body().cellBounds(i);
+      // Integer division must assign both edges to this cell, including
+      // columns and rows that receive the remainder pixel.
+      for (int x : {cell.xMin(), cell.xMax()}) {
+        for (int y : {cell.yMin(), cell.yMax()}) {
+          device_.reset();
+          body().onSingleTapUp(x, y);
+          app_.refresh();
+          EXPECT_EQ(day, panel().session().draft);
+          expectSingleWrites(false);
+        }
+      }
+    }
+    const std::vector<roo::byte> incremental = raster_;
+    device_.reset();
+    panel().invalidateInterior();
+    app_.refresh();
+    expectSingleWrites();
+    EXPECT_EQ(incremental, raster_);
   }
 
   std::vector<roo::byte> raster_;
@@ -172,6 +210,37 @@ class DatePickerRender : public testing::Test {
   Task& owner_;
   ModalDatePicker picker_;
 };
+
+using DatePickerRender = DatePickerRenderSized<400, 576>;
+using DatePickerPortrait = DatePickerRenderSized<240, 320>;
+using DatePickerLandscape = DatePickerRenderSized<320, 240>;
+using DatePickerMinimum = DatePickerRenderSized<240, 240>;
+using DatePickerUneven = DatePickerRenderSized<257, 321>;
+
+// Verifies a portrait calendar fits and all cell edges select the right date.
+TEST_F(DatePickerPortrait, FittedCalendar) { expectFittedCalendar(); }
+
+// Verifies compact chrome leaves room for all six weeks in landscape.
+TEST_F(DatePickerLandscape, FittedCalendar) { expectFittedCalendar(); }
+
+// Verifies the smallest admitted display still paints all calendar rows once.
+TEST_F(DatePickerMinimum, FittedCalendar) { expectFittedCalendar(); }
+
+// Verifies remainder pixels in fitted cell dimensions keep correct hit tests.
+TEST_F(DatePickerUneven, FittedCalendar) { expectFittedCalendar(); }
+
+// Verifies opting out retains the original full-size scrolling day grid.
+TEST_F(DatePickerPortrait, FittingCanBeDisabled) {
+  picker_.setShrinkToFit(false);
+  EXPECT_FALSE(picker_.shrinkToFit());
+  open();
+  EXPECT_EQ(Scaled(336), body().width());
+  EXPECT_EQ(Scaled(336), body().height());
+  EXPECT_EQ(Scaled(48), body().cellBounds(0).width());
+  EXPECT_EQ(Scaled(48), body().cellBounds(0).height());
+  EXPECT_GT(body().width(), body().parent()->width());
+  EXPECT_GT(body().height(), body().parent()->height());
+}
 
 // Verifies focus never adds a header-center halo or tints the whole day grid.
 TEST_F(DatePickerRender, FocusFeedbackBelongsToIndividualControls) {

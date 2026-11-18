@@ -1,7 +1,4 @@
 // Target-ABI measurements; this translation unit has no runtime behavior.
-#if defined(ROO_WINDOWS_STANDALONE_ABI_PROBE)
-#include "benchmarks/standalone_abi_logging_stub.h"
-#endif
 #include "roo_windows/material3/date_picker/date_picker_internal.h"
 #include "roo_windows/material3/date_picker/docked_date_picker_field.h"
 

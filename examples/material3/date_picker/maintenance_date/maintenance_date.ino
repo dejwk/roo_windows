@@ -137,8 +137,10 @@ void setup() {
   form.add(calendar);
   form.add(numeric);
   form.add(date_field);
-  // On this compact display the docked calendar promotes to full-screen.
-  // On a larger display it anchors to the field. Both capture calendar focus.
+  // This compact display promotes the calendar to full-screen and shrinks its
+  // cells to show the whole month. Set picker.setShrinkToFit(false) or
+  // date_field.setShrinkToFit(false) to keep 48 dp cells with scrolling.
+  // On a larger display the docked calendar anchors to the field.
   app.addTaskFullScreen(scroller);
   InitDisplay();
   app.start();

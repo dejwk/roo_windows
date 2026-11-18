@@ -109,6 +109,9 @@ class DatePickerBody final : public SurfaceWidget {
   /// Scrolls the current keyboard cell into the viewport.
   void revealCursor();
 
+ protected:
+  Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
+
  private:
   /// Applies an enabled day or changes the month/year body selection.
   void activate(int index);
@@ -286,6 +289,9 @@ class DatePickerSession final : public TransientPresentationRegistration {
 
   /// Borrows the presenter numeric codec.
   const DateTextCodec& codec() const { return owner_.dateTextCodec(); }
+
+  /// Returns the configured calendar fitting policy without retaining a copy.
+  bool shrinkToFit() const { return owner_.shrinkToFit(); }
 
   /// Returns the explicitly configured today marker.
   roo_time::CivilDay today() const { return owner_.today_; }

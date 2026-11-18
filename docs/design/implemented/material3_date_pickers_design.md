@@ -55,7 +55,8 @@ class MaintenancePicker : public roo_windows::material3::ModalDatePicker {
 
 Modal values use `setValue()/value()`. Docked fields use `setDate()/date()` to
 avoid colliding with the inherited text editor's `value()` virtual method.
-Both expose `setToday()`, `setBounds()`, and `setDisplayedMonth()`. Setters
+Both expose `setToday()`, `setBounds()`, `setDisplayedMonth()`, and
+`setShrinkToFit()/shrinkToFit()`. Setters
 require a closed picker. An invalid date represents no selection; invalid
 bound endpoints mean unbounded. Reversed bounds reject admission.
 
@@ -134,12 +135,17 @@ transparent barrier. If the regular panel plus clearance does not fit, both
 variants promote to the full window with a scrim and square corners.
 Viewports smaller than 240 by 240 dp reject admission.
 
-The full-screen fallback pins the header and Cancel/OK actions. Its body
-scrolls in both directions, retaining 48 dp calendar cells; it does not shrink
-touch targets to fit. On a 320 by 240 display only a small part of the grid is
-visible at once. The selected/cursor cell is revealed after layout and keyboard
-movement; users can drag the body to reach other rows and columns. Numeric
-input uses the same stable outer panel geometry across mode switches.
+The full-screen fallback pins the header and Cancel/OK actions. Both presenters
+shrink the calendar to fit by default, keeping all seven weekday columns and six
+week rows visible. Measurement distributes remainder pixels across cells, and
+hit testing uses those same boundaries. Small cells use compact typography and
+markers; displays shorter than 320 dp also use a compact header and footer.
+Shrinking reduces touch-target sizes, so applications prioritizing 48 dp targets
+can call `setShrinkToFit(false)` on either presenter while closed. This restores
+the original two-axis scrolling grid and cursor reveal. The bounded year list
+keeps vertical scrolling in either policy. Numeric input shares the panel chrome.
+
+![Fitted portrait calendar geometry](figures/material3_date_picker_fit.svg)
 
 The day grid computes 42 cells arithmetically, including disabled adjacent
 month dates. Month selection uses 12 cells. Year selection uses pages of up to
@@ -156,8 +162,10 @@ be committed through either touch or keyboard.
 ## Rendering and resources
 
 The header and day/month/year cells are owner-painted; there are no per-day
-widgets or row objects. Foreground glyphs settle against their final background
-before rounded decorations and remaining surface fill. Clipping skips
+widgets or row objects. Glyphs and rounded markers resolve together through a tile with a raster
+background, including at reduced cell sizes. Short draw bands avoid allocating
+background streams. Header feedback and keyboard outlines belong to individual
+controls; generic header-center halos and whole-grid focus tint are suppressed. Clipping skips
 non-visible body cells. Calendar selection and keyboard cursor changes compare against the previous
 paint snapshot and repaint only changed cells. Header updates track changed
 controls and the draft headline. Coalesced edits do not retain intermediate
@@ -177,19 +185,23 @@ state):
 | Object | Bytes |
 | --- | ---: |
 | Closed `ModalDatePicker` | 36 |
-| Base Material 3 `TextField` | 108 |
-| Closed `DockedDatePickerField` | 136 |
-| Active `DatePickerSession`, including panel | 456 |
-| `DatePickerPanel` (included in session) | 416 |
-| Header (included in panel) | 36 |
-| Body, including paint snapshot (included in panel) | 44 |
+| Base Material 3 `TextField` | 104 |
+| Closed `DockedDatePickerField` | 132 |
+| Active `DatePickerSession`, including panel | 440 |
+| `DatePickerPanel` (included in session) | 400 |
+| Header (included in panel) | 32 |
+| Body, including paint snapshot (included in panel) | 40 |
+
+The November 2026 fitting and header changes add zero bytes to these objects
+with the current library dependencies. The fitting option shares packed flag
+storage; header measurement uses existing alignment padding.
 
 Run `benchmarks/material3_date_picker_size_probe.sh COMPILER NM` with sibling
 Roo libraries, or set `ROO_LIBRARIES_ROOT`. This is a target-ABI object-size
 probe, not a firmware flash-size or peak-heap measurement.
 
 The resource regression asserts zero allocations for warmed model navigation.
-Ten selection-update frames record 204 allocations (previously 1080) through
+Ten selection-update frames record 237 allocations through
 the existing `roo_display` glyph-stream renderer. As with Material 3 text fields,
 removing those upstream allocations is deferred; this implementation does not
 claim allocation-free paint.
@@ -200,7 +212,8 @@ Focused tests cover civil bounds/locale helpers, drafts and terminal hooks,
 input validation, month/year transitions, civil endpoints, shared-host rejection,
 owner navigation, outside dismissal, callback reopening/destruction, field
 focus restoration/destruction, and editor isolation. Golden tests cover modal
-calendar/input/error/month/year bodies, compact clipping, and closed/anchored/
+calendar/input/error/month/year bodies, fitted and scrolling compact layouts,
+and closed/anchored/
 promoted docked fields. A separate target verifies Polish defaults.
 
 The runnable example is
@@ -220,7 +233,6 @@ regressions pass. The example builds; interactive hardware checks were not run.
 
 - Simultaneous editing of the docked source while its calendar is open.
 - Live anchor tracking and repositioning during a session.
-- A denser compact layout and dynamic input-only panel height, while
-  preserving usable touch targets.
+- Dynamic input-only panel height.
 - Range selection and richer locale-specific headline formatting.
 - Upstream allocation-free glyph rendering.

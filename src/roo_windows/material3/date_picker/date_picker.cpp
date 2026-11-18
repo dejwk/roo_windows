@@ -12,7 +12,9 @@ namespace roo_windows::material3 {
 using roo_time::CivilDay;
 
 ModalDatePicker::ModalDatePicker(ApplicationContext& context)
-    : context_(context) {}
+    : context_(context),
+      entry_mode_(DatePickerEntryMode::kCalendar),
+      shrink_to_fit_(true) {}
 
 ModalDatePicker::~ModalDatePicker() = default;
 
@@ -43,6 +45,11 @@ CivilDay ModalDatePicker::displayedMonth() const {
 void ModalDatePicker::setEntryMode(DatePickerEntryMode mode) {
   CHECK(!isOpen());
   entry_mode_ = mode;
+}
+
+void ModalDatePicker::setShrinkToFit(bool enabled) {
+  CHECK(!isOpen());
+  shrink_to_fit_ = enabled;
 }
 
 const DatePickerStrings& ModalDatePicker::datePickerStrings() const {

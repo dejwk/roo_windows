@@ -18,7 +18,8 @@ using roo_time::CivilDay;
 
 // Captures the real hosted surface, including scrim and compact clipping.
 void CheckPicker(const char* name, int width, int height, DatePickerMode mode,
-                 bool invalid = false) {
+                 bool invalid = false, bool shrink = true,
+                 CivilDay month = CivilDay()) {
   std::vector<roo::byte> raster(width * height * 2);
   roo_display::OffscreenDevice<roo_display::Argb4444> device(
       width, height, raster.data(), roo_display::Argb4444());
@@ -30,6 +31,8 @@ void CheckPicker(const char* name, int width, int height, DatePickerMode mode,
   Task& owner = app.addTaskFullScreen(content);
   ModalDatePicker picker(app.context());
   picker.setValue(CivilDay::FromYmd(2024, 2, 29));
+  picker.setShrinkToFit(shrink);
+  picker.setDisplayedMonth(month);
   picker.setToday(CivilDay::FromYmd(2024, 2, 12));
   picker.setBounds(
       {CivilDay::FromYmd(2024, 2, 5), CivilDay::FromYmd(2024, 12, 31)});
@@ -60,8 +63,7 @@ TEST(DatePickerGolden, ModalCalendar) {
   CheckPicker("calendar", 400, 576, DatePickerMode::kDays);
 }
 
-// Verifies compact fallback preserves pinned controls and scrolls full-size
-// cells.
+// Verifies compact fallback preserves pinned controls and shows the whole grid.
 TEST(DatePickerGolden, CompactCalendar) {
   CheckPicker("compact", 320, 240, DatePickerMode::kDays);
 }
@@ -73,6 +75,17 @@ TEST(DatePickerGolden, PortraitCalendar) {
   ASSERT_EQ(320, screen.effective_height());
   CheckPicker("portrait", screen.effective_width(), screen.effective_height(),
               DatePickerMode::kDays);
+}
+
+// Verifies callers can retain the full-size scrolling grid in portrait.
+TEST(DatePickerGolden, PortraitScrollingCalendar) {
+  CheckPicker("portrait_scroll", 240, 320, DatePickerMode::kDays, false, false);
+}
+
+// Verifies the long month name remains complete above a fitted calendar.
+TEST(DatePickerGolden, PortraitNovember) {
+  CheckPicker("portrait_november", 240, 320, DatePickerMode::kDays, false, true,
+              CivilDay::FromYmd(2024, 11, 1));
 }
 
 // Verifies numeric input remains usable at the same portrait width.

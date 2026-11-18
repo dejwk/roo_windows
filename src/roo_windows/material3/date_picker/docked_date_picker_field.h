@@ -45,6 +45,13 @@ class DockedDatePickerField : public TextField {
   /// Returns the current or most recently displayed month.
   roo_time::CivilDay displayedMonth() const;
 
+  /// Shrinks the next calendar to fit, matching ModalDatePicker's default.
+  /// Disable to retain 48 dp scrolling cells. Requires a closed calendar.
+  void setShrinkToFit(bool enabled);
+
+  /// Returns whether calendar cells shrink to fit the available area.
+  bool shrinkToFit() const { return shrink_to_fit_; }
+
   /// Captures anchor geometry, opens below the field, or promotes to modal.
   PresentationStartResult openPicker();
 
@@ -96,7 +103,8 @@ class DockedDatePickerField : public TextField {
   roo_time::CivilDay month_;
   DatePickerBounds bounds_;
   std::unique_ptr<Picker> picker_;
-  bool changing_text_ = false;
+  bool changing_text_ : 1;
+  bool shrink_to_fit_ : 1;
 };
 
 static_assert(sizeof(DockedDatePickerField) <=
