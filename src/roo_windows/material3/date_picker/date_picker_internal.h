@@ -25,6 +25,9 @@ class DatePickerHeader final : public Widget {
   /// Reports whether this node participates in keyboard focus.
   bool isFocusable() const override { return true; }
 
+  /// Keeps interaction feedback within the owner-painted controls.
+  OverlayType getOverlayType() const override { return OVERLAY_CUSTOM; }
+
   /// Accepts tap gestures for arithmetic hit testing.
   bool supportsTap() const override { return true; }
 
@@ -65,6 +68,9 @@ class DatePickerBody final : public SurfaceWidget {
 
   /// Reports whether this node participates in keyboard focus.
   bool isFocusable() const override { return true; }
+
+  /// Keeps interaction feedback within the owner-painted controls.
+  OverlayType getOverlayType() const override { return OVERLAY_CUSTOM; }
 
   /// Accepts tap gestures for arithmetic hit testing.
   bool supportsTap() const override { return true; }

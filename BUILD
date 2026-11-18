@@ -1375,6 +1375,13 @@ cc_test(
 )
 
 cc_test(
+    name = "material3_date_picker_render_test",
+    srcs = ["test/material3_date_picker_render_test.cpp"],
+    linkstatic = 1,
+    deps = [":roo_windows", "@roo_testing//:arduino_gtest_main"],
+)
+
+cc_test(
     name = "material3_date_picker_resource_test",
     srcs = ["test/material3_date_picker_resource_test.cpp", "test/roo_windows_render_test_support.h"],
     linkstatic = 1,
