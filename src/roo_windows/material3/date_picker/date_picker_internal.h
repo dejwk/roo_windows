@@ -50,9 +50,7 @@ class DatePickerHeader final : public Widget {
   void dirtyPart(int part);
 
   /// Returns fixed target geometry without measuring children.
-  Dimensions getSuggestedMinimumDimensions() const override {
-    return Dimensions(Scaled(208), Scaled(112));
-  }
+  Dimensions getSuggestedMinimumDimensions() const override;
 
  protected:
   Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
@@ -175,6 +173,9 @@ class DatePickerPanel final : public Material3Container {
 
   /// Returns fixed target geometry without measuring children.
   Dimensions getSuggestedMinimumDimensions() const override;
+
+  /// Returns the smallest viewport supported at the current theme density.
+  Dimensions minimumViewportDimensions() const;
 
   /// Returns the active model borrowed by this panel.
   DatePickerSession& session() { return session_; }

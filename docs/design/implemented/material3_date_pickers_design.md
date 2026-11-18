@@ -133,7 +133,14 @@ Modal presentation centers it with a scrim. Docked presentation uses the menu
 placement resolver's below-start placement, with flipping/clamping and a
 transparent barrier. If the regular panel plus clearance does not fit, both
 variants promote to the full window with a scrim and square corners.
-Viewports smaller than 240 by 240 dp reject admission.
+At default density, viewports smaller than 240 by 240 dp reject admission.
+The live `Theme::material3Theme().density` reduces nominal cells from 48 dp to
+28 dp in 4 dp steps, together with panel padding and chrome. At `kMinus5`,
+the minimum viewport is 200 by 200 dp. Density changes whitespace; fitting
+chooses smaller text only when cells still exceed the available area. Both
+policies use the exact cell rectangles for touch targets and retain no copied
+density state in the presenter. After changing density on a live theme, call
+`app.invalidateTheme(true)` to request both measurement and painting.
 
 The full-screen fallback pins the header and Cancel/OK actions. Both presenters
 shrink the calendar to fit by default, keeping all seven weekday columns and six

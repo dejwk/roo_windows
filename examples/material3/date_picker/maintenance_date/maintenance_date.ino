@@ -73,7 +73,9 @@ void InitDisplay() {
 #include "roo_windows/material3/date_picker/docked_date_picker_field.h"
 
 roo_scheduler::SchedulingService scheduler;
-Environment env(scheduler);
+// Tighter shared spacing leaves more room for dates on this small display.
+Theme app_theme;
+Environment env(scheduler, app_theme);
 #ifdef ROO_TESTING
 Application app(&env, display, emulator_keys, true);
 #else
@@ -120,6 +122,7 @@ void OpenDate(DatePickerEntryMode mode) {
 }
 
 void setup() {
+  app_theme.material3Theme().density = material3::Density::kMinus2;
   // Civil dates are explicit: applications decide how to obtain local today.
   CivilDay today = CivilDay::FromYmd(2026, 9, 19);
   material3::DatePickerBounds bounds{today, CivilDay::FromYmd(2028, 12, 31)};

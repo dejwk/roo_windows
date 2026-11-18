@@ -19,13 +19,16 @@ using roo_time::CivilDay;
 // Captures the real hosted surface, including scrim and compact clipping.
 void CheckPicker(const char* name, int width, int height, DatePickerMode mode,
                  bool invalid = false, bool shrink = true,
-                 CivilDay month = CivilDay()) {
+                 CivilDay month = CivilDay(),
+                 Density density = Density::kDefault) {
   std::vector<roo::byte> raster(width * height * 2);
   roo_display::OffscreenDevice<roo_display::Argb4444> device(
       width, height, raster.data(), roo_display::Argb4444());
   roo_display::Display display(device);
   roo_scheduler::SchedulingService scheduler;
-  Environment environment(scheduler);
+  Theme theme;
+  theme.material3Theme().density = density;
+  Environment environment(scheduler, theme);
   Application app(&environment, display);
   Panel content(app.context());
   Task& owner = app.addTaskFullScreen(content);
@@ -86,6 +89,12 @@ TEST(DatePickerGolden, PortraitScrollingCalendar) {
 TEST(DatePickerGolden, PortraitNovember) {
   CheckPicker("portrait_november", 240, 320, DatePickerMode::kDays, false, true,
               CivilDay::FromYmd(2024, 11, 1));
+}
+
+// Verifies tighter theme density keeps the entire month visible at 200 px.
+TEST(DatePickerGolden, TightTinyCalendar) {
+  CheckPicker("tiny_dense", 200, 200, DatePickerMode::kDays, false, true,
+              CivilDay(), Density::kMinus5);
 }
 
 // Verifies numeric input remains usable at the same portrait width.

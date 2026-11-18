@@ -106,7 +106,7 @@ class DatePickerRenderSized : public testing::Test {
       : raster_(Width * Height * 2),
         device_(Width, Height, raster_.data()),
         display_(device_),
-        environment_(scheduler_),
+        environment_(scheduler_, theme_),
         app_(&environment_, display_),
         content_(app_.context()),
         owner_(app_.addTaskFullScreen(content_)),
@@ -204,6 +204,7 @@ class DatePickerRenderSized : public testing::Test {
   WriteCountingDevice device_;
   roo_display::Display display_;
   roo_scheduler::SchedulingService scheduler_;
+  Theme theme_;
   Environment environment_;
   Application app_;
   Panel content_;
@@ -216,6 +217,7 @@ using DatePickerPortrait = DatePickerRenderSized<240, 320>;
 using DatePickerLandscape = DatePickerRenderSized<320, 240>;
 using DatePickerMinimum = DatePickerRenderSized<240, 240>;
 using DatePickerUneven = DatePickerRenderSized<257, 321>;
+using DatePickerTiny = DatePickerRenderSized<200, 200>;
 
 // Verifies a portrait calendar fits and all cell edges select the right date.
 TEST_F(DatePickerPortrait, FittedCalendar) { expectFittedCalendar(); }
@@ -228,6 +230,27 @@ TEST_F(DatePickerMinimum, FittedCalendar) { expectFittedCalendar(); }
 
 // Verifies remainder pixels in fitted cell dimensions keep correct hit tests.
 TEST_F(DatePickerUneven, FittedCalendar) { expectFittedCalendar(); }
+
+// Verifies tighter shared density admits and fits a 200 px display.
+TEST_F(DatePickerTiny, TightDensityFitsTinyDisplay) {
+  theme_.material3Theme().density = Density::kMinus5;
+  expectFittedCalendar();
+}
+
+// Verifies all density levels change calendar spacing through the live theme.
+TEST_F(DatePickerRender, SharedDensityControlsCalendarGeometry) {
+  picker_.setShrinkToFit(false);
+  open();
+  for (int level = 0; level >= -5; --level) {
+    theme_.material3Theme().density = static_cast<Density>(level);
+    app_.invalidateTheme(true);
+    device_.reset();
+    app_.refresh();
+    EXPECT_EQ(Scaled(48 + 4 * level), body().cellBounds(0).width());
+    EXPECT_EQ(Scaled(48 + 4 * level), body().cellBounds(0).height());
+    expectSingleWrites();
+  }
+}
 
 // Verifies opting out retains the original full-size scrolling day grid.
 TEST_F(DatePickerPortrait, FittingCanBeDisabled) {

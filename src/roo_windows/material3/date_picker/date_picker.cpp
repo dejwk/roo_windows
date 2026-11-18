@@ -165,7 +165,8 @@ PresentationStartResult DatePickerSession::show(Task& task,
   const int margin = Scaled(16);
   // Below this size even pinned actions and one full calendar target cannot
   // fit.
-  if (window.width() < Scaled(240) || window.height() < Scaled(240)) {
+  const Dimensions minimum = panel.minimumViewportDimensions();
+  if (window.width() < minimum.width() || window.height() < minimum.height()) {
     return PresentationStartResult::kSurfaceUnavailable;
   }
   bool fits = window.width() >= desired.width() + 2 * margin &&
