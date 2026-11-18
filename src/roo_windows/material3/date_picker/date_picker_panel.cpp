@@ -73,18 +73,52 @@ void PaintCell(PaintContext& ctx, roo::string_view text, const Rect& cell,
 
 DatePickerHeader::DatePickerHeader(ApplicationContext& context,
                                    DatePickerPanel& panel)
-    : Widget(context), panel_(panel) {}
+    : Widget(context),
+      panel_(panel),
+      focused_control_(0),
+      navigation_style_(0) {}
 
 Rect DatePickerHeader::controlBounds(int control) const {
   if (control == 4) return Rect(width() - kCell, 0, width() - 1, kCell - 1);
   int y = height() - kCell;
   if (control == 0) return Rect(0, y, kCell - 1, height() - 1);
   if (control == 3) return Rect(width() - kCell, y, width() - 1, height() - 1);
-  // Reserve a full target for the year even in a 240 dp portrait window.
-  int center =
-      std::min(width() - 2 * kCell, (width() - 2 * kCell) * 3 / 5 + kCell);
-  return control == 1 ? Rect(kCell, y, center - 1, height() - 1)
-                      : Rect(center, y, width() - kCell - 1, height() - 1);
+  return control == 1
+             ? Rect(kCell, y, kCell + month_width_ - 1, height() - 1)
+             : Rect(kCell + month_width_, y, width() - kCell - 1, height() - 1);
+}
+
+const TextStyle& DatePickerHeader::navigationTextStyle() const {
+  return navigation_style_ == 0   ? text_style_label_large()
+         : navigation_style_ == 1 ? text_style_label_medium()
+                                  : text_style_label_small();
+}
+
+Dimensions DatePickerHeader::onMeasure(WidthSpec width, HeightSpec height) {
+  const int w = width.resolveSize(getSuggestedMinimumDimensions().width());
+  const int available = w - 2 * kCell;
+  int year_width = 0;
+  // Measure every localized month so navigation never shifts the hit targets.
+  for (navigation_style_ = 0; navigation_style_ < 3; ++navigation_style_) {
+    const TextStyle& style = navigationTextStyle();
+    year_width = std::max(
+        Scaled(32), roo_display::StringViewLabel("9999", style.font(), Color(),
+                                                 style.fontOptions())
+                            .anchorExtents()
+                            .width() +
+                        Scaled(8));
+    int month_width = 0;
+    for (roo::string_view month : panel_.session().strings().month_names) {
+      roo_display::StringViewLabel label(month, style.font(), Color(),
+                                         style.fontOptions());
+      month_width = std::max<int>(month_width, label.anchorExtents().width());
+    }
+    if (month_width + year_width + Scaled(4) <= available) break;
+  }
+  navigation_style_ = std::min<int>(navigation_style_, 2);
+  month_width_ = std::max(1, available - year_width);
+  return Dimensions(
+      w, height.resolveSize(getSuggestedMinimumDimensions().height()));
 }
 
 void DatePickerHeader::dirtyPart(int part) {
@@ -144,7 +178,7 @@ void DatePickerHeader::paint(PaintContext& ctx) const {
         std::snprintf(year, sizeof(year), "%d", session.month.year());
         label = year;
       }
-      PaintText(ctx, label, text_style_label_large(), foreground, bg, bounds);
+      PaintText(ctx, label, navigationTextStyle(), foreground, bg, bounds);
     }
   }
   dirty_parts_ = 0;

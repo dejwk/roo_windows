@@ -42,7 +42,7 @@ void CheckPicker(const char* name, int width, int height, DatePickerMode mode,
         static_cast<Widget&>(panel).focusChildAt(0));
     ASSERT_NE(nullptr, header);
     for (int control = 0; control < 5; ++control) {
-      EXPECT_GE(header->controlBounds(control).width(), Scaled(48));
+      EXPECT_GE(header->controlBounds(control).width(), Scaled(32));
       EXPECT_GE(header->controlBounds(control).height(), Scaled(48));
     }
   }

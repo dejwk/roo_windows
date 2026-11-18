@@ -4,6 +4,7 @@
 #include "gtest/gtest.h"
 #include "roo_display.h"
 #include "roo_display/core/offscreen.h"
+#include "roo_display/ui/text_label.h"
 #include "roo_windows/core/application.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/panel.h"
@@ -184,6 +185,24 @@ TEST_F(DatePickerRender, FocusFeedbackBelongsToIndividualControls) {
   EXPECT_EQ(background,
             localPixel(header(), header().width() / 2, header().height() / 2));
   EXPECT_EQ(background, localPixel(body(), 2, 2));
+}
+
+// Verifies all supported month names and four-digit years fit compact labels.
+TEST_F(DatePickerRender, HeaderLabelsFitCompactWidth) {
+  open();
+  header().measure(WidthSpec::Exactly(Scaled(208)),
+                   HeightSpec::Exactly(Scaled(104)));
+  header().layout(Rect(0, 0, Scaled(208) - 1, Scaled(104) - 1));
+  const TextStyle& style = header().navigationTextStyle();
+  for (roo::string_view month : panel().session().strings().month_names) {
+    roo_display::StringViewLabel label(month, style.font(), Color(),
+                                       style.fontOptions());
+    EXPECT_LE(label.anchorExtents().width(), header().controlBounds(1).width())
+        << std::string(month.data(), month.size());
+  }
+  roo_display::StringViewLabel year("9999", style.font(), Color(),
+                                    style.fontOptions());
+  EXPECT_LE(year.anchorExtents().width(), header().controlBounds(2).width());
 }
 
 // Verifies initial, selection-dirty, and invalidated repaint settle each pixel

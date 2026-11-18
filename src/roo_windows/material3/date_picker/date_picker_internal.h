@@ -43,6 +43,9 @@ class DatePickerHeader final : public Widget {
   /// Returns a header-local hit rectangle for one of the five controls.
   Rect controlBounds(int control) const;
 
+  /// Returns the measured navigation style used by month and year labels.
+  const TextStyle& navigationTextStyle() const;
+
   /// Marks one control (0–4) or the draft headline (5) as changed.
   void dirtyPart(int part);
 
@@ -52,11 +55,15 @@ class DatePickerHeader final : public Widget {
   }
 
  protected:
+  Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
+
   Rect getDirectPaintExclusionBounds() const override { return Rect(); }
 
  private:
   DatePickerPanel& panel_;
-  uint8_t focused_control_ = 0;
+  XDim month_width_ = 0;
+  uint8_t focused_control_ : 3;
+  uint8_t navigation_style_ : 2;
   mutable uint8_t dirty_parts_ = 0;
 };
 
