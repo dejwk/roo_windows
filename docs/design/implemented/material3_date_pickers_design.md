@@ -186,6 +186,16 @@ controls and the draft headline. Coalesced edits do not retain intermediate
 selections. External invalidation, including framework focus-surface changes,
 continues to repaint the exposed region. Four active-only flags share one byte.
 
+Day and header presses use the core-owned shared `ClickAnimation`. A bounded
+ripple is composed inside the active marker; day selection colors interpolate
+from the retained sample without a widget timer or animation-registry track.
+The departing and arriving date cells report separate damage rectangles, so
+unchanged dates between distant selections remain unwritten. Cancellation,
+mode changes, and rapid retaps retire the previous feedback before starting
+another interaction. Disabled dates cannot start feedback. The previous
+selection index uses existing body alignment padding: the complete change,
+including fitting, density, and locale hooks, adds zero object bytes on ESP32-C3.
+
 Idle presenters retain only configuration and a session pointer. Numeric
 input is allocated lazily when that mode is first requested, then retained
 until the session ends. The docked wrapper's deferred-open executable is also

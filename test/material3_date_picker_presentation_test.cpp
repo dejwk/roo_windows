@@ -5,6 +5,7 @@
 #include "gtest/gtest.h"
 #include "roo_display.h"
 #include "roo_display/core/offscreen.h"
+#include "roo_testing/system/timer.h"
 #include "roo_windows/core/application.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/panel.h"
@@ -122,6 +123,26 @@ TEST_F(DatePickerPresentation, ActiveBodyReceivesFocus) {
   app_.refresh();
   EXPECT_NE(nullptr, owner_.focus().focused());
   EXPECT_NE(panel().input(), owner_.focus().focused());
+}
+
+// Verifies OK can be pressed immediately after a day, safely retiring the
+// day ripple before the terminal action destroys the session.
+TEST_F(DatePickerPresentation, ConfirmationCanInterruptDayFeedback) {
+  open();
+  auto& body =
+      *static_cast<internal::DatePickerBody*>(owner_.focus().focused());
+  const Rect day = body.cellBounds(14);  // January 14, 2024.
+  body.onSingleTapUp(day.xMin() + 4, day.yMin() + 4);
+  EXPECT_TRUE(body.isClicking());
+  Widget* confirm = static_cast<Widget&>(panel()).focusChildAt(3);
+  ASSERT_NE(nullptr, confirm);
+  confirm->onSingleTapUp(10, 10);
+  EXPECT_FALSE(body.isClicking());
+  system_time_lag_ns(350000000);
+  app_.refresh();
+  EXPECT_EQ(1, picker_.accepted);
+  EXPECT_EQ(CivilDay::FromYmd(2024, 1, 14), picker_.value());
+  EXPECT_FALSE(picker_.isOpen());
 }
 
 // Verifies a draft commits once, only on confirmation and after detachment.

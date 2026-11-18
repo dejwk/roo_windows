@@ -28,6 +28,23 @@ class DatePickerHeader final : public Widget {
   /// Keeps interaction feedback within the owner-painted controls.
   OverlayType getOverlayType() const override { return OVERLAY_CUSTOM; }
 
+  /// Enables the core-owned click controller for the active control.
+  bool isClickable() const override { return true; }
+
+  /// Applies selection immediately while the shared visual feedback finishes.
+  ClickActivationPolicy getClickActivationPolicy() const override {
+    return ClickActivationPolicy::kImmediateContinueAnimation;
+  }
+
+  /// Limits shared press and click repainting to the active control.
+  Rect getClickFeedbackBounds() const override;
+
+  /// Starts shared feedback only over an enabled control.
+  void onShowPress(XDim x, YDim y) override;
+
+  /// Delivers the active control through the shared click settlement policy.
+  void onClicked() override;
+
   /// Accepts tap gestures for arithmetic hit testing.
   bool supportsTap() const override { return true; }
 
@@ -61,6 +78,9 @@ class DatePickerHeader final : public Widget {
   Rect getDirectPaintExclusionBounds() const override { return Rect(); }
 
  private:
+  /// Returns the control under a header-local point, or -1 outside controls.
+  int controlAt(XDim x, YDim y) const;
+
   DatePickerPanel& panel_;
   XDim month_width_ = 0;
   uint8_t focused_control_ : 3;
@@ -80,6 +100,23 @@ class DatePickerBody final : public SurfaceWidget {
 
   /// Keeps interaction feedback within the owner-painted controls.
   OverlayType getOverlayType() const override { return OVERLAY_CUSTOM; }
+
+  /// Enables the core-owned click controller for the active control.
+  bool isClickable() const override { return true; }
+
+  /// Applies selection immediately while the shared visual feedback finishes.
+  ClickActivationPolicy getClickActivationPolicy() const override {
+    return ClickActivationPolicy::kImmediateContinueAnimation;
+  }
+
+  /// Limits shared press and click repainting to the active control.
+  Rect getClickFeedbackBounds() const override;
+
+  /// Starts shared feedback only over an enabled control.
+  void onShowPress(XDim x, YDim y) override;
+
+  /// Delivers the active control through the shared click settlement policy.
+  void onClicked() override;
 
   /// Accepts tap gestures for arithmetic hit testing.
   bool supportsTap() const override { return true; }
@@ -115,6 +152,16 @@ class DatePickerBody final : public SurfaceWidget {
   Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
 
  private:
+  /// Erases a departing selection transition before its retained state is
+  /// reset.
+  void onClickAnimationChanged(float previous_progress) override;
+
+  /// Marks one valid cell without damaging the rest of the calendar.
+  void dirtyCell(int index);
+
+  /// Finds a selected day in the current month's grid, or -1 outside it.
+  int selectedCell(roo_time::CivilDay day) const;
+
   /// Returns a cell for a body-local point, or -1 outside the selectable grid.
   int cellAt(XDim x, YDim y) const;
 
@@ -130,6 +177,8 @@ class DatePickerBody final : public SurfaceWidget {
   mutable int16_t painted_cursor_ = -1;
   mutable bool painted_focused_ : 1;
   bool abbreviated_months_ : 1;
+  // -2 means no selection transition; -1 means previously unselected.
+  int8_t transition_from_ = -2;
 };
 
 /// Scrollable content leaves surface fill to the panel.
@@ -194,6 +243,9 @@ class DatePickerPanel final : public Material3Container {
   /// Returns the first year of the bounded year page.
   int firstYear() const { return first_year_; }
 
+  /// Retires another owner-painted control's feedback before a new gesture.
+  void prepareInteraction(Widget& source);
+
   /// Dispatches previous, month, year, next or input-toggle activation.
   void activateHeader(int control);
 
@@ -234,6 +286,13 @@ class DatePickerPanel final : public Material3Container {
    public:
     /// Binds one fixed terminal action to the active panel.
     Action(ApplicationContext& context, DatePickerPanel& panel, bool confirm);
+
+    /// Retires calendar feedback before starting the action's shared press.
+    void onShowPress(XDim x, YDim y) override;
+
+    /// Lets footer actions follow a day selection without waiting for its
+    /// ripple.
+    void onSingleTapUp(XDim x, YDim y) override;
 
     /// Confirms an enabled draft or dismisses without committing.
     void onClicked() override;

@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cmath>
 #include <cstdio>
 #include <new>
 
@@ -9,6 +10,7 @@
 #include "roo_icons/filled/24/editor.h"
 #include "roo_icons/filled/24/navigation.h"
 #include "roo_windows/core/child_layout.h"
+#include "roo_windows/core/click_animation.h"
 #include "roo_windows/core/paint_context.h"
 #include "roo_windows/core/task.h"
 #include "roo_windows/material3/date_picker/date_picker_internal.h"
@@ -49,9 +51,11 @@ void PaintText(PaintContext& ctx, roo::string_view text, const TextStyle& style,
 class CellBackground final : public roo_display::Rasterizable {
  public:
   CellBackground(const Rect& cell, const Rect& marker, Color surface,
-                 Color fill, Color outline, int outline_width)
+                 Color fill, Color outline, int outline_width,
+                 const PressOverlay* press = nullptr)
       : cell_(cell.asBox()),
         surface_(surface),
+        press_(press),
         marker_(roo_display::SmoothFilledRoundRect(
             marker.xMin(), marker.yMin(), marker.xMax(), marker.yMax(),
             marker.height() * 0.5f, fill)),
@@ -67,10 +71,15 @@ class CellBackground final : public roo_display::Rasterizable {
     Color outline[16];
     while (count != 0) {
       const uint32_t batch = std::min<uint32_t>(count, 16);
-      marker_.readColors(x, y, batch, fill);
-      outline_.readColors(x, y, batch, outline);
+      marker_.readColorsMaybeOutOfBounds(x, y, batch, fill);
+      outline_.readColorsMaybeOutOfBounds(x, y, batch, outline);
       for (uint32_t i = 0; i < batch; ++i) {
         result[i] = AlphaBlend(AlphaBlend(surface_, fill[i]), outline[i]);
+        if (press_ != nullptr) {
+          Color ink = press_->get(x[i], y[i]);
+          ink.set_a(static_cast<uint8_t>(ink.a() * fill[i].a() / 255));
+          result[i] = AlphaBlend(result[i], ink);
+        }
       }
       x += batch;
       y += batch;
@@ -82,6 +91,7 @@ class CellBackground final : public roo_display::Rasterizable {
  private:
   roo_display::Box cell_;
   Color surface_;
+  const PressOverlay* press_;
   roo_display::SmoothShape marker_;
   roo_display::SmoothShape outline_;
 };
@@ -94,12 +104,62 @@ const TextStyle& CellTextStyle(const Rect& cell, int nominal_cell) {
                                       : text_style_body_medium();
 }
 
-/// Resolves glyphs, rounded markers, and surface together in a single tile.
+/// Blends selection colors using the shared click's retained sample.
+Color SelectionColor(Color from, Color to, float amount) {
+  return AlphaBlend(from, to.withA(static_cast<uint8_t>(255 * amount)));
+}
+
+/// Keeps borrowed foreground and background alive through a synchronous draw.
+void PaintComposedControl(PaintContext& ctx,
+                          const roo_display::Drawable& foreground,
+                          const Rect& bounds, const Rect& marker,
+                          Color background, Color fill, Color outline,
+                          int outline_width, const PressOverlay* press) {
+  const CellBackground composed(bounds, marker, background, fill, outline,
+                                outline_width, press);
+  roo_display::Tile tile(&foreground, bounds.asBox(),
+                         roo_display::kCenter | roo_display::kMiddle);
+  tile.setBackground(&composed);
+  // Short bands keep Tile's background filter from allocating raster streams.
+  // The borrowed sources stay alive through this synchronous draw only.
+  for (int y = bounds.yMin(); y <= bounds.yMax(); y += 8) {
+    PaintContext band = ctx.clipped(Rect(bounds.xMin(), y, bounds.xMax(),
+                                         std::min<int>(y + 7, bounds.yMax())));
+    band.drawObject(tile);
+  }
+  ctx.addExclusion(bounds);
+}
+
+/// Samples bounded ripple/fade feedback without reading time from paint.
+PressOverlay MakePressFeedback(const Widget& widget, const Rect& bounds,
+                               Color ink) {
+  const ClickAnimation* animation = widget.getClickAnimation();
+  const float progress = animation == nullptr ? 1.0f : animation->progress();
+  const int x = animation == nullptr ? bounds.xMin() + bounds.width() / 2
+                                     : animation->xCenter();
+  const int y = animation == nullptr ? bounds.yMin() + bounds.height() / 2
+                                     : animation->yCenter();
+  const int dx = std::max(x - bounds.xMin(), bounds.xMax() - x);
+  const int dy = std::max(y - bounds.yMin(), bounds.yMax() - y);
+  const bool fade = animation != nullptr &&
+                    animation->reveal() == ClickOverlayAnimation::kFade;
+  const float reveal =
+      fade ? 1.0f : 1.0f - (1.0f - progress) * (1.0f - progress);
+  const float opacity =
+      widget.isPressed() ? (fade ? progress : 1.0f) : 1.0f - progress;
+  ink.set_a(static_cast<uint8_t>(
+      widget.interactionOpacity(InteractionState::kPressed) * opacity));
+  return PressOverlay(
+      x, y, static_cast<int>(std::sqrt(dx * dx + dy * dy) * reveal) + 1, ink);
+}
+
+/// Resolves glyphs, rounded markers, and sampled feedback in one tile.
 void PaintCell(PaintContext& ctx, roo::string_view text, const Rect& cell,
-               Color foreground, Color background, Color accent, bool selected,
-               bool today, bool focused, int nominal_cell) {
+               Color foreground, Color background, Color accent,
+               float selection, bool today, bool focused, int nominal_cell,
+               const PressOverlay* press) {
   const TextStyle& style = CellTextStyle(cell, nominal_cell);
-  if (!selected && !today && !focused) {
+  if (selection == 0.0f && !today && !focused && press == nullptr) {
     PaintText(ctx, text, style, foreground, background, cell);
     return;
   }
@@ -114,22 +174,26 @@ void PaintCell(PaintContext& ctx, roo::string_view text, const Rect& cell,
   const int top = cell.yMin() + (cell.height() - marker_height) / 2;
   const Rect marker(left, top, left + marker_width - 1,
                     top + marker_height - 1);
-  const CellBackground composed(
-      cell, marker, background, selected ? accent : background,
+  PaintComposedControl(
+      ctx, label, cell, marker, background,
+      SelectionColor(background, accent, selection),
       today || focused ? accent : roo_display::color::Transparent,
-      focused ? Scaled(2) : Scaled(1));
-  roo_display::Tile tile(&label, cell.asBox(),
-                         roo_display::kCenter | roo_display::kMiddle);
-  tile.setBackground(&composed);
-  // Keep background reads in short bands so Tile's background filter never
-  // allocates a stream. Sources are borrowed only through this synchronous
-  // draw.
-  for (int y = cell.yMin(); y <= cell.yMax(); y += 8) {
-    PaintContext band = ctx.clipped(
-        Rect(cell.xMin(), y, cell.xMax(), std::min<int>(y + 7, cell.yMax())));
-    band.drawObject(tile);
-  }
-  ctx.addExclusion(cell);
+      focused ? Scaled(2) : Scaled(1), press);
+}
+
+/// Keeps header click feedback inside its own circular or pill-shaped control.
+void PaintHeaderControl(PaintContext& ctx, const Widget& widget,
+                        const roo_display::Drawable& content,
+                        const Rect& bounds, Color foreground, Color background,
+                        bool wide) {
+  const int h = std::min(Scaled(40), bounds.height() - Scaled(4));
+  const int w = wide ? bounds.width() - Scaled(4) : h;
+  const int x = bounds.xMin() + (bounds.width() - w) / 2;
+  const int y = bounds.yMin() + (bounds.height() - h) / 2;
+  const PressOverlay press = MakePressFeedback(widget, bounds, foreground);
+  PaintComposedControl(ctx, content, bounds, Rect(x, y, x + w - 1, y + h - 1),
+                       background, background, roo_display::color::Transparent,
+                       0, &press);
 }
 
 /// Makes room for seven compact calendar rows on short displays.
@@ -271,6 +335,8 @@ void DatePickerHeader::paint(PaintContext& ctx) const {
     Color foreground = isFocused() && focused_control_ == control
                            ? colors.primary
                            : colors.onSurface;
+    const bool feedback = control == focused_control_ &&
+                          (getClickAnimation() != nullptr || isPressed());
     if (control == 0 || control == 3 || control == 4) {
       MonoIcon icon = control == 0 ? ic_filled_24_navigation_chevron_left()
                       : control == 3
@@ -278,11 +344,15 @@ void DatePickerHeader::paint(PaintContext& ctx) const {
                           : (input ? ic_filled_24_action_calendar_today()
                                    : ic_filled_24_editor_mode_edit());
       icon.color_mode().setColor(foreground);
-      PaintContext local = ctx.clipped(bounds);
-      local.setBgcolor(bg);
-      local.drawTiled(icon, bounds,
-                      roo_display::kCenter | roo_display::kMiddle);
-      ctx.addExclusion(bounds);
+      if (feedback) {
+        PaintHeaderControl(ctx, *this, icon, bounds, foreground, bg, false);
+      } else {
+        PaintContext local = ctx.clipped(bounds);
+        local.setBgcolor(bg);
+        local.drawTiled(icon, bounds,
+                        roo_display::kCenter | roo_display::kMiddle);
+        ctx.addExclusion(bounds);
+      }
     } else {
       roo::string_view label;
       char year[16];
@@ -292,29 +362,64 @@ void DatePickerHeader::paint(PaintContext& ctx) const {
         std::snprintf(year, sizeof(year), "%d", session.month.year());
         label = year;
       }
-      PaintText(ctx, label, navigationTextStyle(), foreground, bg, bounds);
+      if (feedback) {
+        roo_display::StringViewLabel text(label, navigationTextStyle().font(),
+                                          foreground,
+                                          navigationTextStyle().fontOptions());
+        PaintHeaderControl(ctx, *this, text, bounds, foreground, bg, true);
+      } else {
+        PaintText(ctx, label, navigationTextStyle(), foreground, bg, bounds);
+      }
     }
   }
   dirty_parts_ = 0;
 }
 
-void DatePickerHeader::onSingleTapUp(XDim x, YDim y) {
+int DatePickerHeader::controlAt(XDim x, YDim y) const {
   for (int control = 0; control < 5; ++control) {
-    if (controlBounds(control).contains(x, y)) {
-      dirtyPart(focused_control_);
-      focused_control_ = control;
-      dirtyPart(focused_control_);
-      requestFocus();
-      panel_.activateHeader(control);
-      return;
-    }
+    if (controlBounds(control).contains(x, y)) return control;
   }
+  return -1;
 }
+
+Rect DatePickerHeader::getClickFeedbackBounds() const {
+  return controlBounds(focused_control_);
+}
+
+void DatePickerHeader::onShowPress(XDim x, YDim y) {
+  const int control = controlAt(x, y);
+  if (control < 0) return;
+  panel_.prepareInteraction(*this);
+  if (isClicking() && !isPressed()) onCancel();
+  dirtyPart(focused_control_);
+  focused_control_ = control;
+  dirtyPart(focused_control_);
+  requestFocus();
+  Widget::onShowPress(x, y);
+}
+
+void DatePickerHeader::onSingleTapUp(XDim x, YDim y) {
+  const int control = controlAt(x, y);
+  if (control < 0 || (isPressed() && control != focused_control_)) {
+    onCancel();
+    return;
+  }
+  panel_.prepareInteraction(*this);
+  if (isClicking() && !isPressed()) onCancel();
+  dirtyPart(focused_control_);
+  focused_control_ = control;
+  dirtyPart(focused_control_);
+  requestFocus();
+  Widget::onSingleTapUp(x, y);
+}
+
+void DatePickerHeader::onClicked() { panel_.activateHeader(focused_control_); }
 
 bool DatePickerHeader::onKeyEvent(const KeyEvent& event) {
   if (event.phase != KeyPhase::kDown && event.phase != KeyPhase::kRepeat)
     return false;
   if (event.code == KeyCode::kLeft || event.code == KeyCode::kRight) {
+    onCancel();
     dirtyPart(focused_control_);
     focused_control_ =
         (focused_control_ + (event.code == KeyCode::kLeft ? 4 : 1)) % 5;
@@ -322,7 +427,9 @@ bool DatePickerHeader::onKeyEvent(const KeyEvent& event) {
     return true;
   }
   if (event.code == KeyCode::kEnter || event.code == KeyCode::kSpace) {
-    panel_.activateHeader(focused_control_);
+    const Rect control = controlBounds(focused_control_);
+    onSingleTapUp(control.xMin() + control.width() / 2,
+                  control.yMin() + control.height() / 2);
     return true;
   }
   return false;
@@ -390,6 +497,14 @@ void DatePickerBody::paint(PaintContext& ctx) const {
   const DatePickerSession& session = panel_.session();
   const auto& colors = theme().material3Theme().color;
   bool days = panel_.mode() == DatePickerMode::kDays;
+  const ClickAnimation* animation = getClickAnimation();
+  const float raw_progress =
+      animation == nullptr ? 1.0f : animation->progress();
+  const float progress =
+      raw_progress * raw_progress * (3.0f - 2.0f * raw_progress);
+  const bool transition =
+      days && animation != nullptr && transition_from_ != -2;
+
   if (days && isInvalidated()) {
     for (int col = 0; col < 7; ++col) {
       const Rect first = cellBounds(col);
@@ -418,7 +533,9 @@ void DatePickerBody::paint(PaintContext& ctx) const {
       continue;
     char number[12];
     roo::string_view text;
-    bool enabled = true, selected = false, today = false;
+    bool enabled = true;
+    bool selected = false;
+    bool today = false;
     if (days) {
       CivilDay day = GridDay(session.month, session.firstWeekday(), i);
       if (!day.isValid()) continue;
@@ -437,15 +554,24 @@ void DatePickerBody::paint(PaintContext& ctx) const {
       text = number;
       selected = panel_.firstYear() + i == session.month.year();
     }
-    Color color = selected  ? colors.onPrimary
-                  : enabled ? colors.onSurface
-                            : colors.onSurfaceVariant;
+    float selection = selected ? 1.0f : 0.0f;
+    if (transition) {
+      if (selected)
+        selection = progress;
+      else if (i == transition_from_)
+        selection = 1.0f - progress;
+    }
+    Color color = today ? colors.primary : colors.onSurface;
     if (!enabled)
-      color =
-          AlphaBlend(background(), Color(97, color.r(), color.g(), color.b()));
+      color = AlphaBlend(background(), colors.onSurfaceVariant.withA(97));
+    color = SelectionColor(color, colors.onPrimary, selection);
+    const bool feedback = i == cursor_ && (animation != nullptr || isPressed());
+    const PressOverlay press =
+        feedback ? MakePressFeedback(*this, cell, color) : PressOverlay();
     PaintContext cell_ctx = ctx.clipped(cell);
     PaintCell(cell_ctx, text, cell, color, background(), colors.primary,
-              selected, today, isFocused() && cursor_ == i, CellSize(theme()));
+              selection, today, isFocused() && cursor_ == i, CellSize(theme()),
+              feedback ? &press : nullptr);
     cell_ctx.clear();
     ctx.addExclusion(cell);
   }
@@ -489,16 +615,70 @@ bool DatePickerBody::cellEnabled(int index) const {
          session.enabled(day);
 }
 
-void DatePickerBody::onSingleTapUp(XDim x, YDim y) {
+void DatePickerBody::dirtyCell(int index) {
+  if (index >= 0 && index < cellCount()) setDirty(cellBounds(index));
+}
+
+int DatePickerBody::selectedCell(CivilDay day) const {
+  const DatePickerSession& session = panel_.session();
+  if (!day.isValid() || MonthStart(day) != session.month) return -1;
+  return (7 + session.month.dayOfWeek() - session.firstWeekday()) % 7 +
+         day.day() - 1;
+}
+
+Rect DatePickerBody::getClickFeedbackBounds() const {
+  return cursor_ < 0 ? Rect(0, 0, -1, -1) : cellBounds(cursor_);
+}
+
+void DatePickerBody::onShowPress(XDim x, YDim y) {
   const int index = cellAt(x, y);
   if (!cellEnabled(index)) return;
+  panel_.prepareInteraction(*this);
+  if (isClicking() && !isPressed()) onCancel();
+  transition_from_ = -2;
+  dirtyCell(cursor_);
   cursor_ = index;
-  setDirty();
+  dirtyCell(cursor_);
   requestFocus();
-  activate(index);
+  Widget::onShowPress(x, y);
+}
+
+void DatePickerBody::onSingleTapUp(XDim x, YDim y) {
+  const int index = cellAt(x, y);
+  if (!cellEnabled(index) || (isPressed() && index != cursor_)) {
+    onCancel();
+    return;
+  }
+  panel_.prepareInteraction(*this);
+  if (isClicking() && !isPressed()) onCancel();
+  dirtyCell(cursor_);
+  cursor_ = index;
+  if (panel_.mode() == DatePickerMode::kDays) {
+    const CivilDay day =
+        GridDay(panel_.session().month, panel_.session().firstWeekday(), index);
+    transition_from_ = day == panel_.session().draft
+                           ? -2
+                           : selectedCell(panel_.session().draft);
+  }
+  dirtyCell(cursor_);
+  requestFocus();
+  Widget::onSingleTapUp(x, y);
+  if (getClickAnimation() == nullptr) onClickAnimationChanged(-1.0f);
+}
+
+void DatePickerBody::onClicked() { activate(cursor_); }
+
+void DatePickerBody::onClickAnimationChanged(float) {
+  // Keep the departing and arriving cells as separate damage rectangles, so
+  // distant selections do not repaint the unchanged dates between them.
+  if (transition_from_ >= 0) invalidateInterior(cellBounds(transition_from_));
+  if (getClickAnimation() == nullptr) transition_from_ = -2;
 }
 
 void DatePickerBody::resetCursor() {
+  dirtyCell(cursor_);
+  dirtyCell(painted_cursor_);
+  dirtyCell(selectedCell(painted_draft_));
   const DatePickerSession& session = panel_.session();
   if (panel_.mode() == DatePickerMode::kDays) {
     int offset = (7 + session.month.dayOfWeek() - session.firstWeekday()) % 7;
@@ -517,7 +697,7 @@ void DatePickerBody::resetCursor() {
     cursor_ = std::max(0, std::min(cellCount() - 1,
                                    session.month.year() - panel_.firstYear()));
   }
-  setDirty();
+  dirtyCell(cursor_);
 }
 
 void DatePickerBody::revealCursor() {
@@ -527,6 +707,7 @@ void DatePickerBody::revealCursor() {
 bool DatePickerBody::onKeyEvent(const KeyEvent& event) {
   if (event.phase != KeyPhase::kDown && event.phase != KeyPhase::kRepeat)
     return false;
+  const int previous_cursor = cursor_;
   int columns = panel_.mode() == DatePickerMode::kDays ? 7 : 3;
   int next = cursor_;
   switch (event.code) {
@@ -554,14 +735,20 @@ bool DatePickerBody::onKeyEvent(const KeyEvent& event) {
       break;
     case KeyCode::kEnter:
     case KeyCode::kSpace:
-      activate(cursor_);
+      if (cellEnabled(cursor_)) {
+        const Rect cell = cellBounds(cursor_);
+        onSingleTapUp(cell.xMin() + cell.width() / 2,
+                      cell.yMin() + cell.height() / 2);
+      }
       return true;
     default:
       return false;
   }
+  onCancel();
+  dirtyCell(previous_cursor);
   cursor_ = std::max(0, std::min(cellCount() - 1, next));
   revealCursor();
-  setDirty();
+  dirtyCell(cursor_);
   return true;
 }
 
@@ -573,6 +760,16 @@ DatePickerPanel::Action::Action(ApplicationContext& context,
              ButtonVariant::kText),
       panel_(panel),
       confirm_(confirm) {}
+
+void DatePickerPanel::Action::onShowPress(XDim x, YDim y) {
+  panel_.prepareInteraction(*this);
+  Button::onShowPress(x, y);
+}
+
+void DatePickerPanel::Action::onSingleTapUp(XDim x, YDim y) {
+  panel_.prepareInteraction(*this);
+  Button::onSingleTapUp(x, y);
+}
 
 void DatePickerPanel::Action::onClicked() {
   if (confirm_)
@@ -678,8 +875,8 @@ Dimensions DatePickerPanel::onMeasure(WidthSpec width, HeightSpec height) {
   const int cell_size = CellSize(theme());
   const int inset = InsetSize(theme());
   Dimensions desired = getSuggestedMinimumDimensions();
-  int w = width.resolveSize(desired.width()),
-      h = height.resolveSize(desired.height());
+  int w = width.resolveSize(desired.width());
+  int h = height.resolveSize(desired.height());
   const bool shrink = session_.shrinkToFit();
   const int header_height = HeaderHeight(theme(), shrink, h);
   header_.measure(WidthSpec::Exactly(w - 2 * inset),
@@ -731,7 +928,8 @@ void DatePickerPanel::onLayout(bool, const Rect&) {
 
 void DatePickerPanel::scrollTo(const Rect& cell) {
   auto pos = viewport_.getScrollPosition();
-  int x = pos.x, y = pos.y;
+  int x = pos.x;
+  int y = pos.y;
   if (cell.xMin() + x < 0)
     x = -cell.xMin();
   else if (cell.xMax() + x >= viewport_.width())
@@ -768,7 +966,13 @@ void DatePickerPanel::selectMonth(int year, int month) {
   updateSelection();
 }
 
+void DatePickerPanel::prepareInteraction(Widget& source) {
+  if (&source != &header_) header_.onCancel();
+  if (&source != &body_) body_.onCancel();
+}
+
 void DatePickerPanel::activateHeader(int control) {
+  body_.onCancel();
   if (control == 4) {
     setMode(mode_ == DatePickerMode::kInput ? DatePickerMode::kDays
                                             : DatePickerMode::kInput);
@@ -797,6 +1001,7 @@ void DatePickerPanel::activateHeader(int control) {
 }
 
 void DatePickerPanel::setMode(DatePickerMode mode) {
+  body_.onCancel();
   if (mode_ == DatePickerMode::kInput && mode != DatePickerMode::kInput) {
     inputChanged();
     if (!session_.enabled(session_.draft)) return;

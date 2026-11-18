@@ -79,6 +79,31 @@ TEST_F(DatePickerResource, NavigationDoesNotAllocate) {
   picker.dismiss();
   task.navigation().clear();
 }
+// Verifies shared click admission, semantic delivery, and cancellation retain
+// no per-day allocation or animation track after the first interaction warms.
+TEST_F(DatePickerResource, ClickStateDoesNotAllocate) {
+  Panel content(context());
+  Task& task = app_.addTaskFullScreen(content);
+  ModalDatePicker picker(context());
+  picker.setValue(roo_time::CivilDay::FromYmd(2024, 2, 14));
+  refresh();
+  ASSERT_EQ(PresentationStartResult::kStarted, picker.open(task));
+  refresh();
+  auto& body = *static_cast<internal::DatePickerBody*>(task.focus().focused());
+  const Rect cell = body.cellBounds(18);
+  for (int pass = 0; pass < 2; ++pass) {
+    allocations = 0;
+    tracking = pass == 1;
+    body.onShowPress(cell.xMin() + 4, cell.yMin() + 4);
+    body.onSingleTapUp(cell.xMin() + 4, cell.yMin() + 4);
+    body.onCancel();
+    tracking = false;
+  }
+  EXPECT_EQ(0u, allocations);
+  picker.dismiss();
+  task.navigation().clear();
+}
+
 // Verifies coalesced selection/cursor edits match a full repaint and leave an
 // unrelated cell untouched; external invalidation must restore that cell.
 TEST_F(DatePickerResource, IncrementalPaintMatchesInvalidation) {

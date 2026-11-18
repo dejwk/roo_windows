@@ -5,6 +5,7 @@
 #include "roo_display.h"
 #include "roo_display/core/offscreen.h"
 #include "roo_display/driver/ili9341.h"
+#include "roo_testing/system/timer.h"
 #include "roo_windows/core/application.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/panel.h"
@@ -16,26 +17,34 @@ namespace {
 using internal::DatePickerMode;
 using roo_time::CivilDay;
 
+enum class Feedback { kNone, kDayClick, kHeaderPress };
+
+struct PickerOptions {
+  bool invalid = false;
+  bool shrink = true;
+  CivilDay month;
+  Density density = Density::kDefault;
+  Feedback feedback = Feedback::kNone;
+};
+
 // Captures the real hosted surface, including scrim and compact clipping.
 void CheckPicker(const char* name, int width, int height, DatePickerMode mode,
-                 bool invalid = false, bool shrink = true,
-                 CivilDay month = CivilDay(),
-                 Density density = Density::kDefault) {
+                 PickerOptions options = {}) {
   std::vector<roo::byte> raster(width * height * 2);
   roo_display::OffscreenDevice<roo_display::Argb4444> device(
       width, height, raster.data(), roo_display::Argb4444());
   roo_display::Display display(device);
   roo_scheduler::SchedulingService scheduler;
   Theme theme;
-  theme.material3Theme().density = density;
+  theme.material3Theme().density = options.density;
   Environment environment(scheduler, theme);
   Application app(&environment, display);
   Panel content(app.context());
   Task& owner = app.addTaskFullScreen(content);
   ModalDatePicker picker(app.context());
   picker.setValue(CivilDay::FromYmd(2024, 2, 29));
-  picker.setShrinkToFit(shrink);
-  picker.setDisplayedMonth(month);
+  picker.setShrinkToFit(options.shrink);
+  picker.setDisplayedMonth(options.month);
   picker.setToday(CivilDay::FromYmd(2024, 2, 12));
   picker.setBounds(
       {CivilDay::FromYmd(2024, 2, 5), CivilDay::FromYmd(2024, 12, 31)});
@@ -53,8 +62,25 @@ void CheckPicker(const char* name, int width, int height, DatePickerMode mode,
     }
   }
   panel.setMode(mode);
-  if (invalid) panel.input()->setText("02/");
+  if (options.invalid) panel.input()->setText("02/");
   app.refresh();
+  if (options.feedback == Feedback::kDayClick) {
+    auto& body =
+        *static_cast<internal::DatePickerBody*>(owner.focus().focused());
+    const Rect cell = body.cellBounds(18);
+    body.onSingleTapUp(cell.xMin() + cell.width() / 2,
+                       cell.yMin() + cell.height() / 2);
+  } else if (options.feedback == Feedback::kHeaderPress) {
+    auto& header = *static_cast<internal::DatePickerHeader*>(
+        static_cast<Widget&>(panel).focusChildAt(0));
+    const Rect control = header.controlBounds(3);
+    header.onShowPress(control.xMin() + control.width() / 2,
+                       control.yMin() + control.height() / 2);
+  }
+  if (options.feedback != Feedback::kNone) {
+    system_time_lag_ns(80000000);
+    app.refresh();
+  }
   EXPECT_TRUE(::roo_windows::test::CompareOrUpdateGolden(
       ::roo_windows::test::CaptureRgb(device.raster(), 0, 0, width, height),
       std::string("test/goldens/material3_date_picker/") + name + ".ppm",
@@ -82,19 +108,45 @@ TEST(DatePickerGolden, PortraitCalendar) {
 
 // Verifies callers can retain the full-size scrolling grid in portrait.
 TEST(DatePickerGolden, PortraitScrollingCalendar) {
-  CheckPicker("portrait_scroll", 240, 320, DatePickerMode::kDays, false, false);
+  PickerOptions options;
+  options.shrink = false;
+  CheckPicker("portrait_scroll", 240, 320, DatePickerMode::kDays, options);
 }
 
 // Verifies the long month name remains complete above a fitted calendar.
 TEST(DatePickerGolden, PortraitNovember) {
-  CheckPicker("portrait_november", 240, 320, DatePickerMode::kDays, false, true,
-              CivilDay::FromYmd(2024, 11, 1));
+  PickerOptions options;
+  options.month = CivilDay::FromYmd(2024, 11, 1);
+  CheckPicker("portrait_november", 240, 320, DatePickerMode::kDays, options);
 }
 
 // Verifies tighter theme density keeps the entire month visible at 200 px.
 TEST(DatePickerGolden, TightTinyCalendar) {
-  CheckPicker("tiny_dense", 200, 200, DatePickerMode::kDays, false, true,
-              CivilDay(), Density::kMinus5);
+  PickerOptions options;
+  options.density = Density::kMinus5;
+  CheckPicker("tiny_dense", 200, 200, DatePickerMode::kDays, options);
+}
+
+// Verifies the day ripple and interpolated selection on a regular calendar.
+TEST(DatePickerGolden, DayClickFeedback) {
+  PickerOptions options;
+  options.feedback = Feedback::kDayClick;
+  CheckPicker("day_click", 400, 576, DatePickerMode::kDays, options);
+}
+
+// Verifies the same sampled feedback remains bounded in fitted portrait cells.
+TEST(DatePickerGolden, PortraitDayClickFeedback) {
+  PickerOptions options;
+  options.feedback = Feedback::kDayClick;
+  CheckPicker("portrait_day_click", 240, 320, DatePickerMode::kDays, options);
+}
+
+// Verifies header feedback follows the pressed arrow rather than header center.
+TEST(DatePickerGolden, PortraitHeaderPressFeedback) {
+  PickerOptions options;
+  options.feedback = Feedback::kHeaderPress;
+  CheckPicker("portrait_header_press", 240, 320, DatePickerMode::kDays,
+              options);
 }
 
 // Verifies numeric input remains usable at the same portrait width.
@@ -119,7 +171,9 @@ TEST(DatePickerGolden, Input) {
 
 // Verifies incomplete input disables confirmation and displays the error state.
 TEST(DatePickerGolden, InvalidInput) {
-  CheckPicker("invalid_input", 400, 576, DatePickerMode::kInput, true);
+  PickerOptions options;
+  options.invalid = true;
+  CheckPicker("invalid_input", 400, 576, DatePickerMode::kInput, options);
 }
 }  // namespace
 }  // namespace roo_windows::material3

@@ -5,6 +5,7 @@
 #include "roo_display.h"
 #include "roo_display/core/offscreen.h"
 #include "roo_display/ui/text_label.h"
+#include "roo_testing/system/timer.h"
 #include "roo_windows/core/application.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/panel.h"
@@ -163,6 +164,16 @@ class DatePickerRenderSized : public testing::Test {
     if (expect_output) EXPECT_GT(written, 0);
   }
 
+  void finishFeedback() {
+    system_time_delay_micros((theme_.framework.click.durationMillis + 50) *
+                             1000);
+    for (int i = 0; i < 2; ++i) {
+      device_.reset();
+      app_.refresh();
+      expectSingleWrites(false);
+    }
+  }
+
   void expectFittedCalendar() {
     EXPECT_TRUE(picker_.shrinkToFit());
     open();
@@ -191,6 +202,7 @@ class DatePickerRenderSized : public testing::Test {
         }
       }
     }
+    finishFeedback();
     const std::vector<roo::byte> incremental = raster_;
     device_.reset();
     panel().invalidateInterior();
@@ -307,6 +319,111 @@ TEST_F(DatePickerRender, UnavailableMonthHasNoCursorMarker) {
   }
   EXPECT_EQ(0, primary_pixels);
   expectSingleWrites();
+}
+
+// Verifies day clicks share the core timeline, animate only changed cells,
+// settle each pixel once, and end at the same image as explicit invalidation.
+TEST_F(DatePickerRender, DayRippleAndSelectionTransitionStayWithinCells) {
+  open();
+  const Rect target = body().cellBounds(18);  // February 15, 2024.
+  device_.reset();
+  body().onSingleTapUp(target.xMin() + target.width() / 2,
+                       target.yMin() + target.height() / 2);
+  EXPECT_EQ(CivilDay::FromYmd(2024, 2, 15), panel().session().draft);
+  ASSERT_NE(nullptr, body().getClickAnimation());
+  app_.refresh();
+  expectSingleWrites();
+  const std::vector<roo::byte> start = raster_;
+  system_time_lag_ns(80000000);
+  device_.reset();
+  app_.refresh();
+  expectSingleWrites();
+  EXPECT_NE(start, raster_);
+  XDim dx;
+  YDim dy;
+  body().getAbsoluteOffset(dx, dy);
+  EXPECT_EQ(0, device_.writesAt(dx + 2, dy + 2));
+  EXPECT_EQ(0, device_.writesAt(dx + 2, dy + body().cellBounds(0).yMin() + 2));
+  finishFeedback();
+  EXPECT_FALSE(body().isClicking());
+  EXPECT_EQ(nullptr, body().getClickAnimation());
+  const std::vector<roo::byte> settled = raster_;
+  device_.reset();
+  panel().invalidateInterior();
+  app_.refresh();
+  expectSingleWrites();
+  EXPECT_EQ(settled, raster_);
+}
+
+// Verifies distant selection transitions preserve every intervening cell.
+TEST_F(DatePickerRender, DistantSelectionPreservesInterveningDates) {
+  open();
+  const Rect target = body().cellBounds(31);  // February 28, 2024.
+  const Rect between = body().cellBounds(24);
+  XDim dx;
+  YDim dy;
+  body().getAbsoluteOffset(dx, dy);
+  body().onSingleTapUp(target.xMin() + 4, target.yMin() + 4);
+  app_.refresh();
+  system_time_lag_ns(80000000);
+  device_.reset();
+  app_.refresh();
+  expectSingleWrites();
+  for (int y = between.yMin(); y <= between.yMax(); ++y) {
+    for (int x = between.xMin(); x <= between.xMax(); ++x)
+      EXPECT_EQ(0, device_.writesAt(dx + x, dy + y));
+  }
+  finishFeedback();
+}
+
+// Verifies a held press does not select early and leaving for another cell
+// cancels selection; quick repeated taps and keyboard activation remain usable.
+TEST_F(DatePickerRender, PressCancellationRetappingAndKeyboardFeedback) {
+  open();
+  const Rect first = body().cellBounds(18);
+  const Rect second = body().cellBounds(19);
+  const CivilDay original = panel().session().draft;
+  body().onShowPress(first.xMin() + 4, first.yMin() + 4);
+  app_.refresh();
+  EXPECT_TRUE(body().isPressed());
+  EXPECT_EQ(original, panel().session().draft);
+  body().onSingleTapUp(second.xMin() + 4, second.yMin() + 4);
+  EXPECT_EQ(original, panel().session().draft);
+  EXPECT_FALSE(body().isPressed());
+  EXPECT_FALSE(body().isClicking());
+  body().onSingleTapUp(first.xMin() + 4, first.yMin() + 4);
+  body().onSingleTapUp(second.xMin() + 4, second.yMin() + 4);
+  EXPECT_EQ(CivilDay::FromYmd(2024, 2, 16), panel().session().draft);
+  body().onKeyEvent({KeyPhase::kDown, KeyCode::kLeft, 0, 0});
+  body().onKeyEvent({KeyPhase::kDown, KeyCode::kEnter, 0, 0});
+  EXPECT_EQ(CivilDay::FromYmd(2024, 2, 15), panel().session().draft);
+  EXPECT_TRUE(body().isClicking());
+  finishFeedback();
+}
+
+// Verifies disabled dates cannot start held feedback and navigation retires
+// day feedback without leaving selected-day artifacts in the next month.
+TEST_F(DatePickerRender, DisabledPressAndMonthNavigationCannotLeaveRipple) {
+  picker_.setBounds(
+      {CivilDay::FromYmd(2024, 2, 10), CivilDay::FromYmd(2024, 2, 20)});
+  open();
+  const Rect disabled = body().cellBounds(4);
+  body().onShowPress(disabled.xMin() + 4, disabled.yMin() + 4);
+  EXPECT_FALSE(body().isPressed());
+  EXPECT_FALSE(body().isClicking());
+  const Rect enabled = body().cellBounds(18);
+  body().onSingleTapUp(enabled.xMin() + 4, enabled.yMin() + 4);
+  const Rect next = header().controlBounds(3);
+  header().onSingleTapUp(next.xMin() + 4, next.yMin() + 4);
+  EXPECT_FALSE(body().isClicking());
+  EXPECT_EQ(CivilDay::FromYmd(2024, 3, 1), panel().session().month);
+  EXPECT_TRUE(header().isClicking());
+  app_.refresh();
+  finishFeedback();
+  const std::vector<roo::byte> settled = raster_;
+  panel().invalidateInterior();
+  app_.refresh();
+  EXPECT_EQ(settled, raster_);
 }
 
 // Verifies focus never adds a header-center halo or tints the whole day grid.
