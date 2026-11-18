@@ -339,6 +339,12 @@ class Widget {
   /// non-animated delivery and after a held animation enters settlement.
   const ClickAnimation* getClickAnimation() const;
 
+  /// Returns local damage for shared press/click feedback.
+  /// Defaults to the full interior. Owner-painted control groups may narrow
+  /// this to active controls, including old and new selection footprints.
+  /// Explicit invalidateInterior() still repaints the full requested region.
+  virtual Rect getClickFeedbackBounds() const { return getInteriorBounds(); }
+
   /// Appends the visible, enabled widgets geometrically hit at `x`, `y` to
   /// `path`, ordered from this widget toward the deepest hit descendant.
   /// Does not invoke gesture callbacks.

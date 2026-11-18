@@ -96,6 +96,17 @@ class ClickFrameWidget : public SurfaceWidget {
     ++registry_samples;
     invalidateInterior();
   }
+  Rect getClickFeedbackBounds() const override {
+    return feedback_bounds.empty() ? SurfaceWidget::getClickFeedbackBounds()
+                                   : feedback_bounds;
+  }
+  using SurfaceWidget::invalidateInterior;
+  void invalidateInterior(const Rect& rect) override {
+    last_feedback_damage = rect;
+    SurfaceWidget::invalidateInterior(rect);
+  }
+  Rect feedback_bounds = Rect(0, 0, -1, -1);
+  Rect last_feedback_damage;
   ClickActivationPolicy policy = ClickActivationPolicy::kAfterNaturalAnimation;
   OverlayType overlay_type = OVERLAY_POINT;
   bool press_feedback = true;
@@ -135,6 +146,24 @@ class ClickFrameTest : public testing::Test {
   Application app_{&environment_, display_, keys_, false};
   ClickFrameWidget* target_ = nullptr;
 };
+
+// Verifies owner-painted groups can bound feedback damage without changing
+// whole-widget external invalidation or the shared controller's settlement.
+TEST_F(ClickFrameTest, OwnerPaintedFeedbackDamageStaysWithinControl) {
+  target_->feedback_bounds = Rect(4, 4, 11, 11);
+  target_->overlay_type = Widget::OVERLAY_CUSTOM;
+  target_->onSingleTapUp(8, 8);
+  EXPECT_EQ(target_->feedback_bounds, target_->last_feedback_damage);
+  system_time_delay_micros(20000);
+  app_.root().refreshClickAnimation();
+  EXPECT_EQ(target_->feedback_bounds, target_->last_feedback_damage);
+  system_time_delay_micros(300000);
+  app_.refresh();
+  EXPECT_EQ(1, target_->clicks);
+  EXPECT_EQ(target_->feedback_bounds, target_->last_feedback_damage);
+  target_->invalidateInterior();
+  EXPECT_EQ(target_->getInteriorBounds(), target_->last_feedback_damage);
+}
 
 // Verifies each click captures shared timing and reveal defaults at admission.
 TEST_F(ClickFrameTest, FrameworkClickDefaultsAreCapturedPerInteraction) {

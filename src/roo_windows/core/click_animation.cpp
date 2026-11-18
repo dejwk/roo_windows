@@ -47,7 +47,7 @@ ClickAnimation::ClickAnimation()
 void ClickAnimation::tick() {
   sampleFrameTime();
   if (!isAnimationPending() || !target_->isClicking()) return;
-  target_->invalidateInterior();
+  target_->invalidateInterior(target_->getClickFeedbackBounds());
   invalidateTransientFootprint();
   if (static_cast<uint64_t>(sampled_elapsed_millis_) >
           static_cast<uint64_t>(click_anim_duration_millis_) + 100 &&
@@ -82,15 +82,15 @@ void ClickAnimation::notifyRefreshCompleted() {
              phase_ == Phase::kFinishingUnconfirmed) {
     Widget* target = target_;
     reset();
-    target->invalidateInterior();
+    target->invalidateInterior(target->getClickFeedbackBounds());
   } else if (target_->isPressed()) {
-    target_->invalidateInterior();
+    target_->invalidateInterior(target_->getClickFeedbackBounds());
     setPhase(Phase::kAwaitingRelease);
     resetTransientFootprint();
   } else {
     Widget* target = target_;
     reset();
-    target->invalidateInterior();
+    target->invalidateInterior(target->getClickFeedbackBounds());
   }
 }
 
@@ -146,7 +146,7 @@ void ClickAnimation::deliverClick() {
   // Release ownership before calling user code so a reentrant callback can
   // start another interaction.
   reset();
-  target->invalidateInterior();
+  target->invalidateInterior(target->getClickFeedbackBounds());
   target->onClicked();
 }
 
@@ -192,7 +192,7 @@ void ClickAnimation::cancel(Widget& widget) {
   invalidateTransientFootprint();
   widget.clearClicking();
   reset();
-  widget.invalidateInterior();
+  widget.invalidateInterior(widget.getClickFeedbackBounds());
 }
 
 void ClickAnimation::cancelInSubtree(const Widget& subtree) {
@@ -229,7 +229,7 @@ bool ClickAnimation::forceFinalFrame(const Widget& widget) {
     case Phase::kAwaitingRefresh:
       return false;
   }
-  target_->invalidateInterior();
+  target_->invalidateInterior(target_->getClickFeedbackBounds());
   RequestFrame(*target_);
   return true;
 }
@@ -244,7 +244,7 @@ bool ClickAnimation::tryConfirm(Widget& widget, ClickActivationPolicy policy) {
     }
     if (policy == ClickActivationPolicy::kImmediateNoAnimation) {
       RequestFrame(widget);
-      widget.invalidateInterior();
+      widget.invalidateInterior(widget.getClickFeedbackBounds());
       widget.onClicked();
       return true;
     }
@@ -268,7 +268,7 @@ bool ClickAnimation::tryConfirm(Widget& widget, ClickActivationPolicy policy) {
         invalidateTransientFootprint();
         widget.clearClicking();
         reset();
-        widget.invalidateInterior();
+        widget.invalidateInterior(widget.getClickFeedbackBounds());
         widget.onClicked();
         return true;
       case ClickActivationPolicy::kImmediateContinueAnimation:

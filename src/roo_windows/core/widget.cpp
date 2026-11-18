@@ -553,14 +553,14 @@ void Widget::setActivated(bool activated) {
 void Widget::setPressed(bool pressed) {
   if (pressed == isPressed()) return;
   Rect invalidated_bounds =
-      getInteriorBounds().translate(offsetLeft(), offsetTop());
+      getClickFeedbackBounds().translate(offsetLeft(), offsetTop());
   state_ ^= kWidgetPressed;
   if (isVisible() && useOverlayOnPress()) {
     if (getOverlayType() != OVERLAY_NONE) {
-      invalidateInterior();
+      invalidateInterior(getClickFeedbackBounds());
     }
     Rect current_bounds =
-        getInteriorBounds().translate(offsetLeft(), offsetTop());
+        getClickFeedbackBounds().translate(offsetLeft(), offsetTop());
     if (!invalidated_bounds.empty()) {
       notifyParentInvalidatedRegion(invalidated_bounds);
     }
@@ -595,9 +595,10 @@ void Widget::setClicking() {
   state_ |= kWidgetClicking;
   if (isVisible() && useOverlayOnPress()) {
     if (getOverlayType() != OVERLAY_NONE) {
-      invalidateInterior();
+      invalidateInterior(getClickFeedbackBounds());
     }
-    notifyParentInvalidatedRegion(getParentInteractionBounds());
+    notifyParentInvalidatedRegion(
+        getClickFeedbackBounds().translate(offsetLeft(), offsetTop()));
   }
   notifyStateChanged(kWidgetClicking);
 }
@@ -607,9 +608,10 @@ void Widget::clearClicking() {
   state_ &= ~kWidgetClicking;
   if (isVisible() && useOverlayOnPress()) {
     if (getOverlayType() != OVERLAY_NONE) {
-      invalidateInterior();
+      invalidateInterior(getClickFeedbackBounds());
     }
-    notifyParentInvalidatedRegion(getParentInteractionBounds());
+    notifyParentInvalidatedRegion(
+        getClickFeedbackBounds().translate(offsetLeft(), offsetTop()));
   }
   notifyStateChanged(kWidgetClicking);
 }
@@ -844,7 +846,7 @@ void Widget::onSingleTapUp(XDim x, YDim y) {
     if (animated) {
       if (!anim->tryStart(*this, x, y)) return;
       setClicking();
-      invalidateInterior();
+      invalidateInterior(getClickFeedbackBounds());
     }
   }
   if (anim == nullptr) return;
