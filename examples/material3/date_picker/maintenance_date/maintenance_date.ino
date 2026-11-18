@@ -73,9 +73,7 @@ void InitDisplay() {
 #include "roo_windows/material3/date_picker/docked_date_picker_field.h"
 
 roo_scheduler::SchedulingService scheduler;
-// Tighter shared spacing leaves more room for dates on this small display.
-Theme app_theme;
-Environment env(scheduler, app_theme);
+Environment env(scheduler);
 #ifdef ROO_TESTING
 Application app(&env, display, emulator_keys, true);
 #else
@@ -122,7 +120,11 @@ void OpenDate(DatePickerEntryMode mode) {
 }
 
 void setup() {
-  app_theme.material3Theme().density = material3::Density::kMinus2;
+  // Compact only the calendars; launch buttons and the source field keep the
+  // application density. Clear these overrides to inherit the live theme.
+  picker.setDensity(material3::Density::kMinus5);
+  date_field.setCalendarDensity(material3::Density::kMinus5);
+
   // Civil dates are explicit: applications decide how to obtain local today.
   CivilDay today = CivilDay::FromYmd(2026, 9, 19);
   material3::DatePickerBounds bounds{today, CivilDay::FromYmd(2028, 12, 31)};
@@ -142,7 +144,7 @@ void setup() {
   form.add(date_field);
   // This compact display promotes the calendar to full-screen and shrinks its
   // cells to show the whole month. Set picker.setShrinkToFit(false) or
-  // date_field.setShrinkToFit(false) to keep 48 dp cells with scrolling.
+  // date_field.setShrinkToFit(false) to keep nominal cells with scrolling.
   // On a larger display the docked calendar anchors to the field.
   app.addTaskFullScreen(scroller);
   InitDisplay();

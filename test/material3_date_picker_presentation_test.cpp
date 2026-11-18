@@ -111,6 +111,16 @@ TEST_F(DatePickerPresentation, CalendarLocaleSuppliesNamesAndWeekStart) {
   }
 }
 
+// Verifies packed configuration still preserves invalid entry modes so
+// admission can reject them instead of silently treating them as calendar mode.
+TEST_F(DatePickerPresentation, InvalidEntryModeRejectsAdmission) {
+  picker_.setEntryMode(static_cast<DatePickerEntryMode>(2));
+  EXPECT_EQ(static_cast<DatePickerEntryMode>(2), picker_.entryMode());
+  app_.refresh();
+  EXPECT_EQ(PresentationStartResult::kSurfaceUnavailable, picker_.open(owner_));
+  EXPECT_FALSE(picker_.isOpen());
+}
+
 // Verifies initial calendar focus and focus transfer to newly laid-out input.
 TEST_F(DatePickerPresentation, ActiveBodyReceivesFocus) {
   open();

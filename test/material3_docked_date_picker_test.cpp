@@ -70,6 +70,28 @@ TEST_F(DockedDatePickerTest, CalendarFittingPolicy) {
   EXPECT_FALSE(panel().session().shrinkToFit());
 }
 
+// Verifies the calendar override does not pin the source text field's density,
+// and clearing restores inheritance for the next calendar session.
+TEST_F(DockedDatePickerTest, CalendarDensityIsSeparateFromFieldDensity) {
+  EXPECT_TRUE(field_->calendarDensityOverride().isInherited());
+  field_->setCalendarDensity(Density::kMinus5);
+  EXPECT_FALSE(field_->calendarDensityOverride().isInherited());
+  EXPECT_TRUE(field_->densityOverride().isInherited());
+  app_.refresh();
+  ASSERT_EQ(PresentationStartResult::kStarted, field_->openPicker());
+  EXPECT_EQ(Density::kMinus5, panel().session().density());
+  panel().setMode(internal::DatePickerMode::kInput);
+  app_.refresh();
+  ASSERT_NE(nullptr, panel().input());
+  EXPECT_EQ(Density::kMinus5,
+            panel().input()->densityOverride().resolve(Density::kDefault));
+  field_->dismissPicker();
+  field_->clearCalendarDensityOverride();
+  EXPECT_TRUE(field_->calendarDensityOverride().isInherited());
+  ASSERT_EQ(PresentationStartResult::kStarted, field_->openPicker());
+  EXPECT_EQ(Density::kDefault, panel().session().density());
+}
+
 // Verifies focus-triggered admission is deferred and restoration does not
 // reopen.
 TEST_F(DockedDatePickerTest, FocusTakeoverAndRestoration) {

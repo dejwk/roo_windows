@@ -287,6 +287,9 @@ class DatePickerPanel final : public Material3Container {
     /// Binds one fixed terminal action to the active panel.
     Action(ApplicationContext& context, DatePickerPanel& panel, bool confirm);
 
+    /// Uses the calendar's density for internal action spacing.
+    Padding getPadding() const override;
+
     /// Retires calendar feedback before starting the action's shared press.
     void onShowPress(XDim x, YDim y) override;
 
@@ -307,6 +310,9 @@ class DatePickerPanel final : public Material3Container {
    public:
     /// Uses the shared codec hint and reports edits to the active panel.
     Input(ApplicationContext& context, DatePickerPanel& panel);
+
+    /// Keeps numeric-input spacing aligned with the calendar density policy.
+    DensityOverride densityOverride() const override;
 
    protected:
     void onTextChanged() override { panel_.inputChanged(); }
@@ -373,6 +379,12 @@ class DatePickerSession final : public TransientPresentationRegistration {
 
   /// Returns the configured calendar fitting policy without retaining a copy.
   bool shrinkToFit() const { return owner_.shrinkToFit(); }
+
+  /// Resolves the presenter policy without retaining a copied theme or density.
+  Density density() const {
+    return owner_.densityOverride().resolve(
+        panel.theme().material3Theme().density);
+  }
 
   /// Returns the explicitly configured today marker.
   roo_time::CivilDay today() const { return owner_.today_; }

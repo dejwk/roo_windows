@@ -4,6 +4,7 @@
 
 #include "roo_windows/core/transient_presentation.h"
 #include "roo_windows/material3/date_picker/date_picker_types.h"
+#include "roo_windows/material3/density.h"
 
 namespace roo_windows {
 class ApplicationContext;
@@ -58,14 +59,24 @@ class ModalDatePicker {
   /// Returns the next session's initial body mode.
   DatePickerEntryMode entryMode() const { return entry_mode_; }
 
-  /// Fits the calendar into its available area by shrinking cells when needed.
+  /// Fills the available calendar area, shrinking cells when needed.
   /// Enabled by default. Smaller cells have smaller touch targets. Disable to
-  /// retain 48 dp cells and scroll to dates outside the viewport. Set while
-  /// idle.
+  /// retain nominal cells (48 dp at default density) and scroll instead. Set
+  /// while idle.
   void setShrinkToFit(bool enabled);
 
-  /// Returns whether the next calendar shrinks to fit its available area.
+  /// Returns whether the next calendar fits its available area.
   bool shrinkToFit() const { return shrink_to_fit_; }
+
+  /// Pins calendar spacing and chrome to @p density. Requires an idle picker.
+  /// The default policy inherits the live application theme density.
+  void setDensity(Density density);
+
+  /// Restores live application density for future sessions. Requires idle.
+  void clearDensityOverride();
+
+  /// Returns the calendar's density policy, inherited by default.
+  DensityOverride densityOverride() const { return density_; }
 
   /// Opens through the owner's shared transient host; never replaces a dialog.
   PresentationStartResult open(Task& owner);
@@ -109,8 +120,9 @@ class ModalDatePicker {
   roo_time::CivilDay today_;
   roo_time::CivilDay month_;
   DatePickerBounds bounds_;
-  DatePickerEntryMode entry_mode_ : 1;
+  DatePickerEntryMode entry_mode_;
   bool shrink_to_fit_ : 1;
+  DensityOverride density_;
   std::unique_ptr<internal::DatePickerSession> session_;
 };
 

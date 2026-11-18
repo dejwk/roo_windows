@@ -13,6 +13,7 @@
 #include "roo_windows/core/click_animation.h"
 #include "roo_windows/core/paint_context.h"
 #include "roo_windows/core/task.h"
+#include "roo_windows/material3/button/internal/button_geometry.h"
 #include "roo_windows/material3/date_picker/date_picker_internal.h"
 #include "roo_windows/material3/internal/density.h"
 #include "roo_windows/material3/typography.h"
@@ -23,13 +24,18 @@ namespace {
 constexpr int kHeader = Scaled(112);
 constexpr int kFooter = Scaled(64);
 
-/// Resolves eligible calendar whitespace directly from the shared theme.
-int CellSize(const Theme& theme) {
-  return Scaled(48 + 4 * ResolveDensityLevel(theme.material3Theme().density));
+/// Resolves nominal calendar cells from the live calendar density policy.
+int CellSize(const DatePickerPanel& panel) {
+  return Scaled(48 + 4 * ResolveDensityLevel(panel.session().density()));
 }
 
-int InsetSize(const Theme& theme) {
-  return Scaled(16 + 2 * ResolveDensityLevel(theme.material3Theme().density));
+int InsetSize(const DatePickerPanel& panel) {
+  const int inset =
+      Scaled(16 + 2 * ResolveDensityLevel(panel.session().density()));
+  // Floating chrome must stay inside the opaque interior of the 28 dp corners.
+  return panel.getBorderStyle().hasRoundedCorners()
+             ? std::max(inset, Scaled(16))
+             : inset;
 }
 
 /// Resolves foreground plus background in one draw, then excludes settled
@@ -100,7 +106,7 @@ class CellBackground final : public roo_display::Rasterizable {
 const TextStyle& CellTextStyle(const Rect& cell, int nominal_cell) {
   if (cell.height() >= nominal_cell) return text_style_body_medium();
   return cell.height() < Scaled(18)   ? text_style_label_small()
-         : cell.height() < Scaled(32) ? text_style_body_small()
+         : cell.height() < Scaled(24) ? text_style_body_small()
                                       : text_style_body_medium();
 }
 
@@ -197,21 +203,21 @@ void PaintHeaderControl(PaintContext& ctx, const Widget& widget,
 }
 
 /// Makes room for seven compact calendar rows on short displays.
-int HeaderHeight(const Theme& theme, bool shrink, int height) {
-  const int level = ResolveDensityLevel(theme.material3Theme().density);
+int HeaderHeight(const DatePickerPanel& panel, bool shrink, int height) {
+  const int level = ResolveDensityLevel(panel.session().density());
   return shrink && height < Scaled(320) ? Scaled(80 + 2 * level)
                                         : kHeader + Scaled(4 * level);
 }
 
-int FooterHeight(const Theme& theme, bool shrink, int height) {
-  const int level = ResolveDensityLevel(theme.material3Theme().density);
+int FooterHeight(const DatePickerPanel& panel, bool shrink, int height) {
+  const int level = ResolveDensityLevel(panel.session().density());
   return (shrink && height < Scaled(320) ? Scaled(48) : kFooter) +
          Scaled(4 * level);
 }
 
-int BottomInset(const Theme& theme, bool shrink, int height) {
-  return shrink && height < Scaled(320) ? InsetSize(theme) / 2
-                                        : InsetSize(theme);
+int BottomInset(const DatePickerPanel& panel, bool shrink, int height) {
+  return shrink && height < Scaled(320) ? InsetSize(panel) / 2
+                                        : InsetSize(panel);
 }
 
 }  // namespace
@@ -225,7 +231,7 @@ DatePickerHeader::DatePickerHeader(ApplicationContext& context,
       abbreviated_months_(0) {}
 
 Rect DatePickerHeader::controlBounds(int control) const {
-  const int cell_size = CellSize(theme());
+  const int cell_size = CellSize(panel_);
   const int navigation_height =
       std::min(cell_size, std::max(Scaled(24), height() - Scaled(40)));
   if (control == 4)
@@ -248,8 +254,8 @@ const TextStyle& DatePickerHeader::navigationTextStyle() const {
 }
 
 Dimensions DatePickerHeader::getSuggestedMinimumDimensions() const {
-  return Dimensions(2 * CellSize(theme()) + Scaled(112),
-                    HeaderHeight(theme(), false, 0));
+  return Dimensions(2 * CellSize(panel_) + Scaled(112),
+                    HeaderHeight(panel_, false, 0));
 }
 
 roo::string_view DatePickerHeader::monthLabel(int month) const {
@@ -259,7 +265,7 @@ roo::string_view DatePickerHeader::monthLabel(int month) const {
 }
 
 Dimensions DatePickerHeader::onMeasure(WidthSpec width, HeightSpec height) {
-  const int cell_size = CellSize(theme());
+  const int cell_size = CellSize(panel_);
   const int w = width.resolveSize(getSuggestedMinimumDimensions().width());
   const int available = w - 2 * cell_size;
   int year_width = 0;
@@ -294,13 +300,13 @@ Dimensions DatePickerHeader::onMeasure(WidthSpec width, HeightSpec height) {
 
 void DatePickerHeader::dirtyPart(int part) {
   dirty_parts_ |= 1 << part;
-  setDirty(part == 5 ? Rect(0, 0, width() - CellSize(theme()) - 1,
+  setDirty(part == 5 ? Rect(0, 0, width() - CellSize(panel_) - 1,
                             controlBounds(0).yMin() - 1)
                      : controlBounds(part));
 }
 
 void DatePickerHeader::paint(PaintContext& ctx) const {
-  const int cell_size = CellSize(theme());
+  const int cell_size = CellSize(panel_);
   const DatePickerSession& session = panel_.session();
   const auto& colors = theme().material3Theme().color;
   Color bg = panel_.background();
@@ -452,7 +458,7 @@ int DatePickerBody::cellCount() const {
 }
 
 Dimensions DatePickerBody::getSuggestedMinimumDimensions() const {
-  const int cell_size = CellSize(theme());
+  const int cell_size = CellSize(panel_);
   return Dimensions(7 * cell_size, panel_.mode() == DatePickerMode::kDays
                                        ? 7 * cell_size
                                        : ((cellCount() + 2) / 3) * cell_size);
@@ -463,14 +469,14 @@ Dimensions DatePickerBody::onMeasure(WidthSpec width, HeightSpec height) {
   int w = desired.width();
   int h = desired.height();
   if (panel_.session().shrinkToFit()) {
-    if (width.value() > 0) w = std::min<int>(w, width.value());
+    if (width.value() > 0) w = width.value();
     if (height.value() > 0 && panel_.mode() != DatePickerMode::kYears)
-      h = std::min<int>(h, height.value());
+      h = height.value();
   }
   abbreviated_months_ = false;
   if (panel_.mode() == DatePickerMode::kMonths) {
     const TextStyle& style =
-        CellTextStyle(Rect(0, 0, w / 3 - 1, h / 4 - 1), CellSize(theme()));
+        CellTextStyle(Rect(0, 0, w / 3 - 1, h / 4 - 1), CellSize(panel_));
     for (int month = 0; month < 12; ++month) {
       roo_display::StringViewLabel label(
           panel_.session().locale().month_standalone_wide[month], style.font(),
@@ -511,7 +517,7 @@ void DatePickerBody::paint(PaintContext& ctx) const {
       PaintText(
           ctx,
           session.locale().weekday_narrow[(col + session.firstWeekday()) % 7],
-          CellTextStyle(first, CellSize(theme())), colors.onSurfaceVariant,
+          CellTextStyle(first, CellSize(panel_)), colors.onSurfaceVariant,
           background(), Rect(first.xMin(), 0, first.xMax(), first.yMin() - 1));
     }
   }
@@ -570,7 +576,7 @@ void DatePickerBody::paint(PaintContext& ctx) const {
         feedback ? MakePressFeedback(*this, cell, color) : PressOverlay();
     PaintContext cell_ctx = ctx.clipped(cell);
     PaintCell(cell_ctx, text, cell, color, background(), colors.primary,
-              selection, today, isFocused() && cursor_ == i, CellSize(theme()),
+              selection, today, isFocused() && cursor_ == i, CellSize(panel_),
               feedback ? &press : nullptr);
     cell_ctx.clear();
     ctx.addExclusion(cell);
@@ -761,6 +767,14 @@ DatePickerPanel::Action::Action(ApplicationContext& context,
       panel_(panel),
       confirm_(confirm) {}
 
+Padding DatePickerPanel::Action::getPadding() const {
+  const int8_t level = ResolveDensityLevel(panel_.session().density());
+  const ButtonContentMetrics metrics =
+      ResolveButtonContentMetrics(label(), icon(), size(), level);
+  return ResolveButtonPadding(size(), smallButtonPadding(),
+                              metrics.content_height, level);
+}
+
 void DatePickerPanel::Action::onShowPress(XDim x, YDim y) {
   panel_.prepareInteraction(*this);
   Button::onShowPress(x, y);
@@ -785,6 +799,10 @@ DatePickerPanel::Input::Input(ApplicationContext& context,
     : TextField(context, panel.session().codec().placeholder(),
                 TextFieldVariant::kOutlined),
       panel_(panel) {}
+
+DensityOverride DatePickerPanel::Input::densityOverride() const {
+  return DensityOverride::Explicit(panel_.session().density());
+}
 
 DatePickerPanel::DatePickerPanel(ApplicationContext& context,
                                  DatePickerSession& session)
@@ -828,16 +846,15 @@ BorderStyle DatePickerPanel::getBorderStyle() const {
 }
 
 Dimensions DatePickerPanel::getSuggestedMinimumDimensions() const {
-  const int cell_size = CellSize(theme());
-  const int inset = InsetSize(theme());
+  const int cell_size = CellSize(*this);
+  const int inset = InsetSize(*this);
   return Dimensions(7 * cell_size + 2 * inset,
-                    HeaderHeight(theme(), false, 0) + 7 * cell_size +
-                        FooterHeight(theme(), false, 0) + inset);
+                    HeaderHeight(*this, false, 0) + 7 * cell_size +
+                        FooterHeight(*this, false, 0) + inset);
 }
 
 Dimensions DatePickerPanel::minimumViewportDimensions() const {
-  const int span =
-      Scaled(240 + 8 * ResolveDensityLevel(theme().material3Theme().density));
+  const int span = Scaled(240 + 8 * ResolveDensityLevel(session_.density()));
   return Dimensions(span, span);
 }
 
@@ -872,19 +889,19 @@ const Widget& DatePickerPanel::getChild(int index) const {
 }
 
 Dimensions DatePickerPanel::onMeasure(WidthSpec width, HeightSpec height) {
-  const int cell_size = CellSize(theme());
-  const int inset = InsetSize(theme());
+  const int cell_size = CellSize(*this);
+  const int inset = InsetSize(*this);
   Dimensions desired = getSuggestedMinimumDimensions();
   int w = width.resolveSize(desired.width());
   int h = height.resolveSize(desired.height());
   const bool shrink = session_.shrinkToFit();
-  const int header_height = HeaderHeight(theme(), shrink, h);
+  const int header_height = HeaderHeight(*this, shrink, h);
   header_.measure(WidthSpec::Exactly(w - 2 * inset),
                   HeightSpec::Exactly(header_height - inset / 2));
   viewport_.measure(
       WidthSpec::Exactly(w - 2 * inset),
-      HeightSpec::Exactly(h - header_height - FooterHeight(theme(), shrink, h) -
-                          BottomInset(theme(), shrink, h)));
+      HeightSpec::Exactly(h - header_height - FooterHeight(*this, shrink, h) -
+                          BottomInset(*this, shrink, h)));
   MeasureChildWithMargins(cancel_, WidthSpec::Exactly(Scaled(96)),
                           HeightSpec::Exactly(cell_size));
   MeasureChildWithMargins(confirm_, WidthSpec::Exactly(Scaled(64)),
@@ -896,11 +913,11 @@ Dimensions DatePickerPanel::onMeasure(WidthSpec width, HeightSpec height) {
 }
 
 void DatePickerPanel::onLayout(bool, const Rect&) {
-  const int inset = InsetSize(theme());
+  const int inset = InsetSize(*this);
   const bool shrink = session_.shrinkToFit();
-  const int header_height = HeaderHeight(theme(), shrink, height());
-  const int footer_height = FooterHeight(theme(), shrink, height());
-  const int bottom_inset = BottomInset(theme(), shrink, height());
+  const int header_height = HeaderHeight(*this, shrink, height());
+  const int footer_height = FooterHeight(*this, shrink, height());
+  const int bottom_inset = BottomInset(*this, shrink, height());
   header_.layout(
       Rect(inset, inset / 2, width() - inset - 1, header_height - 1));
   viewport_.layout(Rect(inset, header_height, width() - inset - 1,

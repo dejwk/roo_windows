@@ -119,6 +119,16 @@ void DockedDatePickerField::setShrinkToFit(bool enabled) {
   shrink_to_fit_ = enabled;
 }
 
+void DockedDatePickerField::setCalendarDensity(Density density) {
+  CHECK(!isPickerOpen());
+  calendar_density_ = DensityOverride::Explicit(density);
+}
+
+void DockedDatePickerField::clearCalendarDensityOverride() {
+  CHECK(!isPickerOpen());
+  calendar_density_ = DensityOverride{};
+}
+
 CivilDay DockedDatePickerField::displayedMonth() const {
   return picker_ ? picker_->displayedMonth() : month_;
 }
@@ -161,6 +171,11 @@ PresentationStartResult DockedDatePickerField::openPicker() {
   picker_->setToday(today_);
   picker_->setBounds(bounds_);
   picker_->setShrinkToFit(shrink_to_fit_);
+  if (calendar_density_.isInherited()) {
+    picker_->clearDensityOverride();
+  } else {
+    picker_->setDensity(calendar_density_.resolve(Density::kDefault));
+  }
   picker_->setDisplayedMonth(month_);
   PresentationStartResult result =
       picker_->openAt(*owner, &geometry.bounds_in_window);

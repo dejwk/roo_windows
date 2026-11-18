@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <vector>
 
 #include "golden_image.h"
@@ -24,6 +25,7 @@ struct PickerOptions {
   bool shrink = true;
   CivilDay month;
   Density density = Density::kDefault;
+  DensityOverride calendar_density;
   Feedback feedback = Feedback::kNone;
 };
 
@@ -44,6 +46,9 @@ void CheckPicker(const char* name, int width, int height, DatePickerMode mode,
   ModalDatePicker picker(app.context());
   picker.setValue(CivilDay::FromYmd(2024, 2, 29));
   picker.setShrinkToFit(options.shrink);
+  if (!options.calendar_density.isInherited()) {
+    picker.setDensity(options.calendar_density.resolve(Density::kDefault));
+  }
   picker.setDisplayedMonth(options.month);
   picker.setToday(CivilDay::FromYmd(2024, 2, 12));
   picker.setBounds(
@@ -56,9 +61,12 @@ void CheckPicker(const char* name, int width, int height, DatePickerMode mode,
     auto* header = static_cast<internal::DatePickerHeader*>(
         static_cast<Widget&>(panel).focusChildAt(0));
     ASSERT_NE(nullptr, header);
+    const int nominal_cell =
+        Scaled(48 + 4 * static_cast<int>(panel.session().density()));
     for (int control = 0; control < 5; ++control) {
-      EXPECT_GE(header->controlBounds(control).width(), Scaled(32));
-      EXPECT_GE(header->controlBounds(control).height(), Scaled(48));
+      EXPECT_GE(header->controlBounds(control).width(),
+                std::min(Scaled(32), nominal_cell));
+      EXPECT_GE(header->controlBounds(control).height(), nominal_cell);
     }
   }
   panel.setMode(mode);
@@ -125,6 +133,27 @@ TEST(DatePickerGolden, TightTinyCalendar) {
   PickerOptions options;
   options.density = Density::kMinus5;
   CheckPicker("tiny_dense", 200, 200, DatePickerMode::kDays, options);
+}
+
+// Verifies the local override produces the same calendar as a tighter theme.
+TEST(DatePickerGolden, TinyCalendarDensityOverride) {
+  PickerOptions options;
+  options.calendar_density = DensityOverride::Explicit(Density::kMinus5);
+  CheckPicker("tiny_dense", 200, 200, DatePickerMode::kDays, options);
+}
+
+// Verifies dense floating chrome stays within rounded container corners.
+TEST(DatePickerGolden, TightFloatingCalendar) {
+  PickerOptions options;
+  options.calendar_density = DensityOverride::Explicit(Density::kMinus5);
+  CheckPicker("floating_dense", 400, 576, DatePickerMode::kDays, options);
+}
+
+// Verifies tight density leaves no unused strip in a fitted portrait calendar.
+TEST(DatePickerGolden, TightPortraitCalendarFillsViewport) {
+  PickerOptions options;
+  options.density = Density::kMinus5;
+  CheckPicker("portrait_dense", 240, 320, DatePickerMode::kDays, options);
 }
 
 // Verifies the day ripple and interpolated selection on a regular calendar.

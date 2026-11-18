@@ -144,19 +144,36 @@ At default density, viewports smaller than 240 by 240 dp reject admission.
 The live `Theme::material3Theme().density` reduces nominal cells from 48 dp to
 28 dp in 4 dp steps, together with panel padding and chrome. At `kMinus5`,
 the minimum viewport is 200 by 200 dp. Density changes whitespace; fitting
-chooses smaller text only when cells still exceed the available area. Both
-policies use the exact cell rectangles for touch targets and retain no copied
-density state in the presenter. After changing density on a live theme, call
-`app.invalidateTheme(true)` to request both measurement and painting.
+chooses smaller text only when cells still exceed the available area.
+Floating panels retain a 16 dp inset to keep chrome inside their 28 dp rounded
+corners; square full-screen panels use the tighter density inset. Both
+policies use the exact cell rectangles for touch targets without copying
+resolved theme values into the presenter. After changing density on a live theme,
+call `app.invalidateTheme(true)` to request both measurement and painting.
+
+Calendar density can also be pinned independently while the presenter is closed:
+
+```cpp
+picker.setDensity(roo_windows::material3::Density::kMinus5);
+date_field.setCalendarDensity(roo_windows::material3::Density::kMinus5);
+```
+
+`clearDensityOverride()` and `clearCalendarDensityOverride()` restore live theme
+inheritance. Explicit `kDefault` remains pinned even when the application theme
+is tighter. A docked calendar's policy is separate from its source text field's
+`densityOverride()`. Internal actions and numeric input use the calendar policy.
+The one-byte policies occupy existing alignment padding on ESP32-C3.
 
 The full-screen fallback pins the header and Cancel/OK actions. Both presenters
 shrink the calendar to fit by default, keeping all seven weekday columns and six
-week rows visible. Measurement distributes remainder pixels across cells, and
-hit testing uses those same boundaries. Small cells use compact typography and
+week rows visible. Density first resolves nominal panel geometry and chrome.
+Fitted cells then fill the complete remaining viewport in both axes, including
+room released by tighter density. Measurement distributes remainder pixels
+across cells, and hit testing uses those same boundaries. Small cells use compact typography and
 markers; displays shorter than 320 dp also use a compact header and footer.
-Shrinking reduces touch-target sizes, so applications prioritizing 48 dp targets
-can call `setShrinkToFit(false)` on either presenter while closed. This restores
-the original two-axis scrolling grid and cursor reveal. The bounded year list
+Shrinking reduces touch-target sizes. Calling `setShrinkToFit(false)` while
+closed restores nominal density-sized cells, two-axis scrolling, and cursor
+reveal. At default density those cells have 48 dp targets. The bounded year list
 keeps vertical scrolling in either policy. Numeric input shares the panel chrome.
 
 ![Fitted portrait calendar geometry](figures/material3_date_picker_fit.svg)
@@ -176,13 +193,13 @@ be committed through either touch or keyboard.
 ## Rendering and resources
 
 The header and day/month/year cells are owner-painted; there are no per-day
-widgets or row objects. Glyphs and rounded markers resolve together through a tile with a raster
-background, including at reduced cell sizes. Short draw bands avoid allocating
-background streams. Header feedback and keyboard outlines belong to individual
-controls; generic header-center halos and whole-grid focus tint are suppressed. Clipping skips
-non-visible body cells. Calendar selection and keyboard cursor changes compare against the previous
-paint snapshot and repaint only changed cells. Header updates track changed
-controls and the draft headline. Coalesced edits do not retain intermediate
+widgets or row objects. Glyphs and rounded markers resolve together through a
+tile with a raster background, including at reduced cell sizes. Short draw bands
+avoid allocating background streams. Header feedback and keyboard outlines belong to individual
+controls; generic header-center halos and whole-grid focus tint are suppressed.
+Clipping skips non-visible body cells. Calendar selection and keyboard cursor
+changes compare against the previous paint snapshot and repaint only changed
+cells. Header updates track changed controls and the draft headline. Coalesced edits do not retain intermediate
 selections. External invalidation, including framework focus-surface changes,
 continues to repaint the exposed region. Four active-only flags share one byte.
 
@@ -224,7 +241,8 @@ Run `benchmarks/material3_date_picker_size_probe.sh COMPILER NM` with sibling
 Roo libraries, or set `ROO_LIBRARIES_ROOT`. This is a target-ABI object-size
 probe, not a firmware flash-size or peak-heap measurement.
 
-The resource regression asserts zero allocations for warmed model navigation.
+The resource regression asserts zero allocations for warmed model navigation
+and shared click admission/cancellation.
 Ten selection-update frames record 237 allocations through
 the existing `roo_display` glyph-stream renderer. As with Material 3 text fields,
 removing those upstream allocations is deferred; this implementation does not
@@ -247,9 +265,10 @@ modal input and the docked field, and saves accepted dates into the form.
 Its native 240 by 320 portrait screen demonstrates promotion; the larger golden fixture exercises
 anchored placement. Physical touchscreen validation remains manual.
 
-The seven date-picker test targets pass with picker sources and test subclasses
+The eight date-picker test targets pass with picker sources and test subclasses
 compiled using `--per_file_copt='.*date_picker.*\.cpp@-fno-exceptions,-fno-rtti'`.
-The presentation and docked behavior targets also pass with `--config=asan`.
+The rendering, presentation, docked behavior, and shared-click targets also
+pass with `--config=asan`.
 Related text-field, keyboard-avoidance, dialog, menu and transient-host
 regressions pass. The example builds; interactive hardware checks were not run.
 

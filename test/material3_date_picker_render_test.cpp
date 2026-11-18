@@ -179,8 +179,8 @@ class DatePickerRenderSized : public testing::Test {
     open();
     expectSingleWrites();
     Widget* viewport = body().parent();
-    ASSERT_LE(body().width(), viewport->width());
-    ASSERT_LE(body().height(), viewport->height());
+    ASSERT_EQ(body().width(), viewport->width());
+    ASSERT_EQ(body().height(), viewport->height());
     EXPECT_EQ(0, body().offsetLeft());
     EXPECT_EQ(0, body().offsetTop());
     EXPECT_EQ(body().width() - 1, body().cellBounds(41).xMax());
@@ -246,6 +246,66 @@ TEST_F(DatePickerUneven, FittedCalendar) { expectFittedCalendar(); }
 TEST_F(DatePickerTiny, TightDensityFitsTinyDisplay) {
   theme_.material3Theme().density = Density::kMinus5;
   expectFittedCalendar();
+}
+
+// Verifies local calendar density admits tiny displays while the rest of the
+// application retains its default density.
+TEST_F(DatePickerTiny, CalendarDensityCanBeTightenedIndependently) {
+  picker_.setDensity(Density::kMinus5);
+  EXPECT_EQ(Density::kDefault, theme_.material3Theme().density);
+  expectFittedCalendar();
+}
+
+// Verifies explicit default remains pinned and clearing restores the live
+// application density without copying a resolved inherited value.
+TEST_F(DatePickerRender, CalendarDensityOverrideAndClear) {
+  theme_.material3Theme().density = Density::kMinus5;
+  picker_.setShrinkToFit(false);
+  EXPECT_TRUE(picker_.densityOverride().isInherited());
+  picker_.setDensity(Density::kDefault);
+  EXPECT_FALSE(picker_.densityOverride().isInherited());
+  open();
+  EXPECT_EQ(Density::kDefault, panel().session().density());
+  EXPECT_EQ(Scaled(48), body().cellBounds(0).width());
+  theme_.material3Theme().density = Density::kMinus2;
+  app_.invalidateTheme(true);
+  app_.refresh();
+  EXPECT_EQ(Scaled(48), body().cellBounds(0).width());
+  picker_.dismiss();
+  app_.refresh();
+  picker_.clearDensityOverride();
+  EXPECT_TRUE(picker_.densityOverride().isInherited());
+  open();
+  EXPECT_EQ(Density::kMinus2, panel().session().density());
+  EXPECT_EQ(Scaled(40), body().cellBounds(0).width());
+}
+
+// Verifies fitting consumes space released by denser chrome in both axes,
+// including density changes after the panel has already been admitted.
+TEST_F(DatePickerPortrait, FittedGridFillsSpaceAtEveryDensity) {
+  open();
+  for (int level = 0; level >= -5; --level) {
+    theme_.material3Theme().density = static_cast<Density>(level);
+    app_.invalidateTheme(true);
+    device_.reset();
+    app_.refresh();
+    EXPECT_EQ(body().parent()->width(), body().width());
+    EXPECT_EQ(body().parent()->height(), body().height());
+    EXPECT_EQ(body().width() - 1, body().cellBounds(41).xMax());
+    EXPECT_EQ(body().height() - 1, body().cellBounds(41).yMax());
+    expectSingleWrites();
+  }
+}
+
+// Verifies compact floating chrome cannot fill outside the rounded panel.
+TEST_F(DatePickerRender, DenseFloatingChromePreservesRoundedCorners) {
+  picker_.setDensity(Density::kMinus5);
+  open();
+  EXPECT_LT(panel().width(), 400);
+  EXPECT_LT(panel().height(), 576);
+  EXPECT_EQ(localPixel(panel(), 0, 0),
+            localPixel(panel(), Scaled(8), Scaled(4)));
+  expectSingleWrites();
 }
 
 // Verifies all density levels change calendar spacing through the live theme.

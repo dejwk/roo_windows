@@ -52,6 +52,16 @@ void ModalDatePicker::setShrinkToFit(bool enabled) {
   shrink_to_fit_ = enabled;
 }
 
+void ModalDatePicker::setDensity(Density density) {
+  CHECK(!isOpen());
+  density_ = DensityOverride::Explicit(density);
+}
+
+void ModalDatePicker::clearDensityOverride() {
+  CHECK(!isOpen());
+  density_ = DensityOverride{};
+}
+
 const DatePickerStrings& ModalDatePicker::datePickerStrings() const {
   return DefaultDatePickerStrings();
 }
