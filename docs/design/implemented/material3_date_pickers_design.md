@@ -61,12 +61,19 @@ require a closed picker. An invalid date represents no selection; invalid
 bound endpoints mean unbounded. Reversed bounds reject admission.
 
 Override `isDateEnabled(CivilDay)` for application filtering, and
-`datePickerStrings()` / `dateTextCodec()` for localization. Filtering and
+`datePickerStrings()` for picker labels, `calendarLocale()` for shared
+`roo_locale::CalendarLocale` names and week conventions, and `dateTextCodec()`
+for numeric input. Filtering and
 conversion must not mutate the presentation. Shared labels and codecs must
 outlive their use; format output, including NUL, must fit a 64-byte buffer.
 
-English defaults use Sunday-first and `MM/DD/YYYY`. `ROO_LANG=ROO_LANG_pl`
-selects Monday-first and `DD.MM.RRRR`. Defaults delegate strict date-only
+Calendar names and the first weekday come directly from
+`roo_locale::DefaultCalendarLocale()`, including `ROO_CALENDAR_LOCALE` overrides.
+The picker retains no copy of the locale descriptor or its name arrays. Compact
+headers and month grids use the locale's standalone abbreviated month names
+when wide names do not fit. `DatePickerStrings` contains only picker labels.
+English numeric defaults use `MM/DD/YYYY`; `ROO_LANG=ROO_LANG_pl` selects
+`DD.MM.RRRR`. Defaults delegate strict date-only
 parsing and formatting to `roo_time`; partial, impossible, or out-of-bounds
 input disables confirmation and displays a validation error.
 

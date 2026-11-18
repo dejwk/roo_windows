@@ -16,29 +16,13 @@ bool DatePickerBounds::contains(CivilDay day) const {
 
 namespace {
 #if ROO_WINDOWS_LANG == ROO_LANG_pl
-const DatePickerStrings kStrings{
-    roo_time::kMonday,
-    "Wybierz datę",
-    "Wpisz datę",
-    "OK",
-    "Anuluj",
-    "Nieprawidłowa data",
-    {"Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec", "Lipiec",
-     "Sierpień", "Wrzesień", "Październik", "Listopad", "Grudzień"},
-    {"N", "P", "W", "Ś", "C", "P", "S"}};
+const DatePickerStrings kStrings{"Wybierz datę", "Wpisz datę", "OK", "Anuluj",
+                                 "Nieprawidłowa data"};
 constexpr char kFormat[] = "%d.%m.%Y";
 constexpr char kPlaceholder[] = "DD.MM.RRRR";
 #else
-const DatePickerStrings kStrings{
-    roo_time::kSunday,
-    "Select date",
-    "Enter date",
-    "OK",
-    "Cancel",
-    "Invalid date",
-    {"January", "February", "March", "April", "May", "June", "July", "August",
-     "September", "October", "November", "December"},
-    {"S", "M", "T", "W", "T", "F", "S"}};
+const DatePickerStrings kStrings{"Select date", "Enter date", "OK", "Cancel",
+                                 "Invalid date"};
 constexpr char kFormat[] = "%m/%d/%Y";
 constexpr char kPlaceholder[] = "MM/DD/YYYY";
 #endif
@@ -66,6 +50,10 @@ const NumericCodec kCodec;
 }  // namespace
 
 const DatePickerStrings& DefaultDatePickerStrings() { return kStrings; }
+
+const roo_locale::CalendarLocale& DefaultDatePickerCalendarLocale() {
+  return roo_locale::DefaultCalendarLocale();
+}
 
 const DateTextCodec& DefaultDateTextCodec() { return kCodec; }
 

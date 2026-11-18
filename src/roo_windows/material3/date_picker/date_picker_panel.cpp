@@ -157,7 +157,8 @@ DatePickerHeader::DatePickerHeader(ApplicationContext& context,
     : Widget(context),
       panel_(panel),
       focused_control_(0),
-      navigation_style_(0) {}
+      navigation_style_(0),
+      abbreviated_months_(0) {}
 
 Rect DatePickerHeader::controlBounds(int control) const {
   const int cell_size = CellSize(theme());
@@ -187,29 +188,41 @@ Dimensions DatePickerHeader::getSuggestedMinimumDimensions() const {
                     HeaderHeight(theme(), false, 0));
 }
 
+roo::string_view DatePickerHeader::monthLabel(int month) const {
+  const roo_locale::CalendarLocale& locale = panel_.session().locale();
+  return abbreviated_months_ != 0 ? locale.month_standalone_abbreviated[month]
+                                  : locale.month_standalone_wide[month];
+}
+
 Dimensions DatePickerHeader::onMeasure(WidthSpec width, HeightSpec height) {
   const int cell_size = CellSize(theme());
   const int w = width.resolveSize(getSuggestedMinimumDimensions().width());
   const int available = w - 2 * cell_size;
   int year_width = 0;
-  // Measure every localized month so navigation never shifts the hit targets.
+  // Prefer abbreviated locale forms to reducing the navigation typography.
+  // Measure all months so the hit targets and format stay stable on navigation.
   for (navigation_style_ = 0; navigation_style_ < 3; ++navigation_style_) {
     const TextStyle& style = navigationTextStyle();
-    year_width = std::max(
-        Scaled(32), roo_display::StringViewLabel("9999", style.font(), Color(),
-                                                 style.fontOptions())
-                            .anchorExtents()
-                            .width() +
-                        Scaled(8));
-    int month_width = 0;
-    for (roo::string_view month : panel_.session().strings().month_names) {
-      roo_display::StringViewLabel label(month, style.font(), Color(),
-                                         style.fontOptions());
-      month_width = std::max<int>(month_width, label.anchorExtents().width());
+    roo_display::StringViewLabel year("9999", style.font(), Color(),
+                                      style.fontOptions());
+    year_width = std::max(Scaled(32), year.anchorExtents().width() + Scaled(8));
+    for (int abbreviated = 0; abbreviated < 2; ++abbreviated) {
+      abbreviated_months_ = abbreviated;
+      int month_width = 0;
+      for (int month = 0; month < 12; ++month) {
+        roo_display::StringViewLabel label(monthLabel(month), style.font(),
+                                           Color(), style.fontOptions());
+        month_width = std::max<int>(month_width, label.anchorExtents().width());
+      }
+      if (month_width + year_width + Scaled(4) <= available) {
+        month_width_ = std::max(1, available - year_width);
+        return Dimensions(
+            w, height.resolveSize(getSuggestedMinimumDimensions().height()));
+      }
     }
-    if (month_width + year_width + Scaled(4) <= available) break;
   }
-  navigation_style_ = std::min<int>(navigation_style_, 2);
+  navigation_style_ = 2;
+  abbreviated_months_ = 1;
   month_width_ = std::max(1, available - year_width);
   return Dimensions(
       w, height.resolveSize(getSuggestedMinimumDimensions().height()));
@@ -274,7 +287,7 @@ void DatePickerHeader::paint(PaintContext& ctx) const {
       roo::string_view label;
       char year[16];
       if (control == 1) {
-        label = session.strings().month_names[session.month.month() - 1];
+        label = monthLabel(session.month.month() - 1);
       } else {
         std::snprintf(year, sizeof(year), "%d", session.month.year());
         label = year;
@@ -317,7 +330,10 @@ bool DatePickerHeader::onKeyEvent(const KeyEvent& event) {
 
 DatePickerBody::DatePickerBody(ApplicationContext& context,
                                DatePickerPanel& panel)
-    : SurfaceWidget(context), panel_(panel) {}
+    : SurfaceWidget(context),
+      panel_(panel),
+      painted_focused_(false),
+      abbreviated_months_(false) {}
 
 Color DatePickerBody::background() const { return panel_.background(); }
 
@@ -344,6 +360,18 @@ Dimensions DatePickerBody::onMeasure(WidthSpec width, HeightSpec height) {
     if (height.value() > 0 && panel_.mode() != DatePickerMode::kYears)
       h = std::min<int>(h, height.value());
   }
+  abbreviated_months_ = false;
+  if (panel_.mode() == DatePickerMode::kMonths) {
+    const TextStyle& style =
+        CellTextStyle(Rect(0, 0, w / 3 - 1, h / 4 - 1), CellSize(theme()));
+    for (int month = 0; month < 12; ++month) {
+      roo_display::StringViewLabel label(
+          panel_.session().locale().month_standalone_wide[month], style.font(),
+          Color(), style.fontOptions());
+      if (label.anchorExtents().width() + Scaled(8) > w / 3)
+        abbreviated_months_ = true;
+    }
+  }
   return Dimensions(width.resolveSize(w), height.resolveSize(h));
 }
 
@@ -367,8 +395,7 @@ void DatePickerBody::paint(PaintContext& ctx) const {
       const Rect first = cellBounds(col);
       PaintText(
           ctx,
-          session.strings()
-              .weekday_narrow[(col + session.strings().first_weekday) % 7],
+          session.locale().weekday_narrow[(col + session.firstWeekday()) % 7],
           CellTextStyle(first, CellSize(theme())), colors.onSurfaceVariant,
           background(), Rect(first.xMin(), 0, first.xMax(), first.yMin() - 1));
     }
@@ -381,7 +408,7 @@ void DatePickerBody::paint(PaintContext& ctx) const {
     bool old_selected = false;
     bool new_selected = false;
     if (days) {
-      CivilDay day = GridDay(session.month, session.strings().first_weekday, i);
+      CivilDay day = GridDay(session.month, session.firstWeekday(), i);
       old_selected = day.isValid() && day == painted_draft_;
       new_selected = day.isValid() && day == session.draft;
     }
@@ -393,7 +420,7 @@ void DatePickerBody::paint(PaintContext& ctx) const {
     roo::string_view text;
     bool enabled = true, selected = false, today = false;
     if (days) {
-      CivilDay day = GridDay(session.month, session.strings().first_weekday, i);
+      CivilDay day = GridDay(session.month, session.firstWeekday(), i);
       if (!day.isValid()) continue;
       enabled = day.month() == session.month.month() && session.enabled(day);
       selected = day == session.draft;
@@ -401,7 +428,9 @@ void DatePickerBody::paint(PaintContext& ctx) const {
       std::snprintf(number, sizeof(number), "%d", day.day());
       text = number;
     } else if (panel_.mode() == DatePickerMode::kMonths) {
-      text = session.strings().month_names[i];
+      text = abbreviated_months_
+                 ? session.locale().month_standalone_abbreviated[i]
+                 : session.locale().month_standalone_wide[i];
       selected = i + 1 == session.month.month();
     } else {
       std::snprintf(number, sizeof(number), "%d", panel_.firstYear() + i);
@@ -430,8 +459,7 @@ void DatePickerBody::activate(int index) {
   if (index < 0 || index >= cellCount()) return;
   DatePickerSession& session = panel_.session();
   if (panel_.mode() == DatePickerMode::kDays) {
-    CivilDay day =
-        GridDay(session.month, session.strings().first_weekday, index);
+    CivilDay day = GridDay(session.month, session.firstWeekday(), index);
     if (day.isValid() && day.month() == session.month.month())
       panel_.selectDate(day);
   } else if (panel_.mode() == DatePickerMode::kMonths) {
@@ -456,8 +484,7 @@ bool DatePickerBody::cellEnabled(int index) const {
   if (index < 0 || index >= cellCount()) return false;
   if (panel_.mode() != DatePickerMode::kDays) return true;
   const DatePickerSession& session = panel_.session();
-  const CivilDay day =
-      GridDay(session.month, session.strings().first_weekday, index);
+  const CivilDay day = GridDay(session.month, session.firstWeekday(), index);
   return day.isValid() && day.month() == session.month.month() &&
          session.enabled(day);
 }
@@ -474,8 +501,7 @@ void DatePickerBody::onSingleTapUp(XDim x, YDim y) {
 void DatePickerBody::resetCursor() {
   const DatePickerSession& session = panel_.session();
   if (panel_.mode() == DatePickerMode::kDays) {
-    int offset =
-        (7 + session.month.dayOfWeek() - session.strings().first_weekday) % 7;
+    int offset = (7 + session.month.dayOfWeek() - session.firstWeekday()) % 7;
     cursor_ = offset + ((session.draft.isValid() &&
                          MonthStart(session.draft) == session.month)
                             ? session.draft.day() - 1

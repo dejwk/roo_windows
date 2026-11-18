@@ -78,6 +78,10 @@ class DockedDatePickerField : public TextField {
   /// Returns shared labels that outlive each calendar session.
   virtual const DatePickerStrings& datePickerStrings() const;
 
+  /// Supplies calendar names and week conventions from shared roo_locale data.
+  /// The locale and all its strings must outlive the open calendar session.
+  virtual const roo_locale::CalendarLocale& calendarLocale() const;
+
   /// Returns a shared codec whose output fits 63 bytes.
   virtual const DateTextCodec& dateTextCodec() const;
 

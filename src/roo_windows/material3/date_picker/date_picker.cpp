@@ -56,6 +56,10 @@ const DatePickerStrings& ModalDatePicker::datePickerStrings() const {
   return DefaultDatePickerStrings();
 }
 
+const roo_locale::CalendarLocale& ModalDatePicker::calendarLocale() const {
+  return DefaultDatePickerCalendarLocale();
+}
+
 const DateTextCodec& ModalDatePicker::dateTextCodec() const {
   return DefaultDateTextCodec();
 }

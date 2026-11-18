@@ -175,9 +175,8 @@ class DatePickerRenderSized : public testing::Test {
     EXPECT_EQ(body().width() - 1, body().cellBounds(41).xMax());
     EXPECT_EQ(body().height() - 1, body().cellBounds(41).yMax());
     for (int i = 0; i < 42; ++i) {
-      const CivilDay day =
-          internal::GridDay(panel().session().month,
-                            panel().session().strings().first_weekday, i);
+      const CivilDay day = internal::GridDay(
+          panel().session().month, panel().session().firstWeekday(), i);
       if (day.month() != panel().session().month.month()) continue;
       const Rect cell = body().cellBounds(i);
       // Integer division must assign both edges to this cell, including
@@ -274,8 +273,8 @@ TEST_F(DatePickerRender, DisabledDatesDoNotAcquireFeedback) {
   const std::vector<roo::byte> before = raster_;
   const CivilDay selected = panel().session().draft;
   for (int i = 0; i < 42; ++i) {
-    const CivilDay day = internal::GridDay(
-        panel().session().month, panel().session().strings().first_weekday, i);
+    const CivilDay day = internal::GridDay(panel().session().month,
+                                           panel().session().firstWeekday(), i);
     if (day.month() == 2 && picker_.bounds().contains(day)) continue;
     const Rect cell = body().cellBounds(i);
     device_.reset();
@@ -331,7 +330,10 @@ TEST_F(DatePickerRender, HeaderLabelsFitCompactWidth) {
                    HeightSpec::Exactly(Scaled(104)));
   header().layout(Rect(0, 0, Scaled(208) - 1, Scaled(104) - 1));
   const TextStyle& style = header().navigationTextStyle();
-  for (roo::string_view month : panel().session().strings().month_names) {
+  for (int i = 0; i < 12; ++i) {
+    const roo::string_view month = header().monthLabel(i);
+    EXPECT_EQ(panel().session().locale().month_standalone_abbreviated[i],
+              month);
     roo_display::StringViewLabel label(month, style.font(), Color(),
                                        style.fontOptions());
     EXPECT_LE(label.anchorExtents().width(), header().controlBounds(1).width())

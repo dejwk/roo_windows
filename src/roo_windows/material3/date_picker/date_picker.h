@@ -84,6 +84,10 @@ class ModalDatePicker {
   /// Returns shared labels whose storage outlives the open session.
   virtual const DatePickerStrings& datePickerStrings() const;
 
+  /// Supplies calendar names and week conventions from shared roo_locale data.
+  /// The locale and all its strings must outlive the open calendar session.
+  virtual const roo_locale::CalendarLocale& calendarLocale() const;
+
   /// Returns a shared allocation-free codec; formatted dates must fit 63 bytes.
   virtual const DateTextCodec& dateTextCodec() const;
 

@@ -22,10 +22,16 @@ class Picker : public ModalDatePicker {
   int accepted = 0;
   int dismissed = 0;
   bool disable_weekends = false;
+  const roo_locale::CalendarLocale* calendar_locale = nullptr;
   DatePickerDismissReason reason = DatePickerDismissReason::kCancel;
   std::function<void()> completion;
 
  protected:
+  const roo_locale::CalendarLocale& calendarLocale() const override {
+    return calendar_locale != nullptr ? *calendar_locale
+                                      : ModalDatePicker::calendarLocale();
+  }
+
   bool isDateEnabled(CivilDay day) const override {
     return !disable_weekends || (day.dayOfWeek() != roo_time::kSaturday &&
                                  day.dayOfWeek() != roo_time::kSunday);
@@ -78,6 +84,31 @@ class DatePickerPresentation : public testing::Test {
   Task& owner_;
   Picker picker_;
 };
+
+// Verifies calendar names, abbreviations, and week starts are borrowed from
+// roo_locale rather than copied into picker label tables.
+TEST_F(DatePickerPresentation, CalendarLocaleSuppliesNamesAndWeekStart) {
+  for (const roo_locale::CalendarLocale* locale :
+       {&roo_locale::PolishPoland(), &roo_locale::FrenchFrance(),
+        &roo_locale::GermanGermany(), &roo_locale::EnglishUnitedKingdom()}) {
+    picker_.calendar_locale = locale;
+    open();
+    EXPECT_EQ(locale, &panel().session().locale());
+    EXPECT_EQ(static_cast<roo_time::DayOfWeek>(locale->first_weekday),
+              panel().session().firstWeekday());
+    auto& header = *static_cast<internal::DatePickerHeader*>(
+        static_cast<Widget&>(panel()).focusChildAt(0));
+    for (int i = 0; i < 12; ++i)
+      EXPECT_EQ(locale->month_standalone_wide[i], header.monthLabel(i));
+    header.measure(WidthSpec::Exactly(Scaled(208)),
+                   HeightSpec::Exactly(Scaled(104)));
+    header.layout(Rect(0, 0, Scaled(208) - 1, Scaled(104) - 1));
+    for (int i = 0; i < 12; ++i)
+      EXPECT_EQ(locale->month_standalone_abbreviated[i], header.monthLabel(i));
+    picker_.dismiss();
+    app_.refresh();
+  }
+}
 
 // Verifies initial calendar focus and focus transfer to newly laid-out input.
 TEST_F(DatePickerPresentation, ActiveBodyReceivesFocus) {

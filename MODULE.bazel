@@ -16,3 +16,10 @@ bazel_dep(name = "roo_icons", version = "1.2.5")
 bazel_dep(name = "roo_io", version = "2.4.1")
 bazel_dep(name = "roo_scheduler", version = "2.3.0")
 bazel_dep(name = "roo_time", version = "2.0.1")
+
+# CalendarLocale data is available ahead of the next roo_locale registry release.
+git_override(
+    module_name = "roo_locale",
+    commit = "a77ccf9fce043eb51677120b92338cd9668375bf",
+    remote = "https://github.com/dejwk/roo_locale",
+)

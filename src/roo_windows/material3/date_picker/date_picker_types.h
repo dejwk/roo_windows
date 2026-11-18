@@ -1,5 +1,6 @@
 #pragma once
 
+#include "roo_locale/calendar_locale.h"
 #include "roo_time/civil_day.h"
 #include "roo_time/format.h"
 
@@ -29,16 +30,14 @@ enum class DatePickerDismissReason : uint8_t {
   kOwnerUnavailable,
 };
 
-/// Shared localized labels. Custom tables must outlive the picker session.
+/// Shared picker labels. Calendar names and week conventions come from
+/// calendarLocale(). Custom label tables must outlive the picker session.
 struct DatePickerStrings {
-  roo_time::DayOfWeek first_weekday;
   roo::string_view headline_select_date;
   roo::string_view headline_input_date;
   roo::string_view ok_label;
   roo::string_view cancel_label;
   roo::string_view invalid_date;
-  roo::string_view month_names[12];
-  roo::string_view weekday_narrow[7];
 };
 
 /// Allocation-free date-only conversion; custom instances must outlive use.
@@ -60,6 +59,9 @@ class DateTextCodec {
 
 /// Returns the build-language labels (English or Polish).
 const DatePickerStrings& DefaultDatePickerStrings();
+
+/// Returns the shared roo_locale calendar selected by the build configuration.
+const roo_locale::CalendarLocale& DefaultDatePickerCalendarLocale();
 
 /// Returns the build-language strict numeric codec.
 const DateTextCodec& DefaultDateTextCodec();

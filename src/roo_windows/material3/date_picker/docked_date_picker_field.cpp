@@ -49,6 +49,9 @@ class DockedDatePickerField::Picker final : public ModalDatePicker,
   const DatePickerStrings& datePickerStrings() const override {
     return field_.datePickerStrings();
   }
+  const roo_locale::CalendarLocale& calendarLocale() const override {
+    return field_.calendarLocale();
+  }
   const DateTextCodec& dateTextCodec() const override {
     return field_.dateTextCodec();
   }
@@ -122,6 +125,11 @@ CivilDay DockedDatePickerField::displayedMonth() const {
 
 const DatePickerStrings& DockedDatePickerField::datePickerStrings() const {
   return DefaultDatePickerStrings();
+}
+
+const roo_locale::CalendarLocale& DockedDatePickerField::calendarLocale()
+    const {
+  return DefaultDatePickerCalendarLocale();
 }
 
 const DateTextCodec& DockedDatePickerField::dateTextCodec() const {

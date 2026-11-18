@@ -39,10 +39,12 @@ TEST(DatePickerTypes, NumericCodec) {
             codec.format(day, text, sizeof(text)).status);
 #if ROO_WINDOWS_LANG == ROO_LANG_pl
   EXPECT_STREQ("29.02.2024", text);
-  EXPECT_EQ(roo_time::kMonday, DefaultDatePickerStrings().first_weekday);
+  EXPECT_EQ(roo_locale::Weekday::kMonday,
+            DefaultDatePickerCalendarLocale().first_weekday);
 #else
   EXPECT_STREQ("02/29/2024", text);
-  EXPECT_EQ(roo_time::kSunday, DefaultDatePickerStrings().first_weekday);
+  EXPECT_EQ(roo_locale::Weekday::kSunday,
+            DefaultDatePickerCalendarLocale().first_weekday);
 #endif
   CivilDay parsed;
   EXPECT_EQ(roo_time::TextStatus::kOk, codec.parse(text, parsed).status);

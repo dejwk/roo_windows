@@ -46,6 +46,9 @@ class DatePickerHeader final : public Widget {
   /// Returns the measured navigation style used by month and year labels.
   const TextStyle& navigationTextStyle() const;
 
+  /// Returns a full or abbreviated standalone month name for this header.
+  roo::string_view monthLabel(int month) const;
+
   /// Marks one control (0–4) or the draft headline (5) as changed.
   void dirtyPart(int part);
 
@@ -62,6 +65,7 @@ class DatePickerHeader final : public Widget {
   XDim month_width_ = 0;
   uint8_t focused_control_ : 3;
   uint8_t navigation_style_ : 2;
+  uint8_t abbreviated_months_ : 1;
   mutable uint8_t dirty_parts_ = 0;
 };
 
@@ -124,7 +128,8 @@ class DatePickerBody final : public SurfaceWidget {
   // A completed paint snapshot collapses repeated edits without a cell bitmap.
   mutable roo_time::CivilDay painted_draft_;
   mutable int16_t painted_cursor_ = -1;
-  mutable bool painted_focused_ = false;
+  mutable bool painted_focused_ : 1;
+  bool abbreviated_months_ : 1;
 };
 
 /// Scrollable content leaves surface fill to the panel.
@@ -292,6 +297,16 @@ class DatePickerSession final : public TransientPresentationRegistration {
   /// Borrows the presenter locale table.
   const DatePickerStrings& strings() const {
     return owner_.datePickerStrings();
+  }
+
+  /// Borrows the presenter calendar names and regional week conventions.
+  const roo_locale::CalendarLocale& locale() const {
+    return owner_.calendarLocale();
+  }
+
+  /// Converts the locale weekday index at the civil-date arithmetic boundary.
+  roo_time::DayOfWeek firstWeekday() const {
+    return static_cast<roo_time::DayOfWeek>(locale().first_weekday);
   }
 
   /// Borrows the presenter numeric codec.
