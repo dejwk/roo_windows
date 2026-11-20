@@ -47,6 +47,13 @@ TEST(Material3Badge, SetTextClampsToInlineCapacity) {
   EXPECT_EQ("abcdefg", ToStdString(badge.text()));
 }
 
+// Verifies that bounded badge text still displays the text before a zero byte.
+TEST(Material3Badge, SetTextStopsAtZeroByte) {
+  Badge badge;
+  badge.setText(roo::string_view("ab\0cd", 5));
+  EXPECT_EQ(roo::string_view("ab"), badge.text());
+}
+
 // Verifies that the convenience number formatter renders decimal values up to
 // 999 and caps larger values at the Material-style 999+ label.
 TEST(Material3Badge, SetValueFormatsAndCapsAt999Plus) {

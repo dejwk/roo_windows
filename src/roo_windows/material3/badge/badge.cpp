@@ -31,16 +31,16 @@ constexpr int16_t kTextPaddingV = Scaled(4);
 
 Rect EmptyRect() { return Rect(0, 0, -1, -1); }
 
-/// Copies at most 7 visible bytes so the inline string remains null-terminated.
+/// Copies at most seven visible bytes, stopping at a zero byte.
 void CopyClampedText(roo_collections::SmallString<Badge::kTextStorage>& target,
                      roo::string_view text) {
   size_t size = std::min(text.size(), Badge::kMaxVisibleText);
-  char buffer[Badge::kTextStorage];
-  if (size > 0) {
-    std::memcpy(buffer, text.data(), size);
+  if (size != 0) {
+    const char* end =
+        static_cast<const char*>(std::memchr(text.data(), 0, size));
+    if (end != nullptr) size = end - text.data();
   }
-  buffer[size] = '\0';
-  target = roo::string_view(buffer, size);
+  target = roo::string_view(text.data(), size);
 }
 
 void MeasureTextBadge(roo::string_view text, int16_t& width, int16_t& height) {
@@ -122,9 +122,7 @@ bool Badge::hasText() const {
   return mode() == BadgeMode::kText && !text_.empty();
 }
 
-roo::string_view Badge::text() const {
-  return static_cast<roo::string_view>(text_);
-}
+roo::string_view Badge::text() const { return text_.view(); }
 
 void Badge::hide() {
   mode_ = static_cast<uint8_t>(BadgeMode::kHidden);
