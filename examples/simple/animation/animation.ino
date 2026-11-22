@@ -85,6 +85,7 @@ void initDisplay() {
 #include "roo_display/core/raster.h"
 #include "roo_display/shape/smooth.h"
 #include "roo_display/ui/tile.h"
+#include "roo_icons.h"
 #include "roo_icons/filled/action.h"
 #include "roo_icons/filled/alert.h"
 #include "roo_logging.h"

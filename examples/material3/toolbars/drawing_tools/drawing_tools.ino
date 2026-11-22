@@ -71,6 +71,7 @@ void initDisplay() {
 
 #include <memory>
 
+#include "roo_icons.h"
 #include "roo_icons/outlined/24/action.h"
 #include "roo_icons/outlined/24/content.h"
 #include "roo_icons/outlined/24/editor.h"

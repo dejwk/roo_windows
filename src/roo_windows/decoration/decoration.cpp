@@ -2,6 +2,7 @@
 
 #include <algorithm>
 
+#include "roo_display.h"
 #include "roo_display/shape/smooth.h"
 #include "roo_windows/core/theme.h"
 #include "roo_windows/internal/isqrt.h"

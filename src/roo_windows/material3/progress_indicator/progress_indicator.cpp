@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 
+#include "roo_display.h"
 #include "roo_display/shape/smooth.h"
 #include "roo_windows/material3/progress_indicator/progress_geometry.h"
 #include "roo_windows/material3/theme.h"

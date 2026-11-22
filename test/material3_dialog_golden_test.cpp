@@ -4,6 +4,7 @@
 #include "gtest/gtest.h"
 #include "roo_display.h"
 #include "roo_display/core/offscreen.h"
+#include "roo_icons.h"
 #include "roo_icons/outlined/24/alert.h"
 #include "roo_scheduler.h"
 #include "roo_windows/core/application.h"

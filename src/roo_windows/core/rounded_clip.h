@@ -4,6 +4,7 @@
 #include <memory>
 #include <vector>
 
+#include "roo_display.h"
 #include "roo_display/core/device.h"
 #include "roo_display/core/rasterizable.h"
 #include "roo_windows/core/border_style.h"

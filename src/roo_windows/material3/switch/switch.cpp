@@ -1,5 +1,6 @@
 #include "roo_windows/material3/switch/switch.h"
 
+#include "roo_display.h"
 #include "roo_display/color/interpolation.h"
 #include "roo_display/composition/streamable_stack.h"
 #include "roo_display/shape/basic.h"

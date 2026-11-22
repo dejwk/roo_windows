@@ -8,6 +8,7 @@
 
 #include "benchmarks/native_damage_filter.h"
 #include "benchmarks/native_damage_scenes.h"
+#include "roo_display.h"
 #include "roo_display/core/offscreen.h"
 #include "roo_windows/core/rounded_clip.h"
 

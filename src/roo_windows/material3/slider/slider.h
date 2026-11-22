@@ -3,7 +3,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "roo_backport.h"
 #include "roo_backport/string_view.h"
+#include "roo_display.h"
 #include "roo_display/image/image.h"
 #include "roo_windows/core/widget.h"
 #include "roo_windows/material3/slider/slider_internal.h"

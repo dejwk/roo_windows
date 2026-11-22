@@ -1,5 +1,6 @@
 #include "roo_windows/material2/toggle_buttons.h"
 
+#include "roo_display.h"
 #include "roo_display/shape/basic.h"
 #include "roo_display/ui/tile.h"
 

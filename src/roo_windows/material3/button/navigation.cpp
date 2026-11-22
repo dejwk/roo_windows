@@ -1,5 +1,6 @@
 #include "roo_windows/material3/button/navigation.h"
 
+#include "roo_icons.h"
 #include "roo_icons/outlined/navigation.h"
 #include "roo_windows/core/task.h"
 

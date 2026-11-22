@@ -3,6 +3,7 @@
 #if ROO_WINDOWS_ENABLE_SOFTWARE_KEYBOARD
 #include <algorithm>
 
+#include "roo_display.h"
 #include "roo_display/hal/progmem.h"
 #include "roo_windows/keyboard/layout/keyboard_layout.h"
 

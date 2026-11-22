@@ -89,6 +89,7 @@ void initDisplay() {
 // space, and a row of three icon action-buttons on the right, all aligned to
 // the center of the cross axis.
 
+#include "roo_icons.h"
 #include "roo_icons/filled/24/action.h"
 #include "roo_icons/filled/24/navigation.h"
 #include "roo_windows/containers/flex_layout.h"

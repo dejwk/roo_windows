@@ -2,6 +2,7 @@
 
 #include <algorithm>
 
+#include "roo_display.h"
 #include "roo_display/ui/text_label.h"
 #include "roo_windows/core/child_layout.h"
 #include "roo_windows/material3/navigation_bar/navigation_bar_tokens.h"

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "roo_fonts_material.h"
 #include "roo_fonts/NotoSans_Medium/10_5.h"
 #include "roo_fonts/NotoSans_Medium/11.h"
 #include "roo_fonts/NotoSans_Medium/12.h"
@@ -16,6 +17,7 @@
 #include "roo_fonts/NotoSans_Medium/9.h"
 #include "roo_fonts/NotoSans_Regular/10_5.h"
 #include "roo_fonts/NotoSans_Regular/114.h"
+#include "roo_display.h"
 #include "roo_fonts/NotoSans_Regular/12.h"
 #include "roo_fonts/NotoSans_Regular/14.h"
 #include "roo_fonts/NotoSans_Regular/16.h"

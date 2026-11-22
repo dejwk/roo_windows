@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "gtest/gtest.h"
+#include "roo_display.h"
 #include "roo_display/composition/rasterizable_stack.h"
 #include "roo_display/core/offscreen.h"
 #include "roo_display/filter/foreground.h"

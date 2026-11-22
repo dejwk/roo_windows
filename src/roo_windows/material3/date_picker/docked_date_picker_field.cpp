@@ -2,6 +2,7 @@
 
 #include <new>
 
+#include "roo_icons.h"
 #include "roo_icons/filled/24/action.h"
 #include "roo_logging.h"
 #include "roo_windows/core/task.h"

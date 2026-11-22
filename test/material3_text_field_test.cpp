@@ -1,6 +1,7 @@
 #include <algorithm>
 
 #include "gtest/gtest.h"
+#include "roo_display.h"
 #include "roo_display/ui/text_label.h"
 #include "roo_windows/material3/text_field/internal/text_field_geometry.h"
 #include "roo_windows/material3/text_field/secure_text_field.h"

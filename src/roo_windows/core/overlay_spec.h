@@ -2,6 +2,7 @@
 
 #include <inttypes.h>
 
+#include "roo_display.h"
 #include "roo_display/color/color.h"
 #include "roo_windows/core/press_overlay.h"
 #include "roo_windows/core/theme.h"

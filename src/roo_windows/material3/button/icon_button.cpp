@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 
+#include "roo_display.h"
 #include "roo_display/color/color.h"
 #include "roo_display/ui/alignment.h"
 #include "roo_windows/core/click_animation.h"

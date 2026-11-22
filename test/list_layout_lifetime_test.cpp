@@ -1,4 +1,5 @@
 #include "gtest/gtest.h"
+#include "roo_display.h"
 #include "roo_display/core/offscreen.h"
 #include "roo_windows/containers/list_layout.h"
 #include "roo_windows/containers/scrollable_panel.h"

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "roo_display.h"
 #include "roo_display/font/font.h"
 #include "roo_windows/material3/button/button.h"
 

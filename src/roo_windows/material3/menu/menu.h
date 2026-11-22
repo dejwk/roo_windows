@@ -6,6 +6,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "roo_display.h"
 #include "roo_display/core/utf8.h"
 #include "roo_windows/core/layout_direction.h"
 #include "roo_windows/core/transient_presentation.h"

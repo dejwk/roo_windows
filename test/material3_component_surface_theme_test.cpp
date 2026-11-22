@@ -1,6 +1,7 @@
 #include <array>
 
 #include "gtest/gtest.h"
+#include "roo_display.h"
 #include "roo_display/color/color_modes.h"
 #include "roo_windows/core/theme.h"
 #include "roo_windows/material3/theme.h"

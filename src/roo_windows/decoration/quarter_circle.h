@@ -1,3 +1,4 @@
+#include "roo_display.h"
 #include "roo_display/image/image.h"
 
 const ::roo_display::Raster<const uint8_t PROGMEM*, ::roo_display::Alpha4>&

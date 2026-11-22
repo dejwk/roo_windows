@@ -4,9 +4,11 @@
 #include <cstdlib>
 #include <utility>
 
+#include "roo_display.h"
 #include "roo_display/shape/smooth.h"
 #include "roo_display/ui/alignment.h"
 #include "roo_display/ui/text_label.h"
+#include "roo_icons.h"
 #include "roo_icons/outlined/24/action.h"
 #include "roo_logging.h"
 #include "roo_windows/containers/scrollable_panel.h"

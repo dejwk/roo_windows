@@ -1,5 +1,6 @@
 #pragma once
 
+#include "roo_display.h"
 #include "roo_display/ui/alignment.h"
 #include "roo_scheduler.h"
 #include "roo_time.h"

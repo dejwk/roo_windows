@@ -39,6 +39,7 @@ roo_windows::fake::FltkKeySource emulator_keys;
 #include "roo_display.h"
 #include "roo_display/driver/ili9341.h"
 #include "roo_display/driver/touch_xpt2046.h"
+#include "roo_icons.h"
 #include "roo_icons/outlined/24/action.h"
 #include "roo_icons/outlined/24/navigation.h"
 #include "roo_scheduler.h"

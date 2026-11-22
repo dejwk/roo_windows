@@ -4,6 +4,7 @@
 #include <cstdio>
 #include <cstdlib>
 
+#include "roo_display.h"
 #include "roo_display/core/offscreen.h"
 #include "roo_windows.h"
 #include "roo_windows/containers/scrollable_panel.h"

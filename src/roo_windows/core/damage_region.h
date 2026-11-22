@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <vector>
 
+#include "roo_display.h"
 #include "roo_display/core/box.h"
 
 namespace roo_windows::internal {

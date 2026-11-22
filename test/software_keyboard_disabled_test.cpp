@@ -1,4 +1,5 @@
 #include "gtest/gtest.h"
+#include "roo_fonts_material.h"
 #include "roo_fonts/NotoSans_Regular/16.h"
 #include "roo_windows/material2/text_field.h"
 #include "roo_windows/material3/text_field/text_field.h"

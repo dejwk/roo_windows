@@ -87,6 +87,7 @@ void initDisplay() {
 
 // Example 2: Settings list row
 
+#include "roo_icons.h"
 #include "roo_icons/filled/24/device.h"
 #include "roo_windows/containers/flex_layout.h"
 #include "roo_windows/material2/divider.h"

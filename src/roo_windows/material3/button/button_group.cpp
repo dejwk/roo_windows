@@ -1,5 +1,6 @@
 #include "roo_windows/material3/button/button_group.h"
 
+#include "roo_backport.h"
 #include "roo_backport/bit.h"
 
 namespace roo_windows::material3 {

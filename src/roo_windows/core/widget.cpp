@@ -1,5 +1,6 @@
 #include "roo_windows/core/widget.h"
 
+#include "roo_display.h"
 #include "roo_display/shape/smooth.h"
 #include "roo_logging.h"
 #include "roo_windows/core/application.h"

@@ -1,5 +1,6 @@
 #include "roo_windows/material3/checkbox/checkbox.h"
 
+#include "roo_display.h"
 #include "roo_display/composition/streamable_stack.h"
 #include "roo_display/shape/smooth.h"
 #include "roo_display/ui/alignment.h"

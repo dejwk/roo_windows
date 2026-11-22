@@ -2,7 +2,9 @@
 
 #include <algorithm>
 
+#include "roo_display.h"
 #include "roo_display/ui/text_label.h"
+#include "roo_icons.h"
 #include "roo_icons/filled/alert.h"
 #include "roo_windows/core/application.h"
 #include "roo_windows/core/task.h"

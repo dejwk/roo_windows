@@ -5,11 +5,14 @@
 #include <memory>
 #include <new>
 
+#include "roo_display.h"
 #include "roo_display/shape/smooth.h"
 #include "roo_display/ui/text_label.h"
 #include "roo_display/ui/tile.h"
+#include "roo_icons.h"
 #include "roo_icons/outlined/action.h"
 #include "roo_icons/outlined/content.h"
+#include "roo_io.h"
 #include "roo_io/text/unicode.h"
 #include "roo_scheduler.h"
 #include "roo_windows/config.h"

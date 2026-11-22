@@ -4,6 +4,7 @@
 #include "golden_image.h"
 #include "gtest/gtest.h"
 #include "material3_density_acceptance_theme.h"
+#include "roo_display.h"
 #include "roo_display/core/offscreen.h"
 #include "roo_scheduler.h"
 #include "roo_windows/containers/static_layout.h"

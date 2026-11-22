@@ -1,5 +1,6 @@
 #include "roo_windows/material2/menu/title.h"
 
+#include "roo_icons.h"
 #include "roo_icons/outlined/navigation.h"
 #include "roo_windows/core/task.h"
 #include "roo_windows/material2/typography.h"

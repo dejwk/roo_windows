@@ -1,5 +1,6 @@
 #include "roo_windows/material3/dialog/full_screen_dialog.h"
 
+#include "roo_icons.h"
 #include "roo_icons/outlined/24/navigation.h"
 #include "roo_logging.h"
 #include "roo_windows/core/application.h"

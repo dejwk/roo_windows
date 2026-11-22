@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 
+#include "roo_backport.h"
 #include "roo_backport/string_view.h"
 
 namespace roo_windows::material3 {

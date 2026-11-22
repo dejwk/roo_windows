@@ -2,6 +2,7 @@
 #include <vector>
 
 #include "gtest/gtest.h"
+#include "roo_display.h"
 #include "roo_display/core/offscreen.h"
 #include "roo_testing/system/timer.h"
 #include "roo_windows/core/application.h"

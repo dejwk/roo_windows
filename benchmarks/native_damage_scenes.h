@@ -4,6 +4,7 @@
 #include <array>
 #include <cstdint>
 
+#include "roo_display.h"
 #include "roo_display/core/device.h"
 #include "roo_windows/core/damage_region.h"
 

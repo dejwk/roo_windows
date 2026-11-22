@@ -2,6 +2,7 @@
 
 #include "golden_image.h"
 #include "gtest/gtest.h"
+#include "roo_display.h"
 #include "roo_display/core/offscreen.h"
 #include "roo_windows/core/application.h"
 #include "roo_windows/core/environment.h"

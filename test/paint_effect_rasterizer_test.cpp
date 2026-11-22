@@ -1,6 +1,7 @@
 #include <vector>
 
 #include "gtest/gtest.h"
+#include "roo_display.h"
 #include "roo_display/shape/basic.h"
 #include "roo_windows/core/paint_effect.h"
 #include "roo_windows/core/rounded_clip.h"

@@ -4,6 +4,7 @@
 #include <limits>
 #include <utility>
 
+#include "roo_display.h"
 #include "roo_display/color/color.h"
 #include "roo_logging.h"
 #include "roo_windows/material3/internal/elevation.h"

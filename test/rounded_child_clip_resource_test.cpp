@@ -6,6 +6,7 @@
 #include <new>
 
 #include "gtest/gtest.h"
+#include "roo_display.h"
 #include "roo_display/core/offscreen.h"
 #include "roo_windows.h"
 #include "roo_windows/core/exclusion_filter.h"

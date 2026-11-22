@@ -1,5 +1,6 @@
 #pragma once
 
+#include "roo_display.h"
 #include "roo_display/core/buffered_drawing.h"
 #include "roo_display/core/device.h"
 #include "roo_windows/core/exclusion.h"

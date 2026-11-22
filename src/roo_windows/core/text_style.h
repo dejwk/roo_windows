@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <stdint.h>
 
+#include "roo_display.h"
 #include "roo_display/font/font.h"
 
 namespace roo_windows {

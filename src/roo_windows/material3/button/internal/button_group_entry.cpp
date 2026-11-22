@@ -4,6 +4,7 @@
 #include <climits>
 #include <cmath>
 
+#include "roo_display.h"
 #include "roo_display/ui/text_label.h"
 #include "roo_windows/core/click_animation.h"
 #include "roo_windows/material3/button/internal/button_geometry.h"

@@ -1,5 +1,6 @@
 #include "roo_windows/material3/navigation_destination/navigation_destination.h"
 
+#include "roo_display.h"
 #include "roo_display/shape/smooth.h"
 #include "roo_display/ui/alignment.h"
 #include "roo_display/ui/text_label.h"

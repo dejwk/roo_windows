@@ -5,9 +5,13 @@
 
 #include <algorithm>
 
+#include "roo_backport.h"
 #include "roo_backport/string_view.h"
+#include "roo_display.h"
 #include "roo_display/ui/text_label.h"
+#include "roo_icons.h"
 #include "roo_icons/filled/action.h"
+#include "roo_io.h"
 #include "roo_io/text/unicode.h"
 #include "roo_windows/config.h"
 #include "roo_windows/core/application.h"

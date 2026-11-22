@@ -7,6 +7,7 @@
 #include <utility>
 #include <vector>
 
+#include "roo_backport.h"
 #include "roo_backport/string_view.h"
 #include "roo_windows/containers/scroll_motion_controller.h"
 #include "roo_windows/core/container.h"

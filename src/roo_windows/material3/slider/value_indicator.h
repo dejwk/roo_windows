@@ -3,7 +3,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "roo_backport.h"
 #include "roo_backport/string_view.h"
+#include "roo_display.h"
 #include "roo_display/color/color.h"
 #include "roo_display/core/box.h"
 #include "roo_windows/core/paint_context.h"

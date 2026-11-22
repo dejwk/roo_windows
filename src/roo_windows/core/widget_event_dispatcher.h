@@ -3,6 +3,7 @@
 #include <functional>
 #include <memory>
 
+#include "roo_collections.h"
 #include "roo_collections/flat_small_hash_map.h"
 #include "roo_windows/core/scroll_position.h"
 

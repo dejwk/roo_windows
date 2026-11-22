@@ -69,6 +69,7 @@ void initDisplay() {
 
 // *************** EXAMPLE STARTS HERE
 
+#include "roo_icons.h"
 #include "roo_icons/outlined/24/av.h"
 #include "roo_icons/outlined/24/content.h"
 #include "roo_icons/outlined/24/navigation.h"

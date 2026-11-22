@@ -7,6 +7,7 @@
 #include <ctime>
 #include <vector>
 
+#include "roo_display.h"
 #include "roo_display/core/offscreen.h"
 #include "roo_windows/core/clipper.h"
 #include "roo_windows/core/damage_region.h"

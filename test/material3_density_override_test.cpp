@@ -1,6 +1,7 @@
 #include <limits>
 
 #include "gtest/gtest.h"
+#include "roo_icons.h"
 #include "roo_icons/filled/24/navigation.h"
 #include "roo_windows/containers/scrollable_panel.h"
 #include "roo_windows/containers/vertical_layout.h"

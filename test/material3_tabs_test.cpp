@@ -1,6 +1,7 @@
 #include <type_traits>
 
 #include "gtest/gtest.h"
+#include "roo_icons.h"
 #include "roo_icons/outlined/24/action.h"
 #include "roo_scheduler.h"
 #include "roo_windows/containers/horizontal_page_host.h"

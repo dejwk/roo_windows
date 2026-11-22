@@ -2,6 +2,7 @@
 
 #include <cmath>
 
+#include "roo_display.h"
 #include "roo_display/shape/smooth.h"
 
 namespace roo_windows {

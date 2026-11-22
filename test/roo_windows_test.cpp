@@ -3,6 +3,7 @@
 #include <new>
 #include <type_traits>
 
+#include "roo_display.h"
 #include "roo_display/shape/basic.h"
 #include "roo_windows/material2/text_field.h"
 #include "roo_windows/material2/typography.h"

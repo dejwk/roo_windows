@@ -2,7 +2,9 @@
 
 #include "golden_image.h"
 #include "gtest/gtest.h"
+#include "roo_display.h"
 #include "roo_display/ui/text_label.h"
+#include "roo_icons.h"
 #include "roo_icons/outlined/24/navigation.h"
 #include "roo_windows/containers/flex_layout.h"
 #include "roo_windows/containers/scrollable_panel.h"

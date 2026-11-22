@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "gtest/gtest.h"
+#include "roo_display.h"
 #include "roo_display/core/rasterizable.h"
 #include "roo_display/internal/color_format.h"
 #include "roo_windows/core/clipper.h"

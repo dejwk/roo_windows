@@ -43,6 +43,7 @@ struct Emulator {
 #include "roo_display.h"
 #include "roo_display/driver/ili9341.h"
 #include "roo_display/driver/touch_xpt2046.h"
+#include "roo_icons.h"
 #include "roo_icons/outlined/24/navigation.h"
 #include "roo_scheduler.h"
 #include "roo_windows.h"

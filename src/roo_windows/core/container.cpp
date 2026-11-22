@@ -1,5 +1,6 @@
 #include "roo_windows/core/container.h"
 
+#include "roo_display.h"
 #include "roo_display/core/box.h"
 #include "roo_display/core/device.h"
 #include "roo_display/filter/background_fill_optimizer.h"

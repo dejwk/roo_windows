@@ -4,6 +4,7 @@
 #include <limits>
 
 #include "gtest/gtest.h"
+#include "roo_display.h"
 #include "roo_display/core/offscreen.h"
 #include "roo_windows/core/background_deferral.h"
 #include "roo_windows/core/paint_context.h"

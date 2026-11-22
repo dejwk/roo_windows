@@ -4,7 +4,9 @@
 #include <cstdio>
 #include <new>
 
+#include "roo_display.h"
 #include "roo_display/ui/text_label.h"
+#include "roo_icons.h"
 #include "roo_icons/filled/24/navigation.h"
 #include "roo_logging.h"
 #include "roo_windows/core/display_window.h"

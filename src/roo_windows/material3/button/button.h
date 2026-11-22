@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 
+#include "roo_backport.h"
 #include "roo_backport/string_view.h"
 #include "roo_windows/core/border_style.h"
 #include "roo_windows/core/theme.h"

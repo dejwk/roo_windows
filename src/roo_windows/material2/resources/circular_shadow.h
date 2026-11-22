@@ -1,5 +1,6 @@
 #pragma once
 
+#include "roo_display.h"
 #include "roo_display/image/image.h"
 
 namespace roo_windows::material2 {

@@ -3,8 +3,11 @@
 #include <algorithm>
 #include <vector>
 
+#include "roo_backport.h"
 #include "roo_backport/string_view.h"
+#include "roo_display.h"
 #include "roo_display/shape/basic.h"
+#include "roo_io.h"
 #include "roo_io/text/unicode.h"
 
 namespace roo_windows {

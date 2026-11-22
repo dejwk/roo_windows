@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 
+#include "roo_display.h"
 #include "roo_display/color/color.h"
 
 namespace roo_windows {

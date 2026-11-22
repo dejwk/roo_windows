@@ -2,6 +2,7 @@
 
 #include <inttypes.h>
 
+#include "roo_display.h"
 #include "roo_display/ui/alignment.h"
 
 namespace roo_windows {

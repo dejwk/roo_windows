@@ -1,6 +1,7 @@
 #include <algorithm>
 
 #include "gtest/gtest.h"
+#include "roo_icons.h"
 #include "roo_icons/filled/navigation.h"
 #include "roo_icons/outlined/48/action.h"
 #include "roo_windows/core/environment.h"

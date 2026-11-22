@@ -72,6 +72,7 @@ void initDisplay() {
 }
 
 // *************** EXAMPLE STARTS HERE
+#include "roo_icons.h"
 #include "roo_icons/outlined/action.h"
 #include "roo_icons/outlined/av.h"
 #include "roo_windows/containers/flex_layout.h"

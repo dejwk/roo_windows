@@ -2,6 +2,7 @@
 
 #include <algorithm>
 
+#include "roo_display.h"
 #include "roo_display/core/box.h"
 #include "roo_display/ui/alignment.h"
 #include "roo_logging.h"

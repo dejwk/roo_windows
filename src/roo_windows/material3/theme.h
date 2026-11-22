@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <stdint.h>
 
+#include "roo_display.h"
 #include "roo_display/color/color.h"
 #include "roo_windows/core/framework_theme.h"
 #include "roo_windows/material3/color_token.h"

@@ -1,6 +1,7 @@
 
 #ifdef ROO_TESTING
 
+#include "roo_display.h"
 #include "roo_display/fake/reference_device.h"
 #include "roo_testing/microcontrollers/esp32/fake_esp32.h"
 #include "roo_testing/transducers/ui/viewport/flex_viewport.h"

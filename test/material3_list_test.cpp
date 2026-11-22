@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "gtest/gtest.h"
+#include "roo_icons.h"
 #include "roo_icons/filled/24/device.h"
 #include "roo_icons/outlined/24/notification.h"
 #include "roo_scheduler.h"

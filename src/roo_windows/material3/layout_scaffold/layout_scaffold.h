@@ -5,6 +5,7 @@
 #include <utility>
 #include <vector>
 
+#include "roo_display.h"
 #include "roo_display/color/color.h"
 #include "roo_windows/core/container.h"
 #include "roo_windows/core/gravity.h"

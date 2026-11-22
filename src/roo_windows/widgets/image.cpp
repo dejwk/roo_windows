@@ -1,5 +1,6 @@
 #include "roo_windows/widgets/image.h"
 
+#include "roo_display.h"
 #include "roo_display/ui/tile.h"
 
 namespace roo_windows {

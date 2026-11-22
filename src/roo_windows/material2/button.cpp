@@ -1,5 +1,6 @@
 #include "button.h"
 
+#include "roo_display.h"
 #include "roo_display/core/raster.h"
 #include "roo_display/shape/basic.h"
 #include "roo_display/ui/text_label.h"

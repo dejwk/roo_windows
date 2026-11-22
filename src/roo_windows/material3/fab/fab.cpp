@@ -2,6 +2,7 @@
 
 #include <algorithm>
 
+#include "roo_display.h"
 #include "roo_display/ui/alignment.h"
 #include "roo_display/ui/text_label.h"
 #include "roo_windows/material3/internal/elevation.h"

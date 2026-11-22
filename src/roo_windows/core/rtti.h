@@ -3,6 +3,7 @@
 #if defined(__GXX_RTTI)
 #include <typeinfo>
 
+#include "roo_logging.h"
 #include "roo_logging/demangle.h"
 #endif
 

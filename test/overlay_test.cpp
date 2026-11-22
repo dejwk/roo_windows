@@ -1,3 +1,4 @@
+#include "roo_icons.h"
 #include "roo_icons/outlined/24/action.h"
 #include "roo_icons/outlined/24/navigation.h"
 #include "roo_windows/containers/flex_layout.h"

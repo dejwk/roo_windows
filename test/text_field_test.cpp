@@ -3,6 +3,7 @@
 #include <functional>
 
 #include "gtest/gtest.h"
+#include "roo_fonts_material.h"
 #include "roo_fonts/NotoSans_Regular/14.h"
 #include "roo_windows/core/text_field_editor.h"
 #include "roo_windows/material2/typography.h"

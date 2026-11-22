@@ -1,5 +1,6 @@
 #include "roo_windows/material2/slider.h"
 
+#include "roo_display.h"
 #include "roo_display/composition/streamable_stack.h"
 #include "roo_display/image/image.h"
 #include "roo_display/shape/smooth.h"

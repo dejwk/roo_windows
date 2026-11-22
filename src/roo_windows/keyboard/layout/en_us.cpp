@@ -3,6 +3,7 @@
 
 #if ROO_WINDOWS_ENABLE_SOFTWARE_KEYBOARD
 #include "en_us.h"
+#include "roo_display.h"
 #include "roo_display/hal/progmem.h"
 #include "roo_logging.h"
 namespace roo_windows {

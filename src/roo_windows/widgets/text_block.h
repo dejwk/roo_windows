@@ -3,7 +3,9 @@
 #include <cstdint>
 #include <vector>
 
+#include "roo_backport.h"
 #include "roo_backport/string_view.h"
+#include "roo_display.h"
 #include "roo_display/color/color.h"
 #include "roo_display/font/font.h"
 #include "roo_display/ui/tile.h"

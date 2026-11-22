@@ -1,5 +1,6 @@
 #include "roo_windows/material2/progress_bar.h"
 
+#include "roo_display.h"
 #include "roo_display/shape/basic.h"
 
 using namespace roo_display;

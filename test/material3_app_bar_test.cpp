@@ -2,6 +2,7 @@
 #include <vector>
 
 #include "gtest/gtest.h"
+#include "roo_icons.h"
 #include "roo_icons/outlined/24/navigation.h"
 #include "roo_scheduler.h"
 #include "roo_windows/core/environment.h"

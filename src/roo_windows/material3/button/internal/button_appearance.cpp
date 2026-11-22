@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 
+#include "roo_display.h"
 #include "roo_display/color/color.h"
 #include "roo_windows/material3/button/internal/button_geometry.h"
 #include "roo_windows/material3/internal/elevation.h"

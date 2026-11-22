@@ -1,5 +1,6 @@
 #include "roo_windows/widgets/icon.h"
 
+#include "roo_display.h"
 #include "roo_display/ui/tile.h"
 #include "roo_windows/core/container.h"
 

@@ -4,6 +4,7 @@
 #include <cstdio>
 #include <cstring>
 
+#include "roo_display.h"
 #include "roo_display/ui/text_label.h"
 #include "roo_windows/config.h"
 #include "roo_windows/core/number.h"

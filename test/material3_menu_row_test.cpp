@@ -1,6 +1,7 @@
 #include <type_traits>
 
 #include "gtest/gtest.h"
+#include "roo_icons.h"
 #include "roo_icons/filled/24/navigation.h"
 #include "roo_scheduler.h"
 #include "roo_windows/core/application_context.h"

@@ -2,6 +2,7 @@
 
 #include <string>
 
+#include "roo_display.h"
 #include "roo_display/ui/string_printer.h"
 #include "roo_windows/containers/aligned_layout.h"
 #include "roo_windows/containers/flex_layout.h"

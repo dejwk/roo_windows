@@ -4,6 +4,7 @@
 #include <cmath>
 #include <new>
 
+#include "roo_display.h"
 #include "roo_display/shape/smooth.h"
 #include "roo_windows/core/main_window.h"
 #include "roo_windows/core/overlay_spec.h"

@@ -1,7 +1,9 @@
 #pragma once
 
+#include "roo_display.h"
 #include "roo_display/ui/text_label.h"
 #include "roo_display/ui/tile.h"
+#include "roo_io.h"
 #include "roo_io/text/unicode.h"
 
 namespace roo_windows::internal {

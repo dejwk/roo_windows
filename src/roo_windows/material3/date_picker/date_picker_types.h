@@ -1,6 +1,8 @@
 #pragma once
 
+#include "roo_locale.h"
 #include "roo_locale/calendar_locale.h"
+#include "roo_time.h"
 #include "roo_time/civil_day.h"
 #include "roo_time/format.h"
 

@@ -3,6 +3,7 @@
 // its ripple across the scrolling contents; pause it to see disabled styling.
 
 #include "examples/material3/menus/example_runtime.h"
+#include "roo_display.h"
 #include "roo_display/shape/smooth.h"
 #include "roo_windows/containers/scrollable_panel.h"
 #include "roo_windows/core/panel.h"

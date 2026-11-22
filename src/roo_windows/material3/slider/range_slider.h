@@ -2,6 +2,7 @@
 
 #include <stddef.h>
 
+#include "roo_backport.h"
 #include "roo_backport/string_view.h"
 #include "roo_windows/material3/slider/slider.h"
 

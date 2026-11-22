@@ -2,6 +2,7 @@
 
 #include <algorithm>
 
+#include "roo_io.h"
 #include "roo_io/text/unicode.h"
 #include "roo_windows/core/application.h"
 

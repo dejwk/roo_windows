@@ -1,5 +1,6 @@
 #pragma once
 
+#include "roo_display.h"
 #include "roo_display/composition/rasterizable_stack.h"
 #include "roo_display/shape/smooth.h"
 

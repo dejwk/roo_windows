@@ -2,6 +2,7 @@
 
 #include <Arduino.h>
 
+#include "roo_display.h"
 #include "roo_display/color/color.h"
 #include "roo_display/filter/clip_exclude_rects.h"
 #include "roo_windows/core/application.h"

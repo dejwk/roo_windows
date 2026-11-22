@@ -1,5 +1,6 @@
 #include "roo_windows/material3/radio_button/radio_button.h"
 
+#include "roo_display.h"
 #include "roo_display/composition/streamable_stack.h"
 #include "roo_display/shape/smooth.h"
 #include "roo_display/ui/alignment.h"

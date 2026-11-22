@@ -8,6 +8,7 @@
 #include <utility>
 #include <vector>
 
+#include "roo_display.h"
 #include "roo_display/core/utf8.h"
 #include "roo_windows/core/container.h"
 #include "roo_windows/core/widget_ref.h"

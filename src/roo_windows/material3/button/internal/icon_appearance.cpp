@@ -1,5 +1,6 @@
 #include "roo_windows/material3/button/internal/icon_appearance.h"
 
+#include "roo_display.h"
 #include "roo_display/color/color.h"
 
 namespace roo_windows::material3::internal {

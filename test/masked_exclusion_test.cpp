@@ -2,6 +2,7 @@
 #include <vector>
 
 #include "gtest/gtest.h"
+#include "roo_display.h"
 #include "roo_display/core/offscreen.h"
 #include "roo_display/shape/smooth.h"
 #include "roo_windows/core/clipper.h"

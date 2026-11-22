@@ -3,8 +3,11 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "roo_backport.h"
 #include "roo_backport/string_view.h"
+#include "roo_collections.h"
 #include "roo_collections/small_string.h"
+#include "roo_display.h"
 #include "roo_display/ui/alignment.h"
 #include "roo_windows/core/rect.h"
 

@@ -2,6 +2,7 @@
 
 #include "roo_backport.h"
 #include "roo_backport/string_view.h"
+#include "roo_display.h"
 #include "roo_display/ui/text_label.h"
 #include "roo_display/ui/tile.h"
 #include "roo_smooth_fonts/NotoSans_Condensed/18.h"

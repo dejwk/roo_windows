@@ -2,6 +2,7 @@
 
 #include "gtest/gtest.h"
 #include "navigation_panel_test_access.h"
+#include "roo_icons.h"
 #include "roo_icons/outlined/24/action.h"
 #include "roo_scheduler.h"
 #include "roo_windows/core/environment.h"

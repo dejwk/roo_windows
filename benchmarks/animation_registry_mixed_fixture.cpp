@@ -7,6 +7,7 @@
 // application before measuring linked text and read-only data.
 #include <memory>
 
+#include "roo_icons.h"
 #include "roo_icons/outlined/24/action.h"
 #include "roo_windows/containers/horizontal_page_host.h"
 #include "roo_windows/containers/scrollable_panel.h"

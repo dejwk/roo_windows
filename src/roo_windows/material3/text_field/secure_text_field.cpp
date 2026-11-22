@@ -1,5 +1,6 @@
 #include "roo_windows/material3/text_field/secure_text_field.h"
 
+#include "roo_icons.h"
 #include "roo_icons/filled/action.h"
 
 namespace roo_windows::material3 {

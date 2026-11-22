@@ -3,7 +3,9 @@
 #include <new>
 
 #include "gtest/gtest.h"
+#include "roo_display.h"
 #include "roo_display/core/offscreen.h"
+#include "roo_icons.h"
 #include "roo_icons/filled/navigation.h"
 #include "roo_windows/containers/scrollable_panel.h"
 #include "roo_windows/containers/vertical_layout.h"

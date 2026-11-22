@@ -3,9 +3,11 @@
 #include <cstdio>
 #include <new>
 
+#include "roo_display.h"
 #include "roo_display/shape/smooth.h"
 #include "roo_display/ui/text_label.h"
 #include "roo_display/ui/tile.h"
+#include "roo_icons.h"
 #include "roo_icons/filled/24/action.h"
 #include "roo_icons/filled/24/editor.h"
 #include "roo_icons/filled/24/navigation.h"

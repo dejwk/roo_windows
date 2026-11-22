@@ -3,6 +3,7 @@
 #include <functional>
 #include <stdint.h>
 
+#include "roo_threads.h"
 #include "roo_threads/mutex.h"
 
 namespace roo_windows {

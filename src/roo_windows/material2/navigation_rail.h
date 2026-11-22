@@ -2,6 +2,7 @@
 
 #include <memory>
 
+#include "roo_display.h"
 #include "roo_display/ui/alignment.h"
 #include "roo_windows/core/panel.h"
 #include "roo_windows/material2/divider.h"

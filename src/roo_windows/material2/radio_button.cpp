@@ -1,7 +1,9 @@
 #include "roo_windows/material2/radio_button.h"
 
+#include "roo_display.h"
 #include "roo_display/image/image.h"
 #include "roo_display/ui/tile.h"
+#include "roo_icons.h"
 #include "roo_icons/filled/toggle.h"
 #include "roo_windows/config.h"
 #include "roo_windows/material2/theme.h"

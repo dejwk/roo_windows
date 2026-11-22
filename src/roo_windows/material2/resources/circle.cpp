@@ -1,5 +1,6 @@
 #include "roo_windows/material2/resources/circle.h"
 
+#include "roo_display.h"
 #include "roo_display/color/named.h"
 
 namespace roo_windows::material2 {

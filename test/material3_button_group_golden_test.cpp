@@ -4,6 +4,7 @@
 #include "golden_image.h"
 #include "gtest/gtest.h"
 #include "material3_density_acceptance_theme.h"
+#include "roo_icons.h"
 #include "roo_icons/outlined/24/action.h"
 #include "roo_testing/system/timer.h"
 #include "roo_windows/core/application.h"

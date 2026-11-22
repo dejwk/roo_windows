@@ -1,9 +1,11 @@
 #pragma once
 
+#include "roo_fonts_material.h"
 #include "roo_fonts/NotoSans_Medium/11.h"
 #include "roo_fonts/NotoSans_Medium/14.h"
 #include "roo_fonts/NotoSans_Medium/21.h"
 #include "roo_fonts/NotoSans_Medium/28.h"
+#include "roo_display.h"
 #include "roo_fonts/NotoSans_Regular/12.h"
 #include "roo_fonts/NotoSans_Regular/16.h"
 #include "roo_fonts/NotoSans_Regular/24.h"

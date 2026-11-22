@@ -3,6 +3,7 @@
 #include <cmath>
 #include <cstdio>
 
+#include "roo_display.h"
 #include "roo_display/ui/text_label.h"
 #include "roo_windows/config.h"
 #include "roo_windows/core/border_style.h"

@@ -1,6 +1,7 @@
 #include <cmath>
 
 #include "gtest/gtest.h"
+#include "roo_display.h"
 #include "roo_display/color/color_modes.h"
 #include "roo_windows/core/theme.h"
 #include "roo_windows/decoration/shadow_lookup.h"
