@@ -174,7 +174,7 @@ void PaintCell(PaintContext& ctx, roo::string_view text, const Rect& cell,
   roo_display::StringViewLabel label(text, style.font(), foreground,
                                      style.fontOptions());
   const int marker_height =
-      std::min(nominal_cell - Scaled(8), cell.height() - Scaled(2));
+      std::min<YDim>(nominal_cell - Scaled(8), cell.height() - Scaled(2));
   const int marker_width =
       std::min(cell.width() - Scaled(2),
                std::max(marker_height, label.extents().width() + Scaled(6)));
@@ -194,7 +194,7 @@ void PaintHeaderControl(PaintContext& ctx, const Widget& widget,
                         const roo_display::Drawable& content,
                         const Rect& bounds, Color foreground, Color background,
                         bool wide) {
-  const int h = std::min(Scaled(40), bounds.height() - Scaled(4));
+  const YDim h = std::min<YDim>(Scaled(40), bounds.height() - Scaled(4));
   const int w = wide ? bounds.width() - Scaled(4) : h;
   const int x = bounds.xMin() + (bounds.width() - w) / 2;
   const int y = bounds.yMin() + (bounds.height() - h) / 2;
@@ -234,12 +234,12 @@ DatePickerHeader::DatePickerHeader(ApplicationContext& context,
 
 Rect DatePickerHeader::controlBounds(int control) const {
   const int cell_size = CellSize(panel_);
-  const int navigation_height =
-      std::min(cell_size, std::max(Scaled(24), height() - Scaled(40)));
+  const YDim navigation_height = std::min<YDim>(
+      cell_size, std::max<YDim>(Scaled(24), height() - Scaled(40)));
   if (control == 4)
     return Rect(width() - cell_size, 0, width() - 1,
-                std::min(cell_size, height() - navigation_height) - 1);
-  int y = height() - navigation_height;
+                std::min<YDim>(cell_size, height() - navigation_height) - 1);
+  const YDim y = height() - navigation_height;
   if (control == 0) return Rect(0, y, cell_size - 1, height() - 1);
   if (control == 3)
     return Rect(width() - cell_size, y, width() - 1, height() - 1);

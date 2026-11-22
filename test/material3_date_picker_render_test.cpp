@@ -233,8 +233,16 @@ using DatePickerTiny = DatePickerRenderSized<200, 200>;
 // Verifies a portrait calendar fits and all cell edges select the right date.
 TEST_F(DatePickerPortrait, FittedCalendar) { expectFittedCalendar(); }
 
-// Verifies compact chrome leaves room for all six weeks in landscape.
-TEST_F(DatePickerLandscape, FittedCalendar) { expectFittedCalendar(); }
+// Verifies compact chrome leaves room for all six weeks in landscape
+// and keeps the input toggle above the month navigation row.
+TEST_F(DatePickerLandscape, FittedCalendar) {
+  expectFittedCalendar();
+  const Rect previous = header().controlBounds(0);
+  const Rect input_toggle = header().controlBounds(4);
+  EXPECT_EQ(Scaled(32), previous.height());
+  EXPECT_EQ(Scaled(40), input_toggle.height());
+  EXPECT_EQ(input_toggle.yMax() + 1, previous.yMin());
+}
 
 // Verifies the smallest admitted display still paints all calendar rows once.
 TEST_F(DatePickerMinimum, FittedCalendar) { expectFittedCalendar(); }
