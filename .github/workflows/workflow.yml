@@ -21,7 +21,7 @@ jobs:
         run: python3 tools/keyboard_layout/test_compile.py
 
   ci:
-    uses: dejwk/roo_testing/.github/workflows/client-ci.yml@95ecaae3c28b3b6a46f65b215029a4d30a587606 # roo_testing 2.1.2
+    uses: dejwk/roo_testing/.github/workflows/client-ci.yml@19dda59607baa11ee15a129da6de0300924e84d2 # roo_testing 2.5.0
     with:
       profiles: '["arduino"]'
       system_packages: libx11-dev libjpeg-dev libpng-dev zlib1g-dev
