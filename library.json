@@ -42,6 +42,7 @@
         "examples/**/*.ino"
     ],
     "dependencies": {
+        "dejwk/roo_backport": ">=1.3.0",
         "dejwk/roo_collections": ">=1.4.8",
         "dejwk/roo_display": ">=3.4.0",
         "dejwk/roo_fonts_basic": ">=1.0.6",

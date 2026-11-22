@@ -20,6 +20,7 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         ":material3_palette",
+        "@roo_backport",
         "@roo_collections",
         "@roo_display",
         "@roo_fonts_basic",

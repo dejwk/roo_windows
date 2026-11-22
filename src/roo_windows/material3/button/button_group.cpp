@@ -1,5 +1,7 @@
 #include "roo_windows/material3/button/button_group.h"
 
+#include "roo_backport/bit.h"
+
 namespace roo_windows::material3 {
 
 ButtonGroupButton::ButtonGroupButton(ApplicationContext& context,
@@ -61,9 +63,10 @@ void ConnectedButtonGroup::setSelectionRequired(bool required) {
 }
 
 int ConnectedButtonGroup::selectedIndex() const {
-  if (selection_mask_ == 0 || (selection_mask_ & (selection_mask_ - 1)) != 0)
+  if (selection_mask_ == 0 || (selection_mask_ & (selection_mask_ - 1)) != 0) {
     return -1;
-  return __builtin_ctz(selection_mask_);
+  }
+  return roo::countr_zero(selection_mask_);
 }
 
 bool ConnectedButtonGroup::isSelected(int index) const {
