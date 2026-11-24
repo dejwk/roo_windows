@@ -1,3 +1,16 @@
+# roo_windows 1.11.0
+
+- Added 67 light/dark Material 3 palette pairs from FlexColorScheme. Material 2 and Material 3 have independent palettes, with `ApplyCoordinatedMaterial3Palette()` for applying a shared color scheme and `Application::invalidateTheme()` for refreshing live themes. Mixed-design controls inherit surface colors and share interaction defaults through `Theme::framework`.
+- **API changes** move legacy Material 2 controls, menus, dialogs, and navigation into `roo_windows::material2`. Use `material2::ShowAlertDialog()` in place of `Application::showAlertDialog()`. `Environment::scheduler()` now exposes `roo_scheduler::Scheduler`.
+- Material 2 and Material 3 text fields share a task-owned editor and an application-styled full-screen draft editor. The software keyboard can be compiled out while retaining physical-key and semantic text input.
+- Material 3 modal and docked calendars now fit compact viewports by default, inherit theme density with per-calendar overrides, and use localized names and week starts from `roo_locale`. Added animated day feedback, fixed focus changes on disabled dates, and kept full-size scrolling available through `setShrinkToFit(false)`.
+- Updated the Material 3 navigation rail with an 80 dp baseline layout, revised collapsed and expanded layouts, improved RTL badge placement, and configurable surface colors. Added horizontal and vertical Material 3 dividers.
+- Added a reusable `BlitCache` for custom scrolling, including infinite-scroll layouts, with cache reuse when content stays in place. Reduced button-group repainting and fixed slider flicker, scrim persistence, list-row activation and repainting, and nested flex and dialog sizing.
+- Updated dependencies to `roo_backport` 1.3.0, `roo_collections` 2.0.2, `roo_display` 3.5.0, `roo_fonts_basic` 1.1.0, `roo_fonts_material` 1.1.3, `roo_icons` 1.2.6, `roo_io` 2.5.0, `roo_locale` 1.2.0, `roo_logging` 1.6.1, `roo_scheduler` 2.4.0, and `roo_time` 2.2.1. Fixed Arduino dependency discovery and example compilation.
+- Updated Bazel tooling to `roo_testing` 2.7.1 and expanded the local runner to nine ESP32, ESP32-S3, ESP32-C3, and RP2040 profiles. Added CI validation for generated keyboard layouts and expanded rendering regression coverage.
+
+---
+
 # roo_windows 1.10.0
 
 - Added Material 3 floating action buttons, including icon-only and extended variants, with configurable sizes, colors, and expanded presentation.
