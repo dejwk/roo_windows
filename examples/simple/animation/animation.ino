@@ -89,6 +89,7 @@ void initDisplay() {
 #include "roo_icons/filled/action.h"
 #include "roo_icons/filled/alert.h"
 #include "roo_logging.h"
+#include "roo_windows/containers/vertical_layout.h"
 #include "roo_windows/material2/progress_bar.h"
 #include "roo_windows/widgets/icon.h"
 #include "roo_windows/widgets/image.h"

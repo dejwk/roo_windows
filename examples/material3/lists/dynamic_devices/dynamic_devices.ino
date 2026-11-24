@@ -50,6 +50,7 @@ roo_windows::fake::FltkKeySource emulator_keys;
 #include "roo_display/driver/touch_xpt2046.h"
 #include "roo_scheduler.h"
 #include "roo_windows.h"
+#include "roo_windows/containers/scrollable_panel.h"
 
 using roo_display::Display;
 using roo_display::Ili9341spi;
