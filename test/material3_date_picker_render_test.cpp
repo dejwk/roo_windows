@@ -529,6 +529,30 @@ TEST_F(DatePickerRender, HeaderLabelsFitCompactWidth) {
   EXPECT_LE(year.anchorExtents().width(), header().controlBounds(2).width());
 }
 
+// Verifies the fitted month grid settles each pixel once on entry, cursor
+// movement, and explicit invalidation.
+TEST_F(DatePickerPortrait, MonthGridRepaintsOnce) {
+  open();
+  panel().setMode(internal::DatePickerMode::kMonths);
+  device_.reset();
+  app_.refresh();
+  expectSingleWrites();
+  const std::vector<roo::byte> initial = raster_;
+
+  device_.reset();
+  ASSERT_TRUE(body().onKeyEvent({KeyPhase::kDown, KeyCode::kRight, 0, 0}));
+  app_.refresh();
+  expectSingleWrites();
+  EXPECT_NE(initial, raster_);
+  const std::vector<roo::byte> moved = raster_;
+
+  device_.reset();
+  body().invalidateInterior();
+  app_.refresh();
+  expectSingleWrites();
+  EXPECT_EQ(moved, raster_);
+}
+
 // Verifies initial, selection-dirty, and invalidated repaint settle each pixel
 // once; unchanged cells remain untouched by selection-only changes.
 TEST_F(DatePickerRender, InitialDirtyAndInvalidatedPaintWritePixelsOnce) {

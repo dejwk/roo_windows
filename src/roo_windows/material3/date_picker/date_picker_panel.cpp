@@ -105,11 +105,11 @@ class CellBackground final : public roo_display::Rasterizable {
 };
 
 /// Chooses legible compact text without retaining per-cell font state.
-const TextStyle& CellTextStyle(const Rect& cell, int nominal_cell) {
-  if (cell.height() >= nominal_cell) return text_style_body_medium();
-  return cell.height() < Scaled(18)   ? text_style_label_small()
-         : cell.height() < Scaled(24) ? text_style_body_small()
-                                      : text_style_body_medium();
+const TextStyle& CellTextStyle(YDim cell_height, int nominal_cell) {
+  if (cell_height >= nominal_cell) return text_style_body_medium();
+  if (cell_height < Scaled(18)) return text_style_label_small();
+  if (cell_height < Scaled(24)) return text_style_body_small();
+  return text_style_body_medium();
 }
 
 /// Blends selection colors using the shared click's retained sample.
@@ -166,7 +166,7 @@ void PaintCell(PaintContext& ctx, roo::string_view text, const Rect& cell,
                Color foreground, Color background, Color accent,
                float selection, bool today, bool focused, int nominal_cell,
                const PressOverlay* press) {
-  const TextStyle& style = CellTextStyle(cell, nominal_cell);
+  const TextStyle& style = CellTextStyle(cell.height(), nominal_cell);
   if (selection == 0.0f && !today && !focused && press == nullptr) {
     PaintText(ctx, text, style, foreground, background, cell);
     return;
@@ -477,8 +477,7 @@ Dimensions DatePickerBody::onMeasure(WidthSpec width, HeightSpec height) {
   }
   abbreviated_months_ = false;
   if (panel_.mode() == DatePickerMode::kMonths) {
-    const TextStyle& style =
-        CellTextStyle(Rect(0, 0, w / 3 - 1, h / 4 - 1), CellSize(panel_));
+    const TextStyle& style = CellTextStyle(h / 4, CellSize(panel_));
     for (int month = 0; month < 12; ++month) {
       roo_display::StringViewLabel label(
           panel_.session().locale().month_standalone_wide[month], style.font(),
@@ -519,8 +518,9 @@ void DatePickerBody::paint(PaintContext& ctx) const {
       PaintText(
           ctx,
           session.locale().weekday_narrow[(col + session.firstWeekday()) % 7],
-          CellTextStyle(first, CellSize(panel_)), colors.onSurfaceVariant,
-          background(), Rect(first.xMin(), 0, first.xMax(), first.yMin() - 1));
+          CellTextStyle(first.height(), CellSize(panel_)),
+          colors.onSurfaceVariant, background(),
+          Rect(first.xMin(), 0, first.xMax(), first.yMin() - 1));
     }
   }
   for (int i = 0; i < cellCount(); ++i) {
