@@ -1,4 +1,5 @@
 #include <iostream>
+#include <memory>
 #include <string>
 #include <type_traits>
 #include <vector>
@@ -438,6 +439,27 @@ TEST(Material3List, ConvenienceItemsBindThroughListEntry) {
 
   entry.clearItem();
   EXPECT_EQ(nullptr, avatar.leading()->parent());
+}
+
+// Verifies that destroying a caller-owned row after context teardown still
+// detaches its borrowed slot widgets.
+TEST(Material3List, CallerOwnedRowDetachesSlotsAfterContextDestruction) {
+  roo_scheduler::SchedulingService scheduler;
+  std::unique_ptr<PictogramSupportingTextItem> item;
+  std::unique_ptr<ListEntry> row;
+  {
+    ApplicationContext context(scheduler, DefaultTheme(),
+                               DefaultKeyboardColorTheme());
+    item = std::make_unique<PictogramSupportingTextItem>(
+        context, ic_outlined_24_notification_sync(), "Schedule sync",
+        "Last successful refresh this morning");
+    row = std::make_unique<ListEntry>(context);
+    row->setItem(*item);
+    ASSERT_EQ(row.get(), item->leading()->parent());
+  }
+
+  row.reset();
+  EXPECT_EQ(nullptr, item->leading()->parent());
 }
 
 // Verifies that ListRow still bridges inline-owned items when the item type

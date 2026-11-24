@@ -250,7 +250,7 @@ TEST_F(ContainerMargins, NestedAdaptiveLayoutsUseLocalCoordinates) {
   rail.measure(WidthSpec::Exactly(100), HeightSpec::Exactly(80));
   static_cast<Widget&>(rail).layout(Rect(20, 30, 119, 109));
   EXPECT_EQ(40, header.offsetLeft());
-  EXPECT_EQ(Scaled(4) + 5, header.offsetTop());
+  EXPECT_EQ(Scaled(44) + 5, header.offsetTop());
 }
 
 // Verifies row height includes margins, gravity aligns the occupied rectangle,
@@ -366,7 +366,7 @@ TEST_F(ContainerMargins, NavigationSlots) {
     EXPECT_EQ(10, header.height());
     EXPECT_EQ(3, item.offsetLeft());
     EXPECT_EQ(94, item.width());
-    EXPECT_EQ(Scaled(56) - 10, item.height());
+    EXPECT_EQ(Scaled(64) - 10, item.height());
   }
 }
 
@@ -379,8 +379,9 @@ TEST_F(ContainerMargins, NavigationRailUnderHeightPressure) {
   ASSERT_TRUE(rail.add(first));
   ASSERT_TRUE(rail.add(second));
   layout(rail, 100, 80);
-  EXPECT_EQ(Rect(3, 9, 96, 34), first.parent_bounds());
-  EXPECT_EQ(Rect(3, 45, 96, 70), second.parent_bounds());
+  // Below the 44 dp top inset, both 18 px slots keep their 5 px margins.
+  EXPECT_EQ(Rect(3, 49, 96, 56), first.parent_bounds());
+  EXPECT_EQ(Rect(3, 67, 96, 74), second.parent_bounds());
 }
 
 // Verifies list row margins affect list width/height and custom slot margins

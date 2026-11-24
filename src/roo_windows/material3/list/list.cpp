@@ -734,6 +734,9 @@ void ListEntry::clearItem() {
     return;
   }
   detachBoundChildren();
+  // Caller-owned rows can outlive the context. Detach their children without
+  // scheduling layout or repaint after the application has shut down.
+  if (tryContext() == nullptr) return;
   invalidateInterior();
   requestLayout();
 }
