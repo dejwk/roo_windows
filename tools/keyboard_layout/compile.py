@@ -276,6 +276,7 @@ KeyboardLayout {name}();
 
 #if ROO_WINDOWS_ENABLE_SOFTWARE_KEYBOARD
 #include "{prefix.name}.h"
+#include "roo_display.h"
 #include "roo_display/hal/progmem.h"
 #include "roo_logging.h"
 namespace roo_windows {{
