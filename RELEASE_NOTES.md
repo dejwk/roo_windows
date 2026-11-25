@@ -1,3 +1,10 @@
+# roo_windows 1.11.1
+
+- Fixed compilation warnings in the Material 3 date picker’s text sizing.
+- Added a rendering regression test to verify that the compact month grid writes each repainted pixel once when opened, navigated by keyboard, or explicitly invalidated.
+
+---
+
 # roo_windows 1.11.0
 
 - Added 67 light/dark Material 3 palette pairs from FlexColorScheme. Material 2 and Material 3 have independent palettes, with `ApplyCoordinatedMaterial3Palette()` for applying a shared color scheme and `Application::invalidateTheme()` for refreshing live themes. Mixed-design controls inherit surface colors and share interaction defaults through `Theme::framework`.
