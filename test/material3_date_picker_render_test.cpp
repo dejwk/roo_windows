@@ -161,7 +161,9 @@ class DatePickerRenderSized : public testing::Test {
       }
     }
     EXPECT_EQ(0, excess);
-    if (expect_output) EXPECT_GT(written, 0);
+    if (expect_output) {
+      EXPECT_GT(written, 0);
+    }
   }
 
   void finishFeedback() {

@@ -442,7 +442,9 @@ TEST(ButtonGroupGolden, PressDamageStaysWithChangedEntries) {
           writes += device.writesAt(x, y);
         }
       }
-      if (step == 0 || step == 3) EXPECT_GT(writes, 0);
+      if (step == 0 || step == 3) {
+        EXPECT_GT(writes, 0);
+      }
     }
     ExpectSameRaster(initial, raster);
     group.invalidateInterior();
